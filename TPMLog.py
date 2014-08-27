@@ -1,5 +1,7 @@
 #Plots temperature, recent temperature, mass flow, pressure, and valve record in to separate files
 #Plot name = DataType_Date_Index
+#*.dat column1: time, column2: TC0, column3: TC1, column4: TC2, column5: TC3, column6: TC4, column7: TC5,
+#              column8: PLN valve, column9: SLN valve, column10: Heater, column11: UncorrMFR, column12: MFR, column13: Pressure
 import os, glob, sys
 import matplotlib.pyplot as plt
 import numpy as np
@@ -49,9 +51,9 @@ def main(filename):
         TC4.append(float(split_line[5]))
         TC5.append(float(split_line[6]))
         MFR.append(float(split_line[10]))
-        PLN.append(float(split_line[7]))
+        PLN.append(0.8*float(split_line[7]))
         SLN.append(float(split_line[8]))
-        Heat.append(float(split_line[9]))
+        Heat.append(1.2*float(split_line[9]))
         Pressure.append(float(split_line[12]))
     
     for i in time:
@@ -149,10 +151,12 @@ def main(filename):
     vline1 = plt.plot(time_1, PLN)
     vline2 = plt.plot(time_1, SLN)
     vline3 = plt.plot(time_1, Heat)
-    plt.setp(vline1, color = 'r', linewidth = 0.7, label = 'Primary LN2', ls = '-')
-    plt.setp(vline2, color = 'b', linewidth = 0.7, label = 'Secondary LN2', ls = '-')
-    plt.setp(vline3, color = 'g', linewidth = 0.7, label = 'Heater', ls = '-')
+    plt.setp(vline1, color = 'r', linewidth = 2.0, label = 'PLN Valve', ls = '-')
+    plt.setp(vline2, color = 'b', linewidth = 2.0, label = 'SLN Vavle', ls = '--')
+    plt.setp(vline3, color = 'g', linewidth = 2.0, label = 'Heater', ls = '--')
     plt.xlabel('Time in hrs')
+    plt.legend(loc = 'center right', shadow = False)
+    plt.axis([0, time_1[-1]*1.1, -0.2, 1.2])
     plt.savefig(vpath)
     plt.clf()
     
