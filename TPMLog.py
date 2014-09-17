@@ -29,6 +29,7 @@ import sys
 import matplotlib.pyplot as plt
 import numpy as np
 
+
 def main(filename):
     testfile = file(filename)
     print "--> processing", filename
@@ -36,7 +37,8 @@ def main(filename):
     directory = 'C://Users//xenon//Dropbox//labViewPlots/'
     if not os.path.isdir(directory):
         print "trying alexis' path..."
-        directory = '/Users/alexis/stanford-Dropbox/Dropbox/labViewPlots/'
+        #directory = '/Users/alexis/stanford-Dropbox/Dropbox/labViewPlots/'
+        directory = '/Users/alexis/Downloads/'
         
     basename = os.path.split(filename)[1][5:-4]
     
@@ -46,13 +48,13 @@ def main(filename):
     mfpath = os.path.join(directory, "MassFlow_%s.%s" % (basename, filetype))
     vpath = os.path.join(directory, "ValveStates_%s.%s" % (basename, filetype))
     ppath = os.path.join(directory, "Pressure-10kTorr_%s.%s" % (basename, filetype))
-    ppath2 = os.path.join(directory, "Pressure-1Torr_%s.%s" % (basename, filetype))
+    ppath2 = os.path.join(directory, "Pressure-1kTorr_%s.%s" % (basename, filetype))
     mfrpath = os.path.join(directory, "MassFlowRate_%s.%s" % (basename, filetype))
 
-    time = []
-    time_1 = []
+    time_stamps = [] # labview timestamp, in seconds
+    time_hours = [] # elapsed time in hours
     time_2 = []
-    time_3 = []
+    time_minutes = [] # elapsed time in minutes
     rtime = []
     TC0 = []
     TC1 = []
@@ -68,10 +70,11 @@ def main(filename):
     Pressure = []
     Pressure2 = []
 
+    # read values from input file:
     for line in testfile:
         split_line = line.split()
         data = []
-        time.append(float(split_line[0]))
+        time_stamps.append(float(split_line[0]))
         TC0.append(float(split_line[1]))
         TC1.append(float(split_line[2]))
         TC2.append(float(split_line[3]))
@@ -85,58 +88,58 @@ def main(filename):
         Pressure.append(float(split_line[12]))
         Pressure2.append(float(split_line[13]))
     
-    for i in time:
-        i = round(i - time[0])
-        time_1.append(float(i/3600))
-    for i in time_1:
-        time_3.append(float(i*60))
-    for i in time_1:
-        if time_1[-1]-i < 1:
-            time_2.append(-(float(i)-time_1[-1]))
-        else: None    
-    for i in time_2:
-        rtime.insert(0, i*60)    
-    if len(rtime) > 300:
-        rTC0 = TC0[-len(rtime):]
-        rTC1 = TC1[-len(rtime):]
-        rTC2 = TC2[-len(rtime):]
-        rTC3 = TC3[-len(rtime):]
-        rTC4 = TC4[-len(rtime):]
-        rTC5 = TC5[-len(rtime):]
-        rMFR = MFR[-len(rtime):]
-        rPLN = PLN[-len(rtime):]
-        rSLN = SLN[-len(rtime):]
-        rHeat = Heat[-len(rtime)-1:-1]
-        rPressure = Pressure[-len(rtime)-1:-1]
-    else:
-        rTC0 = TC0
-        rTC1 = TC1
-        rTC2 = TC2
-        rTC3 = TC3
-        rTC4 = TC4
-        rTC5 = TC5
-        rMFR = MFR
-        rPLN = PLN
-        rSLN = SLN
-        rHeat = Heat
-        rPressure = Pressure    
-    
-    for i in time_3:
-        if i == time_3[-1]:
-            volume = np.trapz(MFR, time_3, 0.5)
+
+    start_index_of_last_hour = None
+    start_time_stamp_of_last_hour = None
+    last_time_stamp = time_stamps[-1]
+    for (i, time_stamp) in enumerate(time_stamps):
+        time_elapsed = round(time_stamp - time_stamps[0])
+        time_hours.append(float(time_elapsed/3600)) # time in hours
+        time_minutes.append(float(time_stamp/60)) # time in minutes
+        # find time stamp from one hour ago:
+        if start_index_of_last_hour == None:
+            if last_time_stamp - time_stamp <= 3600:
+                start_index_of_last_hour = i
+                start_time_stamp_of_last_hour = time_stamp
+                print "found most recent time at i = %i of %i, t= %.2f" % (i, len(time_stamps),  start_time_stamp_of_last_hour)
+                print "last timestamp = %.2f, diff = %.2f" % (last_time_stamp, last_time_stamp - start_time_stamp_of_last_hour )
+                print "%i recent time stamps" % (len(time_stamps) - start_index_of_last_hour - 1)
+
+    # if the run is too short, recent times start at t0:
+    if start_time_stamp_of_last_hour == None:
+        start_index_of_last_hour = 0
+        start_time_stamp_of_last_hour = time_stamps[0]
+
+    rtime = time_stamps[start_index_of_last_hour:-1]
+
+    rTC0 = TC0[-len(rtime):]
+    rTC1 = TC1[-len(rtime):]
+    rTC2 = TC2[-len(rtime):]
+    rTC3 = TC3[-len(rtime):]
+    rTC4 = TC4[-len(rtime):]
+    rTC5 = TC5[-len(rtime):]
+    rMFR = MFR[-len(rtime):]
+    rPLN = PLN[-len(rtime):]
+    rSLN = SLN[-len(rtime):]
+    rHeat = Heat[-len(rtime)-1:-1]
+    rPressure = Pressure[-len(rtime)-1:-1]
+
+    for i in time_minutes:
+        if i == time_minutes[-1]:
+            volume = np.trapz(MFR, time_minutes, 0.5)
             Vol.append(volume)
         else:
-            volume = np.trapz(MFR[0:time_3.index(i)+1],time_3[0:time_3.index(i)+1], 0.5)
+            volume = np.trapz(MFR[0:time_minutes.index(i)+1],time_minutes[0:time_minutes.index(i)+1], 0.5)
             Vol.append(volume)
     
     plt.figure(1)
     plt.title('Temperature')
-    line1 = plt.plot(time_1, TC0)
-    line2 = plt.plot(time_1, TC1)
-    line3 = plt.plot(time_1, TC2)
-    line4 = plt.plot(time_1, TC3)
-    line5 = plt.plot(time_1, TC4)
-    line6 = plt.plot(time_1, TC5)
+    line1 = plt.plot(time_hours, TC0)
+    line2 = plt.plot(time_hours, TC1)
+    line3 = plt.plot(time_hours, TC2)
+    line4 = plt.plot(time_hours, TC3)
+    line5 = plt.plot(time_hours, TC4)
+    line6 = plt.plot(time_hours, TC5)
     plt.setp(line1, color = 'r', linewidth = 0.5, label = 'CuBot')
     plt.setp(line2, color = 'b', linewidth = 0.5, label = 'CellTop')
     plt.setp(line3, color = 'g', linewidth = 0.5, label = 'CellMid')
@@ -169,7 +172,7 @@ def main(filename):
     
     plt.figure(3)
     plt.title('Mass Flow in L')
-    uline1 = plt.plot(time_3, Vol)
+    uline1 = plt.plot(time_minutes, Vol)
     plt.setp(uline1, color = 'b', linewidth = 0.4)
     plt.xlabel('Time in mins')
     plt.savefig(mfpath)
@@ -177,21 +180,21 @@ def main(filename):
     
     plt.figure(4)
     plt.title('Valves')
-    vline1 = plt.plot(time_1, PLN)
-    vline2 = plt.plot(time_1, SLN)
-    vline3 = plt.plot(time_1, Heat)
+    vline1 = plt.plot(time_hours, PLN)
+    vline2 = plt.plot(time_hours, SLN)
+    vline3 = plt.plot(time_hours, Heat)
     plt.setp(vline1, color = 'r', linewidth = 2.0, label = 'PLN Valve', ls = '-')
     plt.setp(vline2, color = 'b', linewidth = 2.0, label = 'SLN Vavle', ls = '--')
     plt.setp(vline3, color = 'g', linewidth = 2.0, label = 'Heater', ls = '--')
     plt.xlabel('Time in hrs')
     plt.legend(loc = 'center right', shadow = False)
-    plt.axis([0, time_1[-1]*1.1, -0.2, 1.2])
+    plt.axis([0, time_hours[-1]*1.1, -0.2, 1.2])
     plt.savefig(vpath)
     plt.clf()
     
     plt.figure(5)
     plt.title('Pressure (10k Torr Baratron)')
-    pline1 = plt.plot(time_1, Pressure)
+    pline1 = plt.plot(time_hours, Pressure)
     plt.setp(pline1, color = 'b', linewidth = 0.4)
     plt.xlabel('Time [hrs]')
     plt.ylabel('Pressure [Torr]')
@@ -200,7 +203,7 @@ def main(filename):
 
     plt.figure(6)
     plt.title('Pressure (1k Torr Baratron)')
-    pline1 = plt.plot(time_1, Pressure2)
+    pline1 = plt.plot(time_hours, Pressure2)
     plt.setp(pline1, color = 'b', linewidth = 0.4)
     plt.xlabel('Time [hrs]')
     plt.ylabel('Pressure [Torr]')
@@ -209,7 +212,7 @@ def main(filename):
     
     plt.figure(7)
     plt.title('Mass Flow Rate in L/min')
-    mfline1 = plt.plot(time_3, MFR)
+    mfline1 = plt.plot(time_minutes, MFR)
     plt.setp(mfline1, color = 'b', linewidth = 0.4)
     plt.xlabel('Time in mins')
     plt.savefig(mfrpath)
