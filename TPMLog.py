@@ -8,8 +8,8 @@ plots that are produced.
 Plot names = DataType_Date_Index*.jpeg
 
 *.dat file columns:
-1: time in seconds
-2: TC0 
+1: time [seconds]
+2: TC0 [K]
 3: TC1
 4: TC2 
 5: TC3 
@@ -20,7 +20,8 @@ Plot names = DataType_Date_Index*.jpeg
 10: Heater 
 11: UncorrMFR
 12: MFR
-13: Pressure
+13: Pressure from 10k Torr baratron [Torr]
+14: Pressure from 1k Torr baratron [Torr]
 """
 
 import os
@@ -44,7 +45,8 @@ def main(filename):
     rtpath = os.path.join(directory, "rTemp_%s.%s" % (basename, filetype))
     mfpath = os.path.join(directory, "MassFlow_%s.%s" % (basename, filetype))
     vpath = os.path.join(directory, "ValveStates_%s.%s" % (basename, filetype))
-    ppath = os.path.join(directory, "Pressure_%s.%s" % (basename, filetype))
+    ppath = os.path.join(directory, "Pressure-10kTorr_%s.%s" % (basename, filetype))
+    ppath2 = os.path.join(directory, "Pressure-1Torr_%s.%s" % (basename, filetype))
     mfrpath = os.path.join(directory, "MassFlowRate_%s.%s" % (basename, filetype))
 
     time = []
@@ -64,7 +66,9 @@ def main(filename):
     SLN = []
     Heat = []
     Pressure = []
-    for  line in testfile:
+    Pressure2 = []
+
+    for line in testfile:
         split_line = line.split()
         data = []
         time.append(float(split_line[0]))
@@ -79,6 +83,7 @@ def main(filename):
         SLN.append(float(split_line[8]))
         Heat.append(1.2*float(split_line[9]))
         Pressure.append(float(split_line[12]))
+        Pressure2.append(float(split_line[13]))
     
     for i in time:
         i = round(i - time[0])
@@ -185,15 +190,24 @@ def main(filename):
     plt.clf()
     
     plt.figure(5)
-    plt.title('Pressure in torr')
+    plt.title('Pressure (10k Torr Baratron)')
     pline1 = plt.plot(time_1, Pressure)
     plt.setp(pline1, color = 'b', linewidth = 0.4)
-    plt.xlabel('Time in hrs')
-    plt.ylabel('Pressure in torr')
+    plt.xlabel('Time [hrs]')
+    plt.ylabel('Pressure [Torr]')
     plt.savefig(ppath)
     plt.clf()
-    
+
     plt.figure(6)
+    plt.title('Pressure (1k Torr Baratron)')
+    pline1 = plt.plot(time_1, Pressure2)
+    plt.setp(pline1, color = 'b', linewidth = 0.4)
+    plt.xlabel('Time [hrs]')
+    plt.ylabel('Pressure [Torr]')
+    plt.savefig(ppath2)
+    plt.clf()
+    
+    plt.figure(7)
     plt.title('Mass Flow Rate in L/min')
     mfline1 = plt.plot(time_3, MFR)
     plt.setp(mfline1, color = 'b', linewidth = 0.4)
