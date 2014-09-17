@@ -9,11 +9,12 @@ import shutil
 import TPMLog
 
 def datalog():
-    directory = 'C://Users//xenon//Dropbox//labViewPlots/'
+    directory = 'C://Users//xenon//Dropbox//labViewData/'
     if not os.path.isdir(directory):
         print "trying alexis' path..."
         directory = '/Users/alexis/Downloads/'
     files = os.path.join(directory, '*.dat')
+    print files
     flist = glob.glob(files)
     # use the last file, in alphabetical order -- this will be the most recent
     testfile = flist[-1]
