@@ -1,44 +1,51 @@
-#Plots temperature, recent temperature, mass flow, pressure, and valve record in to separate files
-#Plot name = DataType_Date_Index
-#*.dat columns:
-#1: time
-#2: TC0 
-#3: TC1
-#4: TC2 
-#5: TC3 
-#6: TC4
-#7: TC5
-#8: PLN valve status
-#9: SLN valve status
-#10: Heater 
-#11: UncorrMFR
-#12: MFR
-#13: Pressure
+"""
+This script plots temperature, recent temperature, mass flow, pressure, and
+valve status
 
-import os, glob, sys
+The main function returns a string that can be used with glob to select all
+plots that are produced.
+
+Plot names = DataType_Date_Index*.jpeg
+
+*.dat file columns:
+1: time in seconds
+2: TC0 
+3: TC1
+4: TC2 
+5: TC3 
+6: TC4
+7: TC5
+8: PLN valve status
+9: SLN valve status
+10: Heater 
+11: UncorrMFR
+12: MFR
+13: Pressure
+"""
+
+import os
+import sys
 import matplotlib.pyplot as plt
 import numpy as np
 
 def main(filename):
     testfile = file(filename)
     print "--> processing", filename
-    # on the windows computer:
+    # on the windows DAQ machine:
     directory = 'C://Users//xenon//Dropbox//labViewPlots/'
     if not os.path.isdir(directory):
         print "trying alexis' path..."
+        directory = '/Users/alexis/stanford-Dropbox/Dropbox/labViewPlots/'
         
-    tFile = "Temp_%s.%s" % (os.path.split(filename)[1][5:-4], 'jpeg')
-    rtFile = "rTemp_%s.%s" % (os.path.split(filename)[1][5:-4], 'jpeg')
-    mfFile = "MassFlow_%s.%s" % (os.path.split(filename)[1][5:-4], 'jpeg')
-    vFile = "Vavle_%s.%s" %(os.path.split(filename)[1][5:-4], 'jpeg')
-    pFile = "Pressure_%s.%s" %(os.path.split(filename)[1][5:-4], 'jpeg')
-    mfrFile = "MassFlowRate_%s.%s" % (os.path.split(filename)[1][5:-4], 'jpeg')
-    tpath = os.path.join(directory,tFile)
-    rtpath = os.path.join(directory,rtFile)
-    mfpath = os.path.join(directory,mfFile)
-    vpath = os.path.join(directory,vFile)
-    ppath = os.path.join(directory,pFile)
-    mfrpath = os.path.join(directory, mfrFile)
+    basename = os.path.split(filename)[1][5:-4]
+    
+    filetype = 'jpeg'    
+    tpath = os.path.join(directory, "Temp_%s.%s" % (basename, filetype))
+    rtpath = os.path.join(directory, "rTemp_%s.%s" % (basename, filetype))
+    mfpath = os.path.join(directory, "MassFlow_%s.%s" % (basename, filetype))
+    vpath = os.path.join(directory, "ValveStates_%s.%s" % (basename, filetype))
+    ppath = os.path.join(directory, "Pressure_%s.%s" % (basename, filetype))
+    mfrpath = os.path.join(directory, "MassFlowRate_%s.%s" % (basename, filetype))
 
     time = []
     time_1 = []
@@ -182,6 +189,7 @@ def main(filename):
     pline1 = plt.plot(time_1, Pressure)
     plt.setp(pline1, color = 'b', linewidth = 0.4)
     plt.xlabel('Time in hrs')
+    plt.ylabel('Pressure in torr')
     plt.savefig(ppath)
     plt.clf()
     
@@ -193,6 +201,13 @@ def main(filename):
     plt.savefig(mfrpath)
     plt.clf()
 
+    print "done!!!!"
+    
+    # make a string that selects all plots that were produced:
+    file_string = os.path.join(directory, "*%s*.%s" % (basename, filetype))
+    #print file_string
+    return file_string
+    
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         print "argument:  *.dat data file name"
