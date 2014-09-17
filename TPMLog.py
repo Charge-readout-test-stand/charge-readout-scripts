@@ -1,7 +1,20 @@
 #Plots temperature, recent temperature, mass flow, pressure, and valve record in to separate files
 #Plot name = DataType_Date_Index
-#*.dat column1: time, column2: TC0, column3: TC1, column4: TC2, column5: TC3, column6: TC4, column7: TC5,
-#              column8: PLN valve, column9: SLN valve, column10: Heater, column11: UncorrMFR, column12: MFR, column13: Pressure
+#*.dat columns:
+#1: time
+#2: TC0 
+#3: TC1
+#4: TC2 
+#5: TC3 
+#6: TC4
+#7: TC5
+#8: PLN valve status
+#9: SLN valve status
+#10: Heater 
+#11: UncorrMFR
+#12: MFR
+#13: Pressure
+
 import os, glob, sys
 import matplotlib.pyplot as plt
 import numpy as np
@@ -9,7 +22,11 @@ import numpy as np
 def main(filename):
     testfile = file(filename)
     print "--> processing", filename
-    directory = 'C://Users//xenon//Dropbox//test1/'
+    # on the windows computer:
+    directory = 'C://Users//xenon//Dropbox//labViewPlots/'
+    if not os.path.isdir(directory):
+        print "trying alexis' path..."
+        
     tFile = "Temp_%s.%s" % (os.path.split(filename)[1][5:-4], 'jpeg')
     rtFile = "rTemp_%s.%s" % (os.path.split(filename)[1][5:-4], 'jpeg')
     mfFile = "MassFlow_%s.%s" % (os.path.split(filename)[1][5:-4], 'jpeg')
@@ -177,5 +194,8 @@ def main(filename):
     plt.clf()
 
 if __name__ == '__main__':
+    if len(sys.argv) < 2:
+        print "argument:  *.dat data file name"
+        sys.exit()
     filename = sys.argv[1]
     main(filename)
