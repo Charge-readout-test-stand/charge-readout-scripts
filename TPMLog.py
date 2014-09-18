@@ -93,9 +93,9 @@ def main(filename):
     start_time_stamp_of_last_hour = None
     last_time_stamp = time_stamps[-1]
     for (i, time_stamp) in enumerate(time_stamps):
-        time_elapsed = round(time_stamp - time_stamps[0])
-        time_hours.append(float(time_elapsed/3600)) # time in hours
-        time_minutes.append(float(time_stamp/60)) # time in minutes
+        seconds_elapsed = round(time_stamp - time_stamps[0])
+        time_hours.append(float(seconds_elapsed/3600)) # time in hours
+        time_minutes.append(float(seconds_elapsed/60)) # time in minutes
         # find time stamp from one hour ago:
         if start_index_of_last_hour == None:
             if last_time_stamp - time_stamp <= 3600:
@@ -110,7 +110,9 @@ def main(filename):
         start_index_of_last_hour = 0
         start_time_stamp_of_last_hour = time_stamps[0]
 
-    rtime = time_stamps[start_index_of_last_hour:-1]
+    rtime = time_hours[start_index_of_last_hour:-1]
+    # subtract off t0 from every time
+    #rtime[:] = [x - time_minutes[0] for x in rtime]
 
     rTC0 = TC0[-len(rtime):]
     rTC1 = TC1[-len(rtime):]
@@ -131,7 +133,13 @@ def main(filename):
         else:
             volume = np.trapz(MFR[0:time_minutes.index(i)+1],time_minutes[0:time_minutes.index(i)+1], 0.5)
             Vol.append(volume)
+
+    sum_mass_flow_rate = 0.0
+    for rate in MFR: sum_mass_flow_rate += rate
+    average_flow_rate = sum_mass_flow_rate / len(MFR)
+    print "average flow rate: %.4f L/min" % average_flow_rate
     
+    linewidth=1
     plt.figure(1)
     plt.title('Temperature')
     line1 = plt.plot(time_hours, TC0)
@@ -140,41 +148,44 @@ def main(filename):
     line4 = plt.plot(time_hours, TC3)
     line5 = plt.plot(time_hours, TC4)
     line6 = plt.plot(time_hours, TC5)
-    plt.setp(line1, color = 'r', linewidth = 0.5, label = 'CuBot')
-    plt.setp(line2, color = 'b', linewidth = 0.5, label = 'CellTop')
-    plt.setp(line3, color = 'g', linewidth = 0.5, label = 'CellMid')
-    plt.setp(line4, color = 'm', linewidth = 0.5, label = 'CellBot')
-    plt.setp(line5, color = 'k', linewidth = 0.5, label = 'CuTop')
-    plt.setp(line6, color = 'c', linewidth = 0.5, label = 'Ambient')
+    plt.setp(line1, color = 'r', linewidth = linewidth, label = 'CuBot')
+    plt.setp(line2, color = 'b', linewidth = linewidth, label = 'CellTop')
+    plt.setp(line3, color = 'g', linewidth = linewidth, label = 'CellMid')
+    plt.setp(line4, color = 'm', linewidth = linewidth, label = 'CellBot')
+    plt.setp(line5, color = 'k', linewidth = linewidth, label = 'CuTop')
+    plt.setp(line6, color = 'c', linewidth = linewidth, label = 'Ambient')
     plt.xlabel('Time in hrs')
-    legend = plt.legend(loc='center right', shadow = False)
+    plt.ylabel('Temperature [K]')
+    legend = plt.legend(loc='best', shadow = False)
     plt.savefig(tpath)
     plt.clf()
     
     plt.figure(2)
     plt.title('Recent Temperature')
-    rline1 = plt.plot(rtime, rTC0)
+    rline1 = plt.plot(rtime, rTC0, linewidth=linewidth)
     rline2 = plt.plot(rtime, rTC1)
     rline3 = plt.plot(rtime, rTC2)
     rline4 = plt.plot(rtime, rTC3)
     rline5 = plt.plot(rtime, rTC4)
     rline6 = plt.plot(rtime, rTC5)
-    plt.setp(rline1, color = 'r', linewidth = 0.5, label = 'CuBot')
-    plt.setp(rline2, color = 'b', linewidth = 0.5, label = 'CellTop')
-    plt.setp(rline3, color = 'g', linewidth = 0.5, label = 'CellMid')
-    plt.setp(rline4, color = 'm', linewidth = 0.5, label = 'CellBot')
-    plt.setp(rline5, color = 'k', linewidth = 0.5, label = 'CuTop')
-    plt.setp(rline6, color = 'c', linewidth = 0.5, label = 'Ambient')
-    plt.xlabel('Time in mins')
-    legend = plt.legend(loc='center right', shadow = False)
+    plt.setp(rline1, color = 'r', linewidth = linewidth, label = 'CuBot')
+    plt.setp(rline2, color = 'b', linewidth = linewidth, label = 'CellTop')
+    plt.setp(rline3, color = 'g', linewidth = linewidth, label = 'CellMid')
+    plt.setp(rline4, color = 'm', linewidth = linewidth, label = 'CellBot')
+    plt.setp(rline5, color = 'k', linewidth = linewidth, label = 'CuTop')
+    plt.setp(rline6, color = 'c', linewidth = linewidth, label = 'Ambient')
+    plt.xlabel('Time [minutes]')
+    plt.ylabel('Temperature [K]')
+    plt.legend(loc='best', shadow = False)
     plt.savefig(rtpath)
     plt.clf()
     
     plt.figure(3)
-    plt.title('Mass Flow in L')
+    plt.title('Integrated mass flow (%.2f L of xenon gas)' % volume)
     uline1 = plt.plot(time_minutes, Vol)
     plt.setp(uline1, color = 'b', linewidth = 0.4)
-    plt.xlabel('Time in mins')
+    plt.xlabel('Time [minutes]')
+    plt.ylabel('Mass Flow [L of xenon gas]')
     plt.savefig(mfpath)
     plt.clf()
     
@@ -211,10 +222,11 @@ def main(filename):
     plt.clf()
     
     plt.figure(7)
-    plt.title('Mass Flow Rate in L/min')
+    plt.title('Mass Flow Rate')
     mfline1 = plt.plot(time_minutes, MFR)
     plt.setp(mfline1, color = 'b', linewidth = 0.4)
-    plt.xlabel('Time in mins')
+    plt.xlabel('Time [minutes]')
+    plt.ylabel('Rate [L/min xenon gas]')
     plt.savefig(mfrpath)
     plt.clf()
 
