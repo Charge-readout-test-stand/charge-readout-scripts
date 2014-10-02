@@ -50,6 +50,8 @@ def main(filename):
     ppath = os.path.join(directory, "Pressure-10kTorr_%s.%s" % (basename, filetype))
     ppath2 = os.path.join(directory, "Pressure-1kTorr_%s.%s" % (basename, filetype))
     mfrpath = os.path.join(directory, "MassFlowRate_%s.%s" % (basename, filetype))
+    ccgpath = os.path.join(directory, "CCGauge_%s.%s" % (basename, filetype))
+    tcgpath = os.path.join(directory, "TCGauge_%s.%s" % (basename, filetype))
 
     time_stamps = [] # labview timestamp, in seconds
     time_hours = [] # elapsed time in hours
@@ -69,6 +71,8 @@ def main(filename):
     Heat = []
     Pressure = []
     Pressure2 = []
+    ccg_Pressure = []
+    tcg_Pressure = []
 
     # read values from input file:
     for line in testfile:
@@ -87,7 +91,8 @@ def main(filename):
         Heat.append(1.2*float(split_line[9]))
         Pressure.append(float(split_line[12]))
         Pressure2.append(float(split_line[13]))
-    
+        ccg_Pressure.append(float(split_line[14]))
+        tcg_Pressure.append(float(split_line[15]))    
 
     start_index_of_last_hour = None
     start_time_stamp_of_last_hour = None
@@ -229,6 +234,25 @@ def main(filename):
     plt.ylabel('Rate [L/min xenon gas]')
     plt.savefig(mfrpath)
     plt.clf()
+
+    plt.figure(8)
+    plt.title('Cold Cathode Pressure')
+    mfline1 = plt.plot(time_minutes, ccg_Pressure)
+    plt.setp(mfline1, color = 'b', linewidth = 0.4)
+    plt.xlabel('Time [minutes]')
+    plt.ylabel('Pressure [10^-6 Torr]')
+    plt.savefig(ccgpath)
+    plt.clf()
+ 
+    plt.figure(9)
+    plt.title('TC Gauge Pressure')
+    mfline1 = plt.plot(time_minutes, tcg_Pressure)
+    plt.setp(mfline1, color = 'b', linewidth = 0.4)
+    plt.xlabel('Time [minutes]')
+    plt.ylabel('Signal [V]')
+    plt.savefig(tcgpath)
+    plt.clf()
+
 
     print "done!!!!"
     
