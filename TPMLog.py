@@ -24,6 +24,7 @@ Plot names = DataType_Date_Index*.jpeg
 13: Pressure from 1k Torr baratron [Torr]
 14: Cold cathode gauge [micro Torr]
 15: TC gauge [Volts]
+16: Bottle weight [V]
 """
 
 import os
@@ -58,6 +59,7 @@ def main(filename):
     ccgpath = os.path.join(directory, "CCGauge_%s.%s" % (basename, filetype))
     rccgpath = os.path.join(directory, "CCGauge_recent_%s.%s" % (basename, filetype))
     tcgpath = os.path.join(directory, "TCGauge_%s.%s" % (basename, filetype))
+    bottle_mass_path = os.path.join(directory, "BottleMass_%s.%s" % (basename, filetype))
 
     time_stamps = [] # labview timestamp, in seconds
     time_hours = [] # elapsed time in hours
@@ -78,6 +80,7 @@ def main(filename):
     Pressure2 = []
     ccg_Pressure = []
     tcg_Pressure = []
+    bottle_mass = []
 
     # read values from input file:
     for (i_line, line) in enumerate(testfile):
@@ -98,6 +101,10 @@ def main(filename):
         Pressure2.append(float(split_line[13]))
         ccg_Pressure.append(float(split_line[14])/1e6)
         tcg_Pressure.append(float(split_line[15]))    
+        try:
+            bottle_mass.append(float(split_line[16]))    
+        except IndexError:
+            print "column 16 doesn't exist!"
         #if i_line % 1000 == 0:
         #  print "line %i" % i_line
 
@@ -128,6 +135,10 @@ def main(filename):
     rtime = time_hours[start_index_of_last_hour:-1]
     # subtract off t0 from every time
     #rtime[:] = [x - time_minutes[0] for x in rtime]
+
+    # open a log file for writing:
+    outfile = file("%s/log_%s.txt" % (directory, basename), 'w')
+    plot_time = datetime.datetime.now()
 
     rTC0 = TC0[-len(rtime):]
     rTC1 = TC1[-len(rtime):]
@@ -268,46 +279,55 @@ def main(filename):
       plt.clf()
 
     if len(ccg_Pressure) > 0:
-      plt.figure(8)
-      plt.title('Cold Cathode Pressure')
-      mfline1 = plt.plot(time_hours, ccg_Pressure)
-      plt.setp(mfline1, color = 'b', linewidth = linewidth)
-      plt.yscale('log')
-      plt.xlabel('Time [hours]')
-      plt.ylabel('Pressure [Torr]')
-      plt.savefig(ccgpath)
-      print "printed %s" % ccgpath
-      plt.clf()
+        outfile.write("CC pressure [Torr]: %.2e \n" % ccg_Pressure[-1])
+        plt.figure(8)
+        plt.title('Cold Cathode Pressure')
+        mfline1 = plt.plot(time_hours, ccg_Pressure)
+        plt.setp(mfline1, color = 'b', linewidth = linewidth)
+        plt.yscale('log')
+        plt.xlabel('Time [hours]')
+        plt.ylabel('Pressure [Torr]')
+        plt.savefig(ccgpath)
+        print "printed %s" % ccgpath
+        plt.clf()
 
-      plt.figure(9)
-      plt.title('Recent Cold Cathode Pressure')
-      mfline1 = plt.plot(rtime, rccg_Pressure)
-      plt.setp(mfline1, color = 'b', linewidth = linewidth)
-      plt.yscale('log')
-      plt.xlabel('Time [hours]')
-      plt.ylabel('Pressure [Torr]')
-      plt.savefig(rccgpath)
-      print "printed %s" % rccgpath
-      plt.clf()
-   
-
+        plt.figure(9)
+        plt.title('Recent Cold Cathode Pressure')
+        mfline1 = plt.plot(rtime, rccg_Pressure)
+        plt.setp(mfline1, color = 'b', linewidth = linewidth)
+        plt.yscale('log')
+        plt.xlabel('Time [hours]')
+        plt.ylabel('Pressure [Torr]')
+        plt.savefig(rccgpath)
+        print "printed %s" % rccgpath
+        plt.clf()
    
     if len(tcg_Pressure) > 0:
-      plt.figure(10)
-      plt.title('TC Gauge Pressure')
-      mfline1 = plt.plot(time_hours, tcg_Pressure)
-      plt.setp(mfline1, color = 'b', linewidth = linewidth)
-      plt.xlabel('Time [hours]')
-      plt.ylabel('Signal [V]')
-      plt.savefig(tcgpath)
-      print "printed %s" % tcgpath
-      plt.clf()
+        plt.figure(10)
+        plt.title('TC Gauge Pressure')
+        mfline1 = plt.plot(time_hours, tcg_Pressure)
+        plt.setp(mfline1, color = 'b', linewidth = linewidth)
+        plt.xlabel('Time [hours]')
+        plt.ylabel('Signal [V]')
+        plt.savefig(tcgpath)
+        print "printed %s" % tcgpath
+        plt.clf()
+        outfile.write("TC pressure [V]: %.3f \n" % tcg_Pressure[-1])
 
-    plot_time = datetime.datetime.now()
+    if len(bottle_mass) > 0:
+        plt.figure(11)
+        plt.title('Xenon bottle mass')
+        mfline1 = plt.plot(time_hours, bottle_mass)
+        plt.setp(mfline1, color = 'b', linewidth = linewidth)
+        plt.xlabel('Time [hours]')
+        plt.ylabel('Signal [V]')
+        plt.savefig(bottle_mass_path)
+        print "printed %s" % bottle_mass_path
+        plt.clf()
+        outfile.write("Xenon bottle mass [V]: %.2f" % bottle_mass[-1])
 
-    outfile = file("%s/log_%s.txt" % (directory, basename), 'w')
-    outfile.write("CC pressure [Torr]: %.2e \n" % ccg_Pressure[-1])
-    outfile.write("TC pressure [V]: %.3f \n" % tcg_Pressure[-1])
+
+
     outfile.write("1k Torr Baratron [Torr]: %.2f \n" % Pressure2[-1])
     outfile.write("10k Torr Baratron [Torr]: %.2f \n" % Pressure[-1])
     outfile.write("Cu bot [K]: %.3f \n" % TC0[-1])
