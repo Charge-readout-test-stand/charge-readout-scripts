@@ -50,14 +50,14 @@ def main(filename):
     
     filetype = 'jpeg'    
     tpath = os.path.join(directory, "Temp_%s.%s" % (basename, filetype))
-    rtpath = os.path.join(directory, "Temp_recent_%s_.%s" % (basename, filetype))
+    rtpath = os.path.join(directory, "Temp-recent_%s_.%s" % (basename, filetype))
     mfpath = os.path.join(directory, "MassFlow_%s.%s" % (basename, filetype))
     vpath = os.path.join(directory, "ValveStates_%s.%s" % (basename, filetype))
     ppath = os.path.join(directory, "Pressure-10kTorr_%s.%s" % (basename, filetype))
     ppath2 = os.path.join(directory, "Pressure-1kTorr_%s.%s" % (basename, filetype))
     mfrpath = os.path.join(directory, "MassFlowRate_%s.%s" % (basename, filetype))
     ccgpath = os.path.join(directory, "CCGauge_%s.%s" % (basename, filetype))
-    rccgpath = os.path.join(directory, "CCGauge_recent_%s.%s" % (basename, filetype))
+    rccgpath = os.path.join(directory, "CCGauge-recent_%s.%s" % (basename, filetype))
     tcgpath = os.path.join(directory, "TCGauge_%s.%s" % (basename, filetype))
     bottle_mass_path = os.path.join(directory, "BottleMass_%s.%s" % (basename, filetype))
 
