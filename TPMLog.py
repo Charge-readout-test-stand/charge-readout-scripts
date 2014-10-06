@@ -28,6 +28,7 @@ Plot names = DataType_Date_Index*.jpeg
 
 import os
 import sys
+import datetime
 import matplotlib.pyplot as plt
 #import numpy as np
 
@@ -43,16 +44,19 @@ def main(filename):
         directory = '/Users/alexis/Downloads/'
         
     basename = os.path.split(filename)[1][5:-4]
+
+    recent_time_span = 3600.0 # seconds to use for "recent" plots
     
     filetype = 'jpeg'    
     tpath = os.path.join(directory, "Temp_%s.%s" % (basename, filetype))
-    rtpath = os.path.join(directory, "rTemp_%s.%s" % (basename, filetype))
+    rtpath = os.path.join(directory, "Temp_recent_%s_.%s" % (basename, filetype))
     mfpath = os.path.join(directory, "MassFlow_%s.%s" % (basename, filetype))
     vpath = os.path.join(directory, "ValveStates_%s.%s" % (basename, filetype))
     ppath = os.path.join(directory, "Pressure-10kTorr_%s.%s" % (basename, filetype))
     ppath2 = os.path.join(directory, "Pressure-1kTorr_%s.%s" % (basename, filetype))
     mfrpath = os.path.join(directory, "MassFlowRate_%s.%s" % (basename, filetype))
     ccgpath = os.path.join(directory, "CCGauge_%s.%s" % (basename, filetype))
+    rccgpath = os.path.join(directory, "CCGauge_recent_%s.%s" % (basename, filetype))
     tcgpath = os.path.join(directory, "TCGauge_%s.%s" % (basename, filetype))
 
     time_stamps = [] # labview timestamp, in seconds
@@ -106,7 +110,7 @@ def main(filename):
         time_minutes.append(float(seconds_elapsed/60)) # time in minutes
         # find time stamp from one hour ago:
         if start_index_of_last_hour == None:
-            if last_time_stamp - time_stamp <= 3600:
+            if last_time_stamp - time_stamp <= recent_time_span:
                 start_index_of_last_hour = i
                 start_time_stamp_of_last_hour = time_stamp
                 print "found most recent time at i = %i of %i, t= %.2f" % (i, len(time_stamps),  start_time_stamp_of_last_hour)
@@ -136,6 +140,7 @@ def main(filename):
     rSLN = SLN[-len(rtime):]
     rHeat = Heat[-len(rtime)-1:-1]
     rPressure = Pressure[-len(rtime)-1:-1]
+    rccg_Pressure = ccg_Pressure[-len(rtime):]
 
     volume = 0.0
     Vol = []
@@ -185,7 +190,7 @@ def main(filename):
     
     plt.figure(2)
     plt.title('Recent Temperature')
-    rline1 = plt.plot(rtime, rTC0, linewidth=linewidth)
+    rline1 = plt.plot(rtime, rTC0)
     rline2 = plt.plot(rtime, rTC1)
     rline3 = plt.plot(rtime, rTC2)
     rline4 = plt.plot(rtime, rTC3)
@@ -208,7 +213,7 @@ def main(filename):
       plt.figure(3)
       plt.title('Integrated mass flow (%.2f L of xenon gas)' % volume)
       uline1 = plt.plot(time_minutes, Vol)
-      plt.setp(uline1, color = 'b', linewidth = 0.4)
+      plt.setp(uline1, color = 'b', linewidth = linewidth)
       plt.xlabel('Time [minutes]')
       plt.ylabel('Mass Flow [L of xenon gas]')
       plt.savefig(mfpath)
@@ -233,7 +238,7 @@ def main(filename):
     plt.figure(5)
     plt.title('Pressure (10k Torr Baratron)')
     pline1 = plt.plot(time_hours, Pressure)
-    plt.setp(pline1, color = 'b', linewidth = 0.4)
+    plt.setp(pline1, color = 'b', linewidth = linewidth)
     plt.xlabel('Time [hours]')
     plt.ylabel('Pressure [Torr]')
     plt.savefig(ppath)
@@ -244,7 +249,7 @@ def main(filename):
       plt.figure(6)
       plt.title('Pressure (1k Torr Baratron)')
       pline1 = plt.plot(time_hours, Pressure2)
-      plt.setp(pline1, color = 'b', linewidth = 0.4)
+      plt.setp(pline1, color = 'b', linewidth = linewidth)
       plt.xlabel('Time [hours]')
       plt.ylabel('Pressure [Torr]')
       plt.savefig(ppath2)
@@ -255,7 +260,7 @@ def main(filename):
       plt.figure(7)
       plt.title('Mass Flow Rate')
       mfline1 = plt.plot(time_minutes, MFR)
-      plt.setp(mfline1, color = 'b', linewidth = 0.4)
+      plt.setp(mfline1, color = 'b', linewidth = linewidth)
       plt.xlabel('Time [minutes]')
       plt.ylabel('Rate [L/min xenon gas]')
       plt.savefig(mfrpath)
@@ -266,30 +271,60 @@ def main(filename):
       plt.figure(8)
       plt.title('Cold Cathode Pressure')
       mfline1 = plt.plot(time_hours, ccg_Pressure)
-      plt.setp(mfline1, color = 'b', linewidth = 0.4)
+      plt.setp(mfline1, color = 'b', linewidth = linewidth)
       plt.yscale('log')
       plt.xlabel('Time [hours]')
       plt.ylabel('Pressure [Torr]')
       plt.savefig(ccgpath)
       print "printed %s" % ccgpath
       plt.clf()
+
+      plt.figure(9)
+      plt.title('Recent Cold Cathode Pressure')
+      mfline1 = plt.plot(rtime, rccg_Pressure)
+      plt.setp(mfline1, color = 'b', linewidth = linewidth)
+      plt.yscale('log')
+      plt.xlabel('Time [hours]')
+      plt.ylabel('Pressure [Torr]')
+      plt.savefig(rccgpath)
+      print "printed %s" % rccgpath
+      plt.clf()
+   
+
    
     if len(tcg_Pressure) > 0:
-      plt.figure(9)
+      plt.figure(10)
       plt.title('TC Gauge Pressure')
       mfline1 = plt.plot(time_hours, tcg_Pressure)
-      plt.setp(mfline1, color = 'b', linewidth = 0.4)
+      plt.setp(mfline1, color = 'b', linewidth = linewidth)
       plt.xlabel('Time [hours]')
       plt.ylabel('Signal [V]')
       plt.savefig(tcgpath)
       print "printed %s" % tcgpath
       plt.clf()
 
+    plot_time = datetime.datetime.now()
+
+    outfile = file("%s/log_%s.txt" % (directory, basename), 'w')
+    outfile.write("CC pressure [Torr]: %.2e \n" % ccg_Pressure[-1])
+    outfile.write("TC pressure [V]: %.3f \n" % tcg_Pressure[-1])
+    outfile.write("1k Torr Baratron [Torr]: %.2f \n" % Pressure2[-1])
+    outfile.write("10k Torr Baratron [Torr]: %.2f \n" % Pressure[-1])
+    outfile.write("Cu bot [K]: %.3f \n" % TC0[-1])
+    outfile.write("Cell top [K]: %.3f \n" % TC1[-1])
+    outfile.write("Cell mid [K]: %.3f \n" % TC2[-1])
+    outfile.write("Cell bot [K]: %.3f \n" % TC3[-1])
+    outfile.write("Cu top [K]: %.3f \n" % TC4[-1])
+    outfile.write("Ambient [K]: %.3f \n" % TC5[-1])
+    outfile.write("Plotting script run time: %s \n" % plot_time)
+    outfile.write("Last time being logged with labview: %s \n" % datetime.datetime.fromtimestamp(time_stamps[-1]- 2082844800))
+    outfile.close()
+
 
     print "done!!!!"
     
     # make a string that selects all plots that were produced:
-    file_string = os.path.join(directory, "*%s*.%s" % (basename, filetype))
+    file_string = os.path.join(directory, "*%s*" % basename)
     #print file_string
     return file_string
     
