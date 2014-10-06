@@ -35,8 +35,6 @@ def datalog():
         #print current_name
         shutil.copyfile(plot_filename, current_name)
     #threading.Timer(600, datalog).start()
-    
-    
-    
 
 datalog()
+
