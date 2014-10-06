@@ -8,26 +8,28 @@ plots that are produced.
 Plot names = DataType_Date_Index*.jpeg
 
 *.dat file columns:
-1: time [seconds]
-2: TC0 [K]
-3: TC1
-4: TC2 
-5: TC3 
-6: TC4
-7: TC5
-8: PLN valve status
-9: SLN valve status
-10: Heater 
-11: UncorrMFR
-12: MFR
-13: Pressure from 10k Torr baratron [Torr]
-14: Pressure from 1k Torr baratron [Torr]
+0: time [seconds]
+1: TC0 [K]
+2: TC1
+3: TC2 
+4: TC3 
+5: TC4
+6: TC5
+7: PLN valve status
+8: SLN valve status
+9: Heater 
+10: Mass flow rate (uncorrected)
+11: Mass flow rate
+12: Pressure from 10k Torr baratron [Torr]
+13: Pressure from 1k Torr baratron [Torr]
+14: Cold cathode gauge [micro Torr]
+15: TC gauge [Volts]
 """
 
 import os
 import sys
 import matplotlib.pyplot as plt
-import numpy as np
+#import numpy as np
 
 
 def main(filename):
@@ -65,7 +67,6 @@ def main(filename):
     TC4 = []
     TC5 = []
     MFR = []
-    Vol = []
     PLN = []
     SLN = []
     Heat = []
@@ -75,7 +76,7 @@ def main(filename):
     tcg_Pressure = []
 
     # read values from input file:
-    for line in testfile:
+    for (i_line, line) in enumerate(testfile):
         split_line = line.split()
         data = []
         time_stamps.append(float(split_line[0]))
@@ -85,14 +86,16 @@ def main(filename):
         TC3.append(float(split_line[4]))
         TC4.append(float(split_line[5]))
         TC5.append(float(split_line[6]))
-        MFR.append(float(split_line[10]))
         PLN.append(0.8*float(split_line[7]))
         SLN.append(float(split_line[8]))
         Heat.append(1.2*float(split_line[9]))
+        MFR.append(float(split_line[10]))
         Pressure.append(float(split_line[12]))
         Pressure2.append(float(split_line[13]))
-        ccg_Pressure.append(float(split_line[14]))
+        ccg_Pressure.append(float(split_line[14])/1e6)
         tcg_Pressure.append(float(split_line[15]))    
+        #if i_line % 1000 == 0:
+        #  print "line %i" % i_line
 
     start_index_of_last_hour = None
     start_time_stamp_of_last_hour = None
@@ -109,6 +112,9 @@ def main(filename):
                 print "found most recent time at i = %i of %i, t= %.2f" % (i, len(time_stamps),  start_time_stamp_of_last_hour)
                 print "last timestamp = %.2f, diff = %.2f" % (last_time_stamp, last_time_stamp - start_time_stamp_of_last_hour )
                 print "%i recent time stamps" % (len(time_stamps) - start_index_of_last_hour - 1)
+
+    if last_time_stamp - time_stamps[0]  <= 0.0:
+        return
 
     # if the run is too short, recent times start at t0:
     if start_time_stamp_of_last_hour == None:
@@ -131,19 +137,30 @@ def main(filename):
     rHeat = Heat[-len(rtime)-1:-1]
     rPressure = Pressure[-len(rtime)-1:-1]
 
-    for i in time_minutes:
-        if i == time_minutes[-1]:
-            volume = np.trapz(MFR, time_minutes, 0.5)
-            Vol.append(volume)
-        else:
-            volume = np.trapz(MFR[0:time_minutes.index(i)+1],time_minutes[0:time_minutes.index(i)+1], 0.5)
-            Vol.append(volume)
+    volume = 0.0
+    Vol = []
+    if len(MFR) > 1:
+      print "integrating %i mass flow rate points..." % len(MFR)
+      for (i_time, minute_time) in enumerate(time_minutes):
+          if i_time == len(time_minutes)-1:
+              #volume = np.trapz(MFR, time_minutes, 0.5)
+              volume += MFR[i_time]
+              Vol.append(volume)
+          else:
+              #volume = np.trapz(MFR[0:i_time+1],time_minutes[0:i_time+1], 0.5)
+              volume += MFR[i_time]
+              Vol.append(volume)
+              #if i_time % 100 == 0:
+              #  print "mfr time %i" % i_time
 
-    sum_mass_flow_rate = 0.0
-    for rate in MFR: sum_mass_flow_rate += rate
-    average_flow_rate = sum_mass_flow_rate / len(MFR)
-    print "average flow rate: %.4f L/min" % average_flow_rate
+      print "done with numpy integral"
+      sum_mass_flow_rate = 0.0
+      for rate in MFR: sum_mass_flow_rate += rate
+      average_flow_rate = sum_mass_flow_rate / len(MFR)
+      print "average flow rate: %.4f L/min" % average_flow_rate
     
+    print "starting plots..."
+
     linewidth=1
     plt.figure(1)
     plt.title('Temperature')
@@ -159,10 +176,11 @@ def main(filename):
     plt.setp(line4, color = 'm', linewidth = linewidth, label = 'CellBot')
     plt.setp(line5, color = 'k', linewidth = linewidth, label = 'CuTop')
     plt.setp(line6, color = 'c', linewidth = linewidth, label = 'Ambient')
-    plt.xlabel('Time in hrs')
+    plt.xlabel('Time [hours]')
     plt.ylabel('Temperature [K]')
     legend = plt.legend(loc='best', shadow = False)
     plt.savefig(tpath)
+    print "printed %s" % tpath
     plt.clf()
     
     plt.figure(2)
@@ -183,17 +201,20 @@ def main(filename):
     plt.ylabel('Temperature [K]')
     plt.legend(loc='best', shadow = False)
     plt.savefig(rtpath)
+    print "printed %s" % rtpath
     plt.clf()
     
-    plt.figure(3)
-    plt.title('Integrated mass flow (%.2f L of xenon gas)' % volume)
-    uline1 = plt.plot(time_minutes, Vol)
-    plt.setp(uline1, color = 'b', linewidth = 0.4)
-    plt.xlabel('Time [minutes]')
-    plt.ylabel('Mass Flow [L of xenon gas]')
-    plt.savefig(mfpath)
-    plt.clf()
-    
+    if len(Vol) > 0:
+      plt.figure(3)
+      plt.title('Integrated mass flow (%.2f L of xenon gas)' % volume)
+      uline1 = plt.plot(time_minutes, Vol)
+      plt.setp(uline1, color = 'b', linewidth = 0.4)
+      plt.xlabel('Time [minutes]')
+      plt.ylabel('Mass Flow [L of xenon gas]')
+      plt.savefig(mfpath)
+      print "printed %s" % mfpath
+      plt.clf()
+      
     plt.figure(4)
     plt.title('Valves')
     vline1 = plt.plot(time_hours, PLN)
@@ -202,56 +223,67 @@ def main(filename):
     plt.setp(vline1, color = 'r', linewidth = 2.0, label = 'PLN Valve', ls = '-')
     plt.setp(vline2, color = 'b', linewidth = 2.0, label = 'SLN Vavle', ls = '--')
     plt.setp(vline3, color = 'g', linewidth = 2.0, label = 'Heater', ls = '--')
-    plt.xlabel('Time in hrs')
+    plt.xlabel('Time [hours]')
     plt.legend(loc = 'center right', shadow = False)
     plt.axis([0, time_hours[-1]*1.1, -0.2, 1.2])
     plt.savefig(vpath)
+    print "printed %s" % vpath
     plt.clf()
     
     plt.figure(5)
     plt.title('Pressure (10k Torr Baratron)')
     pline1 = plt.plot(time_hours, Pressure)
     plt.setp(pline1, color = 'b', linewidth = 0.4)
-    plt.xlabel('Time [hrs]')
+    plt.xlabel('Time [hours]')
     plt.ylabel('Pressure [Torr]')
     plt.savefig(ppath)
+    print "printed %s" % ppath
     plt.clf()
 
-    plt.figure(6)
-    plt.title('Pressure (1k Torr Baratron)')
-    pline1 = plt.plot(time_hours, Pressure2)
-    plt.setp(pline1, color = 'b', linewidth = 0.4)
-    plt.xlabel('Time [hrs]')
-    plt.ylabel('Pressure [Torr]')
-    plt.savefig(ppath2)
-    plt.clf()
-    
-    plt.figure(7)
-    plt.title('Mass Flow Rate')
-    mfline1 = plt.plot(time_minutes, MFR)
-    plt.setp(mfline1, color = 'b', linewidth = 0.4)
-    plt.xlabel('Time [minutes]')
-    plt.ylabel('Rate [L/min xenon gas]')
-    plt.savefig(mfrpath)
-    plt.clf()
+    if len(Pressure2) > 0:
+      plt.figure(6)
+      plt.title('Pressure (1k Torr Baratron)')
+      pline1 = plt.plot(time_hours, Pressure2)
+      plt.setp(pline1, color = 'b', linewidth = 0.4)
+      plt.xlabel('Time [hours]')
+      plt.ylabel('Pressure [Torr]')
+      plt.savefig(ppath2)
+      print "printed %s" % ppath2
+      plt.clf()
+      
+    if len(MFR) > 0:
+      plt.figure(7)
+      plt.title('Mass Flow Rate')
+      mfline1 = plt.plot(time_minutes, MFR)
+      plt.setp(mfline1, color = 'b', linewidth = 0.4)
+      plt.xlabel('Time [minutes]')
+      plt.ylabel('Rate [L/min xenon gas]')
+      plt.savefig(mfrpath)
+      print "printed %s" % mfrpath
+      plt.clf()
 
-    plt.figure(8)
-    plt.title('Cold Cathode Pressure')
-    mfline1 = plt.plot(time_minutes, ccg_Pressure)
-    plt.setp(mfline1, color = 'b', linewidth = 0.4)
-    plt.xlabel('Time [minutes]')
-    plt.ylabel('Pressure [10^-6 Torr]')
-    plt.savefig(ccgpath)
-    plt.clf()
- 
-    plt.figure(9)
-    plt.title('TC Gauge Pressure')
-    mfline1 = plt.plot(time_minutes, tcg_Pressure)
-    plt.setp(mfline1, color = 'b', linewidth = 0.4)
-    plt.xlabel('Time [minutes]')
-    plt.ylabel('Signal [V]')
-    plt.savefig(tcgpath)
-    plt.clf()
+    if len(ccg_Pressure) > 0:
+      plt.figure(8)
+      plt.title('Cold Cathode Pressure')
+      mfline1 = plt.plot(time_hours, ccg_Pressure)
+      plt.setp(mfline1, color = 'b', linewidth = 0.4)
+      plt.yscale('log')
+      plt.xlabel('Time [hours]')
+      plt.ylabel('Pressure [Torr]')
+      plt.savefig(ccgpath)
+      print "printed %s" % ccgpath
+      plt.clf()
+   
+    if len(tcg_Pressure) > 0:
+      plt.figure(9)
+      plt.title('TC Gauge Pressure')
+      mfline1 = plt.plot(time_hours, tcg_Pressure)
+      plt.setp(mfline1, color = 'b', linewidth = 0.4)
+      plt.xlabel('Time [hours]')
+      plt.ylabel('Signal [V]')
+      plt.savefig(tcgpath)
+      print "printed %s" % tcgpath
+      plt.clf()
 
 
     print "done!!!!"
@@ -265,5 +297,6 @@ if __name__ == '__main__':
     if len(sys.argv) < 2:
         print "argument:  *.dat data file name"
         sys.exit()
-    filename = sys.argv[1]
-    main(filename)
+
+    for filename in sys.argv[1:]:
+        main(filename)
