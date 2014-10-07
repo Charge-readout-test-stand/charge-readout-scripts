@@ -24,7 +24,7 @@ Plot names = DataType_Date_Index*.jpeg
 13: Pressure from 1k Torr baratron [Torr]
 14: Cold cathode gauge [micro Torr]
 15: TC gauge [Volts]
-16: Bottle weight [V]
+16: Bottle weight [kg]
 """
 
 import os
@@ -104,7 +104,8 @@ def main(filename):
         try:
             bottle_mass.append(float(split_line[16]))    
         except IndexError:
-            print "column 16 doesn't exist!"
+            #print "column 16 doesn't exist!"
+            pass
         #if i_line % 1000 == 0:
         #  print "line %i" % i_line
 
@@ -132,9 +133,9 @@ def main(filename):
         start_index_of_last_hour = 0
         start_time_stamp_of_last_hour = time_stamps[0]
 
-    rtime = time_hours[start_index_of_last_hour:-1]
+    rtime = time_hours[start_index_of_last_hour:]
     # subtract off t0 from every time
-    #rtime[:] = [x - time_minutes[0] for x in rtime]
+    #rtime[:] = [x - time_hours[0] for x in rtime]
 
     # open a log file for writing:
     outfile = file("%s/log_%s.txt" % (directory, basename), 'w')
@@ -149,8 +150,8 @@ def main(filename):
     rMFR = MFR[-len(rtime):]
     rPLN = PLN[-len(rtime):]
     rSLN = SLN[-len(rtime):]
-    rHeat = Heat[-len(rtime)-1:-1]
-    rPressure = Pressure[-len(rtime)-1:-1]
+    rHeat = Heat[-len(rtime):]
+    rPressure = Pressure[-len(rtime):]
     rccg_Pressure = ccg_Pressure[-len(rtime):]
 
     volume = 0.0
@@ -213,7 +214,7 @@ def main(filename):
     plt.setp(rline4, color = 'm', linewidth = linewidth, label = 'CellBot')
     plt.setp(rline5, color = 'k', linewidth = linewidth, label = 'CuTop')
     plt.setp(rline6, color = 'c', linewidth = linewidth, label = 'Ambient')
-    plt.xlabel('Time [minutes]')
+    plt.xlabel('Time [hours]')
     plt.ylabel('Temperature [K]')
     plt.legend(loc='best', shadow = False)
     plt.savefig(rtpath)
@@ -232,12 +233,12 @@ def main(filename):
       plt.clf()
       
     plt.figure(4)
-    plt.title('Valves')
+    plt.title('Valves / Heaters')
     vline1 = plt.plot(time_hours, PLN)
-    vline2 = plt.plot(time_hours, SLN)
+    #vline2 = plt.plot(time_hours, SLN)
     vline3 = plt.plot(time_hours, Heat)
-    plt.setp(vline1, color = 'r', linewidth = 2.0, label = 'PLN Valve', ls = '-')
-    plt.setp(vline2, color = 'b', linewidth = 2.0, label = 'SLN Vavle', ls = '--')
+    plt.setp(vline1, color = 'r', linewidth = 2.0, label = 'LN Valve', ls = '-')
+    #plt.setp(vline2, color = 'b', linewidth = 2.0, label = 'LN Valve 2', ls = '--')
     plt.setp(vline3, color = 'g', linewidth = 2.0, label = 'Heater', ls = '--')
     plt.xlabel('Time [hours]')
     plt.legend(loc = 'center right', shadow = False)
@@ -320,11 +321,11 @@ def main(filename):
         mfline1 = plt.plot(time_hours, bottle_mass)
         plt.setp(mfline1, color = 'b', linewidth = linewidth)
         plt.xlabel('Time [hours]')
-        plt.ylabel('Signal [V]')
+        plt.ylabel('Mass [kg]')
         plt.savefig(bottle_mass_path)
         print "printed %s" % bottle_mass_path
         plt.clf()
-        outfile.write("Xenon bottle mass [V]: %.2f" % bottle_mass[-1])
+        outfile.write("Xenon bottle mass [kg]: %.3f \n" % bottle_mass[-1])
 
 
 
@@ -337,14 +338,14 @@ def main(filename):
     outfile.write("Cu top [K]: %.3f \n" % TC4[-1])
     outfile.write("Ambient [K]: %.3f \n" % TC5[-1])
     outfile.write("Plotting script run time: %s \n" % plot_time)
-    outfile.write("Last time being logged with labview: %s \n" % datetime.datetime.fromtimestamp(time_stamps[-1]- 2082844800))
+    outfile.write("Last labview time stamp: %s \n" % datetime.datetime.fromtimestamp(time_stamps[-1]- 2082844800))
     outfile.close()
 
 
     print "done!!!!"
     
     # make a string that selects all plots that were produced:
-    file_string = os.path.join(directory, "*%s*" % basename)
+    file_string = os.path.join(directory, "*%s.*" % basename)
     #print file_string
     return file_string
     
