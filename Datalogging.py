@@ -14,7 +14,7 @@ def datalog():
         print "trying alexis' path..."
         directory = '/Users/alexis/Downloads/'
     files = os.path.join(directory, '*.dat')
-    print files
+    #print files
     flist = glob.glob(files)
     # use the last file, in alphabetical order -- this will be the most recent
     testfile = flist[-1]
@@ -25,14 +25,14 @@ def datalog():
         current_plot_dir = '/Users/alexis/Downloads/'
     plot_filenames = glob.glob(plot_string)
     for plot_filename in plot_filenames:
-        #print plot
+        #print plot_filename
         basename = os.path.basename(plot_filename)
         #print basename
         filetype =  os.path.splitext(basename)[1]
         current_name = basename.split('_')[0] 
         current_name += filetype
         current_name = os.path.join(current_plot_dir, current_name)
-        #print current_name
+        #print "%s --> %s" % (basename, current_name)
         shutil.copyfile(plot_filename, current_name)
     #threading.Timer(600, datalog).start()
 
