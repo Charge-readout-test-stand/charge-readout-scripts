@@ -50,7 +50,7 @@ def main(filename):
     
     filetype = 'jpeg'    
     tpath = os.path.join(directory, "Temp_%s.%s" % (basename, filetype))
-    rtpath = os.path.join(directory, "Temp-recent_%s_.%s" % (basename, filetype))
+    rtpath = os.path.join(directory, "Temp-recent_%s.%s" % (basename, filetype))
     mfpath = os.path.join(directory, "MassFlow_%s.%s" % (basename, filetype))
     vpath = os.path.join(directory, "ValveStates_%s.%s" % (basename, filetype))
     ppath = os.path.join(directory, "Pressure-10kTorr_%s.%s" % (basename, filetype))
