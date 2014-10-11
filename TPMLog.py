@@ -58,6 +58,8 @@ def main(filename):
     mfrpath = os.path.join(directory, "MassFlowRate_%s.%s" % (basename, filetype))
     ccgpath = os.path.join(directory, "CCGauge_%s.%s" % (basename, filetype))
     rccgpath = os.path.join(directory, "CCGauge-recent_%s.%s" % (basename, filetype))
+    ccgpath_log = os.path.join(directory, "CCGauge-log_%s.%s" % (basename, filetype))
+    rccgpath_log = os.path.join(directory, "CCGauge-log-recent_%s.%s" % (basename, filetype))
     tcgpath = os.path.join(directory, "TCGauge_%s.%s" % (basename, filetype))
     bottle_mass_path = os.path.join(directory, "BottleMass_%s.%s" % (basename, filetype))
 
@@ -181,6 +183,7 @@ def main(filename):
     linewidth=1
     plt.figure(1)
     plt.title('Temperature')
+    plt.grid(b=True)
     line1 = plt.plot(time_hours, TC0)
     line2 = plt.plot(time_hours, TC1)
     line3 = plt.plot(time_hours, TC2)
@@ -202,6 +205,7 @@ def main(filename):
     
     plt.figure(2)
     plt.title('Recent Temperature')
+    plt.grid(b=True)
     rline1 = plt.plot(rtime, rTC0)
     rline2 = plt.plot(rtime, rTC1)
     rline3 = plt.plot(rtime, rTC2)
@@ -223,6 +227,7 @@ def main(filename):
     
     if len(Vol) > 0:
       plt.figure(3)
+      plt.grid(b=True)
       plt.title('Integrated mass flow (%.2f L of xenon gas)' % volume)
       uline1 = plt.plot(time_minutes, Vol)
       plt.setp(uline1, color = 'b', linewidth = linewidth)
@@ -233,6 +238,7 @@ def main(filename):
       plt.clf()
       
     plt.figure(4)
+    plt.grid(b=True)
     plt.title('Valves / Heaters')
     vline1 = plt.plot(time_hours, PLN)
     #vline2 = plt.plot(time_hours, SLN)
@@ -248,6 +254,7 @@ def main(filename):
     plt.clf()
     
     plt.figure(5)
+    plt.grid(b=True)
     plt.title('Pressure (10k Torr Baratron)')
     pline1 = plt.plot(time_hours, Pressure)
     plt.setp(pline1, color = 'b', linewidth = linewidth)
@@ -259,6 +266,7 @@ def main(filename):
 
     if len(Pressure2) > 0:
       plt.figure(6)
+      plt.grid(b=True)
       plt.title('Pressure (1k Torr Baratron)')
       pline1 = plt.plot(time_hours, Pressure2)
       plt.setp(pline1, color = 'b', linewidth = linewidth)
@@ -271,6 +279,7 @@ def main(filename):
     if len(MFR) > 0:
       plt.figure(7)
       plt.title('Mass Flow Rate')
+      plt.grid(b=True)
       mfline1 = plt.plot(time_minutes, MFR)
       plt.setp(mfline1, color = 'b', linewidth = linewidth)
       plt.xlabel('Time [minutes]')
@@ -282,29 +291,58 @@ def main(filename):
     if len(ccg_Pressure) > 0:
         outfile.write("CC pressure [Torr]: %.2e \n" % ccg_Pressure[-1])
         plt.figure(8)
+        plt.grid(b=True)
         plt.title('Cold Cathode Pressure')
         mfline1 = plt.plot(time_hours, ccg_Pressure)
         plt.setp(mfline1, color = 'b', linewidth = linewidth)
         plt.yscale('log')
         plt.xlabel('Time [hours]')
         plt.ylabel('Pressure [Torr]')
-        plt.savefig(ccgpath)
-        print "printed %s" % ccgpath
+        plt.savefig(ccgpath_log)
+        print "printed %s" % ccgpath_log
         plt.clf()
 
         plt.figure(9)
+        plt.grid(b=True)
         plt.title('Recent Cold Cathode Pressure')
         mfline1 = plt.plot(rtime, rccg_Pressure)
         plt.setp(mfline1, color = 'b', linewidth = linewidth)
         plt.yscale('log')
         plt.xlabel('Time [hours]')
         plt.ylabel('Pressure [Torr]')
+        plt.savefig(rccgpath_log)
+        print "printed %s" % rccgpath_log
+        plt.clf()
+
+        # convert to micro torr for the linear plot:
+        for i in xrange(len(ccg_Pressure)): ccg_Pressure[i]*=1e6 
+        for i in xrange(len(rccg_Pressure)): rccg_Pressure[i]*=1e6 
+
+        plt.figure(10)
+        plt.grid(b=True)
+        plt.title('Cold Cathode Pressure')
+        mfline1 = plt.plot(time_hours, ccg_Pressure)
+        plt.setp(mfline1, color = 'b', linewidth = linewidth)
+        plt.xlabel('Time [hours]')
+        plt.ylabel('Pressure [10^-6 Torr]')
+        plt.savefig(ccgpath)
+        print "printed %s" % ccgpath
+        plt.clf()
+
+        plt.figure(11)
+        plt.grid(b=True)
+        plt.title('Recent Cold Cathode Pressure')
+        mfline1 = plt.plot(rtime, rccg_Pressure)
+        plt.setp(mfline1, color = 'b', linewidth = linewidth)
+        plt.xlabel('Time [hours]')
+        plt.ylabel('Pressure [10^-6 Torr]')
         plt.savefig(rccgpath)
         print "printed %s" % rccgpath
         plt.clf()
    
     if len(tcg_Pressure) > 0:
-        plt.figure(10)
+        plt.figure(12)
+        plt.grid(b=True)
         plt.title('TC Gauge Pressure')
         mfline1 = plt.plot(time_hours, tcg_Pressure)
         plt.setp(mfline1, color = 'b', linewidth = linewidth)
@@ -316,7 +354,8 @@ def main(filename):
         outfile.write("TC pressure [V]: %.3f \n" % tcg_Pressure[-1])
 
     if len(bottle_mass) > 0:
-        plt.figure(11)
+        plt.figure(13)
+        plt.grid(b=True)
         plt.title('Xenon bottle mass')
         mfline1 = plt.plot(time_hours, bottle_mass)
         plt.setp(mfline1, color = 'b', linewidth = linewidth)
