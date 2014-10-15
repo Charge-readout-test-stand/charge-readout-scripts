@@ -289,30 +289,34 @@ def main(filename):
       plt.clf()
 
     if len(ccg_Pressure) > 0:
-        outfile.write("CC pressure [Torr]: %.2e \n" % ccg_Pressure[-1])
-        plt.figure(8)
-        plt.grid(b=True)
-        plt.title('Cold Cathode Pressure')
-        mfline1 = plt.plot(time_hours, ccg_Pressure)
-        plt.setp(mfline1, color = 'b', linewidth = linewidth)
-        plt.yscale('log')
-        plt.xlabel('Time [hours]')
-        plt.ylabel('Pressure [Torr]')
-        plt.savefig(ccgpath_log)
-        print "printed %s" % ccgpath_log
-        plt.clf()
 
-        plt.figure(9)
-        plt.grid(b=True)
-        plt.title('Recent Cold Cathode Pressure')
-        mfline1 = plt.plot(rtime, rccg_Pressure)
-        plt.setp(mfline1, color = 'b', linewidth = linewidth)
-        plt.yscale('log')
-        plt.xlabel('Time [hours]')
-        plt.ylabel('Pressure [Torr]')
-        plt.savefig(rccgpath_log)
-        print "printed %s" % rccgpath_log
-        plt.clf()
+        try:
+            outfile.write("CC pressure [Torr]: %.2e \n" % ccg_Pressure[-1])
+            plt.figure(8)
+            plt.grid(b=True)
+            plt.title('Cold Cathode Pressure')
+            mfline1 = plt.plot(time_hours, ccg_Pressure)
+            plt.setp(mfline1, color = 'b', linewidth = linewidth)
+            plt.yscale('log')
+            plt.xlabel('Time [hours]')
+            plt.ylabel('Pressure [Torr]')
+            plt.savefig(ccgpath_log)
+            print "printed %s" % ccgpath_log
+            plt.clf()
+
+            plt.figure(9)
+            plt.grid(b=True)
+            plt.title('Recent Cold Cathode Pressure')
+            mfline1 = plt.plot(rtime, rccg_Pressure)
+            plt.setp(mfline1, color = 'b', linewidth = linewidth)
+            plt.yscale('log')
+            plt.xlabel('Time [hours]')
+            plt.ylabel('Pressure [Torr]')
+            plt.savefig(rccgpath_log)
+            print "printed %s" % rccgpath_log
+            plt.clf()
+        except ValueError:
+            pass
 
         # convert to micro torr for the linear plot:
         for i in xrange(len(ccg_Pressure)): ccg_Pressure[i]*=1e6 
