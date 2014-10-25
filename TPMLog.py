@@ -25,7 +25,7 @@ Plot names = DataType_Date_Index*.jpeg
 14: Cold cathode gauge [micro Torr]
 15: TC gauge [Volts]
 16: Bottle weight [kg]
-18: Capacity [pF]
+17: Capacity [pF]
 """
 
 import os
@@ -106,11 +106,16 @@ def main(filename):
         Pressure2.append(float(split_line[13]))
         ccg_Pressure.append(float(split_line[14])/1e6)
         tcg_Pressure.append(float(split_line[15]))    
-        bottle_mass.append(float(split_line[16])) 
+        # special handling for old files
         try:   
-         capacity.append(float(split_line[17]))
+            bottle_mass.append(float(split_line[16])) 
         except IndexError:
             #print "column 16 doesn't exist!"
+            pass
+        try:   
+            capacity.append(float(split_line[17]))
+        except IndexError:
+            #print "column 17 doesn't exist!"
             pass
         #if i_line % 1000 == 0:
         #  print "line %i" % i_line
