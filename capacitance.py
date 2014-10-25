@@ -10,11 +10,11 @@ for i in LXeH:
     c2 = 1*8.854*(10**-12)*0.0248286/(0.02464-i)
     cpct.append(10**12*(1/(1/c1 + 1/c2)))
 
-#plt.plot(LXeH, cpct)
-#plt.title('Capacitance vs. Height')
-#plt.xlabel('LXe height in m')
-#plt.ylabel('Capacitance in pF')
-#plt.show()
+plt.plot(LXeH, cpct)
+plt.title('Capacitance vs. Height')
+plt.xlabel('LXe height in m')
+plt.ylabel('Capacitance in pF')
+plt.show()
 
 def LXe_height(volume):
     if volume > 0.00126:
