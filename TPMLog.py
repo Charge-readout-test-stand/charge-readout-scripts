@@ -25,7 +25,7 @@ Plot names = DataType_Date_Index*.jpeg
 14: Cold cathode gauge [micro Torr]
 15: TC gauge [Volts]
 16: Bottle weight [kg]
-18: Capacity [pF]
+18: Capacitance [pF]
 """
 
 import os
@@ -63,7 +63,7 @@ def main(filename):
     rccgpath_log = os.path.join(directory, "CCGauge-log-recent_%s.%s" % (basename, filetype))
     tcgpath = os.path.join(directory, "TCGauge_%s.%s" % (basename, filetype))
     bottle_mass_path = os.path.join(directory, "BottleMass_%s.%s" % (basename, filetype))
-    capacity_path = os.path.join(directory, "Capacity_%s.%s" % (basename, filetype))
+    capacitance_path = os.path.join(directory, "Capacitance_%s.%s" % (basename, filetype))
 
     time_stamps = [] # labview timestamp, in seconds
     time_hours = [] # elapsed time in hours
@@ -85,7 +85,7 @@ def main(filename):
     ccg_Pressure = []
     tcg_Pressure = []
     bottle_mass = []
-    capacity = []
+    capacitance = []
 
     # read values from input file:
     for (i_line, line) in enumerate(testfile):
@@ -108,7 +108,7 @@ def main(filename):
         tcg_Pressure.append(float(split_line[15]))    
         bottle_mass.append(float(split_line[16])) 
         try:   
-         capacity.append(float(split_line[17]))
+         capacitance.append(float(split_line[17]))
         except IndexError:
             #print "column 16 doesn't exist!"
             pass
@@ -374,18 +374,18 @@ def main(filename):
         plt.clf()
         outfile.write("Xenon bottle mass [kg]: %.3f \n" % bottle_mass[-1])
 
-    if len(capacity) > 0:
+    if len(capacitance) > 0:
         plt.figure(14)
         plt.grid(b=True)
-        plt.title('Xenon cell capacity')
-        mfline1 = plt.plot(time_hours, capacity)
+        plt.title('Xenon cell capacitance')
+        mfline1 = plt.plot(time_hours, capacitance)
         plt.setp(mfline1, color = 'b', linewidth = linewidth)
         plt.xlabel('Time [hours]')
-        plt.ylabel('Capacity [pF]')
-        plt.savefig(capacity_path)
-        print "printed %s" % capacity_path
+        plt.ylabel('Capacitance [pF]')
+        plt.savefig(capacitance_path)
+        print "printed %s" % capacitance_path
         plt.clf()
-        outfile.write("Xenon cell capacity [pF]: %.3f \n" % capacity[-1])
+        outfile.write("Xenon cell capacitance [pF]: %.3f \n" % capacitance[-1])
 
 
     outfile.write("1k Torr Baratron [Torr]: %.2f \n" % Pressure2[-1])
