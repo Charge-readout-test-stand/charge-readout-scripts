@@ -19,7 +19,7 @@ Plot names = DataType_Date_Index*.jpeg
 8: SLN valve status
 9: Heater 
 10: Mass flow rate (uncorrected)
-11: Mass flow rate
+11: Mass flow rate [Liters of Xe gas]
 12: Pressure from 10k Torr baratron [Torr]
 13: Pressure from 1k Torr baratron [Torr]
 14: Cold cathode gauge [micro Torr]
@@ -167,11 +167,13 @@ def main(filename):
       for (i_time, minute_time) in enumerate(time_minutes):
           if i_time == len(time_minutes)-1:
               #volume = np.trapz(MFR, time_minutes, 0.5)
-              volume += MFR[i_time]
+              volume += MFR[i_time]*5.89
+              # the factor 5.89 is the density of Xe gas [g/L] at 0C
               Vol.append(volume)
           else:
               #volume = np.trapz(MFR[0:i_time+1],time_minutes[0:i_time+1], 0.5)
-              volume += MFR[i_time]
+              volume += MFR[i_time]*5.89
+              # the factor 5.89 is the density of Xe gas [g/L] at 0C
               Vol.append(volume)
               #if i_time % 100 == 0:
               #  print "mfr time %i" % i_time
@@ -232,11 +234,11 @@ def main(filename):
     if len(Vol) > 0:
       plt.figure(3)
       plt.grid(b=True)
-      plt.title('Integrated mass flow (%.2f L of xenon gas)' % volume)
+      plt.title('Integrated mass flow (%.2f g of xenon)' % volume)
       uline1 = plt.plot(time_minutes, Vol)
       plt.setp(uline1, color = 'b', linewidth = linewidth)
       plt.xlabel('Time [minutes]')
-      plt.ylabel('Mass Flow [L of xenon gas]')
+      plt.ylabel('Mass Flow [g of xenon]')
       plt.savefig(mfpath)
       print "printed %s" % mfpath
       plt.clf()
