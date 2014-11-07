@@ -14,7 +14,7 @@ Plot names = DataType_Date_Index*.jpeg
 3: TC2 
 4: TC3 
 5: TC4
-6: TC5
+6: T_ambient
 7: PLN valve status
 8: SLN valve status
 9: Heater 
@@ -25,7 +25,13 @@ Plot names = DataType_Date_Index*.jpeg
 14: Cold cathode gauge [micro Torr]
 15: TC gauge [Volts]
 16: Bottle weight [kg]
-18: Capacitance [pF]
+17: Capacitance [pF]
+18: LN F/T inlet TC [K]
+19: LN F/T outlet TC [K]
+20: T_max set point [K]
+21: T_max set point offset [K]
+22: T_min set point [K]
+23: T_min set point offset [K]
 """
 
 import os
@@ -33,25 +39,94 @@ import sys
 import datetime
 import matplotlib.pyplot as plt
 #import numpy as np
+  
+def plot_temperatures(filename, title, time_hours, TC0=None, TC1=None, TC2=None,
+    TC3=None, TC4=None, T_ambient=None, T_LN_in=None, T_LN_out=None, T_max_set=None,
+    T_min_set=None, first_index=0):
 
+    """
+    This function makes a temperature plot
+    """
+
+    linewidth=1
+
+    plt.figure(1)
+    plt.title(title)
+    plt.grid(b=True)
+
+    # plot the lines
+
+    if TC0 and len(TC0) > 0:
+        line1 = plt.plot(time_hours[first_index:], TC0[first_index:])
+        plt.setp(line1, color = 'r', linewidth = linewidth, label = 'Cu Bot')
+
+    if TC1 and len(TC1) > 0:
+        line2 = plt.plot(time_hours[first_index:], TC1[first_index:])
+        plt.setp(line2, color = 'b', linewidth = linewidth, label = 'CellTop')
+
+    if TC2 and len(TC2) > 0:
+        line3 = plt.plot(time_hours[first_index:], TC2[first_index:])
+        plt.setp(line3, color = 'g', linewidth = linewidth, label = 'CellMid')
+
+    if TC3 and len(TC3) > 0:
+        line4 = plt.plot(time_hours[first_index:], TC3[first_index:])
+        plt.setp(line4, color = 'm', linewidth = linewidth, label = 'CellBot')
+
+    if TC4 and len(TC4) > 0:
+        line5 = plt.plot(time_hours[first_index:], TC4[first_index:])
+        plt.setp(line5, color = 'k', linewidth = linewidth, label = 'Cu Top')
+
+    if T_ambient and len(T_ambient) > 0:
+        line6 = plt.plot(time_hours[first_index:], T_ambient[first_index:])
+        plt.setp(line6, color = 'c', linewidth = linewidth, label = 'Ambient')
+
+    if T_LN_in and len(T_LN_in) > 0:
+        line7 = plt.plot(time_hours[first_index:], T_LN_in[first_index:])
+        plt.setp(line7, color = 'purple', linewidth = linewidth, label = 'LN in')
+
+    if T_LN_out and len(T_LN_out) > 0:
+        line8 = plt.plot(time_hours[first_index:], T_LN_out[first_index:])
+        plt.setp(line8, color = 'royalblue', linewidth = linewidth, label = 'LN out')
+
+    if T_max_set and len(T_max_set) > 0:
+        line9 = plt.plot(time_hours[first_index:], T_max_set[first_index:])
+        plt.setp(line9, color = 'r', linewidth = linewidth, label = 'T_max', ls = '--')
+
+    if T_min_set and len(T_min_set) > 0:
+        line10 = plt.plot(time_hours[first_index:], T_min_set[first_index:])
+        plt.setp(line10, color = 'b', linewidth = linewidth, label = 'T_min', ls = '--')
+
+    plt.xlabel('Time [hours]')
+    plt.ylabel('Temperature [K]')
+    legend = plt.legend(loc='best', shadow = False, fontsize='medium', ncol=2)
+    plt.savefig(filename)
+    print "printed %s" % filename
+    plt.clf()
+ 
 
 def main(filename):
-    testfile = file(filename)
+
+    # print some status info 
     print "--> processing", filename
+
+    # choose an output directory for these files
+
     # on the windows DAQ machine:
     directory = 'C://Users//xenon//Dropbox//labViewPlots/'
     if not os.path.isdir(directory):
         print "trying alexis' path..."
         #directory = '/Users/alexis/stanford-Dropbox/Dropbox/labViewPlots/'
         directory = '/Users/alexis/Downloads/'
-        
+        if not os.path.isdir(directory):
+            directory = "."
+
+    # construct a base name for plots, based on the input file name
     basename = os.path.split(filename)[1][5:-4]
 
     recent_time_span = 3600.0 # seconds to use for "recent" plots
     
+    # construct file names of plots
     filetype = 'jpeg'    
-    tpath = os.path.join(directory, "Temp_%s.%s" % (basename, filetype))
-    rtpath = os.path.join(directory, "Temp-recent_%s.%s" % (basename, filetype))
     mfpath = os.path.join(directory, "MassFlow_%s.%s" % (basename, filetype))
     vpath = os.path.join(directory, "ValveStates_%s.%s" % (basename, filetype))
     ppath = os.path.join(directory, "Pressure-10kTorr_%s.%s" % (basename, filetype))
@@ -65,18 +140,25 @@ def main(filename):
     bottle_mass_path = os.path.join(directory, "BottleMass_%s.%s" % (basename, filetype))
     capacitance_path = os.path.join(directory, "Capacitance_%s.%s" % (basename, filetype))
 
+
+    # create some lists to hold values from files
     time_stamps = [] # labview timestamp, in seconds
     time_hours = [] # elapsed time in hours
-    time_2 = []
     time_minutes = [] # elapsed time in minutes
-    rtime = []
+    recent_time = []
     TC0 = []
     TC1 = []
     TC2 = []
     TC3 = []
     TC4 = []
-    TC5 = []
-    MFR = []
+    T_ambient = []
+    T_LN_in = []
+    T_LN_out = []
+    T_max_set = []
+    T_max_set_offset = []
+    T_min_set = []
+    T_min_set_offset = []
+    mass_flow_rate = []
     PLN = []
     SLN = []
     Heat = []
@@ -86,6 +168,9 @@ def main(filename):
     tcg_Pressure = []
     bottle_mass = []
     capacitance = []
+
+    # open the input file
+    testfile = file(filename)
 
     # read values from input file:
     for (i_line, line) in enumerate(testfile):
@@ -97,20 +182,35 @@ def main(filename):
         TC2.append(float(split_line[3]))
         TC3.append(float(split_line[4]))
         TC4.append(float(split_line[5]))
-        TC5.append(float(split_line[6]))
+        T_ambient.append(float(split_line[6]))
         PLN.append(0.8*float(split_line[7]))
         SLN.append(float(split_line[8]))
         Heat.append(1.2*float(split_line[9]))
-        MFR.append(float(split_line[10]))
+        mass_flow_rate.append(float(split_line[10]))
         Pressure.append(float(split_line[12]))
         Pressure2.append(float(split_line[13]))
         ccg_Pressure.append(float(split_line[14])/1e6)
         tcg_Pressure.append(float(split_line[15]))    
         bottle_mass.append(float(split_line[16])) 
         try:   
-         capacitance.append(float(split_line[17]))
+            capacitance.append(float(split_line[17]))
         except IndexError:
-            #print "column 16 doesn't exist!"
+            pass
+
+        # LN TCs added to LabView output 06 Nov 2014
+        try: 
+            T_LN_in.append(float(split_line[18]))
+            T_LN_out.append(float(split_line[19]))
+        except IndexError:
+            pass
+
+        # Temperature set points added to LabView output 06 Nov 2014
+        try:
+            T_max_set.append(float(split_line[20]))
+            T_max_set_offset.append(float(split_line[21]))
+            T_min_set.append(float(split_line[22]))
+            T_min_set_offset.append(float(split_line[23]))
+        except IndexError:
             pass
         #if i_line % 1000 == 0:
         #  print "line %i" % i_line
@@ -139,40 +239,27 @@ def main(filename):
         start_index_of_last_hour = 0
         start_time_stamp_of_last_hour = time_stamps[0]
 
-    rtime = time_hours[start_index_of_last_hour:]
-    # subtract off t0 from every time
-    #rtime[:] = [x - time_hours[0] for x in rtime]
+    # make a new array for "recent" times, the last hour or running or so
+    recent_time = time_hours[start_index_of_last_hour:]
 
     # open a log file for writing:
     outfile = file("%s/log_%s.txt" % (directory, basename), 'w')
     plot_time = datetime.datetime.now()
 
-    rTC0 = TC0[-len(rtime):]
-    rTC1 = TC1[-len(rtime):]
-    rTC2 = TC2[-len(rtime):]
-    rTC3 = TC3[-len(rtime):]
-    rTC4 = TC4[-len(rtime):]
-    rTC5 = TC5[-len(rtime):]
-    rMFR = MFR[-len(rtime):]
-    rPLN = PLN[-len(rtime):]
-    rSLN = SLN[-len(rtime):]
-    rHeat = Heat[-len(rtime):]
-    rPressure = Pressure[-len(rtime):]
-    rccg_Pressure = ccg_Pressure[-len(rtime):]
 
     volume = 0.0
     Vol = []
-    if len(MFR) > 1:
-      print "integrating %i mass flow rate points..." % len(MFR)
+    if len(mass_flow_rate) > 1:
+      print "integrating %i mass flow rate points..." % len(mass_flow_rate)
       for (i_time, minute_time) in enumerate(time_minutes):
           if i_time == len(time_minutes)-1:
-              #volume = np.trapz(MFR, time_minutes, 0.5)
-              volume += MFR[i_time]*5.89
+              #volume = np.trapz(mass_flow_rate, time_minutes, 0.5)
+              volume += mass_flow_rate[i_time]*5.89
               # the factor 5.89 is the density of Xe gas [g/L] at 0C
               Vol.append(volume)
           else:
-              #volume = np.trapz(MFR[0:i_time+1],time_minutes[0:i_time+1], 0.5)
-              volume += MFR[i_time]*5.89
+              #volume = np.trapz(mass_flow_rate[0:i_time+1],time_minutes[0:i_time+1], 0.5)
+              volume += mass_flow_rate[i_time]*5.89
               # the factor 5.89 is the density of Xe gas [g/L] at 0C
               Vol.append(volume)
               #if i_time % 100 == 0:
@@ -180,57 +267,37 @@ def main(filename):
 
       print "done with numpy integral"
       sum_mass_flow_rate = 0.0
-      for rate in MFR: sum_mass_flow_rate += rate
-      average_flow_rate = sum_mass_flow_rate / len(MFR)
+      for rate in mass_flow_rate: sum_mass_flow_rate += rate
+      average_flow_rate = sum_mass_flow_rate / len(mass_flow_rate)
       print "average flow rate: %.4f L/min" % average_flow_rate
     
     print "starting plots..."
 
+
+    # plot temperatures
+    filename = os.path.join(directory, "Temp_%s.%s" % (basename, filetype))
+    plot_temperatures(filename, 'Temperature', time_hours, TC0, TC1, TC2, TC3,
+    TC4, T_ambient, T_LN_in, T_LN_out, T_max_set, T_min_set)
+
+    # plot recent temperatures
+    filename = os.path.join(directory, "Temp-recent_%s.%s" % (basename, filetype))
+
+    plot_temperatures(filename, 'Recent Temperature', time_hours, TC0, TC1, TC2,
+    TC3, TC4, T_ambient, T_LN_in, T_LN_out, T_max_set, T_min_set,
+    first_index=start_index_of_last_hour)
+
+    # plot temperatures
+    filename = os.path.join(directory, "Temp-cell_%s.%s" % (basename, filetype))
+    plot_temperatures(filename, 'LXe cell and Cu plate temperature', time_hours, TC0, TC1, TC2, TC3, TC4)
+
+    # plot temperatures
+    filename = os.path.join(directory, "Temp-cell-recent_%s.%s" % (basename, filetype))
+    plot_temperatures(filename, 'Recent LXe cell and Cu plate temperature', time_hours, TC0, TC1, TC2, TC3, TC4,
+      first_index=start_index_of_last_hour)
+
     linewidth=1
-    plt.figure(1)
-    plt.title('Temperature')
-    plt.grid(b=True)
-    line1 = plt.plot(time_hours, TC0)
-    line2 = plt.plot(time_hours, TC1)
-    line3 = plt.plot(time_hours, TC2)
-    line4 = plt.plot(time_hours, TC3)
-    line5 = plt.plot(time_hours, TC4)
-    line6 = plt.plot(time_hours, TC5)
-    plt.setp(line1, color = 'r', linewidth = linewidth, label = 'CuBot')
-    plt.setp(line2, color = 'b', linewidth = linewidth, label = 'CellTop')
-    plt.setp(line3, color = 'g', linewidth = linewidth, label = 'CellMid')
-    plt.setp(line4, color = 'm', linewidth = linewidth, label = 'CellBot')
-    plt.setp(line5, color = 'k', linewidth = linewidth, label = 'CuTop')
-    plt.setp(line6, color = 'c', linewidth = linewidth, label = 'Ambient')
-    plt.xlabel('Time [hours]')
-    plt.ylabel('Temperature [K]')
-    legend = plt.legend(loc='best', shadow = False)
-    plt.savefig(tpath)
-    print "printed %s" % tpath
-    plt.clf()
-    
-    plt.figure(2)
-    plt.title('Recent Temperature')
-    plt.grid(b=True)
-    rline1 = plt.plot(rtime, rTC0)
-    rline2 = plt.plot(rtime, rTC1)
-    rline3 = plt.plot(rtime, rTC2)
-    rline4 = plt.plot(rtime, rTC3)
-    rline5 = plt.plot(rtime, rTC4)
-    rline6 = plt.plot(rtime, rTC5)
-    plt.setp(rline1, color = 'r', linewidth = linewidth, label = 'CuBot')
-    plt.setp(rline2, color = 'b', linewidth = linewidth, label = 'CellTop')
-    plt.setp(rline3, color = 'g', linewidth = linewidth, label = 'CellMid')
-    plt.setp(rline4, color = 'm', linewidth = linewidth, label = 'CellBot')
-    plt.setp(rline5, color = 'k', linewidth = linewidth, label = 'CuTop')
-    plt.setp(rline6, color = 'c', linewidth = linewidth, label = 'Ambient')
-    plt.xlabel('Time [hours]')
-    plt.ylabel('Temperature [K]')
-    plt.legend(loc='best', shadow = False)
-    plt.savefig(rtpath)
-    print "printed %s" % rtpath
-    plt.clf()
-    
+   
+
     if len(Vol) > 0:
       plt.figure(3)
       plt.grid(b=True)
@@ -253,7 +320,7 @@ def main(filename):
     #plt.setp(vline2, color = 'b', linewidth = 2.0, label = 'LN Valve 2', ls = '--')
     plt.setp(vline3, color = 'g', linewidth = 2.0, label = 'Heater', ls = '--')
     plt.xlabel('Time [hours]')
-    plt.legend(loc = 'center right', shadow = False)
+    plt.legend(loc = 'best', shadow = False)
     plt.axis([0, time_hours[-1]*1.1, -0.2, 1.2])
     plt.savefig(vpath)
     print "printed %s" % vpath
@@ -282,11 +349,11 @@ def main(filename):
       print "printed %s" % ppath2
       plt.clf()
       
-    if len(MFR) > 0:
+    if len(mass_flow_rate) > 0:
       plt.figure(7)
       plt.title('Mass Flow Rate')
       plt.grid(b=True)
-      mfline1 = plt.plot(time_minutes, MFR)
+      mfline1 = plt.plot(time_minutes, mass_flow_rate)
       plt.setp(mfline1, color = 'b', linewidth = linewidth)
       plt.xlabel('Time [minutes]')
       plt.ylabel('Rate [L/min xenon gas]')
@@ -313,7 +380,7 @@ def main(filename):
             plt.figure(9)
             plt.grid(b=True)
             plt.title('Recent Cold Cathode Pressure')
-            mfline1 = plt.plot(rtime, rccg_Pressure)
+            mfline1 = plt.plot(recent_time, ccg_Pressure[start_index_of_last_hour:])
             plt.setp(mfline1, color = 'b', linewidth = linewidth)
             plt.yscale('log')
             plt.xlabel('Time [hours]')
@@ -326,7 +393,6 @@ def main(filename):
 
         # convert to micro torr for the linear plot:
         for i in xrange(len(ccg_Pressure)): ccg_Pressure[i]*=1e6 
-        for i in xrange(len(rccg_Pressure)): rccg_Pressure[i]*=1e6 
 
         plt.figure(10)
         plt.grid(b=True)
@@ -342,7 +408,7 @@ def main(filename):
         plt.figure(11)
         plt.grid(b=True)
         plt.title('Recent Cold Cathode Pressure')
-        mfline1 = plt.plot(rtime, rccg_Pressure)
+        mfline1 = plt.plot(recent_time, ccg_Pressure[start_index_of_last_hour:])
         plt.setp(mfline1, color = 'b', linewidth = linewidth)
         plt.xlabel('Time [hours]')
         plt.ylabel('Pressure [10^-6 Torr]')
@@ -397,7 +463,7 @@ def main(filename):
     outfile.write("Cell mid [K]: %.3f \n" % TC2[-1])
     outfile.write("Cell bot [K]: %.3f \n" % TC3[-1])
     outfile.write("Cu top [K]: %.3f \n" % TC4[-1])
-    outfile.write("Ambient [K]: %.3f \n" % TC5[-1])
+    outfile.write("Ambient [K]: %.3f \n" % T_ambient[-1])
     outfile.write("Plotting script run time: %s \n" % plot_time)
     outfile.write("Last labview time stamp: %s \n" % datetime.datetime.fromtimestamp(time_stamps[-1]- 2082844800))
     outfile.close()
