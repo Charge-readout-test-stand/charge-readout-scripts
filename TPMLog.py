@@ -334,7 +334,7 @@ def main(filename):
     
     plt.figure(5)
     plt.grid(b=True)
-    plt.title('Pressure (10k Torr Baratron)')
+    plt.title('Xenon system pressure (10k Torr Baratron)')
     pline1 = plt.plot(time_hours, Pressure)
     plt.setp(pline1, color = 'b', linewidth = linewidth)
     plt.xlabel('Time [hours]')
@@ -346,7 +346,7 @@ def main(filename):
     if len(Pressure2) > 0:
       plt.figure(6)
       plt.grid(b=True)
-      plt.title('Pressure (1k Torr Baratron)')
+      plt.title('Vacuum system pressure (1k Torr Baratron)')
       pline1 = plt.plot(time_hours, Pressure2)
       plt.setp(pline1, color = 'b', linewidth = linewidth)
       plt.xlabel('Time [hours]')
@@ -462,14 +462,29 @@ def main(filename):
         outfile.write("Xenon cell capacitance [pF]: %.3f \n" % capacitance[-1])
 
 
-    outfile.write("1k Torr Baratron [Torr]: %.2f \n" % Pressure2[-1])
-    outfile.write("10k Torr Baratron [Torr]: %.2f \n" % Pressure[-1])
+    outfile.write("Vacuum system 1k Torr Baratron [Torr]: %.2f \n" % Pressure2[-1])
+    outfile.write("Xenon system 10k Torr Baratron [Torr]: %.2f \n" % Pressure[-1])
+    outfile.write("Cu top [K]: %.3f (used for temp control) \n" % TC4[-1])
     outfile.write("Cu bot [K]: %.3f \n" % TC0[-1])
     outfile.write("Cell top [K]: %.3f \n" % TC1[-1])
     outfile.write("Cell mid [K]: %.3f \n" % TC2[-1])
     outfile.write("Cell bot [K]: %.3f \n" % TC3[-1])
-    outfile.write("Cu top [K]: %.3f \n" % TC4[-1])
     outfile.write("Ambient [K]: %.3f \n" % T_ambient[-1])
+
+    if len(T_LN_in) > 0:
+        outfile.write("LN F/T inlet [K]: %.3f \n" % T_LN_in[-1])
+
+    if len(T_LN_out) > 0:
+        outfile.write("LN F/T outlet [K]: %.3f \n" % T_LN_out[-1])
+
+    if len(T_max_set) > 0:
+        outfile.write("Setpoint max [K]: %.3f - %.3f \n" % (T_max_set[-1],
+        T_max_set_offset[-1]))
+
+    if len(T_min_set) > 0:
+        outfile.write("Setpoint min [K]: %.3f + %.3f \n" % (T_min_set[-1],
+        T_min_set_offset[-1]))
+
     outfile.write("Plotting script run time: %s \n" % plot_time)
     outfile.write("Last labview time stamp: %s \n" % datetime.datetime.fromtimestamp(time_stamps[-1]- 2082844800))
     outfile.close()
