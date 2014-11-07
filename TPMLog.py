@@ -55,6 +55,9 @@ def plot_temperatures(filename, title, time_hours, TC0=None, TC1=None, TC2=None,
     plt.grid(b=True)
 
     # plot the lines
+    # html color names can be used, as defined here:
+    # http://www.w3schools.com/tags/ref_colornames.asp
+
 
     if TC0 and len(TC0) > 0:
         line1 = plt.plot(time_hours[first_index:], TC0[first_index:])
@@ -80,19 +83,19 @@ def plot_temperatures(filename, title, time_hours, TC0=None, TC1=None, TC2=None,
         line6 = plt.plot(time_hours[first_index:], T_ambient[first_index:])
         plt.setp(line6, color = 'c', linewidth = linewidth, label = 'Ambient')
 
-    if T_LN_in and len(T_LN_in) > 0:
+    if T_LN_in and len(T_LN_in) > 0 and len(T_LN_in) == len(T_ambient):
         line7 = plt.plot(time_hours[first_index:], T_LN_in[first_index:])
         plt.setp(line7, color = 'purple', linewidth = linewidth, label = 'LN in')
 
-    if T_LN_out and len(T_LN_out) > 0:
+    if T_LN_out and len(T_LN_out) > 0 and len(T_LN_out) == len(T_ambient):
         line8 = plt.plot(time_hours[first_index:], T_LN_out[first_index:])
         plt.setp(line8, color = 'royalblue', linewidth = linewidth, label = 'LN out')
 
-    if T_max_set and len(T_max_set) > 0:
+    if T_max_set and len(T_max_set) > 0 and len(T_max_set) == len(T_ambient):
         line9 = plt.plot(time_hours[first_index:], T_max_set[first_index:])
         plt.setp(line9, color = 'r', linewidth = linewidth, label = 'T_max', ls = '--')
 
-    if T_min_set and len(T_min_set) > 0:
+    if T_min_set and len(T_min_set) > 0 and len(T_min_set) == len(T_ambient):
         line10 = plt.plot(time_hours[first_index:], T_min_set[first_index:])
         plt.setp(line10, color = 'b', linewidth = linewidth, label = 'T_min', ls = '--')
 
@@ -121,7 +124,10 @@ def main(filename):
             directory = "."
 
     # construct a base name for plots, based on the input file name
-    basename = os.path.split(filename)[1][5:-4]
+    basename = os.path.basename(filename)
+    basename = os.path.splitext(basename)[0]
+    basename = basename.split("test_")[-1]
+    print basename
 
     recent_time_span = 3600.0 # seconds to use for "recent" plots
     
