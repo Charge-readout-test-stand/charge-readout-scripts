@@ -209,9 +209,9 @@ def main(
         TC3.append(float(split_line[4]))
         TC4.append(float(split_line[5]))
         T_ambient.append(float(split_line[6]))
-        PLN.append(0.8*float(split_line[7]))
+        PLN.append(float(split_line[7]))
         SLN.append(float(split_line[8]))
-        Heat.append(1.2*float(split_line[9]))
+        Heat.append(float(split_line[9]))
         mass_flow_rate.append(float(split_line[10]))
         Pressure.append(float(split_line[12]))
         Pressure2.append(float(split_line[13]))
@@ -276,9 +276,6 @@ def main(
             if time_hours[-1] >= stop_time: 
                 last_index = i
                 print "found last index: %i at time %.2f hours" % (i, time_hours[-1])
-                print last_index, len(time_stamps)-1
-                print last_index == len(time_stamps)-1
-                
             
 
     if last_time_stamp - time_stamps[0]  <= 0.0:
@@ -354,7 +351,8 @@ def main(
       plt.figure(3)
       plt.grid(b=True)
       plt.title('Integrated mass flow (%.2f g of xenon)' % volume)
-      uline1 = plt.plot(time_minutes, Vol)
+      uline1 = plt.plot(time_minutes[first_index:last_index],
+      Vol[first_index:last_index])
       plt.setp(uline1, color = 'b', linewidth = linewidth)
       plt.xlabel('Time [minutes]')
       plt.ylabel('Mass Flow [g of xenon]')
@@ -365,15 +363,15 @@ def main(
     plt.figure(4)
     plt.grid(b=True)
     plt.title('Valves / Heaters')
-    vline1 = plt.plot(time_hours, PLN)
+    vline1 = plt.plot(time_hours[first_index:last_index], PLN[first_index:last_index])
     #vline2 = plt.plot(time_hours, SLN)
-    vline3 = plt.plot(time_hours, Heat)
-    plt.setp(vline1, color = 'r', linewidth = 2.0, label = 'LN Valve', ls = '-')
-    #plt.setp(vline2, color = 'b', linewidth = 2.0, label = 'LN Valve 2', ls = '--')
-    plt.setp(vline3, color = 'g', linewidth = 2.0, label = 'Heater', ls = '--')
+    vline3 = plt.plot(time_hours[first_index:last_index], Heat[first_index:last_index])
+    plt.setp(vline1, color = 'b', linewidth = 2.0, label = 'LN Valve')
+    #plt.setp(vline2, color = 'b', linewidth = 2.0, label = 'LN Valve 2')
+    plt.setp(vline3, color = 'r', linewidth = 2.0, label = 'Heater')
     plt.xlabel('Time [hours]')
     plt.legend(loc = 'best', shadow = False)
-    plt.axis([0, time_hours[-1]*1.1, -0.2, 1.2])
+    #plt.axis([0, time_hours[-1]*1.1, -0.2, 1.2])
     plt.savefig(vpath)
     print "printed %s" % vpath
     plt.clf()
@@ -381,7 +379,8 @@ def main(
     plt.figure(5)
     plt.grid(b=True)
     plt.title('Xenon system pressure (10k Torr Baratron)')
-    pline1 = plt.plot(time_hours, Pressure)
+    pline1 = plt.plot(time_hours[first_index:last_index],
+    Pressure[first_index:last_index])
     plt.setp(pline1, color = 'b', linewidth = linewidth)
     plt.xlabel('Time [hours]')
     plt.ylabel('Pressure [Torr]')
@@ -393,7 +392,8 @@ def main(
       plt.figure(6)
       plt.grid(b=True)
       plt.title('Vacuum system pressure (1k Torr Baratron)')
-      pline1 = plt.plot(time_hours, Pressure2)
+      pline1 = plt.plot(time_hours[first_index:last_index],
+      Pressure2[first_index:last_index])
       plt.setp(pline1, color = 'b', linewidth = linewidth)
       plt.xlabel('Time [hours]')
       plt.ylabel('Pressure [Torr]')
@@ -405,7 +405,8 @@ def main(
       plt.figure(7)
       plt.title('Mass Flow Rate')
       plt.grid(b=True)
-      mfline1 = plt.plot(time_minutes, mass_flow_rate)
+      mfline1 = plt.plot(time_minutes[first_index:last_index],
+      mass_flow_rate[first_index:last_index])
       plt.setp(mfline1, color = 'b', linewidth = linewidth)
       plt.xlabel('Time [minutes]')
       plt.ylabel('Rate [L/min xenon gas]')
@@ -420,7 +421,8 @@ def main(
             plt.figure(8)
             plt.grid(b=True)
             plt.title('Cold Cathode Pressure')
-            mfline1 = plt.plot(time_hours, ccg_Pressure)
+            mfline1 = plt.plot(time_hours[first_index:last_index],
+            ccg_Pressure[first_index:last_index])
             plt.setp(mfline1, color = 'b', linewidth = linewidth)
             plt.yscale('log')
             plt.xlabel('Time [hours]')
@@ -441,6 +443,7 @@ def main(
             print "printed %s" % rccgpath_log
             plt.clf()
         except ValueError:
+            print "--> no log-scale CC gauge plots"
             pass
 
         # convert to micro torr for the linear plot:
@@ -449,7 +452,8 @@ def main(
         plt.figure(10)
         plt.grid(b=True)
         plt.title('Cold Cathode Pressure')
-        mfline1 = plt.plot(time_hours, ccg_Pressure)
+        mfline1 = plt.plot(time_hours[first_index:last_index],
+        ccg_Pressure[first_index:last_index])
         plt.setp(mfline1, color = 'b', linewidth = linewidth)
         plt.xlabel('Time [hours]')
         plt.ylabel('Pressure [10^-6 Torr]')
@@ -472,7 +476,8 @@ def main(
         plt.figure(12)
         plt.grid(b=True)
         plt.title('TC Gauge Pressure')
-        mfline1 = plt.plot(time_hours, tcg_Pressure)
+        mfline1 = plt.plot(time_hours[first_index:last_index],
+        tcg_Pressure[first_index:last_index])
         plt.setp(mfline1, color = 'b', linewidth = linewidth)
         plt.xlabel('Time [hours]')
         plt.ylabel('Signal [V]')
@@ -485,7 +490,8 @@ def main(
         plt.figure(13)
         plt.grid(b=True)
         plt.title('Xenon bottle mass')
-        mfline1 = plt.plot(time_hours, bottle_mass)
+        mfline1 = plt.plot(time_hours[first_index:last_index],
+        bottle_mass[first_index:last_index])
         plt.setp(mfline1, color = 'b', linewidth = linewidth)
         plt.xlabel('Time [hours]')
         plt.ylabel('Mass [kg]')
@@ -498,7 +504,8 @@ def main(
         plt.figure(14)
         plt.grid(b=True)
         plt.title('Xenon cell capacitance')
-        mfline1 = plt.plot(time_hours, capacitance)
+        mfline1 = plt.plot(time_hours[first_index:last_index],
+        capacitance[first_index:last_index])
         plt.setp(mfline1, color = 'b', linewidth = linewidth)
         plt.xlabel('Time [hours]')
         plt.ylabel('Capacitance [pF]')
