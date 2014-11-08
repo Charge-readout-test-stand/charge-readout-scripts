@@ -38,11 +38,12 @@ import os
 import sys
 import datetime
 import matplotlib.pyplot as plt
+from optparse import OptionParser
 #import numpy as np
   
 def plot_temperatures(filename, title, time_hours, TC0=None, TC1=None, TC2=None,
     TC3=None, TC4=None, T_ambient=None, T_LN_in=None, T_LN_out=None, T_max_set=None,
-    T_min_set=None, first_index=0):
+    T_min_set=None, first_index=0, last_index=-1):
 
     """
     This function makes a temperature plot
@@ -54,49 +55,59 @@ def plot_temperatures(filename, title, time_hours, TC0=None, TC1=None, TC2=None,
     plt.title(title)
     plt.grid(b=True)
 
+
+
     # plot the lines
     # html color names can be used, as defined here:
     # http://www.w3schools.com/tags/ref_colornames.asp
 
 
     if TC0 and len(TC0) > 0:
-        line1 = plt.plot(time_hours[first_index:], TC0[first_index:])
+        line1 = plt.plot(time_hours[first_index:last_index], TC0[first_index:last_index])
         plt.setp(line1, color = 'r', linewidth = linewidth, label = 'Cu Bot')
 
     if TC1 and len(TC1) > 0:
-        line2 = plt.plot(time_hours[first_index:], TC1[first_index:])
+        line2 = plt.plot(time_hours[first_index:last_index], TC1[first_index:last_index])
         plt.setp(line2, color = 'b', linewidth = linewidth, label = 'CellTop')
 
     if TC2 and len(TC2) > 0:
-        line3 = plt.plot(time_hours[first_index:], TC2[first_index:])
+        line3 = plt.plot(time_hours[first_index:last_index],
+        TC2[first_index:last_index])
         plt.setp(line3, color = 'g', linewidth = linewidth, label = 'CellMid')
 
     if TC3 and len(TC3) > 0:
-        line4 = plt.plot(time_hours[first_index:], TC3[first_index:])
+        line4 = plt.plot(time_hours[first_index:last_index],
+        TC3[first_index:last_index])
         plt.setp(line4, color = 'm', linewidth = linewidth, label = 'CellBot')
 
     if TC4 and len(TC4) > 0:
-        line5 = plt.plot(time_hours[first_index:], TC4[first_index:])
+        line5 = plt.plot(time_hours[first_index:last_index],
+        TC4[first_index:last_index])
         plt.setp(line5, color = 'k', linewidth = linewidth, label = 'Cu Top')
 
     if T_ambient and len(T_ambient) > 0:
-        line6 = plt.plot(time_hours[first_index:], T_ambient[first_index:])
+        line6 = plt.plot(time_hours[first_index:last_index],
+        T_ambient[first_index:last_index])
         plt.setp(line6, color = 'c', linewidth = linewidth, label = 'Ambient')
 
     if T_LN_in and len(T_LN_in) > 0 and len(T_LN_in) == len(T_ambient):
-        line7 = plt.plot(time_hours[first_index:], T_LN_in[first_index:])
+        line7 = plt.plot(time_hours[first_index:last_index],
+        T_LN_in[first_index:last_index])
         plt.setp(line7, color = 'purple', linewidth = linewidth, label = 'LN in')
 
     if T_LN_out and len(T_LN_out) > 0 and len(T_LN_out) == len(T_ambient):
-        line8 = plt.plot(time_hours[first_index:], T_LN_out[first_index:])
+        line8 = plt.plot(time_hours[first_index:last_index],
+        T_LN_out[first_index:last_index])
         plt.setp(line8, color = 'royalblue', linewidth = linewidth, label = 'LN out')
 
     if T_max_set and len(T_max_set) > 0 and len(T_max_set) == len(T_ambient):
-        line9 = plt.plot(time_hours[first_index:], T_max_set[first_index:])
+        line9 = plt.plot(time_hours[first_index:last_index],
+        T_max_set[first_index:last_index])
         plt.setp(line9, color = 'r', linewidth = linewidth, label = 'T_max', ls = '--')
 
     if T_min_set and len(T_min_set) > 0 and len(T_min_set) == len(T_ambient):
-        line10 = plt.plot(time_hours[first_index:], T_min_set[first_index:])
+        line10 = plt.plot(time_hours[first_index:last_index],
+        T_min_set[first_index:last_index])
         plt.setp(line10, color = 'b', linewidth = linewidth, label = 'T_min', ls = '--')
 
     plt.xlabel('Time [hours]')
@@ -107,10 +118,21 @@ def plot_temperatures(filename, title, time_hours, TC0=None, TC1=None, TC2=None,
     plt.clf()
  
 
-def main(filename):
+def main(
+    filename,   # *.dat file to process
+    start_time, # start time, in hours, other than first time in file
+    stop_time   # stop time, in hours, other than last time in file
+):
+
+    # options
+    recent_time_span = 3600.0 # seconds to use for "recent" plots
 
     # print some status info 
     print "--> processing", filename
+    if start_time != None:
+        print "\t using start time of %.2f hours" % start_time
+    if stop_time != None:
+        print "\t using stop time of %.2f hours" % stop_time
 
     # choose an output directory for these files
 
@@ -127,9 +149,7 @@ def main(filename):
     basename = os.path.basename(filename)
     basename = os.path.splitext(basename)[0]
     basename = basename.split("test_")[-1]
-    print basename
 
-    recent_time_span = 3600.0 # seconds to use for "recent" plots
     
     # construct file names of plots
     filetype = 'jpeg'    
@@ -221,14 +241,22 @@ def main(filename):
         #if i_line % 1000 == 0:
         #  print "line %i" % i_line
 
+    # indices to use if start_time or stop_time are specified
+    first_index = 0
+    last_index = len(time_stamps)-1
+
     start_index_of_last_hour = None
     start_time_stamp_of_last_hour = None
     last_time_stamp = time_stamps[-1]
+
+    # loop over time stamps, converting some units and searching for some
+    # special indices
     for (i, time_stamp) in enumerate(time_stamps):
-        seconds_elapsed = round(time_stamp - time_stamps[0])
-        time_hours.append(float(seconds_elapsed/3600)) # time in hours
-        time_minutes.append(float(seconds_elapsed/60)) # time in minutes
-        # find time stamp from one hour ago:
+        seconds_elapsed = time_stamp - time_stamps[0]
+        time_hours.append(seconds_elapsed/3600.0) # time in hours
+        time_minutes.append(seconds_elapsed/60.0) # time in minutes
+
+        # find time stamp recent_time_span from end of file:
         if start_index_of_last_hour == None:
             if last_time_stamp - time_stamp <= recent_time_span:
                 start_index_of_last_hour = i
@@ -236,6 +264,22 @@ def main(filename):
                 print "found most recent time at i = %i of %i, t= %.2f" % (i, len(time_stamps),  start_time_stamp_of_last_hour)
                 print "last timestamp = %.2f, diff = %.2f" % (last_time_stamp, last_time_stamp - start_time_stamp_of_last_hour )
                 print "%i recent time stamps" % (len(time_stamps) - start_index_of_last_hour - 1)
+
+        # find first_index, if start_time is specified
+        if start_time != None and first_index == 0:
+            if time_hours[-1] >= start_time: 
+                first_index = i
+                print "found first index: %i at time %.2f hours" % (i, time_hours[-1])
+            
+        # find last_index, if stop_time is specified
+        if stop_time != None and last_index == len(time_stamps)-1:
+            if time_hours[-1] >= stop_time: 
+                last_index = i
+                print "found last index: %i at time %.2f hours" % (i, time_hours[-1])
+                print last_index, len(time_stamps)-1
+                print last_index == len(time_stamps)-1
+                
+            
 
     if last_time_stamp - time_stamps[0]  <= 0.0:
         return
@@ -280,26 +324,28 @@ def main(filename):
     print "starting plots..."
 
 
+
     # plot temperatures
     filename = os.path.join(directory, "Temp_%s.%s" % (basename, filetype))
     plot_temperatures(filename, 'Temperature', time_hours, TC0, TC1, TC2, TC3,
-    TC4, T_ambient, T_LN_in, T_LN_out, T_max_set, T_min_set)
+    TC4, T_ambient, T_LN_in, T_LN_out, T_max_set, T_min_set, first_index,
+    last_index)
 
     # plot recent temperatures
     filename = os.path.join(directory, "Temp-recent_%s.%s" % (basename, filetype))
-
     plot_temperatures(filename, 'Recent Temperature', time_hours, TC0, TC1, TC2,
     TC3, TC4, T_ambient, T_LN_in, T_LN_out, T_max_set, T_min_set,
     first_index=start_index_of_last_hour)
 
-    # plot temperatures
+    # plot LXe cell and Cu plate temperatures
     filename = os.path.join(directory, "Temp-cell_%s.%s" % (basename, filetype))
-    plot_temperatures(filename, 'LXe cell and Cu plate temperature', time_hours, TC0, TC1, TC2, TC3, TC4)
+    plot_temperatures(filename, 'LXe cell and Cu plate temperature', time_hours,
+    TC0, TC1, TC2, TC3, TC4, first_index=first_index, last_index=last_index)
 
-    # plot temperatures
+    # plot LXe cell and Cu plate recent temperatures
     filename = os.path.join(directory, "Temp-cell-recent_%s.%s" % (basename, filetype))
-    plot_temperatures(filename, 'Recent LXe cell and Cu plate temperature', time_hours, TC0, TC1, TC2, TC3, TC4,
-      first_index=start_index_of_last_hour)
+    plot_temperatures(filename, 'Recent LXe cell and Cu plate temperature',
+    time_hours, TC0, TC1, TC2, TC3, TC4, first_index=start_index_of_last_hour)
 
     linewidth=1
    
@@ -498,9 +544,22 @@ def main(filename):
     return file_string
     
 if __name__ == '__main__':
-    if len(sys.argv) < 2:
-        print "argument:  *.dat data file name"
-        sys.exit()
 
-    for filename in sys.argv[1:]:
-        main(filename)
+    usage = "argument: *.dat data file name"
+    parser = OptionParser(usage)
+
+    parser.add_option("--start",dest="start",type="float",default=None,
+        help="specify start time, in hours, for plots (use first time in .dat file by defaulg)")
+    parser.add_option("--stop",dest="stop",type="float",default=None,
+        help="specify stop time, in hours, for plots (use last time in .dat file by defaulg)")
+    options,args = parser.parse_args()
+
+    if len(args) < 1:
+        parser.print_help()
+        parser.error("==> Wrong number of arguments!")
+
+    for filename in args:
+        main(filename, options.start, options.stop)
+        
+
+
