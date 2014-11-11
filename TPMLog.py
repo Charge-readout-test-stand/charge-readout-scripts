@@ -198,44 +198,57 @@ def main(
     # open the input file
     testfile = file(filename)
 
+    # a column column_offset to handle changes to LabView project
+    column_offset = 0
+
     # read values from input file:
     for (i_line, line) in enumerate(testfile):
         split_line = line.split()
         data = []
         time_stamps.append(float(split_line[0]))
+
+        # handling for changes to LabView...
+
+        # 11 Nov 2014  -- LN F/T and  xenon bottle TCs were added to LabView
+        # plot
+
+        if split_line[0] > 3498505091: 
+            column_offset = 3 
+
         TC0.append(float(split_line[1]))
         TC1.append(float(split_line[2]))
         TC2.append(float(split_line[3]))
         TC3.append(float(split_line[4]))
         TC4.append(float(split_line[5]))
         T_ambient.append(float(split_line[6]))
-        PLN.append(float(split_line[7]))
-        SLN.append(float(split_line[8]))
-        Heat.append(float(split_line[9]))
-        mass_flow_rate.append(float(split_line[10]))
-        Pressure.append(float(split_line[12]))
-        Pressure2.append(float(split_line[13]))
-        ccg_Pressure.append(float(split_line[14+3])/1e6)
-        tcg_Pressure.append(float(split_line[15+3]))    
-        bottle_mass.append(float(split_line[16+3])) 
+        PLN.append(float(split_line[7+column_offset]))
+        SLN.append(float(split_line[8+column_offset]))
+        Heat.append(float(split_line[9+column_offset]))
+        mass_flow_rate.append(float(split_line[10+column_offset]))
+        Pressure.append(float(split_line[12+column_offset]))
+        Pressure2.append(float(split_line[13+column_offset]))
+
+        ccg_Pressure.append(float(split_line[14+column_offset])/1e6)
+        tcg_Pressure.append(float(split_line[15+column_offset]))    
+        bottle_mass.append(float(split_line[16+column_offset])) 
         try:   
-            capacitance.append(float(split_line[17+3]))
+            capacitance.append(float(split_line[17+column_offset]))
         except IndexError:
             pass
 
         # LN TCs added to LabView output 06 Nov 2014
         try: 
-            T_LN_in.append(float(split_line[18+3]))
-            T_LN_out.append(float(split_line[19+3]))
+            T_LN_in.append(float(split_line[18+column_offset]))
+            T_LN_out.append(float(split_line[19+column_offset]))
         except IndexError:
             pass
 
         # Temperature set points added to LabView output 06 Nov 2014
         try:
-            T_max_set.append(float(split_line[20+3]))
-            T_max_set_offset.append(float(split_line[21+3]))
-            T_min_set.append(float(split_line[22+3]))
-            T_min_set_offset.append(float(split_line[23+3]))
+            T_max_set.append(float(split_line[20+column_offset]))
+            T_max_set_offset.append(float(split_line[21+column_offset]))
+            T_min_set.append(float(split_line[22+column_offset]))
+            T_min_set_offset.append(float(split_line[23+column_offset]))
         except IndexError:
             pass
         #if i_line % 1000 == 0:
