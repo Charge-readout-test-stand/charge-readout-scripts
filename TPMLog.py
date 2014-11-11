@@ -15,23 +15,24 @@ Plot names = DataType_Date_Index*.jpeg
 4: TC3 
 5: TC4
 6: T_ambient
-7: PLN valve status
-8: SLN valve status
-9: Heater 
-10: Mass flow rate (uncorrected)
-11: Mass flow rate [Liters of Xe gas]
-12: Pressure from 10k Torr baratron [Torr]
-13: Pressure from 1k Torr baratron [Torr]
-14: Cold cathode gauge [micro Torr]
-15: TC gauge [Volts]
-16: Bottle weight [kg]
-17: Capacitance [pF]
-18: LN F/T inlet TC [K]
-19: LN F/T outlet TC [K]
-20: T_max set point [K]
-21: T_max set point offset [K]
-22: T_min set point [K]
-23: T_min set point offset [K]
+7: LN F/T inlet TC [K]
+8: LN F/T outlet TC [K]
+9: Xe recovery bottle
+10: T_min set point
+11: T_max set point
+12: Primary LN valve status
+13: Secondar LN valve status
+14: Heater 
+15: Mass flow rate (uncorrected)
+16: Mass flow rate [Liters of Xe gas]
+17: Pressure from 10k Torr baratron [Torr]
+18: Pressure from 1k Torr baratron [Torr]
+19: Cold cathode gauge [micro Torr]
+20: TC gauge [Volts]
+21: Bottle weight [kg]
+22: Capacitance [pF]
+23: T_max set point offset [K]
+24: T_min set point offset [K]
 """
 
 import os
@@ -42,7 +43,8 @@ from optparse import OptionParser
 #import numpy as np
   
 def plot_temperatures(filename, title, time_hours, TC0=None, TC1=None, TC2=None,
-    TC3=None, TC4=None, T_ambient=None, T_LN_in=None, T_LN_out=None, T_max_set=None,
+    TC3=None, TC4=None, T_ambient=None, T_LN_in=None, T_LN_out=None,
+    T_Xe_bottle=None, T_max_set=None,
     T_min_set=None, first_index=0, last_index=-1):
 
     """
@@ -99,6 +101,11 @@ def plot_temperatures(filename, title, time_hours, TC0=None, TC1=None, TC2=None,
         line8 = plt.plot(time_hours[first_index:last_index],
         T_LN_out[first_index:last_index])
         plt.setp(line8, color = 'royalblue', linewidth = linewidth, label = 'LN out')
+
+    if T_Xe_bottle and len(T_Xe_bottle) > 0 and len(T_Xe_bottle) == len(T_ambient):
+        line8 = plt.plot(time_hours[first_index:last_index],
+        T_Xe_bottle[first_index:last_index])
+        plt.setp(line8, color = 'magenta', linewidth = linewidth, label = 'LN out')
 
     if T_max_set and len(T_max_set) > 0 and len(T_max_set) == len(T_ambient):
         line9 = plt.plot(time_hours[first_index:last_index],
@@ -180,6 +187,7 @@ def main(
     T_ambient = []
     T_LN_in = []
     T_LN_out = []
+    T_Xe_bottle = []
     T_max_set = []
     T_max_set_offset = []
     T_min_set = []
@@ -198,22 +206,36 @@ def main(
     # open the input file
     testfile = file(filename)
 
-    # a column column_offset to handle changes to LabView project
+    # a column_offset to handle changes to LabView project
     column_offset = 0
+    do_warning = True
 
     # read values from input file:
     for (i_line, line) in enumerate(testfile):
         split_line = line.split()
         data = []
-        time_stamps.append(float(split_line[0]))
+        time_stamp = float(split_line[0])
+        time_stamps.append(time_stamp)
 
         # handling for changes to LabView...
 
-        # 11 Nov 2014  -- LN F/T and  xenon bottle TCs were added to LabView
+        # 10 Nov 2014  -- LN F/T and xenon bottle TCs were added to LabView
         # plot
-
-        if split_line[0] > 3498505091: 
+        if time_stamp > 3498505091: 
             column_offset = 3 
+            if do_warning:
+                print "--> setting column_offset to %i !!" % column_offset
+                do_warning = False
+
+
+        # 11 Nov 2014 -- temperature set points were added to LabView plot
+        if time_stamp > 3498586822: 
+            column_offset = 5 
+            if do_warning:
+                print "--> setting column_offset to %i !!" % column_offset
+                do_warning = False
+
+
 
         TC0.append(float(split_line[1]))
         TC1.append(float(split_line[2]))
@@ -221,6 +243,19 @@ def main(
         TC3.append(float(split_line[4]))
         TC4.append(float(split_line[5]))
         T_ambient.append(float(split_line[6]))
+
+        # LN TCs added to LabView output 06 Nov 2014
+        # LabView modified again 11 Nov 2014
+        T_LN_in.append(float(split_line[7]))
+        T_LN_out.append(float(split_line[8]))
+
+        # T_Xe_bottle, changed 11 Nov 2014?
+        T_Xe_bottle.append(float(split_line[9]))
+
+        # T_max and min changed 11 Nov 2014
+        T_min_set.append(float(split_line[10]))
+        T_max_set.append(float(split_line[11]))
+
         PLN.append(float(split_line[7+column_offset]))
         SLN.append(float(split_line[8+column_offset]))
         Heat.append(float(split_line[9+column_offset]))
@@ -236,19 +271,12 @@ def main(
         except IndexError:
             pass
 
-        # LN TCs added to LabView output 06 Nov 2014
-        try: 
-            T_LN_in.append(float(split_line[18+column_offset]))
-            T_LN_out.append(float(split_line[19+column_offset]))
-        except IndexError:
-            pass
 
         # Temperature set points added to LabView output 06 Nov 2014
+        # changed 11 Nov 2014
         try:
-            T_max_set.append(float(split_line[20+column_offset]))
-            T_max_set_offset.append(float(split_line[21+column_offset]))
-            T_min_set.append(float(split_line[22+column_offset]))
-            T_min_set_offset.append(float(split_line[23+column_offset]))
+            T_max_set_offset.append(float(split_line[18+column_offset]))
+            T_min_set_offset.append(float(split_line[19+column_offset]))
         except IndexError:
             pass
         #if i_line % 1000 == 0:
@@ -338,13 +366,13 @@ def main(
     # plot temperatures
     filename = os.path.join(directory, "Temp_%s.%s" % (basename, filetype))
     plot_temperatures(filename, 'Temperature', time_hours, TC0, TC1, TC2, TC3,
-    TC4, T_ambient, T_LN_in, T_LN_out, T_max_set, T_min_set, first_index,
+    TC4, T_ambient, T_LN_in, T_LN_out, T_Xe_bottle, T_max_set, T_min_set, first_index,
     last_index)
 
     # plot recent temperatures
     filename = os.path.join(directory, "Temp-recent_%s.%s" % (basename, filetype))
     plot_temperatures(filename, 'Recent Temperature', time_hours, TC0, TC1, TC2,
-    TC3, TC4, T_ambient, T_LN_in, T_LN_out, T_max_set, T_min_set,
+    TC3, TC4, T_ambient, T_LN_in, T_LN_out, T_Xe_bottle, T_max_set, T_min_set,
     first_index=start_index_of_last_hour)
 
     # plot LXe cell and Cu plate temperatures
@@ -543,6 +571,9 @@ def main(
     if len(T_LN_out) > 0:
         outfile.write("LN F/T outlet [K]: %.3f \n" % T_LN_out[-1])
 
+    if len(T_Xe_bottle) > 0:
+        outfile.write("Xe bottle [K]: %.3f \n" % T_Xe_bottle[-1])
+
     if len(T_max_set) > 0:
         outfile.write("Setpoint max [K]: %.3f - %.3f \n" % (T_max_set[-1],
         T_max_set_offset[-1]))
@@ -552,7 +583,7 @@ def main(
         T_min_set_offset[-1]))
 
     outfile.write("Plotting script run time: %s \n" % plot_time)
-    outfile.write("Last labview time stamp: %s \n" % datetime.datetime.fromtimestamp(time_stamps[-1]- 2082844800))
+    outfile.write("Last LabView time stamp: %s \n" % datetime.datetime.fromtimestamp(time_stamps[-1]- 2082844800))
     outfile.close()
 
 
