@@ -120,8 +120,8 @@ def plot_temperatures(filename, title, time_hours, TC0=None, TC1=None, TC2=None,
 
 def main(
     filename,   # *.dat file to process
-    start_time, # start time, in hours, other than first time in file
-    stop_time   # stop time, in hours, other than last time in file
+    start_time=None, # start time, in hours, other than first time in file
+    stop_time=None,   # stop time, in hours, other than last time in file
 ):
 
     # options
@@ -215,27 +215,27 @@ def main(
         mass_flow_rate.append(float(split_line[10]))
         Pressure.append(float(split_line[12]))
         Pressure2.append(float(split_line[13]))
-        ccg_Pressure.append(float(split_line[14])/1e6)
-        tcg_Pressure.append(float(split_line[15]))    
-        bottle_mass.append(float(split_line[16])) 
+        ccg_Pressure.append(float(split_line[14+3])/1e6)
+        tcg_Pressure.append(float(split_line[15+3]))    
+        bottle_mass.append(float(split_line[16+3])) 
         try:   
-            capacitance.append(float(split_line[17]))
+            capacitance.append(float(split_line[17+3]))
         except IndexError:
             pass
 
         # LN TCs added to LabView output 06 Nov 2014
         try: 
-            T_LN_in.append(float(split_line[18]))
-            T_LN_out.append(float(split_line[19]))
+            T_LN_in.append(float(split_line[18+3]))
+            T_LN_out.append(float(split_line[19+3]))
         except IndexError:
             pass
 
         # Temperature set points added to LabView output 06 Nov 2014
         try:
-            T_max_set.append(float(split_line[20]))
-            T_max_set_offset.append(float(split_line[21]))
-            T_min_set.append(float(split_line[22]))
-            T_min_set_offset.append(float(split_line[23]))
+            T_max_set.append(float(split_line[20+3]))
+            T_max_set_offset.append(float(split_line[21+3]))
+            T_min_set.append(float(split_line[22+3]))
+            T_min_set_offset.append(float(split_line[23+3]))
         except IndexError:
             pass
         #if i_line % 1000 == 0:
