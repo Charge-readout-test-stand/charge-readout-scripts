@@ -40,7 +40,6 @@ import sys
 import datetime
 import matplotlib.pyplot as plt
 from optparse import OptionParser
-#import numpy as np
   
 def plot_temperatures(filename, title, time_hours, TC0=None, TC1=None, TC2=None,
     TC3=None, TC4=None, T_ambient=None, T_LN_in=None, T_LN_out=None,
@@ -335,33 +334,48 @@ def main(
     plot_time = datetime.datetime.now()
 
 
-    volume = 0.0
+    # The mass_flow_rate value saved by LabView is the uncorrected (not scaled
+    # by the dial) output of the mass flow meter, multiplied by 5.28. 
+
+    # xenon correction factor: 1.32 [MKS 1479 manual page 50]
+    # xenon density at 0 C: 5.858 [MKS 1479 manual page 50]
+
+    mass = 0.0
     Vol = []
+    xenon_density = 5.89 # density of Xe gas [g/L at 0C]
+
     if len(mass_flow_rate) > 1:
       print "integrating %i mass flow rate points..." % len(mass_flow_rate)
-      for (i_time, minute_time) in enumerate(time_minutes):
-          if i_time == len(time_minutes)-1:
-              #volume = np.trapz(mass_flow_rate, time_minutes, 0.5)
-              volume += mass_flow_rate[i_time]*5.89
-              # the factor 5.89 is the density of Xe gas [g/L] at 0C
-              Vol.append(volume)
-          else:
-              #volume = np.trapz(mass_flow_rate[0:i_time+1],time_minutes[0:i_time+1], 0.5)
-              volume += mass_flow_rate[i_time]*5.89
-              # the factor 5.89 is the density of Xe gas [g/L] at 0C
-              Vol.append(volume)
-              #if i_time % 100 == 0:
-              #  print "mfr time %i" % i_time
 
-      print "done with numpy integral"
+      for (i_time, minute_time) in enumerate(time_minutes):
+
+          delta_time_minutes  = 0.0
+          if i_time > 0:
+              delta_time_minutes = minute_time - time_minutes[i_time-1]
+
+          mass += mass_flow_rate[i_time]*xenon_density*delta_time_minutes
+          Vol.append(mass)
+
+          #if i_time % 100 == 0: # debugging
+          #  print "i: %i | time [min]: %.1f | delta_time_minutes: %.2f | rate [g/min]:%.2e | mass %.2f g" % (
+          #  i_time, minute_time, delta_time_minutes, mass_flow_rate[i_time], mass)
+
+      print "done with integral"
+
+      # do a sanity check on the integral...
       sum_mass_flow_rate = 0.0
+      # this is not a time average:
       for rate in mass_flow_rate: sum_mass_flow_rate += rate
       average_flow_rate = sum_mass_flow_rate / len(mass_flow_rate)
-      print "average flow rate: %.4f L/min" % average_flow_rate
+      total_flow_volume = average_flow_rate*time_minutes[-1]
+      total_flow_mass = total_flow_volume*xenon_density
+      print "\t average flow rate: %.4f L/min" % average_flow_rate
+      print "\t elapsed time: %.2e minutes" % time_minutes[-1]
+      print "\t total flow from average: %.4f L" % total_flow_volume
+      print "\t total flow from average: %.4f g" % total_flow_mass
+      print "\t total flow from integral: %.4f g" % mass
     
-    print "starting plots..."
-
-
+    print "--> starting plots..."
 
     # plot temperatures
     filename = os.path.join(directory, "Temp_%s.%s" % (basename, filetype))
@@ -391,7 +405,7 @@ def main(
     if len(Vol) > 0:
       plt.figure(3)
       plt.grid(b=True)
-      plt.title('Integrated mass flow (%.2f g of xenon)' % volume)
+      plt.title('Integrated mass flow (%.2f g of xenon)' % mass)
       uline1 = plt.plot(time_minutes[first_index:last_index],
       Vol[first_index:last_index])
       plt.setp(uline1, color = 'b', linewidth = linewidth)
@@ -555,6 +569,7 @@ def main(
         plt.clf()
         outfile.write("Xenon cell capacitance [pF]: %.3f \n" % capacitance[-1])
 
+    outfile.write("Xenon mass, integrated mass flow [g]: %.4f \n" % mass)
 
     outfile.write("Vacuum system 1k Torr Baratron [Torr]: %.2f \n" % Pressure2[-1])
     outfile.write("Xenon system 10k Torr Baratron [Torr]: %.2f \n" % Pressure[-1])
