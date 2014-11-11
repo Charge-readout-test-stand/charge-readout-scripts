@@ -418,12 +418,16 @@ def main(
     plt.figure(4)
     plt.grid(b=True)
     plt.title('Valves / Heaters')
+    # plot the lines:
     vline1 = plt.plot(time_hours[first_index:last_index], PLN[first_index:last_index])
     #vline2 = plt.plot(time_hours, SLN)
     vline3 = plt.plot(time_hours[first_index:last_index], Heat[first_index:last_index])
-    plt.setp(vline1, color = 'b', linewidth = 2.0, label = 'LN Valve')
+    # plot the fill areas:
+    plt.fill_between(time_hours[first_index:last_index],PLN[first_index:last_index], color='b')
+    plt.fill_between(time_hours[first_index:last_index],Heat[first_index:last_index], color='r')
+    plt.setp(vline1, color = 'b', linewidth = 2.0, label = 'LN Valve',)
     #plt.setp(vline2, color = 'b', linewidth = 2.0, label = 'LN Valve 2')
-    plt.setp(vline3, color = 'r', linewidth = 2.0, label = 'Heater')
+    plt.setp(vline3, color = 'r', linewidth = 2.0, label = 'Heater',)
     plt.xlabel('Time [hours]')
     plt.legend(loc = 'best', shadow = False)
     #plt.axis([0, time_hours[-1]*1.1, -0.2, 1.2])
