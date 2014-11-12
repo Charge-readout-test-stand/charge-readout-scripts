@@ -24,7 +24,7 @@ Plot names = DataType_Date_Index*.jpeg
 13: Secondar LN valve status
 14: Heater 
 15: Mass flow rate (uncorrected)
-16: Mass flow rate [Liters of Xe gas]
+16: Mass flow rate [grams per minute Xe gas]
 17: Pressure from 10k Torr baratron [Torr]
 18: Pressure from 1k Torr baratron [Torr]
 19: Cold cathode gauge [micro Torr]
@@ -104,7 +104,7 @@ def plot_temperatures(filename, title, time_hours, TC0=None, TC1=None, TC2=None,
     if T_Xe_bottle and len(T_Xe_bottle) > 0 and len(T_Xe_bottle) == len(T_ambient):
         line8 = plt.plot(time_hours[first_index:last_index],
         T_Xe_bottle[first_index:last_index])
-        plt.setp(line8, color = 'magenta', linewidth = linewidth, label = 'LN out')
+        plt.setp(line8, color = 'magenta', linewidth = linewidth, label = 'Xe bottle')
 
     if T_max_set and len(T_max_set) > 0 and len(T_max_set) == len(T_ambient):
         line9 = plt.plot(time_hours[first_index:last_index],
@@ -338,11 +338,20 @@ def main(
     # by the dial) output of the mass flow meter, multiplied by 5.28. 
 
     # xenon correction factor: 1.32 [MKS 1479 manual page 50]
-    # xenon density at 0 C: 5.858 [MKS 1479 manual page 50]
+    # xenon density at 0 C: 5.894 [MKS 1479 manual page 50]
 
     mass = 0.0
     Vol = []
     xenon_density = 5.89 # density of Xe gas [g/L at 0C]
+    # xenon density at 300K: 5.3612 g / mL
+
+    # correction for what alexis put in labview:
+    xenon_density_ratio = xenon_density / 5.3612 # xenon density correction
+    print "xenon_density_ratio: ", xenon_density_ratio
+
+    xenon_gas_correction_factor = 1.32
+    nitrogen_density = 1.25
+
 
     if len(mass_flow_rate) > 1:
       print "integrating %i mass flow rate points..." % len(mass_flow_rate)
@@ -353,7 +362,11 @@ def main(
           if i_time > 0:
               delta_time_minutes = minute_time - time_minutes[i_time-1]
 
-          mass += mass_flow_rate[i_time]*xenon_density*delta_time_minutes
+          # mass_flow_rate from LabView is in grams / minute 
+          xenon_mass_flow = mass_flow_rate[i_time]*delta_time_minutes*xenon_density_ratio
+          nitrogen_mass_flow = xenon_mass_flow / xenon_gas_correction_factor / xenon_density * nitrogen_density
+
+          mass += nitrogen_mass_flow
           Vol.append(mass)
 
           #if i_time % 100 == 0: # debugging
@@ -363,17 +376,17 @@ def main(
       print "done with integral"
 
       # do a sanity check on the integral...
-      sum_mass_flow_rate = 0.0
+      #sum_mass_flow_rate = 0.0
       # this is not a time average:
-      for rate in mass_flow_rate: sum_mass_flow_rate += rate
-      average_flow_rate = sum_mass_flow_rate / len(mass_flow_rate)
-      total_flow_volume = average_flow_rate*time_minutes[-1]
-      total_flow_mass = total_flow_volume*xenon_density
-      print "\t average flow rate: %.4f L/min" % average_flow_rate
-      print "\t elapsed time: %.2e minutes" % time_minutes[-1]
-      print "\t total flow from average: %.4f L" % total_flow_volume
-      print "\t total flow from average: %.4f g" % total_flow_mass
-      print "\t total flow from integral: %.4f g" % mass
+      #for rate in mass_flow_rate: sum_mass_flow_rate += rate
+      #average_flow_rate = sum_mass_flow_rate / len(mass_flow_rate)
+      #total_flow_volume = average_flow_rate*time_minutes[-1]
+      #total_flow_mass = total_flow_volume*xenon_density
+      #print "\t average flow rate: %.4f L/min" % average_flow_rate
+      #print "\t elapsed time: %.2e minutes" % time_minutes[-1]
+      #print "\t total flow from average: %.4f L" % total_flow_volume
+      #print "\t total flow from average: %.4f g" % total_flow_mass
+      #print "\t total flow from integral: %.4f g" % mass
     
     print "--> starting plots..."
 
@@ -594,12 +607,18 @@ def main(
         outfile.write("Xe bottle [K]: %.3f \n" % T_Xe_bottle[-1])
 
     if len(T_max_set) > 0:
-        outfile.write("Setpoint max [K]: %.3f - %.3f \n" % (T_max_set[-1],
-        T_max_set_offset[-1]))
+        try:
+            outfile.write("Setpoint max [K]: %.3f - %.3f \n" % (T_max_set[-1],
+            T_max_set_offset[-1]))
+        except:
+            print "T_max_set info not available!"
 
     if len(T_min_set) > 0:
-        outfile.write("Setpoint min [K]: %.3f + %.3f \n" % (T_min_set[-1],
-        T_min_set_offset[-1]))
+        try:
+            outfile.write("Setpoint min [K]: %.3f + %.3f \n" % (T_min_set[-1],
+            T_min_set_offset[-1]))
+        except:
+            print "T_min_set info not available!"
 
     outfile.write("Plotting script run time: %s \n" % plot_time)
     outfile.write("Last LabView time stamp: %s \n" % datetime.datetime.fromtimestamp(time_stamps[-1]- 2082844800))
