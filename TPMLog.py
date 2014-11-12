@@ -209,6 +209,20 @@ def main(
     column_offset = 0
     do_warning = True
 
+    # The mass_flow_rate value saved by LabView is the uncorrected (not scaled
+    # by the dial) output of the mass flow meter, multiplied by 5.28. 
+    # xenon correction factor: 1.32 [MKS 1479 manual page 50]
+    # xenon density at 0 C: 5.894 [MKS 1479 manual page 50]
+
+    xenon_density = 5.89 # density of Xe gas [g/L at 0C]
+    # xenon density at 300K: 5.3612 g / mL
+    # correction for what alexis put in labview:
+    xenon_density_ratio = xenon_density / 5.3612 # xenon density correction
+    print "xenon_density_ratio: ", xenon_density_ratio
+
+    xenon_gas_correction_factor = 1.32
+    nitrogen_density = 1.25
+
     # read values from input file:
     for (i_line, line) in enumerate(testfile):
         split_line = line.split()
@@ -258,7 +272,16 @@ def main(
         PLN.append(float(split_line[7+column_offset]))
         SLN.append(float(split_line[8+column_offset]))
         Heat.append(float(split_line[9+column_offset]))
-        mass_flow_rate.append(float(split_line[10+column_offset]))
+
+        xenon_mass_flow = float(split_line[10+column_offset])*xenon_density_ratio
+        nitrogen_mass_flow = xenon_mass_flow / xenon_gas_correction_factor / xenon_density * nitrogen_density
+        mass_flow_rate.append(nitrogen_mass_flow)
+
+
+          # mass_flow_rate from LabView is in grams / minute 
+
+
+
         Pressure.append(float(split_line[12+column_offset]))
         Pressure2.append(float(split_line[13+column_offset]))
 
@@ -334,23 +357,10 @@ def main(
     plot_time = datetime.datetime.now()
 
 
-    # The mass_flow_rate value saved by LabView is the uncorrected (not scaled
-    # by the dial) output of the mass flow meter, multiplied by 5.28. 
-
-    # xenon correction factor: 1.32 [MKS 1479 manual page 50]
-    # xenon density at 0 C: 5.894 [MKS 1479 manual page 50]
 
     mass = 0.0
     Vol = []
-    xenon_density = 5.89 # density of Xe gas [g/L at 0C]
-    # xenon density at 300K: 5.3612 g / mL
 
-    # correction for what alexis put in labview:
-    xenon_density_ratio = xenon_density / 5.3612 # xenon density correction
-    print "xenon_density_ratio: ", xenon_density_ratio
-
-    xenon_gas_correction_factor = 1.32
-    nitrogen_density = 1.25
 
 
     if len(mass_flow_rate) > 1:
@@ -362,11 +372,7 @@ def main(
           if i_time > 0:
               delta_time_minutes = minute_time - time_minutes[i_time-1]
 
-          # mass_flow_rate from LabView is in grams / minute 
-          xenon_mass_flow = mass_flow_rate[i_time]*delta_time_minutes*xenon_density_ratio
-          nitrogen_mass_flow = xenon_mass_flow / xenon_gas_correction_factor / xenon_density * nitrogen_density
-
-          mass += nitrogen_mass_flow
+          mass += mass_flow_rate[i_time]*delta_time_minutes
           Vol.append(mass)
 
           #if i_time % 100 == 0: # debugging
@@ -481,7 +487,7 @@ def main(
       mass_flow_rate[first_index:last_index])
       plt.setp(mfline1, color = 'b', linewidth = linewidth)
       plt.xlabel('Time [minutes]')
-      plt.ylabel('Rate [L/min xenon gas]')
+      plt.ylabel('Rate [grams/minute xenon gas]')
       plt.savefig(mfrpath)
       print "printed %s" % mfrpath
       plt.clf()
