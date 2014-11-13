@@ -221,7 +221,7 @@ def main(
     print "xenon_density_ratio: ", xenon_density_ratio
 
     xenon_gas_correction_factor = 1.32
-    nitrogen_density = 1.25
+    #nitrogen_density = 1.25
 
     # read values from input file:
     for (i_line, line) in enumerate(testfile):
@@ -274,13 +274,13 @@ def main(
         Heat.append(float(split_line[9+column_offset]))
 
         xenon_mass_flow = float(split_line[10+column_offset])*xenon_density_ratio
-        nitrogen_mass_flow = xenon_mass_flow / xenon_gas_correction_factor / xenon_density * nitrogen_density
-        mass_flow_rate.append(nitrogen_mass_flow)
+        mass_flow_rate.append(xenon_mass_flow)
 
+        # for use while testing the system with N2
+        #nitrogen_mass_flow = xenon_mass_flow / xenon_gas_correction_factor / xenon_density * nitrogen_density
+        #mass_flow_rate.append(nitrogen_mass_flow)
 
-          # mass_flow_rate from LabView is in grams / minute 
-
-
+        # mass_flow_rate from LabView is in grams / minute 
 
         Pressure.append(float(split_line[12+column_offset]))
         Pressure2.append(float(split_line[13+column_offset]))
@@ -292,7 +292,6 @@ def main(
             capacitance.append(float(split_line[17+column_offset]))
         except IndexError:
             pass
-
 
         # Temperature set points added to LabView output 06 Nov 2014
         # changed 11 Nov 2014
