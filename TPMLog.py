@@ -576,6 +576,12 @@ def main(
         print "printed %s" % bottle_mass_path
         plt.clf()
         outfile.write("Xenon bottle mass [kg]: %.3f \n" % bottle_mass[-1])
+        total_mass = 0.0
+        for mass in bottle_mass[first_index:last_index]:
+            total_mass += mass
+        average_mass = total_mass / len(bottle_mass[first_index:last_index])
+            
+        print "average xenon bottle mass in this time period: %.3f kg" % average_mass
 
     if len(capacitance) > 0:
         plt.figure(14)
