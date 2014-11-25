@@ -39,9 +39,39 @@ import os
 import sys
 import datetime
 import matplotlib.pyplot as plt
+import numpy as np
 from optparse import OptionParser
-  
-def plot_temperatures(filename, title, time_hours, TC0=None, TC1=None, TC2=None,
+ 
+
+def plot_temp_vs_lmass(filename, title, time_hours, time_stamps, T_ambient, mass):
+    linewidth=1
+    start_time = datetime.datetime.fromtimestamp(time_stamps[0]- 2082844800)
+
+    plt.figure(1)
+    plt.title(title +"  "+ str(start_time))
+    plt.grid(b=True)
+    
+    #Ambient Temp
+    ambient_line = plt.plot(time_hours, T_ambient)
+    plt.setp(ambient_line, color = 'c', linewidth = linewidth, label = 'Ambient')
+    
+    offset = np.mean(T_ambient) - np.mean(mass)
+    
+    #Load Mass
+    mass_line = plt.plot(time_hours, np.array(mass) + offset)
+    plt.setp(mass_line, color = 'r', linewidth = linewidth, label = 'Load Mass')
+    
+    plt.xlabel('Time [hours]')
+    plt.ylabel('Temperature [K]')
+    legend = plt.legend(loc='best', shadow = False, fontsize='medium', ncol=2)
+    plt.savefig(filename)
+    print "printed %s" % filename
+    plt.clf()
+    
+    
+        
+   
+def plot_temperatures(filename, title, time_hours, time_stamps, TC0=None, TC1=None, TC2=None,
     TC3=None, TC4=None, T_ambient=None, T_LN_in=None, T_LN_out=None,
     T_Xe_bottle=None, T_max_set=None,
     T_min_set=None, first_index=0, last_index=-1):
@@ -51,12 +81,13 @@ def plot_temperatures(filename, title, time_hours, TC0=None, TC1=None, TC2=None,
     """
 
     linewidth=1
+    start_time = datetime.datetime.fromtimestamp(time_stamps[0]- 2082844800)
 
     plt.figure(1)
-    plt.title(title)
+    plt.title(title +"  "+ str(start_time))
     plt.grid(b=True)
 
-
+    
 
     # plot the lines
     # html color names can be used, as defined here:
@@ -149,7 +180,10 @@ def main(
         #directory = '/Users/alexis/stanford-Dropbox/Dropbox/labViewPlots/'
         directory = '/Users/alexis/Downloads/'
         if not os.path.isdir(directory):
-            directory = "."
+            print "trying mikes path.."
+            directory = "C://Users//Michael//Documents//EXO//plots//"
+            if not os.path.isdir(directory):
+                directory = "."
 
     # construct a base name for plots, based on the input file name
     basename = os.path.basename(filename)
@@ -397,25 +431,29 @@ def main(
 
     # plot temperatures
     filename = os.path.join(directory, "Temp_%s.%s" % (basename, filetype))
-    plot_temperatures(filename, 'Temperature', time_hours, TC0, TC1, TC2, TC3,
+    plot_temperatures(filename, 'Temperature', time_hours,time_stamps, TC0, TC1, TC2, TC3,
     TC4, T_ambient, T_LN_in, T_LN_out, T_Xe_bottle, T_max_set, T_min_set, first_index,
     last_index)
 
     # plot recent temperatures
     filename = os.path.join(directory, "Temp-recent_%s.%s" % (basename, filetype))
-    plot_temperatures(filename, 'Recent Temperature', time_hours, TC0, TC1, TC2,
+    plot_temperatures(filename, 'Recent Temperature', time_hours, time_stamps, TC0, TC1, TC2,
     TC3, TC4, T_ambient, T_LN_in, T_LN_out, T_Xe_bottle, T_max_set, T_min_set,
     first_index=start_index_of_last_hour)
 
     # plot LXe cell and Cu plate temperatures
     filename = os.path.join(directory, "Temp-cell_%s.%s" % (basename, filetype))
-    plot_temperatures(filename, 'LXe cell and Cu plate temperature', time_hours,
-    TC0, TC1, TC2, TC3, TC4, first_index=first_index, last_index=last_index)
+    plot_temperatures(filename, 'LXe cell and Cu plate temperature', time_hours, 
+    time_stamps, TC0, TC1, TC2, TC3, TC4, first_index=first_index, last_index=last_index)
 
     # plot LXe cell and Cu plate recent temperatures
     filename = os.path.join(directory, "Temp-cell-recent_%s.%s" % (basename, filetype))
     plot_temperatures(filename, 'Recent LXe cell and Cu plate temperature',
-    time_hours, TC0, TC1, TC2, TC3, TC4, first_index=start_index_of_last_hour)
+    time_hours,time_stamps, TC0, TC1, TC2, TC3, TC4, first_index=start_index_of_last_hour)
+    
+    #plot just Ambient Temperature
+    filename = os.path.join(directory, "Ambient_Only_%s.%s" % (basename, filetype))
+    plot_temp_vs_lmass(filename, 'Bottle Mass vs Ambient Temp', time_hours, time_stamps, T_ambient, bottle_mass)
 
     linewidth=1
    
