@@ -218,6 +218,7 @@ def main(
     TC2 = []
     TC3 = []
     TC4 = []
+    TC10 = []
     TC15 = []
     T_ambient = []
     T_LN_in = []
@@ -280,6 +281,10 @@ def main(
         #3 Dec 2014 -- thermo couple at XV5 added
         if time_stamp > 3500482580:
             column_offset = 6
+        
+        #3 Dec 2014 -- thermo couple at regulator
+        if time_stamp > 3500502750:
+            column_offset = 7
 
        
         if do_warning:
@@ -307,8 +312,10 @@ def main(
         T_min_set.append(float(split_line[10]))
         T_max_set.append(float(split_line[11]))
         
-        #TC15 at XV5
+        #TC15 at XV5 and TC10 at REG
         TC15.append(float(split_line[12]))
+        TC10.append(float(split_line[13]))
+        
 
         PLN.append(float(split_line[7+column_offset]))
         SLN.append(float(split_line[8+column_offset]))
