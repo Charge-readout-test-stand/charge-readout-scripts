@@ -20,19 +20,20 @@ Plot names = DataType_Date_Index*.jpeg
 9: Xe recovery bottle
 10: T_min set point
 11: T_max set point
-12: Primary LN valve status
-13: Secondar LN valve status
-14: Heater 
-15: Mass flow rate (uncorrected)
-16: Mass flow rate [grams per minute Xe gas]
-17: Pressure from 10k Torr baratron [Torr]
-18: Pressure from 1k Torr baratron [Torr]
-19: Cold cathode gauge [micro Torr]
-20: TC gauge [Volts]
-21: Bottle weight [kg]
-22: Capacitance [pF]
-23: T_max set point offset [K]
-24: T_min set point offset [K]
+12: XV5 Thermo
+13: Primary LN valve status
+14: Secondar LN valve status
+15: Heater 
+16: Mass flow rate (uncorrected)
+17: Mass flow rate [grams per minute Xe gas]
+18: Pressure from 10k Torr baratron [Torr]
+19: Pressure from 1k Torr baratron [Torr]
+20: Cold cathode gauge [micro Torr]
+21: TC gauge [Volts]
+22: Bottle weight [kg]
+23: Capacitance [pF]
+24: T_max set point offset [K]
+25: T_min set point offset [K]
 """
 
 import os
@@ -217,6 +218,7 @@ def main(
     TC2 = []
     TC3 = []
     TC4 = []
+    TC15 = []
     T_ambient = []
     T_LN_in = []
     T_LN_out = []
@@ -270,18 +272,20 @@ def main(
         # plot
         if time_stamp > 3498505091: 
             column_offset = 3 
-            if do_warning:
-                print "--> setting column_offset to %i !!" % column_offset
-                do_warning = False
-
 
         # 11 Nov 2014 -- temperature set points were added to LabView plot
         if time_stamp > 3498586822: 
             column_offset = 5 
-            if do_warning:
-                print "--> setting column_offset to %i !!" % column_offset
-                do_warning = False
 
+        #3 Dec 2014 -- thermo couple at XV5 added
+        if time_stamp > 3500482580:
+            column_offset = 6
+
+       
+        if do_warning:
+            print "--> setting column_offset to %i !!" % column_offset
+            print "tstamp:  ", time_stamp
+            do_warning = False     
 
 
         TC0.append(float(split_line[1]))
@@ -302,6 +306,9 @@ def main(
         # T_max and min changed 11 Nov 2014
         T_min_set.append(float(split_line[10]))
         T_max_set.append(float(split_line[11]))
+        
+        #TC15 at XV5
+        TC15.append(float(split_line[12]))
 
         PLN.append(float(split_line[7+column_offset]))
         SLN.append(float(split_line[8+column_offset]))
