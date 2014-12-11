@@ -73,7 +73,7 @@ def plot_temp_vs_lmass(filename, title, time_hours, time_stamps, T_ambient, mass
         
    
 def plot_temperatures(filename, title, time_hours, time_stamps, TC0=None, TC1=None, TC2=None,
-    TC3=None, TC4=None, T_ambient=None, T_LN_in=None, T_LN_out=None,
+    TC3=None, TC4=None, TC15=None, TC10=None, T_ambient=None, T_LN_in=None, T_LN_out=None,
     T_Xe_bottle=None, T_max_set=None,
     T_min_set=None, first_index=0, last_index=-1):
 
@@ -147,6 +147,16 @@ def plot_temperatures(filename, title, time_hours, time_stamps, TC0=None, TC1=No
         line10 = plt.plot(time_hours[first_index:last_index],
         T_min_set[first_index:last_index])
         plt.setp(line10, color = 'b', linewidth = linewidth, label = 'T_min', ls = '--')
+        
+    if TC15 and len(TC15) > 0:
+        line11 = plt.plot(time_hours[first_index:last_index],
+        TC15[first_index:last_index])
+        plt.setp(line11, color = 'k', linewidth = linewidth, label = 'XV5')
+    
+    if TC10 and len(TC10) > 0:
+        line12 = plt.plot(time_hours[first_index:last_index],
+        TC10[first_index:last_index])
+        plt.setp(line12, color = 'g', linewidth = linewidth, label = 'Reg')
 
     plt.xlabel('Time [hours]')
     plt.ylabel('Temperature [K]')
@@ -446,7 +456,7 @@ def main(
     # plot temperatures
     filename = os.path.join(directory, "Temp_%s.%s" % (basename, filetype))
     plot_temperatures(filename, 'Temperature', time_hours,time_stamps, TC0, TC1, TC2, TC3,
-    TC4, T_ambient, T_LN_in, T_LN_out, T_Xe_bottle, T_max_set, T_min_set, first_index,
+    TC4, TC15, TC10, T_ambient, T_LN_in, T_LN_out, T_Xe_bottle, T_max_set, T_min_set, first_index,
     last_index)
 
     # plot recent temperatures
