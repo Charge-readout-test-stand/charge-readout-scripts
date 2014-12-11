@@ -46,8 +46,11 @@ from optparse import OptionParser
 
 def plot_temp_vs_lmass(filename, title, time_hours, time_stamps, T_ambient, mass):
     linewidth=1
-    start_time = datetime.datetime.fromtimestamp(time_stamps[0]- 2082844800)
-
+    start_time_hold = datetime.datetime.fromtimestamp(time_stamps[0]- 2082844800)
+    
+    start_time = start_time_hold.strftime("%m-%d-%y %I:%M:%p")
+    
+    
     plt.figure(1)
     plt.title(title +"  "+ str(start_time))
     plt.grid(b=True)
@@ -82,7 +85,9 @@ def plot_temperatures(filename, title, time_hours, time_stamps, TC0=None, TC1=No
     """
 
     linewidth=1
-    start_time = datetime.datetime.fromtimestamp(time_stamps[0]- 2082844800)
+    start_time_hold = datetime.datetime.fromtimestamp(time_stamps[0]- 2082844800)
+    
+    start_time = start_time_hold.strftime("%m-%d-%y %I:%M:%p")
 
     plt.figure(1)
     plt.title(title +"  "+ str(start_time))
