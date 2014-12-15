@@ -412,7 +412,7 @@ def main(
     # if the run is too short, recent times start at t0:
     if start_time_stamp_of_last_hour == None:
         start_index_of_last_hour = 0
-        start_time_stamp_of_last_hour = time_stamp[0]
+        start_time_stamp_of_last_hour = time_stamps[0]
 
     # make a new array for "recent" times, the last hour or running or so
     recent_time = time_hours[start_index_of_last_hour:]
