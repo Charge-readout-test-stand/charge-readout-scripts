@@ -47,9 +47,10 @@ from optparse import OptionParser
 def plot_temp_vs_lmass(filename, title, time_hours, time_stamps, T_ambient, mass):
     linewidth=1
     start_time_hold = datetime.datetime.fromtimestamp(time_stamps[0]- 2082844800)
+    end_time_hold = datetime.datetime.fromtimestamp(time_stamps[len(time_stamps)-1]- 2082844800)
     
     start_time = start_time_hold.strftime("%m-%d-%y %I:%M:%p")
-    
+    end_time = end_time_hold.strftime("%m-%d-%y %I:%M:%p")
     
     plt.figure(1)
     plt.title(title +"  "+ str(start_time))
@@ -65,7 +66,7 @@ def plot_temp_vs_lmass(filename, title, time_hours, time_stamps, T_ambient, mass
     mass_line = plt.plot(time_hours, np.array(mass) + offset)
     plt.setp(mass_line, color = 'r', linewidth = linewidth, label = 'Load Mass')
     
-    plt.xlabel('Time [hours]')
+    plt.xlabel('Time [hours]  ' + str(start_time) + "  -  " + str(end_time))
     plt.ylabel('Temperature [K]')
     legend = plt.legend(loc='best', shadow = False, fontsize='medium', ncol=2)
     plt.savefig(filename)
@@ -86,8 +87,10 @@ def plot_temperatures(filename, title, time_hours, time_stamps, TC0=None, TC1=No
 
     linewidth=1
     start_time_hold = datetime.datetime.fromtimestamp(time_stamps[0]- 2082844800)
+    end_time_hold = datetime.datetime.fromtimestamp(time_stamps[len(time_stamps)-1]- 2082844800)
     
     start_time = start_time_hold.strftime("%m-%d-%y %I:%M:%p")
+    end_time = end_time_hold.strftime("%m-%d-%y %I:%M:%p")
 
     plt.figure(1)
     plt.title(title +"  "+ str(start_time))
@@ -163,7 +166,7 @@ def plot_temperatures(filename, title, time_hours, time_stamps, TC0=None, TC1=No
         TC10[first_index:last_index])
         plt.setp(line12, color = 'g', linewidth = linewidth, label = 'Reg')
 
-    plt.xlabel('Time [hours]')
+    plt.xlabel('Time [hours] : '  + str(start_time) + "  -  " + str(end_time))
     plt.ylabel('Temperature [K]')
     legend = plt.legend(loc='best', shadow = False, fontsize='medium', ncol=2)
     plt.savefig(filename)
@@ -409,7 +412,7 @@ def main(
     # if the run is too short, recent times start at t0:
     if start_time_stamp_of_last_hour == None:
         start_index_of_last_hour = 0
-        start_time_stamp_of_last_hour = time_stamps[0]
+        start_time_stamp_of_last_hour = time_stamp[0]
 
     # make a new array for "recent" times, the last hour or running or so
     recent_time = time_hours[start_index_of_last_hour:]
