@@ -224,7 +224,7 @@ def main(
     tcgpath = os.path.join(directory, "TCGauge_%s.%s" % (basename, filetype))
     bottle_mass_path = os.path.join(directory, "BottleMass_%s.%s" % (basename, filetype))
     capacitance_path = os.path.join(directory, "Capacitance_%s.%s" % (basename, filetype))
-
+    hfep_path = os.path.join(directory, "HFE_Pressure_%s.%s" % (basename, filetype))
 
     # create some lists to hold values from files
     time_stamps = [] # labview timestamp, in seconds
@@ -256,6 +256,7 @@ def main(
     tcg_Pressure = []
     bottle_mass = []
     capacitance = []
+    hfe_pressure = []
 
     # open the input file
     testfile = file(filename)
@@ -368,6 +369,12 @@ def main(
             pass
         #if i_line % 1000 == 0:
         #  print "line %i" % i_line
+        
+        #HFE pressure gauge added 12 Dec 2014
+        try:
+            hfe_pressure.append(float(split_line[20+column_offset]))
+        except IndexError:
+            pass
 
     # indices to use if start_time or stop_time are specified
     first_index = 0
@@ -666,6 +673,21 @@ def main(
         print "printed %s" % capacitance_path
         plt.clf()
         outfile.write("Xenon cell capacitance [pF]: %.3f \n" % capacitance[-1])
+    
+    if len(hfe_pressure) > 0:
+        plt.figure(15)
+        plt.grid(b=True)
+        plt.title('HFE Pressure')
+        mfline1 = plt.plot(time_hours[first_index:last_index],
+        hfe_pressure[first_index:last_index])
+        plt.setp(mfline1, color = 'b', linewidth = linewidth)
+        plt.xlabel('Time [hours]')
+        plt.ylabel('Pressure [psi]')
+        plt.savefig(hfep_path)
+        print "printed %s" % hfep_path
+        plt.clf()
+        outfile.write("HFE Pressure [psi]: %.3f \n" % hfe_pressure[-1])
+        
 
     outfile.write("Xenon mass, integrated mass flow [g]: %.4f \n" % mass)
 
