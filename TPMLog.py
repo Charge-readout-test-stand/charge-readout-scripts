@@ -47,7 +47,7 @@ def compare_isochoric(data_path, plot_dir, temp_obs, press_obs, time_hours):
     linewidth = 1
     temp, press = np.loadtxt(str(data_path)+"/vapor_pressure_data.txt",unpack=True, usecols = (0,1))
     plt.figure(1)
-    plt.title("Isochoric Data")
+    plt.title("Isochoric Data NIST")
     plt.xlabel("Temp [K]")
     plt.ylabel("Pressure [torr]")
     plt.grid(b=True)
