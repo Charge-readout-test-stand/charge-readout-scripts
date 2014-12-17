@@ -42,7 +42,45 @@ import datetime
 import matplotlib.pyplot as plt
 import numpy as np
 from optparse import OptionParser
- 
+
+def compare_isochoric(data_path, plot_dir, temp_obs, press_obs, time_hours):
+    linewidth = 1
+    temp, press = np.loadtxt(str(data_path)+"/vapor_pressure_data.txt",unpack=True, usecols = (0,1))
+    plt.figure(1)
+    plt.title("Isochoric Data")
+    plt.xlabel("Temp [K]")
+    plt.ylabel("Pressure [torr]")
+    plt.grid(b=True)
+    iso_data = plt.plot(temp, press)
+    plt.setp(iso_data, color = 'c', linewidth = linewidth, label = 'Data')
+    legend = plt.legend(loc='best', shadow = False, fontsize='medium', ncol=2)
+    plt.savefig(plot_dir+"Comp_Isochoric.jpeg")
+    print "printed", plot_dir+"Comp_Isochoric.jpeg"
+    plt.clf()
+    
+    calc_press = []
+    for t,p in zip(temp_obs, press_obs):
+        if np.min(temp) < t < np.max(temp) and np.min(press) < p < np.max(press): 
+            index = (np.abs(temp-t)).argmin()
+            calc_press.append(press[index])
+        else:
+            calc_press.append(0.0)
+            
+    plt.figure(2)
+    plt.title("Isochoric Batron vs Temp")
+    plt.xlabel("Time [hours]")
+    plt.ylabel("Pressure [torr]")
+    plt.grid(b=True)
+    iso_calc = plt.plot(time_hours, calc_press)
+    iso_real = plt.plot(time_hours, press_obs)
+    plt.setp(iso_calc, color = 'c', linewidth = linewidth, label = 'Temp Calc')
+    plt.setp(iso_real, color = 'r', linewidth = linewidth, label = 'Baratron')
+    legend = plt.legend(loc='best', shadow = False, fontsize='medium', ncol=2)
+    plt.savefig(plot_dir+"Comp_Isochoric2.jpeg")
+    print "printed", plot_dir+"Comp_Isochoric2.jpeg"
+    plt.clf()
+        
+     
 
 def plot_temp_vs_lmass(filename, title, time_hours, time_stamps, T_ambient, mass):
     linewidth=1
@@ -180,6 +218,7 @@ def main(
     stop_time=None,   # stop time, in hours, other than last time in file
 ):
 
+    
     # options
     recent_time_span = 3600.0 # seconds to use for "recent" plots
 
@@ -688,10 +727,11 @@ def main(
         plt.clf()
         outfile.write("HFE Pressure [psi]: %.3f \n" % hfe_pressure[-1])
         
-
+    compare_isochoric(os.path.dirname(os.path.realpath(sys.argv[0])), directory, TC2[first_index:last_index], Pressure[first_index:last_index], time_hours[first_index:last_index])
+    
+    
     outfile.write("Xenon mass, integrated mass flow [g]: %.4f \n" % mass)
-
-    outfile.write("Vacuum system 1k Torr Baratron [Torr]: %.2f \n" % Pressure2[-1])
+    outfile.write("Vacuum system 1k Torr [Torr]: %.2f \n" % Pressure2[-1])
     outfile.write("Xenon system 10k Torr Baratron [Torr]: %.2f \n" % Pressure[-1])
     outfile.write("Cu top [K]: %.3f (used for temp control) \n" % TC4[-1])
     outfile.write("Cu bot [K]: %.3f \n" % TC0[-1])
