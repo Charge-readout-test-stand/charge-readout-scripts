@@ -124,8 +124,8 @@ def plot_temperatures(filename, title, time_hours, time_stamps, TC0=None, TC1=No
     """
 
     linewidth=1
-    start_time_hold = datetime.datetime.fromtimestamp(time_stamps[0]- 2082844800)
-    end_time_hold = datetime.datetime.fromtimestamp(time_stamps[len(time_stamps)-1]- 2082844800)
+    start_time_hold = datetime.datetime.fromtimestamp(time_stamps[first_index]- 2082844800)
+    end_time_hold = datetime.datetime.fromtimestamp(time_stamps[last_index]- 2082844800)
     
     start_time = start_time_hold.strftime("%m-%d-%y %I:%M:%p")
     end_time = end_time_hold.strftime("%m-%d-%y %I:%M:%p")
@@ -217,7 +217,6 @@ def main(
     start_time=None, # start time, in hours, other than first time in file
     stop_time=None,   # stop time, in hours, other than last time in file
 ):
-
     
     # options
     recent_time_span = 3600.0 # seconds to use for "recent" plots
@@ -467,6 +466,19 @@ def main(
     outfile = file("%s/log_%s.txt" % (directory, basename), 'w')
     plot_time = datetime.datetime.now()
 
+    # ags wip
+
+    start_time_hold = datetime.datetime.fromtimestamp(time_stamps[first_index]- 2082844800)
+    end_time_hold = datetime.datetime.fromtimestamp(time_stamps[last_index]- 2082844800)
+    
+    #start_time = start_time_hold.strftime("%m-%d-%y %I:%M:%p")
+    #end_time = end_time_hold.strftime("%m-%d-%y %I:%M:%p")
+    time_string = "%s to %s" % (
+        start_time_hold.strftime("%m-%d-%y %I:%M%p"),
+        end_time_hold.strftime("%m-%d-%y %I:%M%p"),
+    )
+    print time_string
+
 
 
     mass = 0.0
@@ -540,10 +552,10 @@ def main(
       plt.figure(3)
       plt.grid(b=True)
       plt.title('Integrated mass flow (%.2f g of xenon)' % mass)
-      uline1 = plt.plot(time_minutes[first_index:last_index],
+      uline1 = plt.plot(time_hours[first_index:last_index],
       Vol[first_index:last_index])
       plt.setp(uline1, color = 'b', linewidth = linewidth)
-      plt.xlabel('Time [minutes]')
+      plt.xlabel('Time [hours] %s' % time_string)
       plt.ylabel('Mass Flow [g of xenon]')
       plt.savefig(mfpath)
       print "printed %s" % mfpath
@@ -562,7 +574,7 @@ def main(
     plt.setp(vline1, color = 'b', linewidth = 2.0, label = 'LN Valve',)
     #plt.setp(vline2, color = 'b', linewidth = 2.0, label = 'LN Valve 2')
     plt.setp(vline3, color = 'r', linewidth = 2.0, label = 'Heater',)
-    plt.xlabel('Time [hours]')
+    plt.xlabel('Time [hours] %s' % time_string)
     plt.legend(loc = 'best', shadow = False)
     #plt.axis([0, time_hours[-1]*1.1, -0.2, 1.2])
     plt.savefig(vpath)
@@ -575,7 +587,7 @@ def main(
     pline1 = plt.plot(time_hours[first_index:last_index],
     Pressure[first_index:last_index])
     plt.setp(pline1, color = 'b', linewidth = linewidth)
-    plt.xlabel('Time [hours]')
+    plt.xlabel('Time [hours] %s' % time_string)
     plt.ylabel('Pressure [Torr]')
     plt.savefig(ppath)
     print "printed %s" % ppath
@@ -588,7 +600,7 @@ def main(
       pline1 = plt.plot(time_hours[first_index:last_index],
       Pressure2[first_index:last_index])
       plt.setp(pline1, color = 'b', linewidth = linewidth)
-      plt.xlabel('Time [hours]')
+      plt.xlabel('Time [hours] %s' % time_string)
       plt.ylabel('Pressure [Torr]')
       plt.savefig(ppath2)
       print "printed %s" % ppath2
@@ -598,10 +610,10 @@ def main(
       plt.figure(7)
       plt.title('Mass Flow Rate')
       plt.grid(b=True)
-      mfline1 = plt.plot(time_minutes[first_index:last_index],
+      mfline1 = plt.plot(time_hours[first_index:last_index],
       mass_flow_rate[first_index:last_index])
       plt.setp(mfline1, color = 'b', linewidth = linewidth)
-      plt.xlabel('Time [minutes]')
+      plt.xlabel('Time [hours] %s' % time_string)
       plt.ylabel('Rate [grams/minute xenon gas]')
       plt.savefig(mfrpath)
       print "printed %s" % mfrpath
@@ -618,7 +630,7 @@ def main(
             ccg_Pressure[first_index:last_index])
             plt.setp(mfline1, color = 'b', linewidth = linewidth)
             plt.yscale('log')
-            plt.xlabel('Time [hours]')
+            plt.xlabel('Time [hours] %s' % time_string)
             plt.ylabel('Pressure [Torr]')
             plt.savefig(ccgpath_log)
             print "printed %s" % ccgpath_log
@@ -648,7 +660,7 @@ def main(
         mfline1 = plt.plot(time_hours[first_index:last_index],
         ccg_Pressure[first_index:last_index])
         plt.setp(mfline1, color = 'b', linewidth = linewidth)
-        plt.xlabel('Time [hours]')
+        plt.xlabel('Time [hours] %s' % time_string)
         plt.ylabel('Pressure [10^-6 Torr]')
         plt.savefig(ccgpath)
         print "printed %s" % ccgpath
@@ -672,7 +684,7 @@ def main(
         mfline1 = plt.plot(time_hours[first_index:last_index],
         tcg_Pressure[first_index:last_index])
         plt.setp(mfline1, color = 'b', linewidth = linewidth)
-        plt.xlabel('Time [hours]')
+        plt.xlabel('Time [hours] %s' % time_string)
         plt.ylabel('Signal [V]')
         plt.savefig(tcgpath)
         print "printed %s" % tcgpath
@@ -686,7 +698,7 @@ def main(
         mfline1 = plt.plot(time_hours[first_index:last_index],
         bottle_mass[first_index:last_index])
         plt.setp(mfline1, color = 'b', linewidth = linewidth)
-        plt.xlabel('Time [hours]')
+        plt.xlabel('Time [hours] %s' % time_string)
         plt.ylabel('Mass [kg]')
         plt.savefig(bottle_mass_path)
         print "printed %s" % bottle_mass_path
@@ -706,7 +718,7 @@ def main(
         mfline1 = plt.plot(time_hours[first_index:last_index],
         capacitance[first_index:last_index])
         plt.setp(mfline1, color = 'b', linewidth = linewidth)
-        plt.xlabel('Time [hours]')
+        plt.xlabel('Time [hours] %s' % time_string)
         plt.ylabel('Capacitance [pF]')
         plt.savefig(capacitance_path)
         print "printed %s" % capacitance_path
@@ -720,8 +732,8 @@ def main(
         mfline1 = plt.plot(time_hours[first_index:last_index],
         hfe_pressure[first_index:last_index])
         plt.setp(mfline1, color = 'b', linewidth = linewidth)
-        plt.xlabel('Time [hours]')
-        plt.ylabel('Pressure [psi]')
+        plt.xlabel('Time [hours] %s' % time_string)
+        plt.ylabel('Pressure [psia]')
         plt.savefig(hfep_path)
         print "printed %s" % hfep_path
         plt.clf()
