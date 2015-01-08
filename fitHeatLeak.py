@@ -1,9 +1,7 @@
 #!/usr/bin/env python
 
 """
-
 This script estimates the heat leak into the HFE volume
-
 
 Q = sum( C_p_i * m_i * T )
 where:
@@ -11,9 +9,7 @@ Q = energy [J]
 C_p = specific heat [J/kg-K]
 m = mass [kg]
 i labels each component (HFE, SS cell, Cu plate)
-
 """
-
 
 import os
 import sys
@@ -25,6 +21,7 @@ from ROOT import TCanvas
 from ROOT import TColor
 from ROOT import TGraph
 from ROOT import TF1
+from ROOT import TLegend
 
 
 def process_file(filename):
@@ -34,6 +31,9 @@ def process_file(filename):
     thermal_mass = 110892.74 # [J/K] this is the sum over all components
 
     print "--> processing file:", filename
+    basename = os.path.basename(filename)
+    basename = os.path.splitext(basename)[0]
+    print basename
 
     # open root file and get the TTree
     root_file = TFile(filename)
@@ -73,7 +73,8 @@ def process_file(filename):
     canvas = TCanvas("canvas","")
 
     # draw graph of temp vs. time
-    graph.SetLineColor(TColor.kGreen+1)
+    #graph.SetLineColor(TColor.kGreen+1)
+    #graph.SetLineWidth(2)
     graph.Draw("apl")
 
     # draw LN valve status vs time 
@@ -88,6 +89,7 @@ def process_file(filename):
     #raw_input("--> press enter to continue")
 
     est_fit_start = 17e3
+    est_fit_start = 20e3
 
     # define a fit function
     fit_fcn = TF1(
@@ -107,16 +109,27 @@ def process_file(filename):
 
     fit_fcn.Draw("same")
 
-    canvas.Update()
-    raw_input("--> press enter to continue")
-
-
     # perform the fit
-    graph.Fit(fit_fcn, "R")
+    # options:
+    # R = Use the Range specified in the function range
+    # N = Do not store the graphics function, do not draw
+    graph.Fit(fit_fcn, "R N")
 
     # draw the result
     graph.Draw("apl")
+    frame_hist = graph.GetHistogram()
+    frame_hist.SetXTitle("Time [seconds]")
+    frame_hist.SetYTitle("Temperature [K]")
+
+    frame_hist.Draw()
     fit_fcn.Draw("same")
+    graph.Draw("pl")
+    tree.SetLineColor(TColor.kBlue)
+    tree.Draw("pLN*tCellTop:timeStamp-%s" % first_timestamp,"","pl same")
+    canvas.Print("warmupFit_%s.pdf" % basename)
+
+    canvas.Update()
+    raw_input("--> press enter to continue")
 
 
     # take derivative of the temperature:
@@ -129,15 +142,13 @@ def process_file(filename):
 
     # initialize temp_derivative with fit values
     for i_par in xrange(fit_fcn.GetNpar()):
-
         val = fit_fcn.GetParameter(i_par)
-        print "par %i: %.2f" % (i_par, val)
+        #print "par %i: %.2f" % (i_par, val)
         temp_derivative.SetParameter(i_par, val)
 
     temp_derivative.Draw()
     canvas.Update()
-    raw_input("--> press enter to continue")
-    canvas.Print("fit.pdf")
+    #raw_input("--> press enter to continue")
 
     print "dT/dt at cooling stop: %s [K/s] | %.2f [K/hour]" % (
         temp_derivative.Eval(est_fit_start),
@@ -148,10 +159,10 @@ def process_file(filename):
         temp_derivative.Eval(run_duration)*3600.0,
     )
 
-    print "heat leak at cooling stop [W]:", temp_derivative.Eval(est_fit_start)*thermal_mass
-    print "heat leak at run stop [W]:", temp_derivative.Eval(run_duration)*thermal_mass
+    print "heat leak at fit start [W]:", temp_derivative.Eval(est_fit_start)*thermal_mass
+    #print "heat leak at fit stop [W]:", temp_derivative.Eval(run_duration)*thermal_mass
     print fit_fcn.Derivative(est_fit_start)*thermal_mass
-    print fit_fcn.Derivative(run_duration)*thermal_mass
+    #print fit_fcn.Derivative(run_duration)*thermal_mass
 
 
 if __name__ == "__main__":
