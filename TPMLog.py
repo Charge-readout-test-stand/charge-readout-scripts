@@ -725,20 +725,27 @@ def main(
         plt.clf()
         outfile.write("Xenon cell capacitance [pF]: %.3f \n" % capacitance[-1])
     
+    print "HFE pressure list length:", len(hfe_pressure)
+    print "time list length:", len(time_hours)
+
     if len(hfe_pressure) > 0:
-        plt.figure(15)
-        plt.grid(b=True)
-        plt.title('HFE Pressure')
-        mfline1 = plt.plot(time_hours[first_index:last_index],
-        hfe_pressure[first_index:last_index])
-        plt.setp(mfline1, color = 'b', linewidth = linewidth)
-        plt.xlabel('Time [hours] %s' % time_string)
-        plt.ylabel('Pressure [psia]')
-        plt.savefig(hfep_path)
-        print "printed %s" % hfep_path
-        plt.clf()
-        outfile.write("HFE Pressure [psi]: %.3f \n" % hfe_pressure[-1])
-        
+        if len(hfe_pressure) == len(time_hours):
+            plt.figure(15)
+            plt.grid(b=True)
+            plt.title('HFE Pressure')
+            mfline1 = plt.plot(time_hours[first_index:last_index],
+            hfe_pressure[first_index:last_index])
+            plt.setp(mfline1, color = 'b', linewidth = linewidth)
+            plt.xlabel('Time [hours] %s' % time_string)
+            plt.ylabel('Pressure [psia]')
+            plt.savefig(hfep_path)
+            print "printed %s" % hfep_path
+            plt.clf()
+            outfile.write("HFE Pressure [psi]: %.3f \n" % hfe_pressure[-1])
+        else:
+            print "hfe_pressure list and time_hours list are different lengths"
+            print "--> skipping HFE pressure plot"
+            
     compare_isochoric(os.path.dirname(os.path.realpath(sys.argv[0])), directory, TC2[first_index:last_index], Pressure[first_index:last_index], time_hours[first_index:last_index])
     
     
@@ -793,9 +800,9 @@ if __name__ == '__main__':
     parser = OptionParser(usage)
 
     parser.add_option("--start",dest="start",type="float",default=None,
-        help="specify start time, in hours, for plots (use first time in .dat file by defaulg)")
+        help="specify start time, in hours, for plots (use first time in .dat file by default)")
     parser.add_option("--stop",dest="stop",type="float",default=None,
-        help="specify stop time, in hours, for plots (use last time in .dat file by defaulg)")
+        help="specify stop time, in hours, for plots (use last time in .dat file by default)")
     options,args = parser.parse_args()
 
     if len(args) < 1:
