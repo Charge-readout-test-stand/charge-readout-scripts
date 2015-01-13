@@ -28,7 +28,9 @@ def process_file(filename):
 
     # this value was pasted from the LN consumption tab of "LXe test stand notes"
     # https://docs.google.com/spreadsheet/ccc?key=0AqZsfZ_WMNNNdEJ3N2hiY3RIRHlpOFcwbExvaG9fR0E#gid=4
-    thermal_mass = 110892.74 # [J/K] this is the sum over all components
+    thermal_mass = 1.11E+05 # [J/K] this is the sum over all components
+
+    seconds_per_hour = 3600.0
 
     print "--> processing file:", filename
     basename = os.path.basename(filename)
@@ -51,8 +53,8 @@ def process_file(filename):
     last_timestamp = tree.timeStamp
     print "last_timestamp:", last_timestamp
 
-    run_duration = last_timestamp - first_timestamp
-    print "run duration: %.2f seconds" % run_duration
+    run_duration = (last_timestamp - first_timestamp)/seconds_per_hour
+    print "run duration: %.2f hours" % run_duration
 
     # find the last instance of cooling with LN:
     # FIXME
@@ -66,8 +68,8 @@ def process_file(filename):
         # add data point to the graph
         graph.SetPoint(
             i, 
-            tree.timeStamp - first_timestamp,
-            tree.tCellTop
+            (tree.timeStamp - first_timestamp)/seconds_per_hour,
+            tree.tCellBot
         )
 
     canvas = TCanvas("canvas","")
@@ -79,35 +81,40 @@ def process_file(filename):
 
     # draw LN valve status vs time 
     tree.SetLineColor(TColor.kBlue)
-    tree.Draw("pLN*tCellTop:timeStamp-%s" % first_timestamp,"","pl same")
+    tree.Draw("pLN*tCellTop:(timeStamp-%s)/%s" % (first_timestamp, seconds_per_hour),"","pl same")
 
     # draw heater status vs time 
     tree.SetLineColor(TColor.kRed+1)
-    tree.Draw("heat*tCellTop:timeStamp-%s" % first_timestamp,"","pl same")
+    tree.Draw("heat*tCellTop:(timeStamp-%s)/%s" % (first_timestamp, seconds_per_hour),"","pl same")
 
     canvas.Update()
     #raw_input("--> press enter to continue")
 
-    est_fit_start = 17e3
-    est_fit_start = 20e3
+    fit_start = 17e3/3600
+    fit_start = 21e3/3600
+    fit_start = 0.0
+    fit_stop = run_duration #- 25.0
 
     # define a fit function
     fit_fcn = TF1(
         "fit_fcn",
-        "[0] + ([1]-[0])*exp(-x/[2])", 
-        est_fit_start,
-        run_duration
+        #"[0] + ([1]-[0])*exp(-x/[2])", 
+        "pol8(0)",
+        fit_start,
+        fit_stop
     )
     fit_fcn.SetLineColor(TColor.kRed)
 
-    # estimate some initial parameters
-    fit_fcn.SetParameter(0, 290)
-    fit_fcn.SetParameter(1, 170)
-    fit_fcn.SetParameter(2, 3600.0*100)
-    print "initial fit_fcn value at fit start:", fit_fcn.Eval(est_fit_start)
-    print "itniial fit_fcn value at fit end:", fit_fcn.Eval(run_duration)
+    # estimate some initial parameters -- for exp fit_fcn
+    #fit_fcn.SetParameter(0, 290)
+    #fit_fcn.SetParameter(1, 170)
+    #fit_fcn.SetParameter(2, 3600.0*100)
+    #print "initial fit_fcn value at fit start:", fit_fcn.Eval(fit_start)
+    #print "itniial fit_fcn value at fit end:", fit_fcn.Eval(fit_stop)
 
-    fit_fcn.Draw("same")
+    #fit_fcn.Draw("same")
+    #canvas.Update()
+    #raw_input("--> press enter to continue")
 
     # perform the fit
     # options:
@@ -115,54 +122,54 @@ def process_file(filename):
     # N = Do not store the graphics function, do not draw
     graph.Fit(fit_fcn, "R N")
 
-    # draw the result
+    # label axes
     graph.Draw("apl")
     frame_hist = graph.GetHistogram()
-    frame_hist.SetXTitle("Time [seconds]")
+    frame_hist.SetXTitle("Time [hours]")
     frame_hist.SetYTitle("Temperature [K]")
 
+    # make a legend
+    legend = TLegend(0.1, 0.93, 0.9, 0.97)
+    legend.SetFillColor(0)
+    legend.AddEntry(graph, "cell top temperature", "l")
+    legend.AddEntry(fit_fcn, "fit curve", "l")
+    legend.AddEntry(tree, "LN cooling", "l")
+    legend.SetNColumns(3)
+
+
+    # draw the result
     frame_hist.Draw()
     fit_fcn.Draw("same")
     graph.Draw("pl")
+    legend.Draw()
     tree.SetLineColor(TColor.kBlue)
-    tree.Draw("pLN*tCellTop:timeStamp-%s" % first_timestamp,"","pl same")
+    tree.Draw("pLN*tCellTop:(timeStamp-%s)/%s" % (first_timestamp, seconds_per_hour),"","pl same")
     canvas.Print("warmupFit_%s.pdf" % basename)
 
     canvas.Update()
     raw_input("--> press enter to continue")
 
-
-    # take derivative of the temperature:
-    temp_derivative = TF1(
-        "temp_derivative",
-        "-([1]-[0])/[2]*exp(-x/[2])",
-        est_fit_start,
-        run_duration
-    )
-
-    # initialize temp_derivative with fit values
-    for i_par in xrange(fit_fcn.GetNpar()):
-        val = fit_fcn.GetParameter(i_par)
-        #print "par %i: %.2f" % (i_par, val)
-        temp_derivative.SetParameter(i_par, val)
-
-    temp_derivative.Draw()
+    energy_leak = TF1("energy_leak","fit_fcn*%s" % (thermal_mass/seconds_per_hour), fit_start, fit_stop)
+    energy_leak.SetLineWidth(1)
+    energy_leak.SetLineColor(TColor.kBlue+1)
+    #energy_leak.Draw("")
+    energy_leak.DrawDerivative()
     canvas.Update()
-    #raw_input("--> press enter to continue")
+    raw_input("--> press enter to continue")
+    canvas.Print("heatLeak_%s.pdf" % basename)
 
-    print "dT/dt at cooling stop: %s [K/s] | %.2f [K/hour]" % (
-        temp_derivative.Eval(est_fit_start),
-        temp_derivative.Eval(est_fit_start)*3600.0,
+    print "dT/dt at fit start: %.2f [K/hour]" % (
+        fit_fcn.Derivative(fit_start),
     )
-    print "dT/dt at run stop: %s [K/s] | %.2f [K/hour]" % (
-        temp_derivative.Eval(run_duration),
-        temp_derivative.Eval(run_duration)*3600.0,
+    print "dT/dt at fit stop: %.2f [K/hour]" % (
+        fit_fcn.Derivative(fit_stop),
     )
 
-    print "heat leak at fit start [W]:", temp_derivative.Eval(est_fit_start)*thermal_mass
-    #print "heat leak at fit stop [W]:", temp_derivative.Eval(run_duration)*thermal_mass
-    print fit_fcn.Derivative(est_fit_start)*thermal_mass
-    #print fit_fcn.Derivative(run_duration)*thermal_mass
+    print "heat leak at fit start [W]: %.3f" % (
+        fit_fcn.Derivative(fit_start)*thermal_mass/seconds_per_hour
+    )
+    #print "heat leak at fit stop [W]:", fit_fcn.Derivative(fit_stop)*thermal_mass
+    print fit_fcn.Derivative(10)*thermal_mass/seconds_per_hour
 
 
 if __name__ == "__main__":
