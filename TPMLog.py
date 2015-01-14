@@ -29,7 +29,7 @@ Plot names = DataType_Date_Index*.jpeg
 18: Pressure from 10k Torr baratron [Torr]
 19: Pressure from 1k Torr baratron [Torr]
 20: Cold cathode gauge [micro Torr]
-21: TC gauge [Volts]
+21: LN mass [Volts]
 22: Bottle weight [kg]
 23: Capacitance [pF]
 24: T_max set point offset [K]
@@ -291,7 +291,7 @@ def main(
     Pressure = []
     Pressure2 = []
     ccg_Pressure = []
-    tcg_Pressure = []
+    ln_mass = []
     bottle_mass = []
     capacitance = []
     hfe_pressure = []
@@ -391,7 +391,7 @@ def main(
         Pressure2.append(float(split_line[13+column_offset]))
 
         ccg_Pressure.append(float(split_line[14+column_offset])/1e6)
-        tcg_Pressure.append(float(split_line[15+column_offset]))    
+        ln_mass.append(float(split_line[15+column_offset]))    
         bottle_mass.append(float(split_line[16+column_offset])) 
         try:   
             capacitance.append(float(split_line[17+column_offset]))
@@ -677,19 +677,19 @@ def main(
         print "printed %s" % rccgpath
         plt.clf()
    
-    if len(tcg_Pressure) > 0:
+    if len(ln_mass) > 0:
         plt.figure(12)
         plt.grid(b=True)
-        plt.title('TC Gauge Pressure')
+        plt.title('LN mass')
         mfline1 = plt.plot(time_hours[first_index:last_index],
-        tcg_Pressure[first_index:last_index])
+        ln_mass[first_index:last_index])
         plt.setp(mfline1, color = 'b', linewidth = linewidth)
         plt.xlabel('Time [hours] %s' % time_string)
         plt.ylabel('Signal [V]')
         plt.savefig(tcgpath)
         print "printed %s" % tcgpath
         plt.clf()
-        outfile.write("TC pressure [V]: %.3f \n" % tcg_Pressure[-1])
+        outfile.write("TC pressure [V]: %.3f \n" % ln_mass[-1])
 
     if len(bottle_mass) > 0:
         plt.figure(13)
