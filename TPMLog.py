@@ -259,7 +259,7 @@ def main(
     rccgpath = os.path.join(directory, "CCGauge-recent_%s.%s" % (basename, filetype))
     ccgpath_log = os.path.join(directory, "CCGauge-log_%s.%s" % (basename, filetype))
     rccgpath_log = os.path.join(directory, "CCGauge-log-recent_%s.%s" % (basename, filetype))
-    tcgpath = os.path.join(directory, "TCGauge_%s.%s" % (basename, filetype))
+    tcgpath = os.path.join(directory, "LN-Mass_%s.%s" % (basename, filetype))
     bottle_mass_path = os.path.join(directory, "BottleMass_%s.%s" % (basename, filetype))
     capacitance_path = os.path.join(directory, "Capacitance_%s.%s" % (basename, filetype))
     hfep_path = os.path.join(directory, "HFE_Pressure_%s.%s" % (basename, filetype))
