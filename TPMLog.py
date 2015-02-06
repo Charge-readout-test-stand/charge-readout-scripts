@@ -692,12 +692,13 @@ def main(
     if len(ln_mass) > 0:
         old_amt_ln = ln_mass[start_index_of_last_hour]
         new_amt_ln = ln_mass[-1]
+        tare_mass = ln_tare_mass[-1]
         print "old amt ln [lb]:", old_amt_ln
         print "new amt ln [lb]:", new_amt_ln
         print "recent time span:", recent_time_span
         ln_consumption_rate = (old_amt_ln - new_amt_ln) / (recent_time_span/3600.0)
         print "LN consumption rate: [lb / hour]:", ln_consumption_rate
-        ln_hours_remaining = new_amt_ln / ln_consumption_rate
+        ln_hours_remaining = (new_amt_ln-tare_mass) / ln_consumption_rate
         print "LN time remaining: [hours]", ln_hours_remaining
 
 
