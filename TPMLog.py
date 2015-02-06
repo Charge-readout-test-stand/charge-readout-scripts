@@ -29,11 +29,12 @@ Plot names = DataType_Date_Index*.jpeg
 18: Pressure from 10k Torr baratron [Torr]
 19: Pressure from 1k Torr baratron [Torr]
 20: Cold cathode gauge [micro Torr]
-21: LN mass [Volts]
+21: LN mass (minus hooks and dewar tare weight) [lbs]
 22: Bottle weight [kg]
 23: Capacitance [pF]
 24: T_max set point offset [K]
 25: T_min set point offset [K]
+26: LN tare mass [lbs]
 """
 
 import os
@@ -292,6 +293,7 @@ def main(
     Pressure2 = []
     ccg_Pressure = []
     ln_mass = []
+    ln_tare_mass = []
     bottle_mass = []
     capacitance = []
     hfe_pressure = []
@@ -391,7 +393,6 @@ def main(
         Pressure2.append(float(split_line[13+column_offset]))
 
         ccg_Pressure.append(float(split_line[14+column_offset])/1e6)
-        ln_mass.append(float(split_line[15+column_offset]))    
         bottle_mass.append(float(split_line[16+column_offset])) 
         try:   
             capacitance.append(float(split_line[17+column_offset]))
@@ -413,6 +414,17 @@ def main(
             hfe_pressure.append(float(split_line[20+column_offset]))
         except IndexError:
             pass
+
+        # the tare-subtracted mass is recorded by labview, but we want to plot the
+        # tare-included mass, if it is available
+        tare_mass = 0.0
+        # LN tare mass added around 05 Feb 2015
+        try:
+            tare_mass = float(split_line[21+column_offset])
+            ln_tare_mass.append(tare_mass)
+        except IndexError:
+            pass
+        ln_mass.append(float(split_line[15+column_offset]) + tare_mass)    
 
     # indices to use if start_time or stop_time are specified
     first_index = 0
@@ -678,18 +690,42 @@ def main(
         plt.clf()
    
     if len(ln_mass) > 0:
+        old_amt_ln = ln_mass[start_index_of_last_hour]
+        new_amt_ln = ln_mass[-1]
+        print "old amt ln [lb]:", old_amt_ln
+        print "new amt ln [lb]:", new_amt_ln
+        print "recent time span:", recent_time_span
+        ln_consumption_rate = (old_amt_ln - new_amt_ln) / (recent_time_span/3600.0)
+        print "LN consumption rate: [lb / hour]:", ln_consumption_rate
+        ln_hours_remaining = new_amt_ln / ln_consumption_rate
+        print "LN time remaining: [hours]", ln_hours_remaining
+
+
+
+        empty_time = datetime.datetime.fromtimestamp(
+          time_stamps[last_index]- 2082844800 + ln_hours_remaining*3600.0)
+
         plt.figure(12)
         plt.grid(b=True)
-        plt.title('LN mass')
-        mfline1 = plt.plot(time_hours[first_index:last_index],
-        ln_mass[first_index:last_index])
-        plt.setp(mfline1, color = 'b', linewidth = linewidth)
+        plt.title('LN mass (should run out in %.1f hours, at %s)' % (
+            ln_hours_remaining,
+            empty_time.strftime("%m-%d-%y %I:%M%p"),
+        ))
+        ln_line = plt.plot(time_hours[first_index:last_index],
+            ln_mass[first_index:last_index], label = "Total mass")
+        ln_tare_line = plt.plot(time_hours[first_index:last_index],
+            ln_tare_mass[first_index:last_index], label = "Tare (dewar + hooks)")
+        plt.setp(ln_line, color = 'b', linewidth = linewidth)
+        plt.setp(ln_tare_line, color = 'red', linewidth = linewidth)
         plt.xlabel('Time [hours] %s' % time_string)
-        plt.ylabel('Signal [V]')
+        plt.ylabel('LN mass - tare weight [lb]')
+        legend = plt.legend(loc='best', shadow = False, fontsize='medium', ncol=2)
         plt.savefig(tcgpath)
         print "printed %s" % tcgpath
         plt.clf()
-        outfile.write("TC pressure [V]: %.3f \n" % ln_mass[-1])
+        outfile.write("LN mass [lb]: %.3f \n" % ln_mass[-1])
+
+
 
     if len(bottle_mass) > 0:
         plt.figure(13)
