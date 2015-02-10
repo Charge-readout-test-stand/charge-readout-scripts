@@ -17,25 +17,28 @@ Plot names = DataType_Date_Index*.jpeg
 6: T_ambient
 7: LN F/T inlet TC [K]
 8: LN F/T outlet TC [K]
-9: Xe recovery bottle
+9: Xe recovery bottle [K]
 10: T_min set point
 11: T_max set point
-12: XV5 Thermo
-13: Primary LN valve status
-14: Secondar LN valve status
-15: Heater 
-16: Mass flow rate (uncorrected)
-17: Mass flow rate [grams per minute Xe gas]
-18: Pressure from 10k Torr baratron [Torr]
-19: Pressure from 1k Torr baratron [Torr]
-20: Cold cathode gauge [micro Torr]
-21: LN mass (minus hooks and dewar tare weight) [lbs]
-22: Bottle weight [kg]
-23: Capacitance [pF]
-24: T_max set point offset [K]
-25: T_min set point offset [K]
-26: LN tare mass [lbs]
+12: TC15 on valve XV5 [K] (for t > 3500502750)
+13: TC10, regulator temperature [K] (for t > 3500502750)
+14: Primary LN valve status
+15: Secondar LN valve status
+16: Heater 
+17: Mass flow rate (uncorrected)
+18: Mass flow rate [grams per minute Xe gas]
+19: Pressure from 10k Torr baratron [Torr]
+20: Pressure from 1k Torr baratron [Torr]
+21: Cold cathode gauge [micro Torr]
+22: LN mass (minus hooks and dewar tare weight) [lbs]
+23: Xenon Bottle mass [kg]
+24: Capacitance [pF]
+25: T_max set point offset [K]
+26: T_min set point offset [K]
+27: LN tare mass [lbs]
+*** there is another value in the files after LN mass -- what is it?! -- Alexis 06 Feb 2015
 """
+
 
 import os
 import sys
@@ -45,7 +48,7 @@ import numpy as np
 from optparse import OptionParser
 
 def compare_isochoric(data_path, plot_dir, temp_obs, press_obs, time_hours):
-    linewidth = 1
+    linewidth = 2
     temp, press = np.loadtxt(str(data_path)+"/vapor_pressure_data.txt",unpack=True, usecols = (0,1))
     plt.figure(1)
     plt.title("Isochoric Data NIST")
@@ -308,7 +311,7 @@ def main(
     # The mass_flow_rate value saved by LabView is the uncorrected (not scaled
     # by the dial) output of the mass flow meter, multiplied by 5.28. 
     # xenon correction factor: 1.32 [MKS 1479 manual page 50]
-    # xenon density at 0 C: 5.894 [MKS 1479 manual page 50]
+    # xenon gas density at 0 C: 5.894 g/L [MKS 1479 manual page 50]
 
     xenon_density = 5.89 # density of Xe gas [g/L at 0C]
     # xenon density at 300K: 5.3612 g / mL
@@ -446,7 +449,7 @@ def main(
             if last_time_stamp - time_stamp <= recent_time_span:
                 start_index_of_last_hour = i
                 start_time_stamp_of_last_hour = time_stamp
-                print "found most recent time at i = %i of %i, t= %.2f" % (i, len(time_stamps),  start_time_stamp_of_last_hour)
+                print "found last hour time stamp  at i = %i of %i, t= %.2f" % (i, len(time_stamps),  start_time_stamp_of_last_hour)
                 print "last timestamp = %.2f, diff = %.2f" % (last_time_stamp, last_time_stamp - start_time_stamp_of_last_hour )
                 print "%i recent time stamps" % (len(time_stamps) - start_index_of_last_hour - 1)
 
@@ -533,14 +536,14 @@ def main(
 
     # plot temperatures
     filename = os.path.join(directory, "Temp_%s.%s" % (basename, filetype))
-    plot_temperatures(filename, 'Temperature', time_hours,time_stamps, TC0, TC1, TC2, TC3,
+    plot_temperatures(filename, 'Temperature', time_hours, time_stamps, TC0, TC1, TC2, TC3,
     TC4, TC15, TC10, T_ambient, T_LN_in, T_LN_out, T_Xe_bottle, T_max_set, T_min_set, first_index,
     last_index)
 
     # plot recent temperatures
     filename = os.path.join(directory, "Temp-recent_%s.%s" % (basename, filetype))
     plot_temperatures(filename, 'Recent Temperature', time_hours, time_stamps, TC0, TC1, TC2,
-    TC3, TC4, T_ambient, T_LN_in, T_LN_out, T_Xe_bottle, T_max_set, T_min_set,
+    TC3, TC4, TC15, TC10, T_ambient, T_LN_in, T_LN_out, T_Xe_bottle, T_max_set, T_min_set,
     first_index=start_index_of_last_hour)
 
     # plot LXe cell and Cu plate temperatures
@@ -561,9 +564,12 @@ def main(
    
 
     if len(Vol) > 0:
+      lxe_density = 3.0 # kg/L # FIXME to be more accurate
+      xenon_volume = mass/lxe_density/1e3
       plt.figure(3)
       plt.grid(b=True)
-      plt.title('Integrated mass flow (%.2f g of xenon)' % mass)
+      plt.title('Integrated mass flow (%.1f g of xenon = %.1f L LXe)' %
+      (mass, xenon_volume))
       uline1 = plt.plot(time_hours[first_index:last_index],
       Vol[first_index:last_index])
       plt.setp(uline1, color = 'b', linewidth = linewidth)
@@ -595,7 +601,7 @@ def main(
     
     plt.figure(5)
     plt.grid(b=True)
-    plt.title('Xenon system pressure (10k Torr Baratron)')
+    plt.title('Xenon system pressure XP3 (10k Torr Baratron)')
     pline1 = plt.plot(time_hours[first_index:last_index],
     Pressure[first_index:last_index])
     plt.setp(pline1, color = 'b', linewidth = linewidth)
@@ -608,7 +614,7 @@ def main(
     if len(Pressure2) > 0:
       plt.figure(6)
       plt.grid(b=True)
-      plt.title('Vacuum system pressure (1k Torr Baratron)')
+      plt.title('Vacuum system pressure XP5 (1k Torr Baratron)')
       pline1 = plt.plot(time_hours[first_index:last_index],
       Pressure2[first_index:last_index])
       plt.setp(pline1, color = 'b', linewidth = linewidth)
@@ -702,15 +708,20 @@ def main(
         print "LN time remaining: [hours]", ln_hours_remaining
 
 
-
+        # estimate when LN dewar will be empty
         empty_time = datetime.datetime.fromtimestamp(
           time_stamps[last_index]- 2082844800 + ln_hours_remaining*3600.0)
 
+        ln_density = 1.78 # lb / Liter
         plt.figure(12)
         plt.grid(b=True)
-        plt.title('LN mass (should run out in %.1f hours, at %s)' % (
+        plt.title('LN mass (should run out in %.1f hours, at %s) \n total mass = %.1f lb, LN mass = %.1f lb (%.1f  L), tare = %.1f lb' % (
             ln_hours_remaining,
             empty_time.strftime("%m-%d-%y %I:%M%p"),
+            new_amt_ln + tare_mass,
+            new_amt_ln,
+            new_amt_ln/ln_density,
+            tare_mass,
         ))
         ln_line = plt.plot(time_hours[first_index:last_index],
             ln_mass[first_index:last_index], label = "Total mass")
@@ -769,22 +780,29 @@ def main(
         if len(hfe_pressure) == len(time_hours):
             plt.figure(15)
             plt.grid(b=True)
-            plt.title('HFE Pressure')
+            last_pressure = hfe_pressure[-1]
+            last_pressure_psia = last_pressure/760*14.7
+            title = 'HFE Pressure HP2 (%.1f torr = %.1f psia = %.1f psig)' % (
+                last_pressure, 
+                last_pressure_psia,
+                last_pressure_psia - 14.7
+            ) # FIXME -- make this conversion more accurate 
+            plt.title(title)
             mfline1 = plt.plot(time_hours[first_index:last_index],
             hfe_pressure[first_index:last_index])
             plt.setp(mfline1, color = 'b', linewidth = linewidth)
             plt.xlabel('Time [hours] %s' % time_string)
-            plt.ylabel('Pressure [psia]')
+            plt.ylabel('Pressure [torr]')
             plt.savefig(hfep_path)
             print "printed %s" % hfep_path
             plt.clf()
-            outfile.write("HFE Pressure [psi]: %.3f \n" % hfe_pressure[-1])
+            outfile.write("HP2 HFE Pressure [torr]: %.1f (%.1f psia, %.1f psig)\n" % (
+                last_pressure, last_pressure_psia, last_pressure_psia-14.7))
         else:
             print "hfe_pressure list and time_hours list are different lengths"
             print "--> skipping HFE pressure plot"
             
     compare_isochoric(os.path.dirname(os.path.realpath(sys.argv[0])), directory, TC2[first_index:last_index], Pressure[first_index:last_index], time_hours[first_index:last_index])
-    
     
     outfile.write("Xenon mass, integrated mass flow [g]: %.4f \n" % mass)
     outfile.write("Vacuum system 1k Torr [Torr]: %.2f \n" % Pressure2[-1])
