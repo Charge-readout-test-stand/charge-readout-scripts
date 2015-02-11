@@ -705,9 +705,9 @@ def main(
    
     if len(ln_mass) > 0:
         ln_density = 1.78 # lb / Liter
-        old_amt_ln = ln_mass[start_index_of_last_hour]
-        new_amt_ln = ln_mass[last_index]
-        tare_mass = ln_tare_mass[-1]
+        # ln_mass is total mass (dewar tare weight + hooks + LN)
+        old_amt_ln = ln_mass[start_index_of_last_hour] - ln_tare_mass[start_index_of_last_hour]
+        new_amt_ln = ln_mass[last_index] - ln_tare_mass[last_index]
         print "old amt ln [lb]:", old_amt_ln
         print "new amt ln [lb]:", new_amt_ln
         print "recent time span:", recent_time_span
@@ -715,7 +715,7 @@ def main(
         ln_consumption_rate_info = "LN consumption rate [lb / hour]: %.2f" %  ln_consumption_rate
         print ln_consumption_rate_info
         print "LN consumption rate [L / hour]:", ln_consumption_rate/ln_density
-        ln_hours_remaining = (new_amt_ln - tare_mass)/ ln_consumption_rate
+        ln_hours_remaining = (new_amt_ln)/ ln_consumption_rate
         print "LN time remaining: [hours]", ln_hours_remaining
         outfile.write("CC pressure [Torr]: %.2e \n" % ccg_Pressure[-1])
 
@@ -728,10 +728,10 @@ def main(
         plt.title('LN mass (should run out in %.1f hours, at %s) \n total mass = %.1f lb, LN mass = %.1f lb (%.1f  L), tare = %.1f lb' % (
             ln_hours_remaining,
             empty_time.strftime("%m-%d-%y %I:%M%p"),
-            new_amt_ln + tare_mass,
+            new_amt_ln + ln_tare_mass[last_index],
             new_amt_ln,
             new_amt_ln/ln_density,
-            tare_mass,
+            ln_tare_mass[last_index],
         ))
         ln_line = plt.plot(time_hours[first_index:last_index],
             ln_mass[first_index:last_index], label = "Total mass")
