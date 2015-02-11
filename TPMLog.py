@@ -263,7 +263,7 @@ def main(
     rccgpath = os.path.join(directory, "CCGauge-recent_%s.%s" % (basename, filetype))
     ccgpath_log = os.path.join(directory, "CCGauge-log_%s.%s" % (basename, filetype))
     rccgpath_log = os.path.join(directory, "CCGauge-log-recent_%s.%s" % (basename, filetype))
-    tcgpath = os.path.join(directory, "LN-Mass_%s.%s" % (basename, filetype))
+    lnpath = os.path.join(directory, "LN-Mass_%s.%s" % (basename, filetype))
     bottle_mass_path = os.path.join(directory, "BottleMass_%s.%s" % (basename, filetype))
     capacitance_path = os.path.join(directory, "Capacitance_%s.%s" % (basename, filetype))
     hfep_path = os.path.join(directory, "HFE_Pressure_%s.%s" % (basename, filetype))
@@ -429,7 +429,7 @@ def main(
             pass
         ln_mass.append(float(split_line[15+column_offset]) + tare_mass)    
 
-    # indices to use if start_time or stop_time are specified
+    # indices to use if start_time or stop_time are not specified
     first_index = 0
     last_index = len(time_stamps)-1
 
@@ -439,34 +439,42 @@ def main(
 
     # loop over time stamps, converting some units and searching for some
     # special indices
+    print "looping over time stamps..."
     for (i, time_stamp) in enumerate(time_stamps):
         seconds_elapsed = time_stamp - time_stamps[0]
         time_hours.append(seconds_elapsed/3600.0) # time in hours
         time_minutes.append(seconds_elapsed/60.0) # time in minutes
 
-        # find time stamp recent_time_span from end of file:
+        # find time stamp recent_time_span from last_index:
         if start_index_of_last_hour == None:
-            if last_time_stamp - time_stamp <= recent_time_span:
+            #if last_time_stamp - time_stamp <= recent_time_span:
+            last_hour_to_consider = (last_time_stamp - time_stamps[0])/3600.0
+            if stop_time != None:
+                last_hour_to_consider = stop_time
+            if last_hour_to_consider*3600 - seconds_elapsed <= recent_time_span:
                 start_index_of_last_hour = i
                 start_time_stamp_of_last_hour = time_stamp
-                print "found last hour time stamp  at i = %i of %i, t= %.2f" % (i, len(time_stamps),  start_time_stamp_of_last_hour)
-                print "last timestamp = %.2f, diff = %.2f" % (last_time_stamp, last_time_stamp - start_time_stamp_of_last_hour )
-                print "%i recent time stamps" % (len(time_stamps) - start_index_of_last_hour - 1)
+                print "last_hour_to_consider", last_hour_to_consider
+                print "\t found last hour time stamp  at i = %i of %i, t= %.2f hours" % (i, len(time_stamps),  seconds_elapsed/3600.0)
+                print "\t last timestamp = %.2f, diff = %.2f" % (last_time_stamp, last_time_stamp - start_time_stamp_of_last_hour )
+                print "\t %i recent time stamps" % (len(time_stamps) - start_index_of_last_hour - 1)
 
         # find first_index, if start_time is specified
         if start_time != None and first_index == 0:
             if time_hours[-1] >= start_time: 
                 first_index = i
-                print "found first index: %i at time %.2f hours" % (i, time_hours[-1])
+                print "\t found first index: %i at time %.2f hours" % (i, time_hours[-1])
             
         # find last_index, if stop_time is specified
         if stop_time != None and last_index == len(time_stamps)-1:
             if time_hours[-1] >= stop_time: 
                 last_index = i
-                print "found last index: %i at time %.2f hours" % (i, time_hours[-1])
+                print "\t found last index: %i at time %.2f hours" % (i, time_hours[-1])
+    print "...done looping over time stamps"
             
 
     if last_time_stamp - time_stamps[0]  <= 0.0:
+        print "last_time_stamp - time_stamps[0] = ", last_time_stamp - time_stamps[0]
         return
 
     # if the run is too short, recent times start at t0:
@@ -696,23 +704,25 @@ def main(
         plt.clf()
    
     if len(ln_mass) > 0:
+        ln_density = 1.78 # lb / Liter
         old_amt_ln = ln_mass[start_index_of_last_hour]
-        new_amt_ln = ln_mass[-1]
+        new_amt_ln = ln_mass[last_index]
         tare_mass = ln_tare_mass[-1]
         print "old amt ln [lb]:", old_amt_ln
         print "new amt ln [lb]:", new_amt_ln
         print "recent time span:", recent_time_span
         ln_consumption_rate = (old_amt_ln - new_amt_ln) / (recent_time_span/3600.0)
-        print "LN consumption rate: [lb / hour]:", ln_consumption_rate
+        ln_consumption_rate_info = "LN consumption rate [lb / hour]: %.2f" %  ln_consumption_rate
+        print ln_consumption_rate_info
+        print "LN consumption rate [L / hour]:", ln_consumption_rate/ln_density
         ln_hours_remaining = (new_amt_ln - tare_mass)/ ln_consumption_rate
         print "LN time remaining: [hours]", ln_hours_remaining
-
+        outfile.write("CC pressure [Torr]: %.2e \n" % ccg_Pressure[-1])
 
         # estimate when LN dewar will be empty
         empty_time = datetime.datetime.fromtimestamp(
           time_stamps[last_index]- 2082844800 + ln_hours_remaining*3600.0)
 
-        ln_density = 1.78 # lb / Liter
         plt.figure(12)
         plt.grid(b=True)
         plt.title('LN mass (should run out in %.1f hours, at %s) \n total mass = %.1f lb, LN mass = %.1f lb (%.1f  L), tare = %.1f lb' % (
@@ -732,8 +742,8 @@ def main(
         plt.xlabel('Time [hours] %s' % time_string)
         plt.ylabel('LN mass - tare weight [lb]')
         legend = plt.legend(loc='best', shadow = False, fontsize='medium', ncol=2)
-        plt.savefig(tcgpath)
-        print "printed %s" % tcgpath
+        plt.savefig(lnpath)
+        print "printed %s" % lnpath
         plt.clf()
         outfile.write("LN mass [lb]: %.3f \n" % ln_mass[-1])
 
