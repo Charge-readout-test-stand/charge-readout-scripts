@@ -58,8 +58,8 @@ def compare_isochoric(data_path, plot_dir, basename, temp_obs, press_obs, time_h
     iso_data = plt.plot(temp, press)
     plt.setp(iso_data, color = 'c', linewidth = linewidth, label = 'Data')
     legend = plt.legend(loc='best', shadow = False, fontsize='medium', ncol=2)
-    plt.savefig(plot_dir+"Comp_Isochoric_"+basename+".jpeg")
-    print "printed", plot_dir+"Comp_Isochoric_"+basename+".jpeg"
+    plt.savefig(plot_dir+"Comp-Isochoric_"+basename+".jpeg")
+    print "printed", plot_dir+"Comp-Isochoric_"+basename+".jpeg"
     plt.clf()
     
     calc_press = []
@@ -80,8 +80,8 @@ def compare_isochoric(data_path, plot_dir, basename, temp_obs, press_obs, time_h
     plt.setp(iso_calc, color = 'c', linewidth = linewidth, label = 'Temp Calc')
     plt.setp(iso_real, color = 'r', linewidth = linewidth, label = 'Baratron')
     legend = plt.legend(loc='best', shadow = False, fontsize='medium', ncol=2)
-    plt.savefig(plot_dir+"Comp_Isochoric2_" + basename + ".jpeg")
-    print "printed", plot_dir+"Comp_Isochoric2_" + basename +".jpeg"
+    plt.savefig(plot_dir+"Comp-Isochoric2_" + basename + ".jpeg")
+    print "printed", plot_dir+"Comp-Isochoric2_" + basename +".jpeg"
     plt.clf()
         
      
