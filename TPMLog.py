@@ -715,7 +715,11 @@ def main(
         ln_consumption_rate_info = "LN consumption rate [lb / hour]: %.2f" %  ln_consumption_rate
         print ln_consumption_rate_info
         print "LN consumption rate [L / hour]:", ln_consumption_rate/ln_density
-        ln_hours_remaining = (new_amt_ln)/ ln_consumption_rate
+        try: 
+            ln_hours_remaining = (new_amt_ln)/ ln_consumption_rate
+        except ZeroDivisionError:
+            ln_hours_remaining = -999.99
+            
         print "LN time remaining: [hours]", ln_hours_remaining
         outfile.write("LN time remaining [hours]: %.2f \n" % ln_hours_remaining)
         outfile.write("LN consumption rate [lb/hour]: %.2f \n" % ln_consumption_rate)
