@@ -267,6 +267,7 @@ def main(
     bottle_mass_path = os.path.join(directory, "BottleMass_%s.%s" % (basename, filetype))
     capacitance_path = os.path.join(directory, "Capacitance_%s.%s" % (basename, filetype))
     hfep_path = os.path.join(directory, "HFE_Pressure_%s.%s" % (basename, filetype))
+    dp_path = os.path.join(directory, "dP_Pressure_%s.%s" % (basename, filetype))
 
     # create some lists to hold values from files
     time_stamps = [] # labview timestamp, in seconds
@@ -806,9 +807,9 @@ def main(
                 last_pressure_psia - 14.7
             ) # FIXME -- make this conversion more accurate 
             plt.title(title)
-            mfline1 = plt.plot(time_hours[first_index:last_index],
+            hfe_line = plt.plot(time_hours[first_index:last_index],
             hfe_pressure[first_index:last_index])
-            plt.setp(mfline1, color = 'b', linewidth = linewidth)
+            plt.setp(hfe_line, color = 'b', linewidth = linewidth)
             plt.xlabel('Time [hours] %s' % time_string)
             plt.ylabel('Pressure [torr]')
             plt.savefig(hfep_path)
@@ -816,6 +817,27 @@ def main(
             plt.clf()
             outfile.write("HP2 HFE Pressure [torr]: %.1f (%.1f psia, %.1f psig)\n" % (
                 last_pressure, last_pressure_psia, last_pressure_psia-14.7))
+
+            # plot the pressure difference, dP [torr]
+            dP = []
+            for i in xrange(len(hfe_pressure)): 
+                dP.append(Pressure[i] - hfe_pressure[i])
+
+            plt.figure(15)
+            plt.grid(b=True)
+            last_pressure = hfe_pressure[-1]
+            last_pressure_psia = last_pressure/760*14.7
+            title = 'dP = Xenon XP3 - HFE HP2 (should be <0) %.1f torr' % (dP[last_index]) 
+            plt.title(title)
+            dP_line = plt.plot(time_hours[first_index:last_index], dP[first_index:last_index])
+            plt.setp(dP_line, color = 'b', linewidth = linewidth)
+            plt.xlabel('Time [hours] %s' % time_string)
+            plt.ylabel('Pressure [torr]')
+            plt.savefig(dp_path)
+            print "printed %s" % dp_path
+            plt.clf()
+            outfile.write("dP (Xenon XP3 - HFE XP2) [torr]: %.1f \n" % dP[-1])
+
         else:
             print "hfe_pressure list and time_hours list are different lengths"
             print "--> skipping HFE pressure plot"
