@@ -500,7 +500,7 @@ def main(
         start_time_hold.strftime("%m-%d-%y %I:%M%p"),
         end_time_hold.strftime("%m-%d-%y %I:%M%p"),
     )
-    print time_string
+    #print time_string
 
 
 
@@ -648,7 +648,7 @@ def main(
     if len(ccg_Pressure) > 0:
 
         try:
-            outfile.write("CC pressure [Torr]: %.2e \n" % ccg_Pressure[-1])
+            outfile.write("XP4 (cold cathode gauge) pressure [Torr]: %.2e \n" % ccg_Pressure[-1])
             plt.figure(8)
             plt.grid(b=True)
             plt.title('Cold Cathode Pressure')
@@ -717,7 +717,9 @@ def main(
         print "LN consumption rate [L / hour]:", ln_consumption_rate/ln_density
         ln_hours_remaining = (new_amt_ln)/ ln_consumption_rate
         print "LN time remaining: [hours]", ln_hours_remaining
-        outfile.write("CC pressure [Torr]: %.2e \n" % ccg_Pressure[-1])
+        outfile.write("LN time remaining [hours]: %.2f \n" % ln_hours_remaining)
+        outfile.write("LN consumption rate [lb/hour]: %.2f \n" % ln_consumption_rate)
+        outfile.write("LN consumption rate [L/hour]: %.2f \n" % (ln_consumption_rate/ln_density))
 
         # estimate when LN dewar will be empty
         empty_time = datetime.datetime.fromtimestamp(
@@ -745,7 +747,9 @@ def main(
         plt.savefig(lnpath)
         print "printed %s" % lnpath
         plt.clf()
-        outfile.write("LN mass [lb]: %.3f \n" % ln_mass[-1])
+        outfile.write("LN total mass [lb]: %.3f \n" % ln_mass[-1])
+        outfile.write("LN tare mass [lb]: %.3f \n" % ln_tare_mass[-1])
+        outfile.write("LN mass [lb]: %.3f \n" % (ln_mass[-1] - ln_tare_mass[-1])) 
 
 
 
@@ -814,9 +818,9 @@ def main(
             
     compare_isochoric(os.path.dirname(os.path.realpath(sys.argv[0])), directory, TC2[first_index:last_index], Pressure[first_index:last_index], time_hours[first_index:last_index])
     
-    outfile.write("Xenon mass, integrated mass flow [g]: %.4f \n" % mass)
-    outfile.write("Vacuum system 1k Torr [Torr]: %.2f \n" % Pressure2[-1])
-    outfile.write("Xenon system 10k Torr Baratron [Torr]: %.2f \n" % Pressure[-1])
+    outfile.write("Xenon mass in cell (integrated mass flow) [g]: %.4f \n" % mass)
+    outfile.write("XP5 Vacuum system (1k Torr Baratron) [Torr]: %.2f \n" % Pressure2[-1])
+    outfile.write("XP3 Xenon system (10k Torr Baratron) [Torr]: %.2f \n" % Pressure[-1])
     outfile.write("Cu top [K]: %.3f (used for temp control) \n" % TC4[-1])
     outfile.write("Cu bot [K]: %.3f \n" % TC0[-1])
     outfile.write("Cell top [K]: %.3f \n" % TC1[-1])
@@ -847,6 +851,7 @@ def main(
         except:
             print "T_min_set info not available!"
 
+    outfile.write("Run duration: %s \n" % time_string)
     outfile.write("Plotting script run time: %s \n" % plot_time)
     outfile.write("Last LabView time stamp: %s \n" % datetime.datetime.fromtimestamp(time_stamps[-1]- 2082844800))
     outfile.close()
