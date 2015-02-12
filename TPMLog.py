@@ -47,7 +47,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from optparse import OptionParser
 
-def compare_isochoric(data_path, plot_dir, temp_obs, press_obs, time_hours):
+def compare_isochoric(data_path, plot_dir, basename, temp_obs, press_obs, time_hours):
     linewidth = 2
     temp, press = np.loadtxt(str(data_path)+"/vapor_pressure_data.txt",unpack=True, usecols = (0,1))
     plt.figure(1)
@@ -58,8 +58,8 @@ def compare_isochoric(data_path, plot_dir, temp_obs, press_obs, time_hours):
     iso_data = plt.plot(temp, press)
     plt.setp(iso_data, color = 'c', linewidth = linewidth, label = 'Data')
     legend = plt.legend(loc='best', shadow = False, fontsize='medium', ncol=2)
-    plt.savefig(plot_dir+"Comp_Isochoric.jpeg")
-    print "printed", plot_dir+"Comp_Isochoric.jpeg"
+    plt.savefig(plot_dir+"Comp_Isochoric_"+basename+".jpeg")
+    print "printed", plot_dir+"Comp_Isochoric_"+basename+".jpeg"
     plt.clf()
     
     calc_press = []
@@ -80,8 +80,8 @@ def compare_isochoric(data_path, plot_dir, temp_obs, press_obs, time_hours):
     plt.setp(iso_calc, color = 'c', linewidth = linewidth, label = 'Temp Calc')
     plt.setp(iso_real, color = 'r', linewidth = linewidth, label = 'Baratron')
     legend = plt.legend(loc='best', shadow = False, fontsize='medium', ncol=2)
-    plt.savefig(plot_dir+"Comp_Isochoric2.jpeg")
-    print "printed", plot_dir+"Comp_Isochoric2.jpeg"
+    plt.savefig(plot_dir+"Comp_Isochoric2_" + basename + ".jpeg")
+    print "printed", plot_dir+"Comp_Isochoric2_" + basename +".jpeg"
     plt.clf()
         
      
@@ -842,7 +842,7 @@ def main(
             print "hfe_pressure list and time_hours list are different lengths"
             print "--> skipping HFE pressure plot"
             
-    compare_isochoric(os.path.dirname(os.path.realpath(sys.argv[0])), directory, TC2[first_index:last_index], Pressure[first_index:last_index], time_hours[first_index:last_index])
+    compare_isochoric(os.path.dirname(os.path.realpath(sys.argv[0])), directory, basename, TC2[first_index:last_index], Pressure[first_index:last_index], time_hours[first_index:last_index])
     
     outfile.write("Xenon mass in cell (integrated mass flow) [g]: %.4f \n" % mass)
     outfile.write("XP5 Vacuum system (1k Torr Baratron) [Torr]: %.2f \n" % Pressure2[-1])
