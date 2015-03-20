@@ -47,7 +47,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from optparse import OptionParser
 
-def compare_isochoric(data_path, plot_dir, basename, temp_obs, press_obs, time_hours):
+def compare_isochoric(data_path, plot_dir, basename, temp_top, temp_mid, temp_bot, press_obs, time_hours):
     linewidth = 2
     temp, press = np.loadtxt(str(data_path)+"/vapor_pressure_data.txt",unpack=True, usecols = (0,1))
     plt.figure(1)
@@ -58,30 +58,34 @@ def compare_isochoric(data_path, plot_dir, basename, temp_obs, press_obs, time_h
     iso_data = plt.plot(temp, press)
     plt.setp(iso_data, color = 'c', linewidth = linewidth, label = 'Data')
     legend = plt.legend(loc='best', shadow = False, fontsize='medium', ncol=2)
-    plt.savefig(plot_dir+"Comp-Isochoric_"+basename+".jpeg")
+    plt.savefig(plot_dir+"Nist-Isochoric_"+basename+".jpeg")
     print "printed", plot_dir+"Comp-Isochoric_"+basename+".jpeg"
     plt.clf()
     
-    calc_press = []
-    for t,p in zip(temp_obs, press_obs):
-        if np.min(temp) < t < np.max(temp) and np.min(press) < p < np.max(press): 
-            index = (np.abs(temp-t)).argmin()
-            calc_press.append(press[index])
+    calc_temp = []
+    for p in press_obs:
+        if np.min(press) < p < np.max(press): 
+            index = (np.abs(press-p)).argmin()
+            calc_temp.append(temp[index])
         else:
-            calc_press.append(0.0)
+            calc_temp.append(0.0)
             
     plt.figure(2)
-    plt.title("Isochoric Batron vs Temp")
+    plt.title("Isochoric Temp Cell vs Thermocouples")
     plt.xlabel("Time [hours]")
-    plt.ylabel("Pressure [torr]")
+    plt.ylabel("Temp [K]")
     plt.grid(b=True)
-    iso_calc = plt.plot(time_hours, calc_press)
-    iso_real = plt.plot(time_hours, press_obs)
-    plt.setp(iso_calc, color = 'c', linewidth = linewidth, label = 'Temp Calc')
-    plt.setp(iso_real, color = 'r', linewidth = linewidth, label = 'Baratron')
+    iso_calc = plt.plot(time_hours, calc_temp)
+    iso_top = plt.plot(time_hours, temp_top)
+    iso_mid = plt.plot(time_hours, temp_mid)
+    iso_bot = plt.plot(time_hours, temp_bot)
+    plt.setp(iso_calc, color = 'k', linewidth = linewidth, label = 'Baratron')
+    plt.setp(iso_top, color = 'r', linewidth = linewidth, label = 'Cell Top')
+    plt.setp(iso_mid, color = 'b', linewidth = linewidth, label = 'Cell Mid')
+    plt.setp(iso_bot, color = 'g', linewidth = linewidth, label = 'Cell Bot')
     legend = plt.legend(loc='best', shadow = False, fontsize='medium', ncol=2)
-    plt.savefig(plot_dir+"Comp-Isochoric2_" + basename + ".jpeg")
-    print "printed", plot_dir+"Comp-Isochoric2_" + basename +".jpeg"
+    plt.savefig(plot_dir+"Temp-Isochoric_" + basename + ".jpeg")
+    print "printed", plot_dir+"Temp-Isochoric_" + basename +".jpeg"
     plt.clf()
         
      
@@ -844,7 +848,7 @@ def main(
             print "hfe_pressure list and time_hours list are different lengths"
             print "--> skipping HFE pressure plot"
             
-    compare_isochoric(os.path.dirname(os.path.realpath(sys.argv[0])), directory, basename, TC2[first_index:last_index], Pressure[first_index:last_index], time_hours[first_index:last_index])
+    compare_isochoric(os.path.dirname(os.path.realpath(sys.argv[0])), directory, basename, TC1[first_index:last_index], TC2[first_index:last_index], TC3[first_index:last_index], Pressure[first_index:last_index], time_hours[first_index:last_index])
     
     outfile.write("Xenon mass in cell (integrated mass flow) [g]: %.4f \n" % mass)
     outfile.write("XP5 Vacuum system (1k Torr Baratron) [Torr]: %.2f \n" % Pressure2[-1])
