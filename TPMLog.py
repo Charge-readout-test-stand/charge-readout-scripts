@@ -131,11 +131,11 @@ def plot_temperatures(filename, title, time_hours, time_stamps, TC0=None, TC1=No
     start_time_hold = datetime.datetime.fromtimestamp(time_stamps[first_index]- 2082844800)
     end_time_hold = datetime.datetime.fromtimestamp(time_stamps[last_index]- 2082844800)
     
-    start_time = start_time_hold.strftime("%m-%d-%y %I:%M:%p")
-    end_time = end_time_hold.strftime("%m-%d-%y %I:%M:%p")
+    start_time = start_time_hold.strftime("%m-%d-%y %I:%M %p")
+    end_time = end_time_hold.strftime("%m-%d-%y %I:%M %p")
 
     plt.figure(1)
-    plt.title(title +"  "+ str(start_time))
+    plt.title(title)
     plt.grid(b=True)
 
     
@@ -707,6 +707,8 @@ def main(
     if len(ln_mass) > 0:
         ln_density = 1.78 # lb / Liter
         # ln_mass is total mass (dewar tare weight + hooks + LN)
+        print len(ln_mass)
+        print len(ln_tare_mass)
         old_amt_ln = ln_mass[start_index_of_last_hour] - ln_tare_mass[start_index_of_last_hour]
         new_amt_ln = ln_mass[last_index] - ln_tare_mass[last_index]
         print "old amt ln [lb]:", old_amt_ln
