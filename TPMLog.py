@@ -37,6 +37,7 @@ Plot names = DataType_Date_Index*.jpeg
 26: T_min set point offset [K]
 27: LN tare mass [lbs]
 *** there is another value in the files after LN mass -- what is it?! -- Alexis 06 Feb 2015
+29: RMS noise [mV] added 19 Mar 2015
 """
 
 
@@ -270,8 +271,9 @@ def main(
     lnpath = os.path.join(directory, "LN-Mass_%s.%s" % (basename, filetype))
     bottle_mass_path = os.path.join(directory, "BottleMass_%s.%s" % (basename, filetype))
     capacitance_path = os.path.join(directory, "Capacitance_%s.%s" % (basename, filetype))
-    hfep_path = os.path.join(directory, "HFE_Pressure_%s.%s" % (basename, filetype))
-    dp_path = os.path.join(directory, "dP_Pressure_%s.%s" % (basename, filetype))
+    hfep_path = os.path.join(directory, "HFE-Pressure_%s.%s" % (basename, filetype))
+    dp_path = os.path.join(directory, "dP-Pressure_%s.%s" % (basename, filetype))
+    rms_noise_path = os.path.join(directory, "rms-noise_%s.%s" % (basename, filetype))
 
     # create some lists to hold values from files
     time_stamps = [] # labview timestamp, in seconds
@@ -305,6 +307,7 @@ def main(
     bottle_mass = []
     capacitance = []
     hfe_pressure = []
+    rms_noise = []
 
     # open the input file
     testfile = file(filename)
@@ -433,6 +436,11 @@ def main(
         except IndexError:
             pass
         ln_mass.append(float(split_line[15+column_offset]) + tare_mass)    
+
+        try:
+            rms_noise.append(float(split_line[22+column_offset]))
+        except:
+            pass
 
     # indices to use if start_time or stop_time are not specified
     first_index = 0
@@ -847,7 +855,32 @@ def main(
         else:
             print "hfe_pressure list and time_hours list are different lengths"
             print "--> skipping HFE pressure plot"
-            
+
+
+    if len(rms_noise) > 0:
+        if len(rms_noise) == len(time_hours):
+            plt.figure(16)
+            plt.grid(b=True)
+            #plt.yscale('log')
+            last_value = rms_noise[-1]
+            title = 'RMS noise (%.2f mV)' % (last_value) 
+            plt.title(title)
+            rms_line = plt.plot(time_hours[first_index:last_index],
+                rms_noise[first_index:last_index])
+            plt.setp(rms_line, color = 'b', linewidth = linewidth)
+            plt.xlabel('Time [hours] %s' % time_string)
+            plt.ylabel('RMS noise [mV]')
+            plt.savefig(rms_noise_path)
+            print "printed %s" % rms_noise_path
+            plt.clf()
+            outfile.write("RMS noise [mV]: %.1f \n" % (last_value))
+        else:
+            print "hfe_pressure list and time_hours list are different lengths"
+            print "--> skipping HFE pressure plot"
+    else:
+        "skipping RMS noise plot"
+ 
+
     compare_isochoric(os.path.dirname(os.path.realpath(sys.argv[0])), directory, basename, TC1[first_index:last_index], TC2[first_index:last_index], TC3[first_index:last_index], Pressure[first_index:last_index], time_hours[first_index:last_index])
     
     outfile.write("Xenon mass in cell (integrated mass flow) [g]: %.4f \n" % mass)
