@@ -861,9 +861,9 @@ def main(
         if len(rms_noise) == len(time_hours):
             plt.figure(16)
             plt.grid(b=True)
-            #plt.yscale('log')
+            plt.yscale('log')
             last_value = rms_noise[-1]
-            title = 'RMS noise (%.2f mV)' % (last_value) 
+            title = 'RMS noise (last value: %.2f mV)' % (last_value) 
             plt.title(title)
             rms_line = plt.plot(time_hours[first_index:last_index],
                 rms_noise[first_index:last_index])
@@ -875,8 +875,8 @@ def main(
             plt.clf()
             outfile.write("RMS noise [mV]: %.1f \n" % (last_value))
         else:
-            print "hfe_pressure list and time_hours list are different lengths"
-            print "--> skipping HFE pressure plot"
+            print "rms_noise list and time_hours list are different lengths"
+            print "--> skipping rms noise plot"
     else:
         "skipping RMS noise plot"
  
