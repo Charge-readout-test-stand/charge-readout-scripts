@@ -681,7 +681,7 @@ def main(
             mfline1 = plt.plot(recent_time, ccg_Pressure[start_index_of_last_hour:])
             plt.setp(mfline1, color = 'b', linewidth = linewidth)
             plt.yscale('log')
-            plt.xlabel('Time [hours]')
+            plt.xlabel('Time [hours] %s' % time_string)
             plt.ylabel('Pressure [Torr]')
             plt.savefig(rccgpath_log)
             print "printed %s" % rccgpath_log
@@ -710,7 +710,7 @@ def main(
         plt.title('Recent Cold Cathode Pressure')
         mfline1 = plt.plot(recent_time, ccg_Pressure[start_index_of_last_hour:])
         plt.setp(mfline1, color = 'b', linewidth = linewidth)
-        plt.xlabel('Time [hours]')
+        plt.xlabel('Time [hours] %s' % time_string)
         plt.ylabel('Pressure [10^-6 Torr]')
         plt.savefig(rccgpath)
         print "printed %s" % rccgpath
