@@ -719,8 +719,6 @@ def main(
     if len(ln_mass) > 0:
         ln_density = 1.78 # lb / Liter
         # ln_mass is total mass (dewar tare weight + hooks + LN)
-        print len(ln_mass)
-        print len(ln_tare_mass)
         old_amt_ln = ln_mass[start_index_of_last_hour] - ln_tare_mass[start_index_of_last_hour]
         new_amt_ln = ln_mass[last_index] - ln_tare_mass[last_index]
         print "old amt ln [lb]:", old_amt_ln
@@ -863,7 +861,9 @@ def main(
             plt.grid(b=True)
             plt.yscale('log')
             last_value = rms_noise[-1]
-            title = 'RMS noise (last value: %.2f mV)' % (last_value) 
+            mean_rms = sum(rms_noise)/float(len(rms_noise))
+            title = 'RMS noise (last value: %.2f mV, mean value: %.2f mV)' % (
+                last_value, mean_rms) 
             plt.title(title)
             rms_line = plt.plot(time_hours[first_index:last_index],
                 rms_noise[first_index:last_index])
