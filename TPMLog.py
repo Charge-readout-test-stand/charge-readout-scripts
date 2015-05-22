@@ -664,7 +664,7 @@ def main(
             outfile.write("XP4 (cold cathode gauge) pressure [Torr]: %.2e \n" % ccg_Pressure[-1])
             plt.figure(8)
             plt.grid(b=True)
-            plt.title('Cold Cathode Pressure')
+            plt.title('XP4 Cold Cathode Pressure (last value: %.2e Torr)' % ccg_Pressure[-1])
             mfline1 = plt.plot(time_hours[first_index:last_index],
             ccg_Pressure[first_index:last_index])
             plt.setp(mfline1, color = 'b', linewidth = linewidth)
@@ -677,7 +677,7 @@ def main(
 
             plt.figure(9)
             plt.grid(b=True)
-            plt.title('Recent Cold Cathode Pressure')
+            plt.title('Recent XP4 Cold Cathode Pressure (last value: %.2e Torr)' % ccg_Pressure[-1])
             mfline1 = plt.plot(recent_time, ccg_Pressure[start_index_of_last_hour:])
             plt.setp(mfline1, color = 'b', linewidth = linewidth)
             plt.yscale('log')
@@ -695,7 +695,7 @@ def main(
 
         plt.figure(10)
         plt.grid(b=True)
-        plt.title('Cold Cathode Pressure')
+        plt.title('XP4 Cold Cathode Pressure (last value: %.2e Torr)' % (ccg_Pressure[-1]*1e-6))
         mfline1 = plt.plot(time_hours[first_index:last_index],
         ccg_Pressure[first_index:last_index])
         plt.setp(mfline1, color = 'b', linewidth = linewidth)
@@ -707,7 +707,7 @@ def main(
 
         plt.figure(11)
         plt.grid(b=True)
-        plt.title('Recent Cold Cathode Pressure')
+        plt.title('Recent XP4 Cold Cathode Pressure (last value: %.2e Torr)' % (ccg_Pressure[-1]*1e-6))
         mfline1 = plt.plot(recent_time, ccg_Pressure[start_index_of_last_hour:])
         plt.setp(mfline1, color = 'b', linewidth = linewidth)
         plt.xlabel('Time [hours] %s' % time_string)
