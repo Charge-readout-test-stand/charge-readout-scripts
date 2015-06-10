@@ -256,6 +256,12 @@ def main(
     basename = os.path.splitext(basename)[0]
     basename = basename.split("test_")[-1]
 
+    # offset, in grams/minute, for the mass flow meter (we can never exactly zero  the mass flow meter, so
+    # we compensate for this)
+    # compensation from test_20150609_173311.dat
+    mass_flow_rate_offset = 326.33/897.16 
+    print "mass_flow_rate_offset", mass_flow_rate_offset
+
     
     # construct file names of plots
     filetype = 'jpeg'    
@@ -392,7 +398,9 @@ def main(
         Heat.append(float(split_line[9+column_offset]))
 
         xenon_mass_flow = float(split_line[10+column_offset])*xenon_density_ratio
-        mass_flow_rate.append(xenon_mass_flow)
+        # correct for offset in mass flow meter
+        mass_flow_rate.append(xenon_mass_flow - mass_flow_rate_offset)
+        #mass_flow_rate.append(xenon_mass_flow)
 
         # for use while testing the system with N2
         #nitrogen_mass_flow = xenon_mass_flow / xenon_gas_correction_factor / xenon_density * nitrogen_density
@@ -521,7 +529,6 @@ def main(
     Vol = []
 
 
-
     if len(mass_flow_rate) > 1:
       print "integrating %i mass flow rate points..." % len(mass_flow_rate)
 
@@ -531,7 +538,7 @@ def main(
           if i_time > 0:
               delta_time_minutes = minute_time - time_minutes[i_time-1]
 
-          mass += mass_flow_rate[i_time]*delta_time_minutes
+          mass += mass_flow_rate[i_time]*delta_time_minutes 
           Vol.append(mass)
 
           #if i_time % 100 == 0: # debugging
@@ -539,6 +546,7 @@ def main(
           #  i_time, minute_time, delta_time_minutes, mass_flow_rate[i_time], mass)
 
       print "done with integral"
+      print "integrated mass: %.2f g in %.2f minutes" % (mass, time_minutes[-1])
 
       # do a sanity check on the integral...
       #sum_mass_flow_rate = 0.0
