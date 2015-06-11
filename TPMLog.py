@@ -586,8 +586,8 @@ def main(
     time_hours,time_stamps, TC0, TC1, TC2, TC3, TC4, first_index=start_index_of_last_hour)
     
     #plot just Ambient Temperature
-    filename = os.path.join(directory, "Ambient_Only_%s.%s" % (basename, filetype))
-    plot_temp_vs_lmass(filename, 'Bottle Mass vs Ambient Temp', time_hours, time_stamps, T_ambient, bottle_mass)
+    #filename = os.path.join(directory, "Ambient_Only_%s.%s" % (basename, filetype))
+    #plot_temp_vs_lmass(filename, 'Bottle Mass vs Ambient Temp', time_hours, time_stamps, T_ambient, bottle_mass)
 
     linewidth=1
    
@@ -630,7 +630,7 @@ def main(
     
     plt.figure(5)
     plt.grid(b=True)
-    plt.title('Xenon system pressure XP3 (10k Torr Baratron)')
+    plt.title("XP3 Xenon system pressure (10k Torr Baratron) [Torr]: %.2f \n" % Pressure[-1])
     pline1 = plt.plot(time_hours[first_index:last_index],
     Pressure[first_index:last_index])
     plt.setp(pline1, color = 'b', linewidth = linewidth)
@@ -643,7 +643,7 @@ def main(
     if len(Pressure2) > 0:
       plt.figure(6)
       plt.grid(b=True)
-      plt.title('Vacuum system pressure XP5 (1k Torr Baratron)')
+      plt.title("XP5 Vacuum system pressure (1k Torr Baratron) [Torr]: %.2f \n" % Pressure2[-1])
       pline1 = plt.plot(time_hours[first_index:last_index],
       Pressure2[first_index:last_index])
       plt.setp(pline1, color = 'b', linewidth = linewidth)
@@ -655,7 +655,7 @@ def main(
       
     if len(mass_flow_rate) > 0:
       plt.figure(7)
-      plt.title('Mass Flow Rate')
+      plt.title('Mass Flow Rate: [g/min] %.2f' % mass_flow_rate[-1])
       plt.grid(b=True)
       mfline1 = plt.plot(time_hours[first_index:last_index],
       mass_flow_rate[first_index:last_index])
@@ -781,7 +781,7 @@ def main(
     if len(bottle_mass) > 0:
         plt.figure(13)
         plt.grid(b=True)
-        plt.title('Xenon bottle mass')
+        plt.title("Xenon bottle mass [kg]: %.2f \n" % bottle_mass[-1])
         mfline1 = plt.plot(time_hours[first_index:last_index],
         bottle_mass[first_index:last_index])
         plt.setp(mfline1, color = 'b', linewidth = linewidth)
@@ -801,7 +801,7 @@ def main(
     if len(capacitance) > 0:
         plt.figure(14)
         plt.grid(b=True)
-        plt.title('Xenon cell capacitance')
+        plt.title("Xenon cell capacitance [pF]: %.2f \n" % capacitance[-1])
         mfline1 = plt.plot(time_hours[first_index:last_index],
         capacitance[first_index:last_index])
         plt.setp(mfline1, color = 'b', linewidth = linewidth)
@@ -892,8 +892,8 @@ def main(
     compare_isochoric(os.path.dirname(os.path.realpath(sys.argv[0])), directory, basename, TC1[first_index:last_index], TC2[first_index:last_index], TC3[first_index:last_index], Pressure[first_index:last_index], time_hours[first_index:last_index])
     
     outfile.write("Xenon mass in cell (integrated mass flow) [g]: %.4f \n" % mass)
-    outfile.write("XP5 Vacuum system (1k Torr Baratron) [Torr]: %.2f \n" % Pressure2[-1])
-    outfile.write("XP3 Xenon system (10k Torr Baratron) [Torr]: %.2f \n" % Pressure[-1])
+    outfile.write("XP5 Vacuum system pressure (1k Torr Baratron) [Torr]: %.2f \n" % Pressure2[-1])
+    outfile.write("XP3 Xenon system pressure (10k Torr Baratron) [Torr]: %.2f \n" % Pressure[-1])
     outfile.write("Cu top [K]: %.3f (used for temp control) \n" % TC4[-1])
     outfile.write("Cu bot [K]: %.3f \n" % TC0[-1])
     outfile.write("Cell top [K]: %.3f \n" % TC1[-1])
