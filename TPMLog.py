@@ -150,68 +150,69 @@ def plot_temperatures(filename, title, time_hours, time_stamps, TC0=None, TC1=No
     # http://www.w3schools.com/tags/ref_colornames.asp
 
 
+    kelvin_offset = 273.15
     if TC0 and len(TC0) > 0:
         line1 = plt.plot(time_hours[first_index:last_index], TC0[first_index:last_index])
-        plt.setp(line1, color = 'r', linewidth = linewidth, label = 'Cu Bot')
+        plt.setp(line1, color = 'r', linewidth = linewidth, label = 'Cu Bot (%.1fK = %.1fC)' % (TC0[last_index], TC0[last_index]-kelvin_offset))
 
     if TC1 and len(TC1) > 0:
         line2 = plt.plot(time_hours[first_index:last_index], TC1[first_index:last_index])
-        plt.setp(line2, color = 'b', linewidth = linewidth, label = 'CellTop')
+        plt.setp(line2, color = 'b', linewidth = linewidth, label = 'Cell Top (%.1fK = %.1fC)' % (TC1[last_index], TC1[last_index]-kelvin_offset))
 
     if TC2 and len(TC2) > 0:
         line3 = plt.plot(time_hours[first_index:last_index],
         TC2[first_index:last_index])
-        plt.setp(line3, color = 'g', linewidth = linewidth, label = 'CellMid')
+        plt.setp(line3, color = 'g', linewidth = linewidth, label = 'Cell Mid (%.1fK = %.1fC)' % (TC2[last_index], TC2[last_index]-kelvin_offset))
 
     if TC3 and len(TC3) > 0:
         line4 = plt.plot(time_hours[first_index:last_index],
         TC3[first_index:last_index])
-        plt.setp(line4, color = 'm', linewidth = linewidth, label = 'CellBot')
+        plt.setp(line4, color = 'm', linewidth = linewidth, label = 'Cell Bot (%.1fK = %.1fC)' % (TC3[last_index], TC3[last_index]-kelvin_offset))
 
     if TC4 and len(TC4) > 0:
         line5 = plt.plot(time_hours[first_index:last_index],
         TC4[first_index:last_index])
-        plt.setp(line5, color = 'k', linewidth = linewidth, label = 'Cu Top')
+        plt.setp(line5, color = 'k', linewidth = linewidth, label = 'Cu Top (%.1fK = %.1fC)' % (TC4[last_index], TC4[last_index]-kelvin_offset))
 
     if T_ambient and len(T_ambient) > 0:
         line6 = plt.plot(time_hours[first_index:last_index],
         T_ambient[first_index:last_index])
-        plt.setp(line6, color = 'c', linewidth = linewidth, label = 'Ambient')
+        plt.setp(line6, color = 'c', linewidth = linewidth, label = 'Ambient (%.1fK = %.1fC)' % (T_ambient[last_index], T_ambient[last_index]-kelvin_offset))
 
     if T_LN_in and len(T_LN_in) > 0 and len(T_LN_in) == len(T_ambient):
         line7 = plt.plot(time_hours[first_index:last_index],
         T_LN_in[first_index:last_index])
-        plt.setp(line7, color = 'purple', linewidth = linewidth, label = 'LN in')
+        plt.setp(line7, color = 'purple', linewidth = linewidth, label = 'LN in (%.1fK = %.1fC)' % (T_LN_in[last_index], T_LN_in[last_index]-kelvin_offset))
 
     if T_LN_out and len(T_LN_out) > 0 and len(T_LN_out) == len(T_ambient):
         line8 = plt.plot(time_hours[first_index:last_index],
         T_LN_out[first_index:last_index])
-        plt.setp(line8, color = 'royalblue', linewidth = linewidth, label = 'LN out')
+        plt.setp(line8, color = 'royalblue', linewidth = linewidth, label = 'LN out (%.1fK = %.1fC)' % (T_LN_out[last_index], T_LN_out[last_index]-kelvin_offset))
 
     if T_Xe_bottle and len(T_Xe_bottle) > 0 and len(T_Xe_bottle) == len(T_ambient):
         line8 = plt.plot(time_hours[first_index:last_index],
         T_Xe_bottle[first_index:last_index])
-        plt.setp(line8, color = 'magenta', linewidth = linewidth, label = 'Xe bottle')
+        plt.setp(line8, color = 'magenta', linewidth = linewidth, label = 'Xe bottle (%.1fK = %.1fC)' % (T_Xe_bottle[last_index], T_Xe_bottle[last_index]-kelvin_offset))
 
     if T_max_set and len(T_max_set) > 0 and len(T_max_set) == len(T_ambient):
         line9 = plt.plot(time_hours[first_index:last_index],
         T_max_set[first_index:last_index])
-        plt.setp(line9, color = 'r', linewidth = linewidth, label = 'T_max', ls = '--')
+        plt.setp(line9, color = 'r', linewidth = linewidth, label = 'T_max (%.1fK = %.1fC)' % (T_max_set[last_index], T_max_set[last_index]-kelvin_offset), ls = '--')
 
     if T_min_set and len(T_min_set) > 0 and len(T_min_set) == len(T_ambient):
         line10 = plt.plot(time_hours[first_index:last_index],
         T_min_set[first_index:last_index])
-        plt.setp(line10, color = 'b', linewidth = linewidth, label = 'T_min', ls = '--')
+        plt.setp(line10, color = 'b', linewidth = linewidth, label = 'T_min (%.1fK = %.1fC)' % (T_min_set[last_index], T_min_set[last_index]-kelvin_offset), ls = '--')
         
     if TC15 and len(TC15) > 0:
         line11 = plt.plot(time_hours[first_index:last_index],
         TC15[first_index:last_index])
-        plt.setp(line11, color = 'k', linewidth = linewidth, label = 'XV5')
+        plt.setp(line11, color = 'k', linewidth = linewidth, label = 'XV5 (%.1fK = %.1fC)' % (TC15[last_index], TC15[last_index]-kelvin_offset))
     
     if TC10 and len(TC10) > 0:
         line12 = plt.plot(time_hours[first_index:last_index],
         TC10[first_index:last_index])
-        plt.setp(line12, color = 'g', linewidth = linewidth, label = 'Reg')
+        plt.setp(line12, color = 'g', linewidth = linewidth, label = 'Reg (%.1fK = %.1fC)' % (TC10[last_index], TC10[last_index]-kelvin_offset))
 
     plt.xlabel('Time [hours] : '  + str(start_time) + "  -  " + str(end_time))
     plt.ylabel('Temperature [K]')
