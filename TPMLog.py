@@ -82,10 +82,10 @@ def compare_isochoric(data_path, plot_dir, basename, temp_top, temp_mid, temp_bo
     iso_top = plt.plot(time_hours, temp_top)
     iso_mid = plt.plot(time_hours, temp_mid)
     iso_bot = plt.plot(time_hours, temp_bot)
-    plt.setp(iso_calc, color = 'k', linewidth = linewidth, label = 'Baratron')
-    plt.setp(iso_top, color = 'r', linewidth = linewidth, label = 'Cell Top')
-    plt.setp(iso_mid, color = 'b', linewidth = linewidth, label = 'Cell Mid')
-    plt.setp(iso_bot, color = 'g', linewidth = linewidth, label = 'Cell Bot')
+    plt.setp(iso_calc, color = 'k', linewidth = linewidth, label = 'Baratron (%.1fK)' % calc_temp[-1])
+    plt.setp(iso_top, color = 'r', linewidth = linewidth, label = 'Cell Top (%.1fK)' % temp_top[-1])
+    plt.setp(iso_mid, color = 'b', linewidth = linewidth, label = 'Cell Mid (%.1fK)' % temp_mid[-1])
+    plt.setp(iso_bot, color = 'g', linewidth = linewidth, label = 'Cell Bot (%.1fK)' % temp_bot[-1])
     legend = plt.legend(loc='best', shadow = False, fontsize='medium', ncol=2)
     plt.savefig(plot_dir+"Temp-Isochoric_" + basename + ".jpeg")
     print "printed", plot_dir+"Temp-Isochoric_" + basename +".jpeg"
@@ -629,7 +629,7 @@ def main(
     plt.fill_between(time_hours[first_index:last_index],Heat[first_index:last_index], color='r')
     plt.setp(vline1, color = 'b', linewidth = 2.0, label = 'LN valve',)
     plt.setp(vline2, color = 'g', linewidth = 2.0, label = 'LN enabled')
-    plt.setp(vline3, color = 'r', linewidth = 2.0, label = 'Heater',)
+    plt.setp(vline3, color = 'r', linewidth = 2.0, label = 'Heaters',)
     plt.xlabel('Time [hours] %s' % time_string)
     plt.legend(loc = 'best', shadow = False)
     plt.ylim(0.0, 1.2)
@@ -856,7 +856,7 @@ def main(
             plt.grid(b=True)
             last_pressure = hfe_pressure[-1]
             last_pressure_psia = last_pressure/760*14.7
-            title = 'dP = Xenon XP3 - HFE HP2 (should be <0) %.1f torr' % (dP[last_index]) 
+            title = 'dP = Xenon XP3 - HFE HP2 = %.1f torr (should be < 0)' % (dP[last_index]) 
             plt.title(title)
             dP_line = plt.plot(time_hours[first_index:last_index], dP[first_index:last_index])
             plt.setp(dP_line, color = 'b', linewidth = linewidth)
