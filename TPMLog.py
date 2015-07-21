@@ -22,11 +22,13 @@ Plot names = DataType_Date_Index*.jpeg
 11: T_max set point
 12: TC15 on valve XV5 [K] (for t > 3500502750)
 13: TC10, regulator temperature [K] (for t > 3500502750)
-14: Primary LN valve status
-15: Secondar LN valve status
-16: Heater 
-17: Mass flow rate (uncorrected)
-18: Mass flow rate [grams per minute Xe gas]
+14: Omega temp (t > 3520358622, added 21 July 2015)
+
+15: LN valve status
+16: LN enabled (enabled instead of "secondary" t > 3520358622, 21 July 2015)
+17: Heater status
+18: Mass flow  (uncorrected)
+    old 18: Mass flow rate [grams per minute Xe gas] (removed for t > 3520358622, 21 July 2015)
 19: Pressure from 10k Torr baratron [Torr]
 20: Pressure from 1k Torr baratron [Torr]
 21: Cold cathode gauge [micro Torr]
@@ -393,12 +395,18 @@ def main(
         TC15.append(float(split_line[12]))
         TC10.append(float(split_line[13]))
         
+        column_offset_2 = 0
 
-        PLN.append(float(split_line[7+column_offset]))
-        SLN.append(float(split_line[8+column_offset]))
-        Heat.append(float(split_line[9+column_offset]))
+        # this offset occurred when the Omega temperature controller replaced the mass flow rate (corrected by knob)
+        # the output from AI0 was added to the block of temperature data and removed from the element-by-element data stream
+        if time_stamp > 3520358622:
+            column_offset_2 = 1       
+        
+        PLN.append(float(split_line[7+column_offset + column_offset_2]))
+        SLN.append(float(split_line[8+column_offset + column_offset_2]))
+        Heat.append(float(split_line[9+column_offset + column_offset_2]))
 
-        xenon_mass_flow = float(split_line[10+column_offset])*xenon_density_ratio
+        xenon_mass_flow = float(split_line[10+column_offset+column_offset_2])*xenon_density_ratio
         # correct for offset in mass flow meter
         mass_flow_rate.append(xenon_mass_flow - mass_flow_rate_offset)
         #mass_flow_rate.append(xenon_mass_flow)
@@ -611,20 +619,20 @@ def main(
       
     plt.figure(4)
     plt.grid(b=True)
-    plt.title('Valves / Heaters')
+    plt.title('LN and Heaters')
     # plot the lines:
     vline1 = plt.plot(time_hours[first_index:last_index], PLN[first_index:last_index])
-    #vline2 = plt.plot(time_hours, SLN)
+    vline2 = plt.plot(time_hours[first_index:last_index], SLN[first_index:last_index])
     vline3 = plt.plot(time_hours[first_index:last_index], Heat[first_index:last_index])
     # plot the fill areas:
     plt.fill_between(time_hours[first_index:last_index],PLN[first_index:last_index], color='b')
     plt.fill_between(time_hours[first_index:last_index],Heat[first_index:last_index], color='r')
-    plt.setp(vline1, color = 'b', linewidth = 2.0, label = 'LN Valve',)
-    #plt.setp(vline2, color = 'b', linewidth = 2.0, label = 'LN Valve 2')
+    plt.setp(vline1, color = 'b', linewidth = 2.0, label = 'LN valve',)
+    plt.setp(vline2, color = 'g', linewidth = 2.0, label = 'LN enabled')
     plt.setp(vline3, color = 'r', linewidth = 2.0, label = 'Heater',)
     plt.xlabel('Time [hours] %s' % time_string)
     plt.legend(loc = 'best', shadow = False)
-    #plt.axis([0, time_hours[-1]*1.1, -0.2, 1.2])
+    plt.ylim(0.0, 1.2)
     plt.savefig(vpath)
     print "printed %s" % vpath
     plt.clf()
@@ -874,9 +882,12 @@ def main(
             title = 'RMS noise (last value: %.2f mV, mean value: %.2f mV)' % (
                 last_value, mean_rms) 
             plt.title(title)
-            rms_line = plt.plot(time_hours[first_index:last_index],
-                rms_noise[first_index:last_index])
-            plt.setp(rms_line, color = 'b', linewidth = linewidth)
+            try:
+                rms_line = plt.plot(time_hours[first_index:last_index],
+                    rms_noise[first_index:last_index])
+                plt.setp(rms_line, color = 'b', linewidth = linewidth)
+            except ValueError:
+                print "RMS noise value error"
             plt.xlabel('Time [hours] %s' % time_string)
             plt.ylabel('RMS noise [mV]')
             plt.savefig(rms_noise_path)
