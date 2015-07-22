@@ -54,13 +54,13 @@ def compare_isochoric(data_path, plot_dir, basename, temp_top, temp_mid, temp_bo
     linewidth = 2
     temp, press = np.loadtxt(str(data_path)+"/vapor_pressure_data.txt",unpack=True, usecols = (0,1))
     plt.figure(1)
-    plt.title("Isochoric Data NIST")
+    plt.title("NIST Isochoric Xenon Data (9kg / 3.3L = 2.727 g/mL)")
     plt.xlabel("Temp [K]")
     plt.ylabel("Pressure [torr]")
     plt.grid(b=True)
     iso_data = plt.plot(temp, press)
     plt.setp(iso_data, color = 'c', linewidth = linewidth, label = 'Data')
-    legend = plt.legend(loc='best', shadow = False, fontsize='medium', ncol=2)
+    #legend = plt.legend(loc='best', shadow = False, fontsize='medium', ncol=2)
     plt.savefig(plot_dir+"Nist-Isochoric_"+basename+".jpeg")
     print "printed", plot_dir+"Comp-Isochoric_"+basename+".jpeg"
     plt.clf()
