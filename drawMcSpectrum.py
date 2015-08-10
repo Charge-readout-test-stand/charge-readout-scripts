@@ -7,6 +7,10 @@ Arguments: [nEXO root filenames]
 
 used at SLAC with these MC results on 10 Aug 2015:
 /nfs/slac/g/exo_data4/users/mjewell/nEXO_MC/testing/Bi207_Full_3mm.root
+
+Conti et al. paper:
+  "Correlated fluctuations between luminescence and ionization in liquid xenon"
+  PHYSICAL REVIEW B 68, 054201 2003
 """
 
 import os
@@ -44,7 +48,14 @@ def process_file(filename):
     # https://confluence.slac.stanford.edu/download/attachments/162955571/EXO-200_public_material_28Feb2014.pptx?version=1&modificationDate=1394478396000&api=v2
     # sigma/E = 3.5% at the 2615-keV peak (91.5 keV)
     # the simplest thing is to assume this resolution does not vary with energy
-    sigma_keV =  3.5/100.0*2615 # charge-signal sigma, in keV, for energy smearing
+    #sigma_keV =  3.5/100.0*2615 # charge-signal sigma, in keV, for energy smearing
+
+    # from the Conti paper at 0.2 kV/cm, ~11.5% @ 570 keV:
+    #sigma_keV =  11.5/100.0*570 # charge-signal sigma, in keV, for energy smearing
+
+    # from the Conti paper at 1.0 kV/cm, ~5% @ 570 keV:
+    sigma_keV =  5.0/100.0*570 # charge-signal sigma, in keV, for energy smearing
+
     print "sigma_keV", sigma_keV
 
     # construct a basename from the input filename
@@ -59,13 +70,13 @@ def process_file(filename):
     # make a histogram to hold energies
     hist = TH1D("hist", "", 250, 0, 2500)
     hist.SetLineColor(TColor.kBlue+1)
-    hist.SetFillColor(TColor.kBlue+1)
-    hist.SetFillStyle(3004)
+    #hist.SetFillColor(TColor.kBlue+1)
+    #hist.SetFillStyle(3004)
     hist.SetLineWidth(2)
 
     nEXOevents.SetLineColor(TColor.kRed)
-    nEXOevents.SetFillColor(TColor.kRed)
-    nEXOevents.SetFillStyle(3005)
+    #nEXOevents.SetFillColor(TColor.kRed)
+    #nEXOevents.SetFillStyle(3005)
     nEXOevents.SetLineWidth(2)
 
     # make a histogram to hold smearing info
@@ -133,8 +144,8 @@ def process_file(filename):
 
     # set up a legend
     legend = TLegend(0.1, 0.91, 0.9, 0.99)
-    legend.AddEntry(nEXOevents, "MC", "f")
-    legend.AddEntry(hist, "#sigma=%i keV" % sigma_keV, "f")
+    legend.AddEntry(nEXOevents, "MC", "l")
+    legend.AddEntry(hist, "#sigma=%i keV" % sigma_keV, "l")
     legend.SetNColumns(2)
 
     hist.Draw() # draw once to set scale and binning
@@ -143,12 +154,16 @@ def process_file(filename):
     hist.Draw("same") # draw again, on top of the tree
     legend.Draw()
     canvas.Update()
-    canvas.Print("%s_spectrum.pdf" % basename)
+    canvas.Print("%s_spectrum_sigma_%i_keV.pdf" % (basename, sigma_keV))
+
+    # print a linear scale version
+    canvas.SetLogy(0)
+    #canvas.Print("%s_spectrum_sigma_%i_keV_lin.pdf" % (basename, sigma_keV))
 
     canvas.SetLogy(0)
     resolution_hist.Draw()
     canvas.Update()
-    canvas.Print("%s_smearing.pdf" % basename)
+    canvas.Print("%s_smearing_sigma_%i_keV.pdf" % (basename, sigma_keV))
     print "sigma of resolution_hist: %.2f, specified sigma: %.2f" % (
         resolution_hist.GetRMS(),
         sigma_keV,
