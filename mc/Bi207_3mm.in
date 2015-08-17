@@ -1,0 +1,97 @@
+/control/verbose 0
+#/control/verbose 2
+/run/verbose 0
+/event/verbose 0
+/tracking/verbose 0
+
+##########################
+# Detector Construction
+#
+# Check overlaps during all G4PVPlacements
+#
+# Set the max step length in TPCRegion and inner cryostat
+#/nEXO/det/stepMax 1 mm
+#d
+/nEXO/det/checkOverlap false
+/nEXO/WorldDimension 10 m
+/nEXO/TPCExternals/LabDimension 10 m
+/nEXO/TPCExternals/setVersion 3
+/nEXO/TPCExternals/HFERadius 200 mm
+/nEXO/TPCExternals/HFEHeight 640 mm
+/nEXO/TPCExternals/HFEDewarThickness 30 mm
+/nEXO/TPCVessel/tpcVesselOption 2
+/nEXO/TPCVessel/tpcRadiusTestStand 125 mm
+/nEXO/TPCVessel/tpcHeightTestStand 20 mm
+/nEXO/TPCVessel/tpcThicknessTestStand 2 mm
+/nEXO/TPCInternals/internalsFlag 0
+/nEXO/TPCInternals/LXe/ActiveWidthTestStand 1.5 mm
+/nEXO/TPCInternals/LXe/ActiveLengthTestStand 50 mm
+/nEXO/TPCInternals/LXe/ActiveHeightTestStand 8.5 mm
+###########################
+# Physics List
+#
+# Set the charge particle max step length anywhere
+#/nEXO/phys/stepMax 1 m
+#
+# Sets the pi+ to decay into e+, nu
+#/decay/pienu
+#
+# Sets the pi+ to decay into mu+, nu
+#/decay/pimunu
+##
+##########################
+# Choose PrimaryGenerator
+#
+#/generator/setGenerator gun
+/generator/setGenerator gps
+
+##########################
+# Initialisation procedure
+#
+/run/initialize
+
+#
+#
+##########################
+# Set the production cuts
+#
+#/run/setCut 10.0 mm
+
+#/run/setCutForAGivenParticle e- 10.0 mm
+#/run/setCutForAGivenParticle e+ 10.0 mm
+#/run/setCutForAGivenParticle gamma 10.0 mm
+#/run/setCutForAGivenParticle proton 10.0 mm
+
+# Note: this overwrites any cuts per particle and region set in SetCuts()!
+#
+#/run/setCutForRegion TPCRegion 0.1 mm
+#/run/setCutForRegion CryostatRegion 1.0 mm
+
+/analysis/setOutputROOTFileName /nfs/slac/g/exo_data4/users/mjewell/nEXO_MC/testing/Bi207_Full_3mm.root
+/analysis/setOutputROOTTreeName nEXOevents
+
+#/gps/pos/type Volume
+#/gps/pos/shape Cylinder
+#/gps/pos/centre 0 0 0 cm
+#/gps/pos/halfz 65. cm
+#/gps/pos/radius 65. cm
+#/gps/pos/rot1 0 0 1
+#/gps/pos/rot2 0 1 0
+
+#/gps/particle ion
+#/gps/ion 90 228 0 0
+#/gps/pos/confine /nEXO/TPCInternals/LXe/ActiveRegion #InactiveLXe
+#/gps/position 0.0 0.0 0.0
+
+
+/gps/pos/type Point
+/gps/pos/centre 0. 0. -8.5 mm
+/gps/energy 0. keV
+/gps/particle ion
+/gps/ion 83 207 0 0
+/grdm/analogueMC 1
+/run/beamOn 200000
+
+
+
+#
