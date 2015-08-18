@@ -50,6 +50,7 @@ def process_file(filename):
     canvas = TCanvas("canvas","", 700, 900)
     canvas.Divide(1,2)
 
+
     #maw_graph = TGraph()
 
     peaking_time = 4
@@ -66,7 +67,11 @@ def process_file(filename):
         tree.SetLineColor(tree.channel+1)
 
         canvas.cd(1)
+
+        legend = TLegend(0.7, 0.92, 0.9, 0.99)
+        legend.AddEntry(tree, "channel %i" % tree.channel, "pl")
         tree.Draw("wfm:Iteration$","Entry$==%i" % i_entry, "l")
+        legend.Draw()
         canvas.cd(2)
         tree.Draw("maw:Iteration$","Entry$==%i" % i_entry, "l")
 
