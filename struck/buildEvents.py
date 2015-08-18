@@ -18,7 +18,7 @@ import time
 from array import array
 
 from ROOT import gROOT
-gROOT.SetBatch(True)
+#gROOT.SetBatch(True)
 from ROOT import TH1D
 from ROOT import TFile
 from ROOT import TCanvas
@@ -43,7 +43,12 @@ for i in xrange(16):
     hist.SetLineWidth(2)
     hists.append(hist)
 
-def draw_event(tree, entries):
+def draw_event(tree, entries, first_time_in_event):
+
+    # set up a canvas
+    canvas = TCanvas("c1","")
+    canvas.SetLogy(0)
+    canvas.SetGrid(1,1)
 
     legend = TLegend(0.1, 0.91, 0.9, 0.97)
     legend.SetNColumns(3)
@@ -52,51 +57,56 @@ def draw_event(tree, entries):
     event_max = 0
     event_min = pow(2, 14) # 14-bit digitizer
 
+    # set up a "frame hist" to define the axes for drawing wfms
+    tree.SetLineWidth(2)
+    frame_hist = TH1D("frame_hist", "", 100, 0, 2048)
+    frame_hist.SetLineWidth(2)
+    frame_hist.SetXTitle("time [clock ticks]")
+    #frame_hist.SetYTitle("ADC value")
+    frame_hist.SetMinimum(tree.GetMinimum("adc_min")-10)
+    frame_hist.SetMaximum(tree.GetMaximum("adc_max")+10) 
+    #frame_hist.SetMinimum(0)
+    #frame_hist.SetMaximum(16384) # 2^14
 
-    # loop over all timestamps in this event to find max & min
-    for stamp in event_time_stamps:
-        stamp_entries = entries_of_timestamp[stamp]
 
-        # loop over all tree entries for this timestamp
-        for i_entry in stamp_entries:
-            tree.GetEntry(i_entry)
+    # loop over all tree entries for this timestamp
+    for i_entry in entries:
+        tree.GetEntry(i_entry)
 
-            if tree.adc_max > event_max: event_max = tree.adc_max
-            if tree.adc_min < event_min: event_min = tree.adc_min
+        if tree.adc_max > event_max: event_max = tree.adc_max
+        if tree.adc_min < event_min: event_min = tree.adc_min
 
     frame_hist.SetMinimum(event_min-10)
     frame_hist.SetMaximum(event_max+10)
     frame_hist.Draw()
 
 
-    # loop over all timestamps in this event
-    for stamp in event_time_stamps:
-        stamp_entries = entries_of_timestamp[stamp]
+    # loop over all tree entries for this timestamp
+    for i_entry in entries:
+        tree.GetEntry(i_entry)
+        channel = tree.channel
+        tsl = tree.timestamp - first_time_in_event
+        print "\t stamp %s | tsl %i | entry %i | channel %i" % (
+            tree.timestamp,
+            tsl,
+            i_entry, 
+            channel
+        )
 
-        # loop over all tree entries for this timestamp
-        for i_entry in stamp_entries:
-            tree.GetEntry(i_entry)
-            channel = tree.channel
-            print "\t stamp %s | tsl %i | entry %i | channel %i" % (
-                event_time_stamps[0] + tsl,
-                tsl,
-                i_entry, 
-                channel
-            )
-
-            tree.SetLineColor(channel+1)
-            legend.AddEntry(hists[channel], "ch %i, tsl=%i" % (channel, tsl), "f")
-            tree.Draw("wfm:Iteration$","Entry$==%i" % i_entry,"l same")
-            #tree.Draw("wfm:Iteration$+%i" % tsl,"Entry$==%i" % i_entry,"l same")
+        tree.SetLineColor(channel+1)
+        legend.AddEntry(hists[channel], "ch %i, tsl=%i" % (channel, tsl), "f")
+        tree.Draw("wfm:Iteration$","Entry$==%i" % i_entry,"l same")
+        #tree.Draw("wfm:Iteration$+%i" % tsl,"Entry$==%i" % i_entry,"l same")
     legend.Draw()
     canvas.Update()
 
     # pause
     val = raw_input("enter to continue (q=quit, b=batch, p=print) ")
-    print val
-    if (val == 'q' or val == 'Q'): return 0 
-    if val == 'b': do_draw = False
+    #print val
+    if (val == 'q' or val == 'Q'): sys.exit(1) 
+    if val == 'b': return False
     if val == 'p': canvas.Print("event_%i_%s.png" % (i_event, basename,))
+    return True
     # end of drawing
 
 
@@ -105,7 +115,7 @@ def process_file(filename):
     # clock frequency
     freq_Hz = 25.0*1e6
 
-    coincidence_window = 2048 # clock ticks
+    #coincidence_window = 2048 # clock ticks
     coincidence_window = 500 # clock ticks
     coincidence_time = coincidence_window/freq_Hz*1e6
     print "coincidence_time [microseconds]: %.2f" % coincidence_time
@@ -185,10 +195,12 @@ def process_file(filename):
     print "max_tsl [micros]:", max_tsl/freq_Hz*1e6
 
     # set up parameters for tsl hist
-    n_bins = 160 
+    n_bins = 100000 #160*500 
     min_bin = 0
     #max_bin = max_tsl/freq_Hz*1e6
-    max_bin = 200
+    #max_bin = 200 # microseconds
+    #max_bin = 1e5 # microseconds
+    max_bin = 2.5e5 # microseconds
     #print "max_tsl = %.3f seconds = %.2f clock ticks" % (max_tsl, max_tsl*freq_Hz)
 
     # set up hist
@@ -215,19 +227,10 @@ def process_file(filename):
     hist.Draw()
     canvas.Update()
     canvas.Print("tsl_%s.png" % basename)
+    hist.SetAxisRange(0, 1000)
+    canvas.Update()
+    canvas.Print("tsl_%s_zoom.png" % basename)
     #return # debugging
-
-    # set up a "frame hist" to define the axes for drawing wfms
-    tree.SetLineWidth(2)
-    frame_hist = TH1D("frame_hist", "", 100, 0, 2048)
-    frame_hist.SetLineWidth(2)
-    frame_hist.SetXTitle("time [clock ticks]")
-    #frame_hist.SetYTitle("ADC value")
-    frame_hist.SetMinimum(tree.GetMinimum("adc_min")-10)
-    frame_hist.SetMaximum(tree.GetMaximum("adc_max")+10) 
-    #frame_hist.SetMinimum(0)
-    #frame_hist.SetMaximum(16384) # 2^14
-
     #if len(timestamps) > 1000: return # debugging
 
     # a new file for output
@@ -281,12 +284,12 @@ def process_file(filename):
             nHits[0] = 0
 
             event_entry_to_tsl_map = {}
+            entries = []
 
             # loop over all timestamps in this event
             for stamp in event_time_stamps:
                 stamp_entries = entries_of_timestamp[stamp]
                 #print "\t entries_of_timestamp[", stamp, "]: ", entries_of_timestamp[stamp]
-
 
                 # if there are duplicate timestamps, we will loop over the ttree
                 # entries multiple times!! go back to the map or something
@@ -304,11 +307,12 @@ def process_file(filename):
                 tsl_val[channel] = stamp - event_time_stamps[0]
                 totalEnergy[0] = totalEnergy[0] + energy[channel]
                 nHits[0] = nHits[0] + 1
+                entries.append(i_entry)
 
             out_tree.Fill()
 
             if do_draw:
-                draw_event(tree, event_time_stamps)
+                do_draw = draw_event(tree, entries, first_time_in_event)
             # get ready for a new event:
             event_time_stamps = [timestamp]
             first_time_in_event = timestamp
