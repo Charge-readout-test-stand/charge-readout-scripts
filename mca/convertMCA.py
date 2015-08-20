@@ -13,11 +13,29 @@ def getMCAhist(file_name):
     #bin 1 is first and bin nbins is last
     hist = ROOT.TH1D(file_name, file_name, len(data), 0, len(data))
 
+    livetime_line = ""
+    file_check = open(file_name)
+    for i, line in enumerate(file_check):
+        if i==7:
+            livetime_line = line 
+            break
+    file_check.close()
+
+    livetime = 0.0
+    for lv in livetime_line.split():
+        try:
+            livetime = float(lv)
+            break
+        except:
+            continue
+
+    #print livetime
+
     i = 1
     for d in data:
         hist.SetBinContent(i,d)
         i+=1
 
-    return hist
+    return hist, livetime
 
 
