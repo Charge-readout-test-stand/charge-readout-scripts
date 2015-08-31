@@ -71,7 +71,7 @@ def compare_isochoric(data_path, plot_dir, basename, temp_top, temp_mid, temp_bo
             index = (np.abs(press-p)).argmin()
             calc_temp.append(temp[index])
         else:
-            calc_temp.append(0.0)
+            calc_temp.append(161.4) # freezing 
             
     plt.figure(2)
     plt.title("Isochoric Temp Cell vs Thermocouples")
