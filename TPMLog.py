@@ -602,7 +602,7 @@ def main(
    
 
     if len(Vol) > 0:
-      lxe_density = 3.0 # kg/L # FIXME to be more accurate
+      lxe_density = 2.978 # kg/L
       xenon_volume = mass/lxe_density/1e3
       plt.figure(3)
       plt.grid(b=True)
@@ -790,7 +790,7 @@ def main(
     if len(bottle_mass) > 0:
         plt.figure(13)
         plt.grid(b=True)
-        plt.title("Xenon bottle mass [kg]: %.2f \n" % bottle_mass[-1])
+        plt.title("Xenon bottle mass [kg]: %.2f \n" % bottle_mass[last_index])
         mfline1 = plt.plot(time_hours[first_index:last_index],
         bottle_mass[first_index:last_index])
         plt.setp(mfline1, color = 'b', linewidth = linewidth)
