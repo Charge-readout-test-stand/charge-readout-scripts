@@ -61,8 +61,8 @@ def compare_isochoric(data_path, plot_dir, basename, temp_top, temp_mid, temp_bo
     iso_data = plt.plot(temp, press)
     plt.setp(iso_data, color = 'c', linewidth = linewidth, label = 'Data')
     #legend = plt.legend(loc='best', shadow = False, fontsize='medium', ncol=2)
-    plt.savefig(plot_dir+"Nist-Isochoric_"+basename+".jpeg")
-    print "printed", plot_dir+"Comp-Isochoric_"+basename+".jpeg"
+    plt.savefig(plot_dir+"50_Comp-Isochoric_"+basename+".jpeg")
+    print "printed", plot_dir+"50_Comp-Isochoric_"+basename+".jpeg"
     plt.clf()
     
     calc_temp = []
@@ -74,7 +74,7 @@ def compare_isochoric(data_path, plot_dir, basename, temp_top, temp_mid, temp_bo
             calc_temp.append(161.4) # freezing 
             
     plt.figure(2)
-    plt.title("Isochoric Temp Cell vs Thermocouples")
+    plt.title("Isochoric Temp Cell vs Thermocouples", y=1.15)
     plt.xlabel("Time [hours]")
     plt.ylabel("Temp [K]")
     plt.grid(b=True)
@@ -86,9 +86,15 @@ def compare_isochoric(data_path, plot_dir, basename, temp_top, temp_mid, temp_bo
     plt.setp(iso_top, color = 'r', linewidth = linewidth, label = 'Cell Top (%.1fK)' % temp_top[-1])
     plt.setp(iso_mid, color = 'b', linewidth = linewidth, label = 'Cell Mid (%.1fK)' % temp_mid[-1])
     plt.setp(iso_bot, color = 'g', linewidth = linewidth, label = 'Cell Bot (%.1fK)' % temp_bot[-1])
-    legend = plt.legend(loc='best', shadow = False, fontsize='medium', ncol=2)
-    plt.savefig(plot_dir+"Temp-Isochoric_" + basename + ".jpeg")
-    print "printed", plot_dir+"Temp-Isochoric_" + basename +".jpeg"
+
+    # shrink plot height to create space for legend
+    #plt.title(title, y=1.3)
+    subplt = plt.subplot(111)
+    box = subplt.get_position()
+    subplt.set_position([box.x0, box.y0, box.width, box.height*0.9])
+    legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, fontsize='medium', ncol=2)
+    plt.savefig(plot_dir+"10_Temp-Isochoric_" + basename + ".jpeg")
+    print "printed", plot_dir+"10_Temp-Isochoric_" + basename +".jpeg"
     plt.clf()
         
      
@@ -127,8 +133,7 @@ def plot_temp_vs_lmass(filename, title, time_hours, time_stamps, T_ambient, mass
    
 def plot_temperatures(filename, title, time_hours, time_stamps, TC0=None, TC1=None, TC2=None,
     TC3=None, TC4=None, TC15=None, TC10=None, T_ambient=None, T_LN_in=None, T_LN_out=None,
-    T_Xe_bottle=None, T_max_set=None,
-    T_min_set=None, first_index=0, last_index=-1):
+    T_Xe_bottle=None, T_max_set=None, T_min_set=None, first_index=0, last_index=-1):
 
     """
     This function makes a temperature plot
@@ -142,15 +147,11 @@ def plot_temperatures(filename, title, time_hours, time_stamps, TC0=None, TC1=No
     end_time = end_time_hold.strftime("%m-%d-%y %I:%M %p")
 
     plt.figure(1)
-    plt.title(title)
     plt.grid(b=True)
-
-    
 
     # plot the lines
     # html color names can be used, as defined here:
     # http://www.w3schools.com/tags/ref_colornames.asp
-
 
     kelvin_offset = 273.15
     if TC0 and len(TC0) > 0:
@@ -196,12 +197,12 @@ def plot_temperatures(filename, title, time_hours, time_stamps, TC0=None, TC1=No
         T_Xe_bottle[first_index:last_index])
         plt.setp(line8, color = 'magenta', linewidth = linewidth, label = 'Xe bottle (%.1fK = %.1fC)' % (T_Xe_bottle[last_index], T_Xe_bottle[last_index]-kelvin_offset))
 
-    if T_max_set and len(T_max_set) > 0 and len(T_max_set) == len(T_ambient):
+    if T_max_set and len(T_max_set) > 0 and len(T_max_set) == len(TC0):
         line9 = plt.plot(time_hours[first_index:last_index],
         T_max_set[first_index:last_index])
         plt.setp(line9, color = 'r', linewidth = linewidth, label = 'T_max (%.1fK = %.1fC)' % (T_max_set[last_index], T_max_set[last_index]-kelvin_offset), ls = '--')
 
-    if T_min_set and len(T_min_set) > 0 and len(T_min_set) == len(T_ambient):
+    if T_min_set and len(T_min_set) > 0 and len(T_min_set) == len(TC0):
         line10 = plt.plot(time_hours[first_index:last_index],
         T_min_set[first_index:last_index])
         plt.setp(line10, color = 'b', linewidth = linewidth, label = 'T_min (%.1fK = %.1fC)' % (T_min_set[last_index], T_min_set[last_index]-kelvin_offset), ls = '--')
@@ -218,7 +219,21 @@ def plot_temperatures(filename, title, time_hours, time_stamps, TC0=None, TC1=No
 
     plt.xlabel('Time [hours] : '  + str(start_time) + "  -  " + str(end_time))
     plt.ylabel('Temperature [K]')
-    legend = plt.legend(loc='best', shadow = False, fontsize='medium', ncol=2)
+
+    # shrink plot height to create space for legend
+    y = 1.22
+    height = 0.87
+    ncol = 2
+    subplt = plt.subplot(111)
+    if len(subplt.lines) > 8:
+        ncol = 3
+        y=1.3
+        height=0.8
+    plt.title(title, y=y)
+    box = subplt.get_position()
+    subplt.set_position([box.x0, box.y0, box.width, box.height*height])
+    
+    legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, fontsize='small', ncol=ncol)
     plt.savefig(filename)
     print "printed %s" % filename
     plt.clf()
@@ -242,47 +257,52 @@ def main(
 
     # choose an output directory for these files
 
-    # on the windows DAQ machine:
-    directory = 'C://Users//xenon//Dropbox//labViewPlots/'
-    if not os.path.isdir(directory):
-        print "trying alexis' path..."
-        #directory = '/Users/alexis/stanford-Dropbox/Dropbox/labViewPlots/'
-        directory = '/Users/alexis/Downloads/'
-        if not os.path.isdir(directory):
-            print "trying mikes path.."
-            directory = "C://Users//Michael//Documents//EXO//plots//"
-            if not os.path.isdir(directory):
-                directory = "."
-
     # construct a base name for plots, based on the input file name
     basename = os.path.basename(filename)
     basename = os.path.splitext(basename)[0]
     basename = basename.split("test_")[-1]
 
+
+    # on the windows DAQ machine:
+    directory = 'C://Users//xenon//Dropbox//labViewPlots/'
+    if not os.path.isdir(directory):
+        print "trying alexis' path..."
+        #directory = '/Users/alexis/stanford-Dropbox/Dropbox/labViewPlots/'
+        directory = '/Users/alexis/Downloads/%s/' % basename
+        cmd = "mkdir %s" % directory
+        import commands
+        output = commands.getstatusoutput(cmd)
+        if output[0]: print output[1]
+
+        if not os.path.isdir(directory):
+            print "trying mikes path.."
+            directory = "C://Users//Michael//Documents//EXO//plots//"
+            if not os.path.isdir(directory):
+                directory = "."
     # offset, in grams/minute, for the mass flow meter (we can never exactly zero  the mass flow meter, so
     # we compensate for this)
     # compensation from test_20150609_173311.dat
     mass_flow_rate_offset = 326.33/897.16 
-    print "mass_flow_rate_offset", mass_flow_rate_offset
+    #print "mass_flow_rate_offset", mass_flow_rate_offset
 
     
     # construct file names of plots
     filetype = 'jpeg'    
-    mfpath = os.path.join(directory, "MassFlow_%s.%s" % (basename, filetype))
-    vpath = os.path.join(directory, "ValveStates_%s.%s" % (basename, filetype))
-    ppath = os.path.join(directory, "Pressure-10kTorr_%s.%s" % (basename, filetype))
-    ppath2 = os.path.join(directory, "Pressure-1kTorr_%s.%s" % (basename, filetype))
-    mfrpath = os.path.join(directory, "MassFlowRate_%s.%s" % (basename, filetype))
-    ccgpath = os.path.join(directory, "CCGauge_%s.%s" % (basename, filetype))
-    rccgpath = os.path.join(directory, "CCGauge-recent_%s.%s" % (basename, filetype))
-    ccgpath_log = os.path.join(directory, "CCGauge-log_%s.%s" % (basename, filetype))
-    rccgpath_log = os.path.join(directory, "CCGauge-log-recent_%s.%s" % (basename, filetype))
-    lnpath = os.path.join(directory, "LN-Mass_%s.%s" % (basename, filetype))
-    bottle_mass_path = os.path.join(directory, "BottleMass_%s.%s" % (basename, filetype))
-    capacitance_path = os.path.join(directory, "Capacitance_%s.%s" % (basename, filetype))
-    hfep_path = os.path.join(directory, "HFE-Pressure_%s.%s" % (basename, filetype))
-    dp_path = os.path.join(directory, "dP-Pressure_%s.%s" % (basename, filetype))
-    rms_noise_path = os.path.join(directory, "rms-noise_%s.%s" % (basename, filetype))
+    mfpath = os.path.join(directory, "09_MassFlow_%s.%s" % (basename, filetype))
+    vpath = os.path.join(directory, "03_ValveStates_%s.%s" % (basename, filetype))
+    ppath = os.path.join(directory, "04_Pressure-10kTorr_%s.%s" % (basename, filetype))
+    ppath2 = os.path.join(directory, "90_Pressure-1kTorr_%s.%s" % (basename, filetype))
+    mfrpath = os.path.join(directory, "09_MassFlowRate_%s.%s" % (basename, filetype))
+    ccgpath = os.path.join(directory, "91_CCGauge_%s.%s" % (basename, filetype))
+    rccgpath = os.path.join(directory, "91_CCGauge-recent_%s.%s" % (basename, filetype))
+    ccgpath_log = os.path.join(directory, "92_CCGauge-log_%s.%s" % (basename, filetype))
+    rccgpath_log = os.path.join(directory, "92_CCGauge-log-recent_%s.%s" % (basename, filetype))
+    lnpath = os.path.join(directory, "02_LN-Mass_%s.%s" % (basename, filetype))
+    bottle_mass_path = os.path.join(directory, "07_BottleMass_%s.%s" % (basename, filetype))
+    capacitance_path = os.path.join(directory, "08_Capacitance_%s.%s" % (basename, filetype))
+    hfep_path = os.path.join(directory, "06_HFE-Pressure_%s.%s" % (basename, filetype))
+    dp_path = os.path.join(directory, "05_dP-Pressure_%s.%s" % (basename, filetype))
+    rms_noise_path = os.path.join(directory, "93_rms-noise_%s.%s" % (basename, filetype))
 
     # create some lists to hold values from files
     time_stamps = [] # labview timestamp, in seconds
@@ -334,7 +354,7 @@ def main(
     # xenon density at 300K: 5.3612 g / mL
     # correction for what alexis put in labview:
     xenon_density_ratio = xenon_density / 5.3612 # xenon density correction
-    print "xenon_density_ratio: ", xenon_density_ratio
+    #print "xenon_density_ratio: ", xenon_density_ratio
 
     xenon_gas_correction_factor = 1.32
     #nitrogen_density = 1.25
@@ -368,7 +388,7 @@ def main(
        
         if do_warning:
             print "--> setting column_offset to %i !!" % column_offset
-            print "tstamp:  ", time_stamp
+            #print "tstamp:  ", time_stamp
             do_warning = False     
 
 
@@ -484,22 +504,23 @@ def main(
             if last_hour_to_consider*3600 - seconds_elapsed <= recent_time_span:
                 start_index_of_last_hour = i
                 start_time_stamp_of_last_hour = time_stamp
-                print "last_hour_to_consider", last_hour_to_consider
-                print "\t found last hour time stamp  at i = %i of %i, t= %.2f hours" % (i, len(time_stamps),  seconds_elapsed/3600.0)
-                print "\t last timestamp = %.2f, diff = %.2f" % (last_time_stamp, last_time_stamp - start_time_stamp_of_last_hour )
-                print "\t %i recent time stamps" % (len(time_stamps) - start_index_of_last_hour - 1)
+                #print "last_hour_to_consider", last_hour_to_consider
+                #print "\t found last hour time stamp  at i = %i of %i, t= %.2f hours" % (i, len(time_stamps),  seconds_elapsed/3600.0)
+                #print "\t last timestamp = %.2f, diff = %.2f" % (last_time_stamp, last_time_stamp - start_time_stamp_of_last_hour )
+                #print "\t %i recent time stamps" % (len(time_stamps) - start_index_of_last_hour - 1)
 
         # find first_index, if start_time is specified
         if start_time != None and first_index == 0:
             if time_hours[-1] >= start_time: 
                 first_index = i
-                print "\t found first index: %i at time %.2f hours" % (i, time_hours[-1])
+                #print "\t found first index: %i at time %.2f hours" % (i, time_hours[-1])
             
         # find last_index, if stop_time is specified
         if stop_time != None and last_index == len(time_stamps)-1:
             if time_hours[-1] >= stop_time: 
                 last_index = i
-                print "\t found last index: %i at time %.2f hours" % (i, time_hours[-1])
+                #print "\t found last index: %i at time %.2f hours" % (i, time_hours[-1])
+
     print "...done looping over time stamps"
             
 
@@ -516,7 +537,7 @@ def main(
     recent_time = time_hours[start_index_of_last_hour:]
 
     # open a log file for writing:
-    outfile = file("%s/log_%s.txt" % (directory, basename), 'w')
+    outfile = file("%s/99_log_%s.txt" % (directory, basename), 'w')
     plot_time = datetime.datetime.now()
 
     # ags wip
@@ -541,7 +562,7 @@ def main(
     if len(mass_flow_rate) > 1:
       print "integrating %i mass flow rate points..." % len(mass_flow_rate)
 
-      for (i_time, minute_time) in enumerate(time_minutes):
+      for (i_time, minute_time) in enumerate(time_minutes[first_index:last_index]):
 
           delta_time_minutes  = 0.0
           if i_time > 0:
@@ -555,7 +576,7 @@ def main(
           #  i_time, minute_time, delta_time_minutes, mass_flow_rate[i_time], mass)
 
       print "done with integral"
-      print "integrated mass: %.2f g in %.2f minutes" % (mass, time_minutes[-1])
+      #print "integrated mass: %.2f g in %.2f minutes" % (mass, time_minutes[-1])
 
       # do a sanity check on the integral...
       #sum_mass_flow_rate = 0.0
@@ -573,28 +594,31 @@ def main(
     print "--> starting plots..."
 
     # plot temperatures
-    filename = os.path.join(directory, "Temp_%s.%s" % (basename, filetype))
-    plot_temperatures(filename, 'Temperature', time_hours, time_stamps, TC0, TC1, TC2, TC3,
-    TC4, TC15, TC10, T_ambient, T_LN_in, T_LN_out, T_Xe_bottle, T_max_set, T_min_set, first_index,
-    last_index)
+    filename = os.path.join(directory, "11_Temp_%s.%s" % (basename, filetype))
+    plot_temperatures(filename, 'Temperature', time_hours, time_stamps, TC0,
+    TC1, TC2, TC3, TC4, TC15, TC10, T_ambient, T_LN_in, T_LN_out, T_Xe_bottle,
+    T_max_set, T_min_set, first_index, last_index)
 
     # plot recent temperatures
-    filename = os.path.join(directory, "Temp-recent_%s.%s" % (basename, filetype))
-    plot_temperatures(filename, 'Recent Temperature', time_hours, time_stamps, TC0, TC1, TC2,
-    TC3, TC4, TC15, TC10, T_ambient, T_LN_in, T_LN_out, T_Xe_bottle, T_max_set, T_min_set,
-    first_index=start_index_of_last_hour)
+    filename = os.path.join(directory, "11_Temp-recent_%s.%s" % (basename, filetype)) 
+    plot_temperatures(filename, 'Recent Temperature', time_hours,
+    time_stamps, TC0, TC1, TC2, TC3, TC4, TC15, TC10, T_ambient, T_LN_in,
+    T_LN_out, T_Xe_bottle, T_max_set=T_max_set, T_min_set=T_min_set,
+    first_index=start_index_of_last_hour, last_index=last_index)
 
     # plot LXe cell and Cu plate temperatures
-    filename = os.path.join(directory, "Temp-cell_%s.%s" % (basename, filetype))
-    plot_temperatures(filename, 'LXe cell and Cu plate temperature', time_hours, 
-    time_stamps, TC0, TC1, TC2, TC3, TC4, first_index=first_index, last_index=last_index)
+    filename = os.path.join(directory, "01_Temp-cell_%s.%s" % (basename, filetype))
+    plot_temperatures(filename, 'LXe cell and Cu plate temperature', time_hours,
+    time_stamps, TC0, TC1, TC2, TC3, TC4, T_max_set=T_max_set, T_min_set=T_min_set,
+    first_index=first_index, last_index=last_index)
 
     # plot LXe cell and Cu plate recent temperatures
-    filename = os.path.join(directory, "Temp-cell-recent_%s.%s" % (basename, filetype))
+    filename = os.path.join(directory, "01_Temp-cell-recent_%s.%s" % (basename, filetype))
     plot_temperatures(filename, 'Recent LXe cell and Cu plate temperature',
-    time_hours,time_stamps, TC0, TC1, TC2, TC3, TC4, first_index=start_index_of_last_hour)
+    time_hours,time_stamps, TC0, TC1, TC2, TC3, TC4, T_max_set=T_max_set,
+    T_min_set=T_min_set, first_index=start_index_of_last_hour, last_index=last_index)
     
-    #plot just Ambient Temperature
+    #plot Ambient Temperature vs. xenon bottle mass
     #filename = os.path.join(directory, "Ambient_Only_%s.%s" % (basename, filetype))
     #plot_temp_vs_lmass(filename, 'Bottle Mass vs Ambient Temp', time_hours, time_stamps, T_ambient, bottle_mass)
 
@@ -611,6 +635,13 @@ def main(
       uline1 = plt.plot(time_hours[first_index:last_index],
       Vol[first_index:last_index])
       plt.setp(uline1, color = 'b', linewidth = linewidth)
+
+      # add indicator line without changing plot y axes:
+      full_mass_integral = 8760.0
+      ymin, ymax = plt.gca().get_ylim()
+      plt.axhline(y=full_mass_integral, color='black', linestyle="--")
+      plt.gca().set_ylim([ymin,ymax]) # reset axes to original
+
       plt.xlabel('Time [hours] %s' % time_string)
       plt.ylabel('Mass Flow [g of xenon]')
       plt.savefig(mfpath)
@@ -620,10 +651,21 @@ def main(
     plt.figure(4)
     plt.grid(b=True)
     plt.title('LN and Heaters')
+
+    # moving average to plot duty cycle:
+    n = 60 # number of data points to convolve (60 x ~10s = ~1min)
+    duty_cycle = np.convolve(PLN, np.ones((n,))/n, mode='valid')
+
     # plot the lines:
     vline1 = plt.plot(time_hours[first_index:last_index], PLN[first_index:last_index])
     vline2 = plt.plot(time_hours[first_index:last_index], SLN[first_index:last_index])
     vline3 = plt.plot(time_hours[first_index:last_index], Heat[first_index:last_index])
+    try:
+        length = len(duty_cycle[first_index:last_index])
+        vline4 = plt.plot(time_hours[last_index-length:last_index], duty_cycle[first_index:last_index])
+        plt.setp(vline4, color = 'black', linewidth = 2.0, label = 'LN duty cycle')
+    except:
+        print "--> issue with plotting LN duty cycle"
     # plot the fill areas:
     plt.fill_between(time_hours[first_index:last_index],PLN[first_index:last_index], color='b')
     plt.fill_between(time_hours[first_index:last_index],Heat[first_index:last_index], color='r')
@@ -631,7 +673,7 @@ def main(
     plt.setp(vline2, color = 'g', linewidth = 2.0, label = 'LN enabled')
     plt.setp(vline3, color = 'r', linewidth = 2.0, label = 'Heaters',)
     plt.xlabel('Time [hours] %s' % time_string)
-    plt.legend(loc = 'best', shadow = False)
+    plt.legend(loc = 'best', shadow = False, ncol=2)
     plt.ylim(0.0, 1.2)
     plt.savefig(vpath)
     print "printed %s" % vpath
@@ -643,6 +685,12 @@ def main(
     pline1 = plt.plot(time_hours[first_index:last_index],
     Pressure[first_index:last_index])
     plt.setp(pline1, color = 'b', linewidth = linewidth)
+
+    # add red zone without changing plot y axes:
+    ymin, ymax = plt.gca().get_ylim()
+    plt.axhspan(ymin=760*2, ymax=ymax, color='red', alpha=0.5)
+    plt.gca().set_ylim([ymin,ymax])
+
     plt.xlabel('Time [hours] %s' % time_string)
     plt.ylabel('Pressure [Torr]')
     plt.savefig(ppath)
@@ -738,19 +786,19 @@ def main(
         # ln_mass is total mass (dewar tare weight + hooks + LN)
         old_amt_ln = ln_mass[start_index_of_last_hour] - ln_tare_mass[start_index_of_last_hour]
         new_amt_ln = ln_mass[last_index] - ln_tare_mass[last_index]
-        print "old amt ln [lb]:", old_amt_ln
-        print "new amt ln [lb]:", new_amt_ln
-        print "recent time span:", recent_time_span
+        #print "old amt ln [lb]:", old_amt_ln
+        #print "new amt ln [lb]:", new_amt_ln
+        #print "recent time span:", recent_time_span
         ln_consumption_rate = (old_amt_ln - new_amt_ln) / (recent_time_span/3600.0)
         ln_consumption_rate_info = "LN consumption rate [lb / hour]: %.2f" %  ln_consumption_rate
-        print ln_consumption_rate_info
-        print "LN consumption rate [L / hour]:", ln_consumption_rate/ln_density
+        #print ln_consumption_rate_info
+        #print "LN consumption rate [L / hour]:", ln_consumption_rate/ln_density
         try: 
             ln_hours_remaining = (new_amt_ln)/ ln_consumption_rate
         except ZeroDivisionError:
             ln_hours_remaining = -999.99
             
-        print "LN time remaining: [hours]", ln_hours_remaining
+        #print "LN time remaining: [hours]", ln_hours_remaining
         outfile.write("LN time remaining [hours]: %.2f \n" % ln_hours_remaining)
         outfile.write("LN consumption rate [lb/hour]: %.2f \n" % ln_consumption_rate)
         outfile.write("LN consumption rate [L/hour]: %.2f \n" % (ln_consumption_rate/ln_density))
@@ -761,23 +809,34 @@ def main(
 
         plt.figure(12)
         plt.grid(b=True)
-        plt.title('LN mass (should run out in %.1f hours, at %s) \n total mass = %.1f lb, LN mass = %.1f lb (%.1f  L), tare = %.1f lb' % (
+        title="LN mass (should run out in %.1f hours, at %s) \n " % (
             ln_hours_remaining,
             empty_time.strftime("%m-%d-%y %I:%M%p"),
-            new_amt_ln + ln_tare_mass[last_index],
+        )
+        title += "LN mass = %.1f lb (%.1f  L), %.1f lb/hr (%.1f L/hr) in past hour" % ( 
             new_amt_ln,
             new_amt_ln/ln_density,
-            ln_tare_mass[last_index],
-        ))
+            ln_consumption_rate,
+            ln_consumption_rate/ln_density,
+        )
+        plt.title(title, y=1.1)
         ln_line = plt.plot(time_hours[first_index:last_index],
-            ln_mass[first_index:last_index], label = "Total mass")
+            ln_mass[first_index:last_index], 
+            label = "Total mass: %.1f lb" % (new_amt_ln + ln_tare_mass[last_index]) )
         ln_tare_line = plt.plot(time_hours[first_index:last_index],
-            ln_tare_mass[first_index:last_index], label = "Tare (dewar + hooks)")
+            ln_tare_mass[first_index:last_index], 
+            label = "Tare (dewar + hooks): %.1f lb" % ln_tare_mass[last_index])
         plt.setp(ln_line, color = 'b', linewidth = linewidth)
         plt.setp(ln_tare_line, color = 'red', linewidth = linewidth)
         plt.xlabel('Time [hours] %s' % time_string)
-        plt.ylabel('LN mass - tare weight [lb]')
-        legend = plt.legend(loc='best', shadow = False, fontsize='medium', ncol=2)
+        plt.ylabel('total mass = LN mass + tare weight [lb]')
+
+        # shrink plot height to create space for legend
+        #plt.title(title, y=1.3)
+        subplt = plt.subplot(111)
+        box = subplt.get_position()
+        subplt.set_position([box.x0, box.y0, box.width, box.height*0.9])
+        legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, fontsize='medium', ncol=2)
         plt.savefig(lnpath)
         print "printed %s" % lnpath
         plt.clf()
@@ -790,10 +849,19 @@ def main(
     if len(bottle_mass) > 0:
         plt.figure(13)
         plt.grid(b=True)
-        plt.title("Xenon bottle mass [kg]: %.2f \n" % bottle_mass[last_index])
-        mfline1 = plt.plot(time_hours[first_index:last_index],
-        bottle_mass[first_index:last_index])
+        full_bottle_mass = 94.83
+        empty_bottle_mass = 86.0 # not really empty, but when the cell is full
+        plt.title("Xenon bottle mass [kg]: %.2f  (%.1fkg  in cell)" % (
+        bottle_mass[last_index], full_bottle_mass - bottle_mass[last_index]))
+        mfline1 = plt.plot(time_hours[first_index:last_index], bottle_mass[first_index:last_index])
         plt.setp(mfline1, color = 'b', linewidth = linewidth)
+
+        # add indicator lines without changing plot y axes:
+        ymin, ymax = plt.gca().get_ylim()
+        plt.axhline(y=full_bottle_mass, color='black', linestyle="--")
+        plt.axhline(y=empty_bottle_mass, color='black', linestyle="--")
+        plt.gca().set_ylim([ymin,ymax]) # reset axes to original
+
         plt.xlabel('Time [hours] %s' % time_string)
         plt.ylabel('Mass [kg]')
         plt.savefig(bottle_mass_path)
@@ -804,15 +872,25 @@ def main(
         for mass in bottle_mass[first_index:last_index]:
             total_mass += mass
         average_mass = total_mass / len(bottle_mass[first_index:last_index])
-            
-        print "average xenon bottle mass in this time period: %.3f kg" % average_mass
+        #print "average xenon bottle mass in this time period: %.3f kg" % average_mass
 
     if len(capacitance) > 0:
         plt.figure(14)
         plt.grid(b=True)
-        plt.title("Xenon cell capacitance [pF]: %.2f \n" % capacitance[-1])
+        plt.title("Xenon cell capacitance [pF]: %.2f" % capacitance[last_index])
         mfline1 = plt.plot(time_hours[first_index:last_index],
-        capacitance[first_index:last_index])
+            capacitance[first_index:last_index])
+
+        full_capacitance = 38.7
+        empty_capacitance = 25
+
+        # add indicator line without changing plot y axes:
+        full_mass_integral = 8760.0
+        ymin, ymax = plt.gca().get_ylim()
+        plt.axhline(y=full_capacitance, color='black', linestyle="--")
+        plt.axhline(y=empty_capacitance, color='black', linestyle="--")
+        plt.gca().set_ylim([ymin,ymax]) # reset axes to original
+
         plt.setp(mfline1, color = 'b', linewidth = linewidth)
         plt.xlabel('Time [hours] %s' % time_string)
         plt.ylabel('Capacitance [pF]')
@@ -820,9 +898,6 @@ def main(
         print "printed %s" % capacitance_path
         plt.clf()
         outfile.write("Xenon cell capacitance [pF]: %.3f \n" % capacitance[-1])
-    
-    print "HFE pressure list length:", len(hfe_pressure)
-    print "time list length:", len(time_hours)
 
     if len(hfe_pressure) > 0:
         if len(hfe_pressure) == len(time_hours):
@@ -856,9 +931,16 @@ def main(
             plt.grid(b=True)
             last_pressure = hfe_pressure[-1]
             last_pressure_psia = last_pressure/760*14.7
-            title = 'dP = Xenon XP3 - HFE HP2 = %.1f torr (should be < 0)' % (dP[last_index]) 
+            title = 'dP = Xenon XP3 - HFE HP2 = %.1f torr (keep |dP| < 760 torr)' % (dP[last_index]) 
             plt.title(title)
             dP_line = plt.plot(time_hours[first_index:last_index], dP[first_index:last_index])
+
+            # add red zone without changing y axes:
+            ymin, ymax = plt.gca().get_ylim()
+            plt.axhspan(ymin=760, ymax=ymax, color='red', alpha=0.5)
+            plt.axhspan(ymin=ymin, ymax=-760, color='red', alpha=0.5)
+            plt.gca().set_ylim([ymin,ymax])
+
             plt.setp(dP_line, color = 'b', linewidth = linewidth)
             plt.xlabel('Time [hours] %s' % time_string)
             plt.ylabel('Pressure [torr]')
@@ -887,7 +969,7 @@ def main(
                     rms_noise[first_index:last_index])
                 plt.setp(rms_line, color = 'b', linewidth = linewidth)
             except ValueError:
-                print "RMS noise value error"
+                print "--> RMS noise value error"
             plt.xlabel('Time [hours] %s' % time_string)
             plt.ylabel('RMS noise [mV]')
             plt.savefig(rms_noise_path)
