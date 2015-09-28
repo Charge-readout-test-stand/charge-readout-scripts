@@ -61,8 +61,8 @@ def compare_isochoric(data_path, plot_dir, basename, temp_top, temp_mid, temp_bo
     iso_data = plt.plot(temp, press)
     plt.setp(iso_data, color = 'c', linewidth = linewidth, label = 'Data')
     #legend = plt.legend(loc='best', shadow = False, fontsize='medium', ncol=2)
-    plt.savefig(plot_dir+"50_Comp-Isochoric_"+basename+".jpeg")
-    print "printed", plot_dir+"50_Comp-Isochoric_"+basename+".jpeg"
+    plt.savefig(plot_dir+"50-Comp-Isochoric_"+basename+".jpeg")
+    print "printed", plot_dir+"50-Comp-Isochoric_"+basename+".jpeg"
     plt.clf()
     
     calc_temp = []
@@ -93,8 +93,8 @@ def compare_isochoric(data_path, plot_dir, basename, temp_top, temp_mid, temp_bo
     box = subplt.get_position()
     subplt.set_position([box.x0, box.y0, box.width, box.height*0.9])
     legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, fontsize='medium', ncol=2)
-    plt.savefig(plot_dir+"10_Temp-Isochoric_" + basename + ".jpeg")
-    print "printed", plot_dir+"10_Temp-Isochoric_" + basename +".jpeg"
+    plt.savefig(plot_dir+"10-Temp-Isochoric_" + basename + ".jpeg")
+    print "printed", plot_dir+"10-Temp-Isochoric_" + basename +".jpeg"
     plt.clf()
         
      
@@ -288,21 +288,21 @@ def main(
     
     # construct file names of plots
     filetype = 'jpeg'    
-    mfpath = os.path.join(directory, "09_MassFlow_%s.%s" % (basename, filetype))
-    vpath = os.path.join(directory, "03_ValveStates_%s.%s" % (basename, filetype))
-    ppath = os.path.join(directory, "04_Pressure-10kTorr_%s.%s" % (basename, filetype))
-    ppath2 = os.path.join(directory, "90_Pressure-1kTorr_%s.%s" % (basename, filetype))
-    mfrpath = os.path.join(directory, "09_MassFlowRate_%s.%s" % (basename, filetype))
-    ccgpath = os.path.join(directory, "91_CCGauge_%s.%s" % (basename, filetype))
-    rccgpath = os.path.join(directory, "91_CCGauge-recent_%s.%s" % (basename, filetype))
-    ccgpath_log = os.path.join(directory, "92_CCGauge-log_%s.%s" % (basename, filetype))
-    rccgpath_log = os.path.join(directory, "92_CCGauge-log-recent_%s.%s" % (basename, filetype))
-    lnpath = os.path.join(directory, "02_LN-Mass_%s.%s" % (basename, filetype))
-    bottle_mass_path = os.path.join(directory, "07_BottleMass_%s.%s" % (basename, filetype))
-    capacitance_path = os.path.join(directory, "08_Capacitance_%s.%s" % (basename, filetype))
-    hfep_path = os.path.join(directory, "06_HFE-Pressure_%s.%s" % (basename, filetype))
-    dp_path = os.path.join(directory, "05_dP-Pressure_%s.%s" % (basename, filetype))
-    rms_noise_path = os.path.join(directory, "93_rms-noise_%s.%s" % (basename, filetype))
+    mfpath = os.path.join(directory, "09-MassFlow_%s.%s" % (basename, filetype))
+    vpath = os.path.join(directory, "03-ValveStates_%s.%s" % (basename, filetype))
+    ppath = os.path.join(directory, "04-Pressure-10kTorr_%s.%s" % (basename, filetype))
+    ppath2 = os.path.join(directory, "90-Pressure-1kTorr_%s.%s" % (basename, filetype))
+    mfrpath = os.path.join(directory, "09-MassFlowRate_%s.%s" % (basename, filetype))
+    ccgpath = os.path.join(directory, "91-CCGauge_%s.%s" % (basename, filetype))
+    rccgpath = os.path.join(directory, "91-CCGauge-recent_%s.%s" % (basename, filetype))
+    ccgpath_log = os.path.join(directory, "92-CCGauge-log_%s.%s" % (basename, filetype))
+    rccgpath_log = os.path.join(directory, "92-CCGauge-log-recent_%s.%s" % (basename, filetype))
+    lnpath = os.path.join(directory, "02-LN-Mass_%s.%s" % (basename, filetype))
+    bottle_mass_path = os.path.join(directory, "07-BottleMass_%s.%s" % (basename, filetype))
+    capacitance_path = os.path.join(directory, "08-Capacitance_%s.%s" % (basename, filetype))
+    hfep_path = os.path.join(directory, "06-HFE-Pressure_%s.%s" % (basename, filetype))
+    dp_path = os.path.join(directory, "05-dP-Pressure_%s.%s" % (basename, filetype))
+    rms_noise_path = os.path.join(directory, "93-rms-noise_%s.%s" % (basename, filetype))
 
     # create some lists to hold values from files
     time_stamps = [] # labview timestamp, in seconds
@@ -537,7 +537,7 @@ def main(
     recent_time = time_hours[start_index_of_last_hour:]
 
     # open a log file for writing:
-    outfile = file("%s/99_log_%s.txt" % (directory, basename), 'w')
+    outfile = file("%s/99-log_%s.txt" % (directory, basename), 'w')
     plot_time = datetime.datetime.now()
 
     # ags wip
@@ -594,26 +594,26 @@ def main(
     print "--> starting plots..."
 
     # plot temperatures
-    filename = os.path.join(directory, "11_Temp_%s.%s" % (basename, filetype))
+    filename = os.path.join(directory, "11-Temp_%s.%s" % (basename, filetype))
     plot_temperatures(filename, 'Temperature', time_hours, time_stamps, TC0,
     TC1, TC2, TC3, TC4, TC15, TC10, T_ambient, T_LN_in, T_LN_out, T_Xe_bottle,
     T_max_set, T_min_set, first_index, last_index)
 
     # plot recent temperatures
-    filename = os.path.join(directory, "11_Temp-recent_%s.%s" % (basename, filetype)) 
+    filename = os.path.join(directory, "11-Temp-recent_%s.%s" % (basename, filetype)) 
     plot_temperatures(filename, 'Recent Temperature', time_hours,
     time_stamps, TC0, TC1, TC2, TC3, TC4, TC15, TC10, T_ambient, T_LN_in,
     T_LN_out, T_Xe_bottle, T_max_set=T_max_set, T_min_set=T_min_set,
     first_index=start_index_of_last_hour, last_index=last_index)
 
     # plot LXe cell and Cu plate temperatures
-    filename = os.path.join(directory, "01_Temp-cell_%s.%s" % (basename, filetype))
+    filename = os.path.join(directory, "01-Temp-cell_%s.%s" % (basename, filetype))
     plot_temperatures(filename, 'LXe cell and Cu plate temperature', time_hours,
     time_stamps, TC0, TC1, TC2, TC3, TC4, T_max_set=T_max_set, T_min_set=T_min_set,
     first_index=first_index, last_index=last_index)
 
     # plot LXe cell and Cu plate recent temperatures
-    filename = os.path.join(directory, "01_Temp-cell-recent_%s.%s" % (basename, filetype))
+    filename = os.path.join(directory, "01-Temp-cell-recent_%s.%s" % (basename, filetype))
     plot_temperatures(filename, 'Recent LXe cell and Cu plate temperature',
     time_hours,time_stamps, TC0, TC1, TC2, TC3, TC4, T_max_set=T_max_set,
     T_min_set=T_min_set, first_index=start_index_of_last_hour, last_index=last_index)
