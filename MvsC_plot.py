@@ -520,7 +520,7 @@ def main(
 
 # find initial mass
     for last_index in range(len(time_hours)):
-	if time_hours[last_index] > 2: break;
+        if time_hours[last_index] > 2: break;
 ##    plt.figure(135)
 ##    plt.grid(b=True)
 ##    plt.title("Xenon bottle mass [kg]: %.2f \n" % bottle_mass[-1])
@@ -536,9 +536,9 @@ def main(
 # zoom in on mass plot
     bottle_mass_zoomin_path = os.path.join(directory, "BottleMass_zoomin_%s.%s" % (basename, filetype))
     for first_index in range(len(time_hours)):
-	if time_hours[first_index] > 2.7: break;
+        if time_hours[first_index] > 2.7: break;
     for last_index in range(len(time_hours)):
-	if time_hours[last_index] > 6.8: break;
+        if time_hours[last_index] > 6.8: break;
     if len(bottle_mass) > 0:
         plt.figure(131)
         plt.grid(b=True)
@@ -572,45 +572,56 @@ def main(
 # bottle mass vs capacitance plot
     bottle_mass_vs_capacitance_path = os.path.join(directory, "BottleMass_vs_Capacitance_%s.%s" % (basename, filetype))
     if len(bottle_mass) > 0:
-	capacitance1 = []
-	mass1 = []
-	for index in range(first_index,last_index):
-	    if capacitance[index]>30 and initialmass - bottle_mass[index]>1:
-		capacitance1.append(capacitance[index])
-		mass1.append(initialmass - bottle_mass[index])
-	plt.figure(133)
+        capacitance1 = []
+        mass1 = []
+        for index in range(first_index,last_index):
+            if capacitance[index]>30 and initialmass - bottle_mass[index]>1:
+                capacitance1.append(capacitance[index])
+                mass1.append(bottle_mass[index])
+        plt.figure(133)
         plt.grid(b=True)
-        plt.title("Xenon mass vs capacitance \n")
-	mfline1 = plt.plot(mass1,capacitance1)
+        plt.title("Bottle mass vs capacitance \n")
+        mfline1 = plt.plot(mass1,capacitance1)
         plt.setp(mfline1, color = 'b', linewidth = linewidth)
-        plt.xlabel('Mass [kg]')
+        plt.xlabel('Bottle mass [kg]')
         plt.ylabel('Capacitance [pF]')
         plt.savefig(bottle_mass_vs_capacitance_path)
         print "printed %s" % bottle_mass_vs_capacitance_path
         outfile.write("Xenon bottle mass [kg]: %.3f \n" % bottle_mass[-1])
-##        # curve fitting
-##        from scipy.optimize import curve_fit
-##        def func(x,a,b,c): return a*np.exp(-b*x) + c
-##        popt, pcov = curve_fit(func, mass1, capacitance1, p0=[8.5,0.35,39])
-##        print popt
-##        mass1_new = np.linspace(min(mass1),max(mass1),1000)
-##        capacitance1_new = func(mass1_new,popt[0],popt[1],popt[2])
-##        plt.plot(mass1_new,capacitance1_new,'r')
-##        plt.clf()
+
+# LXe mass vs capacitance plot
+    bottle_mass_vs_capacitance_path = os.path.join(directory, "LXeMass_vs_Capacitance_%s.%s" % (basename, filetype))
+    if len(bottle_mass) > 0:
+        capacitance1 = []
+        mass1 = []
+        for index in range(first_index,last_index):
+            if capacitance[index]>30 and initialmass - bottle_mass[index]>1:
+                capacitance1.append(capacitance[index])
+                mass1.append(initialmass - bottle_mass[index])
+        plt.figure(134)
+        plt.grid(b=True)
+        plt.title("LXe mass vs capacitance \n")
+        mfline1 = plt.plot(mass1,capacitance1)
+        plt.setp(mfline1, color = 'b', linewidth = linewidth)
+        plt.xlabel('LXe mass [kg]')
+        plt.ylabel('Capacitance [pF]')
+        plt.savefig(bottle_mass_vs_capacitance_path)
+        print "printed %s" % bottle_mass_vs_capacitance_path
+        outfile.write("Xenon bottle mass [kg]: %.3f \n" % bottle_mass[-1])
 
 # bottle mass vs mass flow plot
 ##    bottle_mass_vs_flow_path = os.path.join(directory, "BottleMass_vs_MassFlow_%s.%s" % (basename, filetype))
 ##    if len(bottle_mass) > 0:
-##	massflow1 = []
-##	mass1 = []
-##	for index in range(first_index,last_index):
-##	    if capacitance[index]>30:
-##		massflow1.append(Vol[index])
-##		mass1.append(initialmass - bottle_mass[index])
-##	plt.figure(134)
+##  massflow1 = []
+##  mass1 = []
+##  for index in range(first_index,last_index):
+##      if capacitance[index]>30:
+##      massflow1.append(Vol[index])
+##      mass1.append(initialmass - bottle_mass[index])
+##  plt.figure(134)
 ##        plt.grid(b=True)
 ##        plt.title("Xenon mass vs mass flow \n")
-##	mfline1 = plt.plot(massflow1,mass1)
+##  mfline1 = plt.plot(massflow1,mass1)
 ##        plt.setp(mfline1, color = 'b', linewidth = linewidth)
 ##        plt.xlabel('Mass flow [g of Xenon]')
 ##        plt.ylabel('Mass [kg]')
