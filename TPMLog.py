@@ -197,15 +197,6 @@ def plot_temperatures(filename, title, time_hours, time_stamps, TC0=None, TC1=No
         T_Xe_bottle[first_index:last_index])
         plt.setp(line8, color = 'magenta', linewidth = linewidth, label = 'Xe bottle (%.1fK = %.1fC)' % (T_Xe_bottle[last_index], T_Xe_bottle[last_index]-kelvin_offset))
 
-    if T_max_set and len(T_max_set) > 0 and len(T_max_set) == len(TC0):
-        line9 = plt.plot(time_hours[first_index:last_index],
-        T_max_set[first_index:last_index])
-        plt.setp(line9, color = 'r', linewidth = linewidth, label = 'T_max (%.1fK = %.1fC)' % (T_max_set[last_index], T_max_set[last_index]-kelvin_offset), ls = '--')
-
-    if T_min_set and len(T_min_set) > 0 and len(T_min_set) == len(TC0):
-        line10 = plt.plot(time_hours[first_index:last_index],
-        T_min_set[first_index:last_index])
-        plt.setp(line10, color = 'b', linewidth = linewidth, label = 'T_min (%.1fK = %.1fC)' % (T_min_set[last_index], T_min_set[last_index]-kelvin_offset), ls = '--')
         
     if TC15 and len(TC15) > 0:
         line11 = plt.plot(time_hours[first_index:last_index],
@@ -217,8 +208,22 @@ def plot_temperatures(filename, title, time_hours, time_stamps, TC0=None, TC1=No
         TC10[first_index:last_index])
         plt.setp(line12, color = 'g', linewidth = linewidth, label = 'Reg (%.1fK = %.1fC)' % (TC10[last_index], TC10[last_index]-kelvin_offset))
 
+    # figure out what the plot limits are before we plot T_min & T_max:
+    ymin, ymax = plt.gca().get_ylim()
+
+    if T_max_set and len(T_max_set) > 0 and len(T_max_set) == len(TC0):
+        line9 = plt.plot(time_hours[first_index:last_index],
+        T_max_set[first_index:last_index])
+        plt.setp(line9, color = 'r', linewidth = linewidth, label = 'T_max (%.1fK = %.1fC)' % (T_max_set[last_index], T_max_set[last_index]-kelvin_offset), ls = '--')
+
+    if T_min_set and len(T_min_set) > 0 and len(T_min_set) == len(TC0):
+        line10 = plt.plot(time_hours[first_index:last_index],
+        T_min_set[first_index:last_index])
+        plt.setp(line10, color = 'b', linewidth = linewidth, label = 'T_min (%.1fK = %.1fC)' % (T_min_set[last_index], T_min_set[last_index]-kelvin_offset), ls = '--')
     plt.xlabel('Time [hours] : '  + str(start_time) + "  -  " + str(end_time))
     plt.ylabel('Temperature [K]')
+
+    plt.gca().set_ylim([ymin,ymax])
 
     # shrink plot height to create space for legend
     y = 1.22
