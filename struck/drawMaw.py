@@ -64,7 +64,7 @@ def process_file(filename):
         #    maw_graph.SetPoint(i, tree.maw[i])
         #graph.Draw("al")
 
-        tree.SetLineColor(tree.channel+1)
+        tree.SetLineColor(TColor.kBlue+1)
 
         canvas.cd(1)
 
