@@ -567,7 +567,7 @@ def main(
     if len(mass_flow_rate) > 1:
       print "integrating %i mass flow rate points..." % len(mass_flow_rate)
 
-      for (i_time, minute_time) in enumerate(time_minutes[first_index:last_index]):
+      for (i_time, minute_time) in enumerate(time_minutes):
 
           delta_time_minutes  = 0.0
           if i_time > 0:
@@ -630,7 +630,8 @@ def main(
     linewidth=1
    
 
-    if len(Vol) > 0:
+    if len(Vol[first_index:last_index]) > 0:
+
       lxe_density = 2.978 # kg/L
       xenon_volume = mass/lxe_density/1e3
       plt.figure(3)
