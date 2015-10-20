@@ -66,13 +66,16 @@ def process_file(filename):
 
         tree.SetLineColor(TColor.kBlue+1)
 
-        canvas.cd(1)
+        pad = canvas.cd(1)
+        pad.SetGrid(1,1)
 
         legend = TLegend(0.7, 0.92, 0.9, 0.99)
         legend.AddEntry(tree, "channel %i" % tree.channel, "pl")
         tree.Draw("wfm:Iteration$","Entry$==%i" % i_entry, "l")
         legend.Draw()
-        canvas.cd(2)
+
+        pad = canvas.cd(2)
+        pad.SetGrid(1,1)
         tree.Draw("maw:Iteration$","Entry$==%i" % i_entry, "l")
 
 
