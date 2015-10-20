@@ -7,7 +7,7 @@ assumed to exist:
 * energy
 * nHits
 
-arguments [sis root files of events]
+arguments [sis tier 2 root files of events]
 """
 
 import os
@@ -52,19 +52,23 @@ def process_file(filename):
     canvas.SetLogy(1)
     canvas.SetGrid(1,1)
 
+    print "%i total entries" % tree.GetEntries()
+
     # set up parameters for histograms
     n_bins = 100
     min_bin = 0
-    max_bin = 2000
+    #max_bin = 4000
+    max_bin = 8000
 
 
     # draw coherent sum hist
     hist0 = TH1D("hist0", "", n_bins, min_bin, max_bin)
     hist0.SetLineWidth(2)
     hist0.SetLineColor(TColor.kBlue)
-    tree.Draw("totalEnergy >> hist0","","goff")
+    tree.Draw("totalEnergy >> hist0","totalEnergy>0","goff")
     #tree.Draw("energy[1]+energy[2] >> hist0","energy[1]+energy[2]>0","goff")
     print "entries in coherent hist0:", hist0.GetEntries()
+    print "mean:", hist0.GetMean()
 
     # draw incoherent sum hist
     hist1 = TH1D("hist1", "", n_bins, min_bin, max_bin)
@@ -75,6 +79,7 @@ def process_file(filename):
     #print "entries in hist1:", hist1.GetEntries()
     #tree.Draw("energy[2] >> +hist1","energy[2]>0","goff")
     print "entries in incoherent hist1:", hist1.GetEntries()
+    print "mean:", hist1.GetMean()
 
     # single-wire hist
     hist2 = TH1D("hist2", "", n_bins, min_bin, max_bin)
@@ -85,6 +90,7 @@ def process_file(filename):
     #print "entries in hist2:", hist2.GetEntries()
     #tree.Draw("energy[2] >> +hist2","energy[1]==0 && energy[2]>0","goff")
     print "entries in single-wire hist2:", hist2.GetEntries()
+    print "mean:", hist2.GetMean()
 
     # multi-wire hist
     hist3 = TH1D("hist3", "", n_bins, min_bin, max_bin)
@@ -93,6 +99,7 @@ def process_file(filename):
     tree.Draw("totalEnergy >> hist3","nHits>1","goff")
     #tree.Draw("energy[1]+energy[2] >> hist3","energy[1]>0 && energy[2]>0","goff")
     print "entries in multi-wire hist3:", hist3.GetEntries()
+    print "mean:", hist3.GetMean()
 
     # set up a legend
     legend = TLegend(0.11, 0.91, 0.9, 0.99)
