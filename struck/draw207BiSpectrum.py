@@ -6,7 +6,7 @@ assumed to exist:
 * max
 * channel
 
-arguments [sis root files]
+arguments [tier1 sis root files]
 """
 
 import os
@@ -51,23 +51,33 @@ def process_file(filename):
 
     # find the maximum energy value in the tree, among all channels
     print "total entries in tree", tree.GetEntries()
-    max_mca_value = tree.GetMaximum("adc_max")
-    min_mca_value = tree.GetMinimum("adc_max")
-    print "max digitized value", max_mca_value
-    print "min digitized value", min_mca_value
+    max_adc_value = tree.GetMaximum("adc_max")
+    min_adc_value = tree.GetMinimum("adc_min")
+    print "max digitized value", max_adc_value
+    print "min digitized value", min_adc_value
 
     # set up parameters for histograms
     #n_bins = 200
-    #min_bin = min_mca_value - 1
-    #max_bin = max_mca_value + 1
+    #min_bin = min_adc_value - 1
+    #max_bin = max_adc_value + 1
     min_bin = 0
     #max_bin = pow(2, 14) # ADC max is 2^14
     #n_bins = max_bin/64
-    max_bin= 2500
+    max_bin= 5000
     n_bins = max_bin/20
     print "n_bins", n_bins
 
-    draw_string = "(adc_max - 1600)"
+
+    # for 11pm runs on 12 Aug 2015:
+    offset = 1600
+
+    # for some pulser tests on 12 Aug 2015 morning:
+    if basename == "sis3316_test_data_0_100mVpulser_noHV_noXe":
+        print "using Aug 12 pulser offset..."
+        offset = 4050
+
+    draw_string = "(adc_max - %s)" % offset
+    print "draw_string:", draw_string
 
     # draw X29
     hist0 = TH1D("hist0", "", n_bins, min_bin, max_bin)
@@ -75,7 +85,11 @@ def process_file(filename):
     hist0.SetLineColor(TColor.kRed)
     #hist0.SetFillColor(TColor.kBlue)
     hist0.SetFillStyle(3004)
-    print "entries in ch0:", tree.Draw("%s*570/3800 >> hist0" % draw_string,"channel==0","goff")
+    print "entries in ch0:", tree.Draw(
+        "%s*570/3800 >> hist0" % draw_string,
+        "channel==0",
+        "goff"
+    )
     max_bin_height0 = hist0.GetBinContent(hist0.GetMaximumBin())
 
     # draw X28
@@ -84,7 +98,11 @@ def process_file(filename):
     hist1.SetLineColor(TColor.kGreen+1)
     #hist1.SetFillColor(TColor.kRed)
     hist1.SetFillStyle(3005)
-    print "entries in ch1:", tree.Draw("%s*570/1900 >> hist1" % draw_string,"channel==1","goff")
+    print "entries in ch1:", tree.Draw(
+        "%s*570/1900 >> hist1" % draw_string,
+        "channel==1",
+        "goff"
+    )
     max_bin_height1 = hist1.GetBinContent(hist1.GetMaximumBin())
 
     # draw X27
@@ -93,7 +111,11 @@ def process_file(filename):
     hist2.SetLineColor(TColor.kBlue)
     #hist2.SetFillColor(TColor.kGreen+1)
     hist2.SetFillStyle(3006)
-    print "entries in ch2:", tree.Draw("%s*570/2800 >> hist2" % draw_string,"channel==2","goff")
+    print "entries in ch2:", tree.Draw(
+        "%s*570/2800 >> hist2" % draw_string,
+        "channel==2",
+        "goff"
+    )
     max_bin_height2 = hist2.GetBinContent(hist2.GetMaximumBin())
 
     # find the highest max, among all 3 channels:
