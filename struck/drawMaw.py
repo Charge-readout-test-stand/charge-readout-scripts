@@ -86,7 +86,7 @@ def process_file(filename):
         if val == 'q': break
         if val == 'p':
             canvas.Update()
-            canvas.Print("%s_event_%i.png" % (basename, i_entry))
+            canvas.Print("%s_entry_%i.png" % (basename, i_entry))
 
         #if i_entry > 2: break # debugging
 
