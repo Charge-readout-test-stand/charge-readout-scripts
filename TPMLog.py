@@ -944,7 +944,7 @@ def main(
             # add red zone without changing y axes:
             ymin, ymax = plt.gca().get_ylim()
             plt.axhspan(ymin=760, ymax=ymax, color='red', alpha=0.5)
-            plt.axhspan(ymin=ymin, ymax=-760, color='red', alpha=0.5)
+            plt.axhspan(ymin=ymin, ymax=-1000, color='red', alpha=0.5)
             plt.gca().set_ylim([ymin,ymax])
 
             plt.setp(dP_line, color = 'b', linewidth = linewidth)
