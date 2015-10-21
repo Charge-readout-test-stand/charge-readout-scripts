@@ -45,7 +45,7 @@ def draw_hist(basename, tree, channel, color=TColor.kBlack, fill_style=3004):
     canvas.SetLogy(1)
     max_bin = pow(2, 14) # ADC max is 2^14
     baseline_hist = TH1D("baseline_hist", "ch %i baseline" % channel, max_bin, 0, max_bin)
-    n_entries = tree.Draw("wfm >> baseline_hist","channel == %i && Iteration$<350" % channel)
+    n_entries = tree.Draw("wfm >> baseline_hist","channel == %i && Iteration$<200" % channel)
     baseline_hist.SetLineColor(TColor.kBlue+1)
     baseline_hist.SetFillColor(TColor.kBlue+1)
     mean = baseline_hist.GetMean()
@@ -56,7 +56,7 @@ def draw_hist(basename, tree, channel, color=TColor.kBlack, fill_style=3004):
         print "mean", mean
         canvas.Update()
         canvas.Print("%s_ch%i_baseline.png" % (basename, channel))
-    
+
 
     name = "hist%i" % channel
     hist = TH1D(name, "", n_bins, min_bin, max_bin)
@@ -67,6 +67,12 @@ def draw_hist(basename, tree, channel, color=TColor.kBlack, fill_style=3004):
     n_entries = tree.Draw("adc_max - %s >> %s" % (mean, name), "channel==%i" % channel, "goff")
     if n_entries > 0:
         print "entries in ch %i:" % channel, n_entries
+
+        last_bin = hist.FindLastBinAbove(0)
+        hist.SetAxisRange(0, hist.GetBinCenter(last_bin) + hist.GetBinWidth(1))
+        hist.Draw()
+        canvas.Print("%s_channel%i.png" % (basename, channel))
+
     max_bin_height = hist.GetBinContent(hist.GetMaximumBin())
 
     return hist, max_bin_height, mean
@@ -147,7 +153,7 @@ def process_file(filename):
     hists[0].SetAxisRange(0, max_range)
     hists[0].SetMaximum(max_bin_height*1.1)
     hists[0].SetXTitle("Energy [ADC units]")
-    hists[0].SetYTitle("Counts / %.2f ADC units" % hists[0].GetBinWidth(1))
+    hists[0].SetYTitle("Counts / %.1f ADC units" % hists[0].GetBinWidth(1))
     hists[0].Draw()
 
 
