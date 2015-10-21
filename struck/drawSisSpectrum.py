@@ -38,7 +38,7 @@ def draw_hist(basename, tree, channel, color=TColor.kBlack, fill_style=3004):
     # set up parameters for histograms
     min_bin = 0
     max_bin = pow(2, 14) # ADC max is 2^14
-    n_bins = max_bin
+    n_bins = max_bin/16
 
     # find baseline
     canvas = TCanvas("canvas1","")
@@ -69,7 +69,7 @@ def draw_hist(basename, tree, channel, color=TColor.kBlack, fill_style=3004):
         print "entries in ch %i:" % channel, n_entries
     max_bin_height = hist.GetBinContent(hist.GetMaximumBin())
 
-    return hist, max_bin_height
+    return hist, max_bin_height, mean
 
 
 def process_file(filename):
@@ -108,24 +108,46 @@ def process_file(filename):
     legend = TLegend(0.1, 0.81, 0.9, 0.99)
     legend.SetNColumns(4)
 
+    # find the maximum adc_max value in the tree
+    max_val = tree.GetMaximum("adc_max")
+    print "max_val:", max_val
+
+    # get ready to find the maximum range of a historgram
+    max_range = 0
+
     for channel in xrange(16):
+        
+        print "--> channel:", channel
 
         i_color = channel % len(colors)
         i_fill = channel % len(fillStyle)
-        hist, i_max_bin_height = draw_hist(basename, tree, channel, colors[i_color],
+        hist, i_max_bin_height, baseline_mean = draw_hist(basename, tree, channel, colors[i_color],
         fillStyle[i_fill])
         n_entries = hist.GetEntries()
 
-        legend.AddEntry(hist, "ch %i (%i)" % (channel, n_entries), "f")
+        legend.AddEntry(hist, "ch %i (%i)" % (channel+1, n_entries), "f")
         hists.append(hist)
 
         if i_max_bin_height > max_bin_height:
             max_bin_height = i_max_bin_height
 
-    hists[0].SetAxisRange(0, 200)
+        # FIXME -- this could be better... should find max bin with contents in
+        # this histogram
+        if n_entries > 0:
+
+            print "baseline_mean", baseline_mean
+            print "max_val", max_val
+            max_hist_bin = max_val - baseline_mean
+            print "max_hist_bin", max_hist_bin
+
+            if max_hist_bin > max_range:
+                max_range = max_hist_bin
+    
+
+    hists[0].SetAxisRange(0, max_range)
     hists[0].SetMaximum(max_bin_height*1.1)
     hists[0].SetXTitle("Energy [ADC units]")
-    hists[0].SetYTitle("Counts")
+    hists[0].SetYTitle("Counts / %.2f ADC units" % hists[0].GetBinWidth(1))
     hists[0].Draw()
 
 
