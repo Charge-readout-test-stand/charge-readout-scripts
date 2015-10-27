@@ -1,14 +1,17 @@
 #!/usr/bin/env python
 
 """
-This script builds events, assuming that the trigger input is used. For each
-event, all channels are assumed to be read out. 
+This script builds events, assuming that the trigger input is used. These are
+the channels we used for 5th LXe:
 
-The following branches are assumed to exist:
-* adc_max
-* channel
+0: X26
+1: X27
+2: X29
+3: Y23
+4: Y24
+8: PMT
 
-arguments [sis root files]
+argument(s): [sis tier 1 root file(s)]
 """
 
 import os
@@ -44,6 +47,10 @@ for i in xrange(16):
 
 
 def get_entry_number(i_event, buffer_lengths, i_channel, n_channels):
+      """
+      This function calculates which ttree entry corresponds to a given event
+      and channel
+      """
       #print "--> finding buffer for event %i, ch %i" % (i_event, i_channel)
 
       # find which buffer spill this event is in:
@@ -61,7 +68,11 @@ def get_entry_number(i_event, buffer_lengths, i_channel, n_channels):
       #print "\t event %i | entry %i | buffer %i" % (i_event, i_entry, n_buffer)
       return int(i_entry)
 
+
 def draw_event(tree, i_event, buffer_lengths, n_channels):
+    """
+    draw the event, for debugging
+    """
 
     print "==> drawing event ", i_event
 
@@ -126,29 +137,23 @@ def draw_event(tree, i_event, buffer_lengths, n_channels):
     # end of drawing
 
 
-
 def process_file(filename):
+    """
+    process a tier 1 root file to produce a new (reduced) file with event info. 
+    """
 
-    # clock frequency
-    freq_Hz = 25.0*1e6
-
+    freq_Hz = 25.0*1e6 # clock frequency
     n_channels = 6 # from 5th LXs
-
-    calibration = array('d', n_channels*[1.0]) # double
-    calibration[0] = 570.0/3800.0
-    calibration[1] = 570.0/1900.0
-    calibration[2] = 570.0/2800.0
 
     do_draw = True
     #do_draw = False
     if gROOT.IsBatch(): do_draw = False
 
     print "---> processing file: ", filename
+    # construct a basename to form output file name
     basename = os.path.basename(filename)
     basename = os.path.splitext(basename)[0]
 
-    # keep track of start time, since this script takes forever
-    last_time = time.clock()
 
     # open the root file and grab the tree
     root_file = TFile(filename)
@@ -178,7 +183,7 @@ def process_file(filename):
     print "... done"
 
 
-    # a new file for output
+    # open a new file for output
     out_file = TFile("%s_events.root" % basename, "recreate")
     out_tree = TTree("tree","events from Struck 3316-DT")
 
@@ -204,21 +209,33 @@ def process_file(filename):
     channel = array('d', [0]*6) # double
     out_tree.Branch('channel', channel, 'channel[6]/D')
 
-    for i_event in xrange(n_entries):
 
-        if i_event % 100 == 0:
-            print "==> event %i of %i (%.3f percent)" % (
+    # keep track of start time, since this script takes forever
+    last_time = time.clock()
+    reporting_period = 500
+
+    # find & build events
+    for i_event in xrange(n_events):
+
+        # periodic progress output
+        if i_event % reporting_period == 0:
+            now = time.clock()
+            print "==> event %i of %i (%.2f percent, %i events in %.1f seconds)" % (
                 i_event,
                 n_events, 
                 100.0*i_event/n_events,
+                reporting_period,
+                now - last_time,
             )
+            last_time = now
 
+        # check that this event doesn't extend past the end of the tree
         if get_entry_number(i_event, buffer_lengths, 5, n_channels) > n_entries:
             print "event %i with (entry %i) is beyond end of tree (%i entries)" % (
                 i_event, i_event + buffer_length*n_channels, n_entries)
             break 
 
-
+        # initialize values
         totalEnergy[0] = 0.0
         chargeEnergy[0] = 0.0
         event[0] = i_event
@@ -232,30 +249,31 @@ def process_file(filename):
             #print "\t stamp %i | entry %i | channel %i" % ( tree.timestampDouble, i_entry, tree.channel)
 
             if i == 0: time_stamp[0] = tree.timestampDouble
+
+            # check that all wfms in this event have the same timestamp
             if tree.timestampDouble != time_stamp[0]:
                 print "==> event %i | entry %i | channel %i timestamp doesn't match!! (%i vs %i)" % (
                 i_event, i_entry, tree.channel, time_stamp[0], tree.timestampDouble)
                 return
 
+            # get values that are written to tree
             channel[i] = tree.channel
             energy[i] = tree.adc_max - tree.wfm[0]
             totalEnergy[0] += energy[i]
             if i < 5:
                 chargeEnergy[0] += energy[i]
 
-
-
         lightEnergy[0] = energy[5]
-        tree.Fill()
+        out_tree.Fill()
 
-        # draw the event:
+        # draw the event, if needed:
         if do_draw:
             do_draw = draw_event(tree, i_event, buffer_lengths, n_channels)
 
 
-
     print "writing file..."
     out_file.Write()
+    out_file.Close()
     print "\t done"
 
     
