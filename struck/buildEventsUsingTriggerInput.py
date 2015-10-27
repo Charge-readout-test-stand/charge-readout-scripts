@@ -153,6 +153,8 @@ def process_file(filename):
     # construct a basename to form output file name
     basename = os.path.basename(filename)
     basename = os.path.splitext(basename)[0]
+    basename = "_".split(basename)[1:]
+    print basename
 
 
     # open the root file and grab the tree
@@ -184,7 +186,7 @@ def process_file(filename):
 
 
     # open a new file for output
-    out_file = TFile("%s_events.root" % basename, "recreate")
+    out_file = TFile("tier2_%s_events.root" % basename, "recreate")
     out_tree = TTree("tree","events from Struck 3316-DT")
 
     # make branches in the output tree, using horrible python syntax
