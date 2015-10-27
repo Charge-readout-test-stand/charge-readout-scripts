@@ -153,8 +153,7 @@ def process_file(filename):
     # construct a basename to form output file name
     basename = os.path.basename(filename)
     basename = os.path.splitext(basename)[0]
-    basename = "_".split(basename)[1:]
-    print basename
+    basename = "_".join(basename.split("_")[1:])
 
 
     # open the root file and grab the tree
