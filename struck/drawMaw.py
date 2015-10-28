@@ -44,7 +44,8 @@ def process_file(filename):
     # open the root file and grab the tree
     root_file = TFile(filename)
     tree = root_file.Get("tree")
-    print "%i entries" % tree.GetEntries()
+    n_entries = tree.GetEntries()
+    print "%i entries" % n_entries
 
     tree.SetLineWidth(2)
 
@@ -58,7 +59,8 @@ def process_file(filename):
     peaking_time = 4
     gap_time = 10
 
-    for i_entry in xrange(tree.GetEntries()):
+    i_entry = 0
+    while i_entry < n_entries:
 
         tree.GetEntry(i_entry)
 
@@ -83,18 +85,18 @@ def process_file(filename):
 
         canvas.Update()
         val = raw_input("--> entry %i | ch %i | enter to continue (q to quit, p to print, or entry number) " % (i_entry, tree.channel))
+        i_entry += 1
+
         if val == 'q': break
         if val == 'p':
             canvas.Update()
             canvas.Print("%s_entry_%i.png" % (basename, i_entry))
         try:
-            i_entry = float(val)
-            print "here"
-            print i_entry
+            i_entry = int(val)
         except: 
             pass
 
-        print i_entry
+
         #if i_entry > 2: break # debugging
 
     #legend.Draw()
