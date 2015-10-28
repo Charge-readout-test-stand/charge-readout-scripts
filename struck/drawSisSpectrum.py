@@ -40,13 +40,15 @@ def draw_hist(basename, tree, channel, color=TColor.kBlack, fill_style=3004):
     # set up parameters for histograms
     min_bin = 0
     max_bin = pow(2, 14) # ADC max is 2^14
+    n_bins = max_bin/16
+    max_bin = 800
     n_bins = max_bin
 
     do_baseline = False # doesn't seem to help us too much, using wfm[0] for now
 
     # for calibrated signals:
-    max_bin = 3000
-    n_bins = 300
+    #max_bin = 6000
+    #n_bins = 300
 
     canvas = TCanvas("canvas1","")
     canvas.SetLogy(1)
@@ -84,6 +86,7 @@ def draw_hist(basename, tree, channel, color=TColor.kBlack, fill_style=3004):
 
     # select calibration for this channel
     cal = calibration[channel]
+    cal = 1.0
 
 
     name = "hist%i" % channel
@@ -180,7 +183,7 @@ def process_file(filename):
     
 
     hists[0].SetAxisRange(0, max_range)
-    hists[0].SetAxisRange(0, 2500) # for calibrated signals
+    #hists[0].SetAxisRange(0, 2500) # for calibrated signals
     hists[0].SetMaximum(max_bin_height*1.1)
     hists[0].SetXTitle("Energy [ADC units]")
     hists[0].SetYTitle("Counts / %.1f ADC units" % hists[0].GetBinWidth(1))
