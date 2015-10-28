@@ -44,6 +44,8 @@ def process_file(filename):
     # open the root file and grab the tree
     root_file = TFile(filename)
     tree = root_file.Get("tree")
+    print "%i entries" % tree.GetEntries()
+
     tree.SetLineWidth(2)
 
     # set up a canvas
@@ -57,6 +59,7 @@ def process_file(filename):
     gap_time = 10
 
     for i_entry in xrange(tree.GetEntries()):
+
         tree.GetEntry(i_entry)
 
         #for i in xrange(tree.sample_length):
@@ -78,16 +81,20 @@ def process_file(filename):
         pad.SetGrid(1,1)
         tree.Draw("maw:Iteration$","Entry$==%i" % i_entry, "l")
 
-
-        
-
         canvas.Update()
-        val = raw_input("--> ch %i | press any key to continue (q to quit, p to print) " % tree.channel)
+        val = raw_input("--> entry %i | ch %i | enter to continue (q to quit, p to print, or entry number) " % (i_entry, tree.channel))
         if val == 'q': break
         if val == 'p':
             canvas.Update()
             canvas.Print("%s_entry_%i.png" % (basename, i_entry))
+        try:
+            i_entry = float(val)
+            print "here"
+            print i_entry
+        except: 
+            pass
 
+        print i_entry
         #if i_entry > 2: break # debugging
 
     #legend.Draw()
