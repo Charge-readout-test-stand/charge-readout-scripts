@@ -136,6 +136,16 @@ def draw_event(tree, i_event, buffer_lengths, n_channels):
     return True
     # end of drawing
 
+def get_basename(filename):
+
+    # construct a basename to form output file name
+    basename = os.path.basename(filename)
+    basename = os.path.splitext(basename)[0]
+    basename = "tier2_" + "_".join(basename.split("_")[1:])
+    return basename
+
+
+
 
 def process_file(filename):
     """
@@ -150,10 +160,7 @@ def process_file(filename):
     if gROOT.IsBatch(): do_draw = False
 
     print "---> processing file: ", filename
-    # construct a basename to form output file name
-    basename = os.path.basename(filename)
-    basename = os.path.splitext(basename)[0]
-    basename = "_".join(basename.split("_")[1:])
+    basename = get_basename(filename)
 
 
     # open the root file and grab the tree
@@ -176,7 +183,12 @@ def process_file(filename):
         tree.GetEntry(i_entry)
         if tree.channel != first_channel:
             buffer_length = i_entry - sum_of_previous_buffers
-            print "\t spill %i: %i" % (len(buffer_lengths),  buffer_length)
+            print "\t spill %i: %i events, entries %i to %i" % (
+                len(buffer_lengths),  
+                buffer_length,
+                sum_of_previous_buffers,
+                sum_of_previous_buffers + buffer_length*n_channels,
+            )
             buffer_lengths.append(buffer_length)
             sum_of_previous_buffers += buffer_length*n_channels
             i_entry = sum_of_previous_buffers
@@ -185,7 +197,7 @@ def process_file(filename):
 
 
     # open a new file for output
-    out_file = TFile("tier2_%s_events.root" % basename, "recreate")
+    out_file = TFile("%s.root" % basename, "recreate")
     out_tree = TTree("tree","events from Struck 3316-DT")
 
     # make branches in the output tree, using horrible python syntax
@@ -207,34 +219,66 @@ def process_file(filename):
     energy = array('d', [0]*6) # double
     out_tree.Branch('energy', energy, 'energy[6]/D')
 
+    maw_max = array('d', [0]*6) # double
+    out_tree.Branch('max_max', maw_max, 'maw_max[6]/D')
+
     channel = array('d', [0]*6) # double
     out_tree.Branch('channel', channel, 'channel[6]/D')
 
+    adc_max_time = array('I', [0]*6) # int
+    out_tree.Branch('adc_max_time', adc_max_time, 'adc_max_time[6]/i')
+
+    sample_length = array('I', [0]) # int
+    out_tree.Branch('sample_length', sample_length, 'sample_length/i')
+
+    channels = [0,1,2,3,4,8]
+    waveforms = []
+
+    for i_channel in channels:
+
+        wfm = array('I', [0]*2048) # unsigned int
+        out_tree.Branch('wfm%i' % i_channel, wfm, 'wfm%i[sample_length]/i' % i_channel)
+        waveforms.append(wfm)
+
+    do_debug = False
+    #do_debug = True
 
     # keep track of start time, since this script takes forever
-    last_time = time.clock()
-    reporting_period = 500
+    start_time = time.clock()
+    last_time = start_time
+    reporting_period = 500 
+    if do_debug:
+        reporting_period = 1
+
+    cache_size = 100000000
+    #tree.SetCacheSize(cache_size)
+    print "cache size: %.2e" % tree.GetCacheSize()
+
 
     # find & build events
     for i_event in xrange(n_events):
 
+        if do_debug:
+            if i_event > 5: break
+
         # periodic progress output
         if i_event % reporting_period == 0:
             now = time.clock()
-            print "==> event %i of %i (%.2f percent, %i events in %.1f seconds)" % (
+            print "==> event %i of %i (%.2f percent, %i events in %.1f seconds, %.2f seconds elapsed)" % (
                 i_event,
                 n_events, 
                 100.0*i_event/n_events,
                 reporting_period,
                 now - last_time,
+                now - start_time,
             )
             last_time = now
 
         # check that this event doesn't extend past the end of the tree
-        if get_entry_number(i_event, buffer_lengths, 5, n_channels) > n_entries:
-            print "event %i with (entry %i) is beyond end of tree (%i entries)" % (
-                i_event, i_event + buffer_length*n_channels, n_entries)
-            break 
+        #if get_entry_number(i_event, buffer_lengths, 5, n_channels) > n_entries:
+        #    print "event %i with (entry %i) is beyond end of tree (%i entries)" % (
+        #        i_event, i_event + buffer_length*n_channels, n_entries)
+        #    break 
 
         # initialize values
         totalEnergy[0] = 0.0
@@ -259,8 +303,19 @@ def process_file(filename):
 
             # get values that are written to tree
             channel[i] = tree.channel
+            adc_max_time[i] = tree.adc_max_time
             energy[i] = tree.adc_max - tree.wfm[0]
+            maw_max[i] = tree.maw_max
             totalEnergy[0] += energy[i]
+            sample_length[0] = tree.sample_length
+
+            # fill the wfm for this channel:
+            wfm = waveforms[i]
+            #print wfm
+            for i_sample in xrange(tree.sample_length):
+                wfm[i_sample] = tree.wfm[i_sample]
+                #print i_sample, wfm[i_sample]
+
             if i < 5:
                 chargeEnergy[0] += energy[i]
 
@@ -272,7 +327,7 @@ def process_file(filename):
             do_draw = draw_event(tree, i_event, buffer_lengths, n_channels)
 
 
-    print "writing file..."
+    print "writing file %s.root..." % basename
     out_file.Write()
     out_file.Close()
     print "\t done"
