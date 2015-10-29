@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 
 """
-This script draws a spectrum from a root tree. The following branches are
-assumed to exist:
-* totalEnergy
-* energy
-* nHits
+This script skims tier2 files, determines which are good, and adds them together
+with hadd. Use like this:
+
+./combineGoodFiles.py *NotShaped_Amplified*DT*.root > & combine.log
 
 arguments [sis tier 2 root files of events]
 """
@@ -46,11 +45,17 @@ def process_file(filename):
     tree = root_file.Get("tree")
     try:
         n_entries = tree.GetEntries()
+        print "\t %i entries" % n_entries
     except AttributeError:
         print "BAD FILE!"
         return 0
         
-    print "\t %i entries" % n_entries
+
+    n_entries = tree.Draw("lightEnergy","lightEnergy>100","goff")
+    print "\t %i entries with lightEnergy > 100" % n_entries
+    if n_entries == 0:
+        print "\t skipping this file (too few light entries)!!"
+        return 0
 
     # figure out the light threshold:
     print "\t minimum light Energy %i" % tree.GetMinimum("lightEnergy")
@@ -75,9 +80,8 @@ if __name__ == "__main__":
     print "%i good files:" % len(good_names)
     #print "\n".join(good_names)
     cmd = "time hadd -O combined.root %s" % " ".join(good_names)
-    print cmd
-    #output = commands.getstatusoutput(cmd)
-    #print output[1]
+    #print cmd
+    print commands.getstatusoutput(cmd)[1]
 
 
 
