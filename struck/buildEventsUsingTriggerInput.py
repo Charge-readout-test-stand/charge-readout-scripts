@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 
 """
-This script builds events, assuming that the trigger input is used. These are
-the channels we used for 5th LXe:
+This script builds events, assuming that the trigger input is used. 
+
+These are the channels we used for 5th LXe:
 
 0: X26
 1: X27
@@ -94,8 +95,8 @@ def draw_event(tree, i_event, buffer_lengths, n_channels):
     frame_hist.SetLineWidth(2)
     frame_hist.SetXTitle("time [clock ticks]")
     #frame_hist.SetYTitle("ADC value")
-    frame_hist.SetMinimum(tree.GetMinimum("adc_min")-10)
-    frame_hist.SetMaximum(tree.GetMaximum("adc_max")+10) 
+    frame_hist.SetMinimum(tree.GetMinimum("wfm_min")-10)
+    frame_hist.SetMaximum(tree.GetMaximum("wfm_max")+10) 
     #frame_hist.SetMinimum(0)
     #frame_hist.SetMaximum(16384) # 2^14
     frame_hist.Draw()
@@ -118,8 +119,8 @@ def draw_event(tree, i_event, buffer_lengths, n_channels):
         legend.AddEntry(hists[channel], "ch %i" % (channel), "f")
         tree.Draw("wfm:Iteration$","Entry$==%i" % i_entry,"l same")
         #tree.Draw("wfm:Iteration$+%i" % tsl,"Entry$==%i" % i_entry,"l same")
-        if tree.adc_max > event_max: event_max = tree.adc_max
-        if tree.adc_min < event_min: event_min = tree.adc_min
+        if tree.wfm_max > event_max: event_max = tree.wfm_max
+        if tree.wfm_min < event_min: event_min = tree.wfm_min
 
 
     frame_hist.SetMinimum(event_min-100)
@@ -203,9 +204,12 @@ def process_file(filename):
     # make branches in the output tree, using horrible python syntax
     event = array('I', [0]) # unsigned int
     out_tree.Branch('event', event, 'event/i')
+ 
+    time_stamp = array('L', [0]) # unsigned long
+    out_tree.Branch('time_stamp', time_stamp, 'time_stamp/l')
 
-    time_stamp = array('d', [0]) # double
-    out_tree.Branch('time_stamp', time_stamp, 'time_stamp/D')
+    time_stampDouble = array('d', [0]) # double
+    out_tree.Branch('time_stampDouble', time_stampDouble, 'time_stampDouble/D')
 
     totalEnergy = array('d', [0]) # double
     out_tree.Branch('totalEnergy', totalEnergy, 'totalEnergy/D')
@@ -225,20 +229,32 @@ def process_file(filename):
     channel = array('d', [0]*6) # double
     out_tree.Branch('channel', channel, 'channel[6]/D')
 
-    adc_max_time = array('I', [0]*6) # int
-    out_tree.Branch('adc_max_time', adc_max_time, 'adc_max_time[6]/i')
+    wfm_max_time = array('I', [0]*6) # unsigned int
+    out_tree.Branch('wfm_max_time', wfm_max_time, 'wfm_max_time[6]/i')
 
-    sample_length = array('I', [0]) # int
-    out_tree.Branch('sample_length', sample_length, 'sample_length/i')
+    wfm_max = array('d', [0]*6) # double
+    out_tree.Branch('wfm_max', wfm_max, 'wfm_max[6]/i')
+
+    wfm_length = array('I', [0]) # unsigned int
+    out_tree.Branch('wfm_length', wfm_length, 'wfm_length/i')
+
+    maw_length = array('I', [0]) # unsigned int
+    out_tree.Branch('maw_length', maw_length, 'maw_length/i')
 
     channels = [0,1,2,3,4,8]
     waveforms = []
+    maws = []
 
     for i_channel in channels:
 
         wfm = array('I', [0]*2048) # unsigned int
-        out_tree.Branch('wfm%i' % i_channel, wfm, 'wfm%i[sample_length]/i' % i_channel)
+        out_tree.Branch('wfm%i' % i_channel, wfm, 'wfm%i[wfm_length]/i' % i_channel)
         waveforms.append(wfm)
+
+        maw = array('i', [0]*2048) # signed int
+        out_tree.Branch('maw%i' % i_channel, maw, 'maw%i[maw_length]/I' % i_channel)
+        maws.append(maw)
+
 
     do_debug = False
     #do_debug = True
@@ -246,7 +262,7 @@ def process_file(filename):
     # keep track of start time, since this script takes forever
     start_time = time.clock()
     last_time = start_time
-    reporting_period = 500 
+    reporting_period = 20 
     if do_debug:
         reporting_period = 1
 
@@ -293,29 +309,37 @@ def process_file(filename):
 
             #print "\t stamp %i | entry %i | channel %i" % ( tree.timestampDouble, i_entry, tree.channel)
 
-            if i == 0: time_stamp[0] = tree.timestampDouble
+            if i == 0: time_stamp[0] = tree.timestamp
+            if i == 0: time_stampDouble[0] = tree.timestampDouble
 
             # check that all wfms in this event have the same timestamp
-            if tree.timestampDouble != time_stamp[0]:
+            if tree.timestamp != time_stamp[0]:
                 print "==> event %i | entry %i | channel %i timestamp doesn't match!! (%i vs %i)" % (
-                i_event, i_entry, tree.channel, time_stamp[0], tree.timestampDouble)
+                i_event, i_entry, tree.channel, time_stamp[0], tree.timestamp)
                 return
 
             # get values that are written to tree
             channel[i] = tree.channel
-            adc_max_time[i] = tree.adc_max_time
-            energy[i] = tree.adc_max - tree.wfm[0]
+            wfm_max_time[i] = tree.wfm_max_time
+            wfm_max[i] = tree.wfm_max
+            energy[i] = tree.wfm_max - tree.wfm[0]
             maw_max[i] = tree.maw_max
             totalEnergy[0] += energy[i]
-            sample_length[0] = tree.sample_length
+            wfm_length[0] = tree.wfm_length
 
             # fill the wfm for this channel:
             wfm = waveforms[i]
             #print wfm
-            for i_sample in xrange(tree.sample_length):
+            for i_sample in xrange(tree.wfm_length):
                 wfm[i_sample] = tree.wfm[i_sample]
                 #print i_sample, wfm[i_sample]
 
+            maw = maws[i]
+            for i_sample in xrange(tree.maw_length):
+                maw[i_sample] = tree.maw[i_sample]
+
+
+            # add up charge channels, skip PMT
             if i < 5:
                 chargeEnergy[0] += energy[i]
 
