@@ -1,0 +1,3 @@
+gap time = 250 clockticks
+flat time = 50 clockticks
+using file "LXe"
