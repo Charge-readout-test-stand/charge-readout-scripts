@@ -35,11 +35,6 @@ gStyle.SetPalette(1)
 gStyle.SetTitleStyle(0)     
 gStyle.SetTitleBorderSize(0)       
 
-title_size = gStyle.GetTitleSize()
-gStyle.SetTitleSize(title_size*10.0)
-label_size = gStyle.GetLabelSize("Y")
-gStyle.SetLabelSize(label_size*4.0,"Y")
-
 def print_tier2_info(tree, sampling_freq_Hz=25.0e6):
 
     print "\t time stamp: %.2f" % (tree.time_stamp/sampling_freq_Hz)
@@ -51,7 +46,7 @@ def print_tier2_info(tree, sampling_freq_Hz=25.0e6):
             tree.channel[i],
             tree.energy[i],
             tree.maw_max[i],
-            tree.adc_max_time[i]/sampling_freq_Hz*1e6,
+            tree.wfm_max_time[i]/sampling_freq_Hz*1e6,
         )
 
 def process_file(filename):
@@ -73,7 +68,17 @@ def process_file(filename):
     canvas = TCanvas("canvas","")
     canvas.SetGrid(1,1)
     #canvas.SetLeftMargin(0.15)
-    canvas.Divide(1,6)
+
+    do_divide = False
+
+    if do_divide:
+     
+        title_size = gStyle.GetTitleSize()
+        gStyle.SetTitleSize(title_size*10.0)
+        label_size = gStyle.GetLabelSize("Y")
+        gStyle.SetLabelSize(label_size*4.0,"Y")
+
+        canvas.Divide(1,6)
 
     channels = [
       0,1,2,3,4,
@@ -85,13 +90,17 @@ def process_file(filename):
     channel_map[2] = "X29"
     channel_map[3] = "Y23"
     channel_map[4] = "Y24"
-    channel_map[8] = "PMT"
+    channel_map[8] = "PMT/10"
 
-    frame_hist = TH1D("hist", "", 100, 0, 21)
+    tree.GetEntry(0)
+    trace_length_us = tree.wfm_length/sampling_freq_Hz*1e6
+    print "length in microseconds:", trace_length_us
+
+    frame_hist = TH1D("hist", "", 100, 0, trace_length_us + 1)
     frame_hist.SetLineColor(TColor.kWhite)
     frame_hist.SetXTitle("Time [#mus]")
     frame_hist.SetYTitle("ADC units")
-    frame_hist.GetYaxis().SetTitleOffset(1.5)
+    frame_hist.GetYaxis().SetTitleOffset(1.2)
     frame_hist.SetBinContent(1, pow(2,14))
 
     tree.SetLineWidth(2)
@@ -108,7 +117,7 @@ def process_file(filename):
         TColor.kOrange+1,
     ]
 
-    legend = TLegend(0.15, 0.91, 0.9, 0.99)
+    legend = TLegend(0.1, 0.91, 0.9, 0.99)
     legend.SetNColumns(len(channels))
 
     # set up some placeholder hists for the legend
@@ -134,23 +143,26 @@ def process_file(filename):
 
         tree.GetEntry(i_entry)
 
-        threshold = 200
+        threshold = 100
         #threshold = 50 # ok for unshaped, unamplified data
        
 
         # test whether any charge channel is above threshold
-        #n_above_threshold = 0
-        #for i in xrange(5): 
-        #    if tree.energy[i] > threshold: n_above_threshold += 1
-        #if n_above_threshold == 0:
-        #    i_entry += 1
-        #    continue
+        if True:
+            n_above_threshold = 0
+            for i in xrange(5): 
+                if tree.energy[i] > threshold: n_above_threshold += 1
+            if n_above_threshold == 0:
+                i_entry += 1
+                continue
 
         # use total charge energy:
         #if tree.chargeEnergy<100: 
         #    i_entry+= 1
         #    continue
-        #frame_hist.Draw()
+
+        if not do_divide:
+            frame_hist.Draw()
 
 
         print "==> entry %i of %i | charge energy: %i" % (
@@ -160,7 +172,7 @@ def process_file(filename):
         )
 
 
-        adc_max = 0
+        wfm_max = 0
         adc_min = pow(2,14)
 
         print_tier2_info(tree)
@@ -170,8 +182,10 @@ def process_file(filename):
 
             #print "\t %i | channel %i" % (i, channel)
 
-            #options = "l same"
             options = "l"
+            if not do_divide:
+                options = "l same"
+
             #if i == 0:
             #    if channel == 8:
             #        options = "l"
@@ -184,8 +198,8 @@ def process_file(filename):
             #if channel < 5:
 
                 # FIXME -- save wfm max in tree:
-                #for index in tree.sample_length:
-                #    if tree. > adc_max: adc_max = tree.adc_max[channel]
+                #for index in tree.wfm_length:
+                #    if tree. > wfm_max: wfm_max = tree.wfm_max[channel]
                 #    if tree.adc_min[channel] < adc_min: adc_min = tree.adc_min[channel]
 
 
@@ -195,32 +209,48 @@ def process_file(filename):
                 color = TColor.kBlack
 
             tree.SetLineColor(color)
-            pad = canvas.cd(i+1)
-            pad.SetGrid(1,1)
-            pad.SetBottomMargin(0.01)
-            pad.SetTopMargin(0.01)
-            pad.SetLeftMargin(0.05)
-            pad.SetRightMargin(0.001)
+
+            if do_divide:
+                pad = canvas.cd(i+1)
+                pad.SetGrid(1,1)
+                pad.SetBottomMargin(0.01)
+                pad.SetTopMargin(0.01)
+                pad.SetLeftMargin(0.05)
+                pad.SetRightMargin(0.001)
+
+            multiplier = 1.0
+            if channel == 8:
+                multiplier = 0.1
+
+            draw_command = "((wfm%i - wfm%i[0])*%s+1000-%i):Iteration$*40/1e3" % (
+                channel, 
+                channel, 
+                multiplier,
+                i*200, # offset
+            )
+            #print draw_command
 
             tree.Draw(
-                "(wfm%i - wfm%i[0]):Iteration$*40/1e3" % (channel, channel),
+                draw_command,
                 "Entry$==%i" % i_entry, 
                 options
             )
-            pave_text.Clear()
-            pave_text.AddText("%s" % channel_map[tree.channel[i]])
-            pave_text.AddText("E=%i" % tree.energy[i])
-            pave_text.Draw()
+            if do_divide:
+                pave_text.Clear()
+                pave_text.AddText("%s" % channel_map[tree.channel[i]])
+                pave_text.AddText("E=%i" % tree.energy[i])
+                pave_text.Draw()
 
 
-        #frame_hist.SetMinimum(0)
-        #frame_hist.SetMaximum(pow(2,14))
-        frame_hist.SetMinimum(7400)
-        frame_hist.SetMaximum(8500)
+        frame_hist.SetMinimum(0)
+        frame_hist.SetMaximum(pow(2,14))
+        frame_hist.SetMinimum(-200)
+        frame_hist.SetMaximum(2000)
+        #frame_hist.SetMinimum(7400)
+        #frame_hist.SetMaximum(8500)
         #frame_hist.SetMinimum(adc_min-10)
-        #frame_hist.SetMaximum(adc_max+10)
+        #frame_hist.SetMaximum(wfm_max+10)
 
-        canvas.cd(0)
         legend.Draw()
         canvas.Update()
 
