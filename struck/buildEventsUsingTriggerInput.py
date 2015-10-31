@@ -3,6 +3,8 @@
 """
 This script builds events, assuming that the trigger input is used. 
 
+argument(s): [sis tier 1 root file(s)]
+
 These are the channels we used for 5th LXe:
 
 0: X26
@@ -12,14 +14,23 @@ These are the channels we used for 5th LXe:
 4: Y24
 8: PMT
 
-argument(s): [sis tier 1 root file(s)]
+processed 5th LXe files w/o the buffer method. Some runs took a long time :
+
+tier2_LXe_Run1_0VC_SupplyOff_1200VPMT_1039AM_X26_X27_Y23_Shaped_Amplified_1670mVDT_0
+still not done after 13 hours
+
+tier2_LXe_Run1_1700VC_1200VPMT_0134AM_NotShaped_Amplified_403mVDT_1
+still not done after 13 hours
+
+tier2_LXe_Run1_0VC_SupplyOff_1200VPMT_1015AM_X26_X27_Y23_Shaped_Amplified_1670mVDT_0
+47617 seconds = 13.2 hours
+
+
 """
 
 import os
 import sys
-import glob
 import time
-import math
 from array import array
 
 from ROOT import gROOT
@@ -63,10 +74,10 @@ def get_entry_number(i_event, buffer_lengths, i_channel, n_channels):
           if new_remainder < 0: break
           prev_buffer_lengths += buffer_length
           remainder = new_remainder
-          
+         
           
       i_entry = remainder + buffer_length*i_channel + prev_buffer_lengths*n_channels
-      #print "\t event %i | entry %i | buffer %i" % (i_event, i_entry, n_buffer)
+      #print "\t event %i | ch %i | entry %i | buffer %i" % (i_event, i_channel, i_entry, n_buffer)
       return int(i_entry)
 
 
@@ -132,10 +143,10 @@ def draw_event(tree, i_event, buffer_lengths, n_channels):
     val = raw_input("enter to continue (q=quit, b=batch, p=print) ")
     #print val
     if (val == 'q' or val == 'Q'): sys.exit(1) 
-    if val == 'b': return False
+    if val == 'b': gROOT.SetBatch(True)
     if val == 'p': canvas.Print("event_%i_%s.png" % (i_event, basename,))
-    return True
     # end of drawing
+
 
 def get_basename(filename):
 
@@ -153,12 +164,16 @@ def process_file(filename):
     process a tier 1 root file to produce a new (reduced) file with event info. 
     """
 
+    # whether to use method that assumes channels write out info in same-length
+    # buffer spills
+    use_buffer_method = False # 3 5th LXe files take a long time; ~400MB memory used
+    #use_buffer_method = True
+
+    # keep track of start time, since this script takes forever
+    start_time = time.clock()
+
     freq_Hz = 25.0*1e6 # clock frequency
     n_channels = 6 # from 5th LXs
-
-    do_draw = True
-    #do_draw = False
-    if gROOT.IsBatch(): do_draw = False
 
     print "---> processing file: ", filename
     basename = get_basename(filename)
@@ -171,30 +186,110 @@ def process_file(filename):
     n_events = n_entries / n_channels
     print "%i entries, %i events" % (n_entries, n_events)
 
-    # loop over tree to determine length of buffer spills
-    # note that this changed throughout the runs during 5th LXe...
-    print "--> finding lengths of buffer spills"
-    buffer_length = 0
-    tree.GetEntry(0)
-    first_channel = tree.channel
-    i_entry = 0
-    buffer_lengths = []
-    sum_of_previous_buffers = 0
-    while i_entry < n_entries:
-        tree.GetEntry(i_entry)
-        if tree.channel != first_channel:
-            buffer_length = i_entry - sum_of_previous_buffers
-            print "\t spill %i: %i events, entries %i to %i" % (
-                len(buffer_lengths),  
-                buffer_length,
-                sum_of_previous_buffers,
-                sum_of_previous_buffers + buffer_length*n_channels,
-            )
-            buffer_lengths.append(buffer_length)
-            sum_of_previous_buffers += buffer_length*n_channels
-            i_entry = sum_of_previous_buffers
-        i_entry += 1
-    print "... done"
+
+    if not use_buffer_method:
+        # some objects to find time since last and coincident events
+        entries_of_timestamp = {} # a dictionary mapping timestamps to lists of tree entries
+
+        # loop over all tree entries to find timestamps, save a dict of timestamps
+        # to tree entry numbers
+        print "collecting time stamps from %i entries..." % n_entries
+        for i_entry in xrange(n_entries):
+            
+            #if i_entry > 1000: break # debugging
+            
+            tree.GetEntry(i_entry)
+
+            timestamp = tree.timestamp
+
+            channel = tree.channel
+
+            try:
+                entries_of_timestamp[timestamp]
+                #print "timestamp already exists!!"
+            except KeyError:
+                entries_of_timestamp[timestamp] = []
+            entries_of_timestamp[timestamp].append(i_entry)
+            if len(entries_of_timestamp[timestamp]) > 6:
+                print "more than 6 entries with timestamp", timestamp
+
+            if False: # debugging
+                channel =  tree.channel
+                print "entry %i | ch %i | timestamp %i | buffer_no %i | event %i" % (
+                    i_entry, 
+                    channel, 
+                    timestamp,
+                    tree.buffer_no,
+                    tree.event,
+                )
+
+        print "\t done collecting timestamps"
+
+        timestamps = entries_of_timestamp.keys()
+        print "sorting %i timestamps..." % len(timestamps)
+        timestamps.sort() # sort in place
+        print "\t done sorting"
+
+
+
+    if use_buffer_method:
+        # loop over tree to determine length of buffer spills
+        # note that this changed throughout the runs during 5th LXe...
+        print "--> finding lengths of buffer spills"
+        buffer_length = 0
+        tree.GetEntry(0)
+        first_channel = tree.channel
+        i_entry = 0
+        buffer_lengths = []
+        buffer_starts = {}
+        buffer_ends = {}
+        prev_channel =-1
+        sum_of_previous_buffers = 0
+        while i_entry < n_entries:
+            tree.GetEntry(i_entry)
+
+            # identify start/end of buffer spill
+            if tree.channel != prev_channel:
+
+                # buffer start and stop method
+                if i_entry > 0:
+                    print "ch %i end at entry %i (%i entries)" % (
+                        prev_channel, i_entry-1,
+                        i_entry -buffer_starts[prev_channel][-1],
+                        )
+                    try:
+                        buffer_ends[tree.channel].append(i_entry-1)
+                    except KeyError:
+                        buffer_ends[tree.channel] = []
+                        buffer_ends[tree.channel].append(i_entry-1)
+
+                print "ch %i start at entry %i" % (tree.channel, i_entry)
+                try:
+                    buffer_starts[tree.channel].append(i_entry)
+                except KeyError:
+                    buffer_starts[tree.channel] = []
+                    buffer_starts[tree.channel].append(i_entry)
+                prev_channel = tree.channel
+                    
+                
+            if tree.channel != first_channel:
+                buffer_length = i_entry - sum_of_previous_buffers
+                print "\t spill %i: %i events, entries %i to %i" % (
+                    len(buffer_lengths),  
+                    buffer_length,
+                    sum_of_previous_buffers,
+                    sum_of_previous_buffers + buffer_length*n_channels,
+                )
+                buffer_lengths.append(buffer_length)
+                sum_of_previous_buffers += buffer_length*n_channels
+                i_entry = sum_of_previous_buffers
+
+            i_entry += 1
+        print "ch %i end at entry %i" % (prev_channel, i_entry-1)
+        buffer_ends[tree.channel].append(i_entry-1)
+        print "... done"
+
+
 
 
     # open a new file for output
@@ -205,6 +300,9 @@ def process_file(filename):
     event = array('I', [0]) # unsigned int
     out_tree.Branch('event', event, 'event/i')
  
+    channel = array('I', [0]*6) # unsigned int
+    out_tree.Branch('channel', channel, 'channel[6]/i')
+
     time_stamp = array('L', [0]) # unsigned long
     out_tree.Branch('time_stamp', time_stamp, 'time_stamp/l')
 
@@ -223,16 +321,13 @@ def process_file(filename):
     energy = array('d', [0]*6) # double
     out_tree.Branch('energy', energy, 'energy[6]/D')
 
-    maw_max = array('d', [0]*6) # double
-    out_tree.Branch('max_max', maw_max, 'maw_max[6]/D')
-
-    channel = array('d', [0]*6) # double
-    out_tree.Branch('channel', channel, 'channel[6]/D')
+    maw_max = array('I', [0]*6) # unsigned int
+    out_tree.Branch('maw_max', maw_max, 'maw_max[6]/i')
 
     wfm_max_time = array('I', [0]*6) # unsigned int
     out_tree.Branch('wfm_max_time', wfm_max_time, 'wfm_max_time[6]/i')
 
-    wfm_max = array('d', [0]*6) # double
+    wfm_max = array('I', [0]*6) # unsigned int
     out_tree.Branch('wfm_max', wfm_max, 'wfm_max[6]/i')
 
     wfm_length = array('I', [0]) # unsigned int
@@ -258,24 +353,31 @@ def process_file(filename):
 
     do_debug = False
     #do_debug = True
-
-    # keep track of start time, since this script takes forever
-    start_time = time.clock()
-    last_time = start_time
-    reporting_period = 20 
+    
+    reporting_period = 500 
     if do_debug:
         reporting_period = 1
 
     cache_size = 100000000
-    #tree.SetCacheSize(cache_size)
+    tree.SetCacheSize(cache_size)
     print "cache size: %.2e" % tree.GetCacheSize()
+
+    now = time.clock()
+    print "%.1f seconds spent preprocessing" % (now - start_time)
+    last_time = now
 
 
     # find & build events
+    # -------------------------------------------------------
+
+    # buffer spill method
+
+    
+    # timestamp sorted list method
     for i_event in xrange(n_events):
 
         if do_debug:
-            if i_event > 5: break
+            if i_event > 1000: break
 
         # periodic progress output
         if i_event % reporting_period == 0:
@@ -290,46 +392,80 @@ def process_file(filename):
             )
             last_time = now
 
-        # check that this event doesn't extend past the end of the tree
-        #if get_entry_number(i_event, buffer_lengths, 5, n_channels) > n_entries:
-        #    print "event %i with (entry %i) is beyond end of tree (%i entries)" % (
-        #        i_event, i_event + buffer_length*n_channels, n_entries)
-        #    break 
+        if not use_buffer_method:
+            i_timestamp = timestamps[i_event]
 
         # initialize values
         totalEnergy[0] = 0.0
         chargeEnergy[0] = 0.0
         event[0] = i_event
 
+        is_data_missing = False
+
         # loop over all channels in this event:
         for i in xrange(n_channels):
-            i_entry = get_entry_number(i_event, buffer_lengths, i, n_channels)
+
+            if use_buffer_method:
+                i_entry = get_entry_number(i_event, buffer_lengths, i, n_channels)
+
+            else:
+                # use big list of timestamps:
+                try:
+                    i_entry = entries_of_timestamp[i_timestamp][i]
+                except IndexError:
+                    print "entry %i | missing data from timestamp %i (only info from %i channels)" % (
+                      i_entry, i_timestamp, len(entries_of_timestamp[i_timestamp]))
+                    is_data_missing = True
+                    break
 
             tree.GetEntry(i_entry)
 
             #print "\t stamp %i | entry %i | channel %i" % ( tree.timestampDouble, i_entry, tree.channel)
 
-            if i == 0: time_stamp[0] = tree.timestamp
-            if i == 0: time_stampDouble[0] = tree.timestampDouble
+            # fill out some values for the output tree
+            if i == 0: 
+                time_stamp[0] = tree.timestamp
+                time_stampDouble[0] = tree.timestampDouble
+                wfm_length[0] = tree.wfm_length
+                maw_length[0] = tree.maw_length
 
-            # check that all wfms in this event have the same timestamp
             if tree.timestamp != time_stamp[0]:
-                print "==> event %i | entry %i | channel %i timestamp doesn't match!! (%i vs %i)" % (
-                i_event, i_entry, tree.channel, time_stamp[0], tree.timestamp)
-                return
+                print "Problem with timestamps!! "
 
-            # get values that are written to tree
+
+            if use_buffer_method:
+                # check that all wfms in this event have the same timestamp
+                search_limit = 10 # maximum number of different entries to test...
+                i_search = 0
+                while tree.timestamp != time_stamp[0]:
+
+                    print "==> event %i | entry %i | channel %i timestamp doesn't match!! (%i vs %i)" % (
+                    i_event, i_entry, tree.channel, time_stamp[0], tree.timestamp)
+                    difference = tree.timestamp - time_stamp[0]
+                    print "difference (this ch timestamp - 0th ch timestamp): ", tree.timestamp - time_stamp[0]
+                    if difference > 0:
+                        i_entry -= 1
+                    else:
+                        i_entry += 1
+                    print "trying new entry:", i_entry
+                    val = tree.GetEntry(i_entry)
+                    print val
+
+                    i_search += 1
+                    if i_search > search_limit: 
+                        print "tried %i new events -- giving up!!" % i_search
+                        return
+
+            # fill out values that are written to tree
             channel[i] = tree.channel
             wfm_max_time[i] = tree.wfm_max_time
             wfm_max[i] = tree.wfm_max
             energy[i] = tree.wfm_max - tree.wfm[0]
             maw_max[i] = tree.maw_max
             totalEnergy[0] += energy[i]
-            wfm_length[0] = tree.wfm_length
 
             # fill the wfm for this channel:
             wfm = waveforms[i]
-            #print wfm
             for i_sample in xrange(tree.wfm_length):
                 wfm[i_sample] = tree.wfm[i_sample]
                 #print i_sample, wfm[i_sample]
@@ -338,17 +474,18 @@ def process_file(filename):
             for i_sample in xrange(tree.maw_length):
                 maw[i_sample] = tree.maw[i_sample]
 
-
             # add up charge channels, skip PMT
-            if i < 5:
+            if tree.channel != 8:
                 chargeEnergy[0] += energy[i]
 
         lightEnergy[0] = energy[5]
-        out_tree.Fill()
 
         # draw the event, if needed:
-        if do_draw:
-            do_draw = draw_event(tree, i_event, buffer_lengths, n_channels)
+        if not gROOT.IsBatch():
+            draw_event(tree, i_event, buffer_lengths, n_channels)
+
+        if not is_data_missing:
+            out_tree.Fill()
 
 
     print "writing file %s.root..." % basename

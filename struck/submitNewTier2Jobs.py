@@ -7,6 +7,13 @@ Right now this just runs things from the command line; soon it should submit the
 job to the cluster.
 
 Should probably learn to use popen instead of commands...
+
+notes about batch jobs:
+https://confluence.slac.stanford.edu/display/exo/Batch+Jobs+without+the+Pipeline
+
+SLAC info about computing:
+http://glast-ground.slac.stanford.edu/workbook/pages/installingOfflineSW/usingSlacBatchFarm.htm
+
 """
 
 import os
@@ -47,7 +54,7 @@ def process_file(filename):
 
     if do_batch:
         # run in batch queue:
-        cmd = "bsub -q xlong -R rhel60 -W 10:00 -J %s -o %s.log %s.csh" % (
+        cmd = "bsub -q xlong -R rhel60 -W 15:00 -J %s -o %s.log %s.csh" % (
             basename,
             basename,
             basename,
