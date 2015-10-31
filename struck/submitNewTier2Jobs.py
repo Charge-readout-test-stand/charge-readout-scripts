@@ -54,7 +54,7 @@ def process_file(filename):
 
     if do_batch:
         # run in batch queue:
-        cmd = "bsub -q xxlong -R rhel60 -W 15:00 -J %s -o %s.log %s.csh" % (
+        cmd = "bsub -q xlong -R rhel60 -W 15:00 -J %s -o %s.log %s.csh" % (
             basename,
             basename,
             basename,
