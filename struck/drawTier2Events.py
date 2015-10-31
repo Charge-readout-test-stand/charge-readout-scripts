@@ -68,6 +68,8 @@ def process_file(filename):
     canvas = TCanvas("canvas","")
     canvas.SetGrid(1,1)
     #canvas.SetLeftMargin(0.15)
+    canvas.SetTopMargin(0.15)
+    canvas.SetBottomMargin(0.12)
 
     do_divide = False
 
@@ -100,11 +102,17 @@ def process_file(filename):
     frame_hist.SetLineColor(TColor.kWhite)
     frame_hist.SetXTitle("Time [#mus]")
     frame_hist.SetYTitle("ADC units")
-    frame_hist.GetYaxis().SetTitleOffset(1.2)
+    frame_hist.GetYaxis().SetTitleOffset(1.3)
     frame_hist.SetBinContent(1, pow(2,14))
 
     tree.SetLineWidth(2)
-    pave_text = TPaveText(0.9, 0.0, 1.0, 0.6, "NDC")
+    pave_text = TPaveText(0.01, 0.01, 0.75, 0.07, "NDC")
+    pave_text.SetTextAlign(11)
+    print pave_text.GetTextFont()
+    print pave_text.SetTextFont(42)
+
+    if do_divide:
+        pave_text = TPaveText(0.9, 0.0, 1.0, 0.6, "NDC")
     pave_text.SetFillColor(0)
     pave_text.SetFillStyle(0)
     pave_text.SetBorderSize(0)
@@ -117,8 +125,8 @@ def process_file(filename):
         TColor.kOrange+1,
     ]
 
-    legend = TLegend(0.1, 0.91, 0.9, 0.99)
-    legend.SetNColumns(len(channels))
+    legend = TLegend(0.1, 0.86, 0.9, 0.99)
+    legend.SetNColumns(3)
 
     # set up some placeholder hists for the legend
     hists = []
@@ -134,21 +142,22 @@ def process_file(filename):
         hist.SetLineColor(color)
         hist.SetFillColor(color)
         hists.append(hist)
-        legend.AddEntry(hist, channel_map[channel],"fl")
     
-    legend.Draw()
     # loop over all events in file
     i_entry = 0
     while i_entry < n_entries:
 
         tree.GetEntry(i_entry)
 
-        threshold = 100
+        threshold = 400
         #threshold = 50 # ok for unshaped, unamplified data
        
 
         # test whether any charge channel is above threshold
         if True:
+            if tree.lightEnergy < 15: 
+                i_entry += 1
+                continue
             n_above_threshold = 0
             for i in xrange(5): 
                 if tree.energy[i] > threshold: n_above_threshold += 1
@@ -176,6 +185,45 @@ def process_file(filename):
         adc_min = pow(2,14)
 
         print_tier2_info(tree)
+
+      
+        #wfm0_e = tree.wfm0[-100:] - tree.wfm0[100:]
+        #print wfm0_e
+        samples_to_avg = 100
+
+        wfm0_e = 0.0
+        wfm1_e = 0.0
+        wfm2_e = 0.0
+        wfm3_e = 0.0
+        wfm4_e = 0.0
+        wfm8_e = 0.0
+
+
+        wfm_length = tree.wfm_length
+
+        for i_sample in xrange(samples_to_avg):
+            #print "i_sample:", i_sample
+            wfm0_e += tree.wfm0[wfm_length - i_sample - 1]- tree.wfm0[i_sample]
+            wfm1_e += tree.wfm1[wfm_length - i_sample - 1]- tree.wfm1[i_sample]
+            wfm2_e += tree.wfm2[wfm_length - i_sample - 1]- tree.wfm2[i_sample]
+            wfm3_e += tree.wfm3[wfm_length - i_sample - 1]- tree.wfm3[i_sample]
+            wfm4_e += tree.wfm4[wfm_length - i_sample - 1]- tree.wfm4[i_sample]
+            wfm8_e += tree.wfm8[wfm_length - i_sample - 1]- tree.wfm8[i_sample]
+
+        energies = [wfm0_e, wfm1_e, wfm2_e, wfm3_e, wfm4_e, wfm8_e]
+        for i in xrange(len(energies)): energies[i] = energies[i]/samples_to_avg
+
+        legend.Clear()
+        for (i, channel) in enumerate(channels):
+
+            energy = energies[i]
+            if channel == 8:
+                energy = tree.lightEnergy
+            legend.AddEntry(
+                hists[i], 
+                "%s E = %.1f" % (channel_map[channel], energy),
+                "f"
+            )
 
         # loop over all channels in the event:
         for (i, channel) in enumerate(channels):
@@ -235,11 +283,17 @@ def process_file(filename):
                 "Entry$==%i" % i_entry, 
                 options
             )
+
+            pave_text.Clear()
             if do_divide:
-                pave_text.Clear()
                 pave_text.AddText("%s" % channel_map[tree.channel[i]])
                 pave_text.AddText("E=%i" % tree.energy[i])
-                pave_text.Draw()
+            else:
+                pave_text.AddText("event %i" % i_entry)
+                pave_text.AddText("%s" % basename)
+            pave_text.Draw()
+                
+            # end loop over channels
 
 
         frame_hist.SetMinimum(0)
