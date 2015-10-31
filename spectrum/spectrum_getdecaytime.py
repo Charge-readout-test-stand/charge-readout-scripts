@@ -1,12 +1,20 @@
 #!/usr/bin/env python
 
 """
-This script draws a spectrum from a root tree. The following branches are
-assumed to exist:
-* max
-* channel
+This script does a fit on the waveform to determine the decay time
 
-arguments [sis root files]
+See the script for settings of flat time and gap time (for maw)
+
+The script will ask for a channel number and a threshold,
+only waveforms in the specified channel and whose maw max is > threshold are included
+
+For qualified waveforms, the script does a fit starting from 100 clockticks after
+the maw max and uses exponential decay function:
+    def expdecay(x, a, b):
+        return a * np.exp(-x / b) + baseline
+(the number of baseline samples is set in the script!)
+
+The output of this script is a histogram of the fit parameter b (i.e. the decay time)
 """
 
 import os
@@ -89,8 +97,8 @@ def process_file(filename):
 
             wfm = np.array(tree.wfm)
 
-            sp = 10
-            mawlen = (len(wfm) - 2*peaking_time - gap_time + 1) // sp
+            sp = 10   # the step used when calculating the maw
+            mawlen = (len(wfm) - 2*peaking_time - gap_time + 1) // sp  # length of the maw
             maw = np.zeros(mawlen)
             # mawplot = TGraph(mawlen)
 
@@ -119,26 +127,31 @@ def process_file(filename):
             # pad.SetGrid(1,1)
             # mawplot.Draw("AL")
 
-            baseline = np.mean(wfm[:600])
+            ## number of baseline samples = 600
+            baseline = np.mean(wfm[:600])  # assuming that the wfm will eventually decay onto the baseline
 
             def expdecay(x, a, b):
                 return a * np.exp(-x / b) + baseline
+
+            ## start fit at 100 points after the maw max
+            fitstart = int(np.argmax(maw) * sp + peaking_time + gap_time + 100)
             
-            fitstart = int(np.argmax(maw) * sp + peaking_time + gap_time + 100)  # start fit at 100 points after the maw max
-            # print "fitstart = ", fitstart
             fitlen = len(wfm) - fitstart
-            if fitlen < 10:
+            if fitlen < 10:  ## if remaining length is < 10 then print out warning message and skip
                 print "fitting length < 10!"
                 continue
+
             # wfm = 0.5 * np.exp(-np.arange(len(wfm)) / 1000.) + 1 + np.random.normal(0., 0.05, len(wfm)) # test waveform
+
             tdata = np.arange(fitlen)
-            # print "wfm[fitstart] = ", wfm[fitstart]
+
             a_guess = wfm[fitstart] - baseline  # making guesses for the fit
-            b_guess = 200 / 0.04
+            b_guess = 200 / 0.04 # guess for decay time = 200 us
             popt, pcov = curve_fit(expdecay, tdata, wfm[fitstart:], p0 = [a_guess, b_guess])
             #print popt
             #print np.sqrt(np.diag(pcov))
 
+            ## Show data with fit
             # pad = canvas.cd(3)
             # pad.SetGrid(1,1)
             # fitplot = TGraph(fitlen)
@@ -156,7 +169,7 @@ def process_file(filename):
             # if val == 'q':
             #     break
 
-            fithist.Fill(popt[1])
+            fithist.Fill(popt[1]) # fill in the histogram
 
 
         canvas.Clear()
