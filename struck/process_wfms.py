@@ -42,9 +42,6 @@ from array import array
 canvas = TCanvas()
 canvas.SetGrid(1,1)
 
-def process_waveform(wfm):
-    pass
-
 
 def process_file(filename):
 
@@ -52,9 +49,19 @@ def process_file(filename):
 
     do_debug = False
 
+    reporting_period = 1000
 
     sampling_freq_Hz = 25.0e6
     n_channels = 6
+
+
+    # values from Peihao, 31 Oct 2015:
+    decay_times = {}
+    decay_times[0] = 850.0*CLHEP.microsecond
+    decay_times[1] = 725.0*CLHEP.microsecond
+    decay_times[2] = 775.0*CLHEP.microsecond
+    decay_times[3] = 750.0*CLHEP.microsecond
+    decay_times[4] = 500.0*CLHEP.microsecond
 
     #---------------------------------------------------------------
 
@@ -81,14 +88,11 @@ def process_file(filename):
     out_file = TFile("test_%s.root" % basename, "recreate")
     out_tree = TTree("tree", "%s processed wfm tree" % basename)
 
-        
-
     event = array('I', [0]) # unsigned int
     out_tree.Branch('event', event, 'event/i')
   
     channel = array('I', [0]*n_channels) # unsigned int
     out_tree.Branch('channel', channel, 'channel[%i]/i' % n_channels)
-
 
     # store some processing parameters:
     n_baseline_samples = array('I', [0]) # double
@@ -97,12 +101,8 @@ def process_file(filename):
     decay_time = array('d', [0]) # double
     out_tree.Branch('decay_time', decay_time, 'decay_time/D')
 
-
-
     # set the processing parameters:
-    n_baseline_samples[0] = 100
-    decay_time[0] = 800.0*CLHEP.microsecond #FIXME -- get real value
-    #decay_time[0] = 20.0*CLHEP.microsecond # FIXME
+    n_baseline_samples[0] = 50
 
     rise_time = array('d', [0]*n_channels) # double
     out_tree.Branch('rise_time', rise_time, 'rise_time[%i]/D' % n_channels)
@@ -155,22 +155,22 @@ def process_file(filename):
     start_time = time.clock()
     last_time = start_time
 
-    reporting_period = 1000
     if do_debug:
         reporting_period = 1
 
     print "%i entries" % n_entries
+
+    # loop over all entries in tree
     for i_entry in xrange(n_entries):
         tree.GetEntry(i_entry)
 
+        # print periodic output message
         if i_entry % reporting_period == 0:
             now = time.clock()
             print "====> entry %i of %i (%.2f percent in %.1f seconds, %.1f seconds total)" % (
                 i_entry, n_entries, 100.0*i_entry/n_entries, now - last_time, now -
                 start_time)
             last_time = now
-
-        #process_waveform(tree.wfm)
 
         for i in xrange(n_channels):
 
@@ -243,6 +243,10 @@ def process_file(filename):
 
             # correct for exponential decay
             pole_zero = EXOPoleZeroCorrection()
+            decay_time[0] = 0.0
+            
+            if i < 5:
+                decay_time[0] = decay_times[i]
             pole_zero.SetDecayConstant(decay_time[0])
             pole_zero.Transform(exo_wfm, energy_wfm)
 
@@ -274,11 +278,9 @@ def process_file(filename):
                 val = raw_input("enter to continue (q=quit, b=batch, p=print) ")
 
             # FIXME -- having trouble doing PZ transform in place!!
-            # maybe this is python specific?!
             #pole_zero.Transform(energy_wfm, energy_wfm)
             pole_zero.Transform(new_wfm, energy_wfm)
             #print pole_zero.GetDecayConstant()
-
 
             if do_debug:
                 energy_wfm.GimmeHist().Draw()
@@ -297,7 +299,6 @@ def process_file(filename):
                 canvas.Update()
                 print "energy calc"
                 val = raw_input("enter to continue (q=quit, b=batch, p=print) ")
-
 
 
             # perform some smoothing -- be careful because this changes the rise
@@ -398,6 +399,8 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         print "arguments: [sis root files]"
         sys.exit(1)
+
+    print "%i files to process" % len(sys.argv[1:])
 
 
     for filename in sys.argv[1:]:
