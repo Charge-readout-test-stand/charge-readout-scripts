@@ -22,6 +22,7 @@ from ROOT import TCanvas
 from ROOT import TColor
 from ROOT import TPad
 from ROOT import TLegend
+from ROOT import TLine
 from ROOT import TPaveText
 from ROOT import gSystem
 from ROOT import gStyle
@@ -51,6 +52,20 @@ def print_tier2_info(tree, sampling_freq_Hz=25.0e6):
 
 def process_file(filename):
 
+    # options ------------------------------------------
+    threshold = 150
+    #threshold = 50 # ok for unshaped, unamplified data
+
+    # y axis limits:
+    y_min = -200
+    y_max = 2200
+
+    # need to determine this on the fly from PMT signal
+    trigger_time = 40.0*200/1e3 # in mircoseconds, 40ns * 200 samples 
+
+    #------------------------------------------------------
+
+
     sampling_freq_Hz = 25.0e6
 
     print "processing file: ", filename
@@ -71,6 +86,12 @@ def process_file(filename):
     canvas.SetTopMargin(0.15)
     canvas.SetBottomMargin(0.12)
 
+    # line to show trigger time
+    line = TLine(trigger_time, y_min, trigger_time,y_max)
+    line.SetLineStyle(7)
+    print "trigger time: [microseconds]", trigger_time
+
+    # whether to divide the canvas into 6
     do_divide = False
 
     if do_divide:
@@ -108,8 +129,8 @@ def process_file(filename):
     tree.SetLineWidth(2)
     pave_text = TPaveText(0.01, 0.01, 0.75, 0.07, "NDC")
     pave_text.SetTextAlign(11)
-    print pave_text.GetTextFont()
-    print pave_text.SetTextFont(42)
+    pave_text.GetTextFont()
+    pave_text.SetTextFont(42)
 
     if do_divide:
         pave_text = TPaveText(0.9, 0.0, 1.0, 0.6, "NDC")
@@ -149,10 +170,7 @@ def process_file(filename):
 
         tree.GetEntry(i_entry)
 
-        threshold = 400
-        #threshold = 50 # ok for unshaped, unamplified data
        
-
         # test whether any charge channel is above threshold
         if True:
             if tree.lightEnergy < 15: 
@@ -266,15 +284,21 @@ def process_file(filename):
                 pad.SetLeftMargin(0.05)
                 pad.SetRightMargin(0.001)
 
+            # scale the PMT signal b/c it is huge
             multiplier = 1.0
             if channel == 8:
                 multiplier = 0.1
 
-            draw_command = "((wfm%i - wfm%i[0])*%s+1000-%i):Iteration$*40/1e3" % (
+            # add an offset so the channels are draw at different levels
+            offset = 800 - i*200
+            if channel == 8:
+                offset = 1500
+
+            draw_command = "((wfm%i - wfm%i[0])*%s+%i):Iteration$*40/1e3" % (
                 channel, 
                 channel, 
                 multiplier,
-                i*200, # offset
+                offset,
             )
             #print draw_command
 
@@ -296,15 +320,10 @@ def process_file(filename):
             # end loop over channels
 
 
-        frame_hist.SetMinimum(0)
-        frame_hist.SetMaximum(pow(2,14))
-        frame_hist.SetMinimum(-200)
-        frame_hist.SetMaximum(2000)
-        #frame_hist.SetMinimum(7400)
-        #frame_hist.SetMaximum(8500)
-        #frame_hist.SetMinimum(adc_min-10)
-        #frame_hist.SetMaximum(wfm_max+10)
+        frame_hist.SetMinimum(y_min)
+        frame_hist.SetMaximum(y_max)
 
+        line.Draw()
         legend.Draw()
         canvas.Update()
 
@@ -316,6 +335,7 @@ def process_file(filename):
         if val == 'p':
             canvas.Update()
             canvas.Print("%s_entry_%i.png" % (basename, i_entry))
+            canvas.Print("%s_entry_%i.pdf" % (basename, i_entry))
         try:
             i_entry = int(val)
         except: 
