@@ -6,7 +6,14 @@ Do some waveform processing to extract energies, etc.
 available CLHEP units are in 
 http://java.freehep.org/svn/repos/exo/show/offline/trunk/utilities/misc/EXOUtilities/SystemOfUnits.hh?revision=HEAD
 
-Use on tier2 files
+Use on tier 1 or tier2 files:
+    *NotShaped_Amplified*DT*.root
+
+Submit batch jobs:
+python ~/alexis-exo/testScripts/submitPythonJobsSLAC.py process_wfms.py ../tier2/tier2_*NotShaped_Amplified*DT*.root
+
+Can combine files later:
+hadd -O all_tier3.root *.root
 
 """
 
@@ -16,6 +23,7 @@ import sys
 import time
 
 from ROOT import gROOT
+# run in batch mode, suppress x output:
 gROOT.SetBatch(True)
 from ROOT import TFile
 from ROOT import TTree
@@ -27,7 +35,6 @@ from ROOT import gStyle
 
 
 gSystem.Load("$EXOLIB/lib/libEXOROOT")
-#gSystem.Load("$EXOLIB/lib/libEXOUtilities")
 from ROOT import CLHEP
 from ROOT import EXODoubleWaveform
 #from ROOT import EXOTrapezoidalFilter
@@ -39,29 +46,23 @@ from ROOT import EXOPoleZeroCorrection
 
 from array import array
 
-canvas = TCanvas()
-canvas.SetGrid(1,1)
 
 
 def process_file(filename):
 
     # options---------------------
 
+    # whether to run in debug mode (draw wfms):
     do_debug = False
+    #do_debug = True
 
     reporting_period = 1000
 
+    # samples at wfm start and end to use for energy calc:
+    n_baseline_samples_to_use = 50
+
     sampling_freq_Hz = 25.0e6
     n_channels = 6
-
-
-    # values from Peihao, 31 Oct 2015:
-    decay_times = {}
-    decay_times[0] = 850.0*CLHEP.microsecond
-    decay_times[1] = 725.0*CLHEP.microsecond
-    decay_times[2] = 775.0*CLHEP.microsecond
-    decay_times[3] = 750.0*CLHEP.microsecond
-    decay_times[4] = 500.0*CLHEP.microsecond
 
     #---------------------------------------------------------------
 
@@ -69,6 +70,12 @@ def process_file(filename):
 
     basename = os.path.basename(filename)
     basename = os.path.splitext(basename)[0]
+    basename = "_".join(basename.split("_")[1:])
+
+
+
+    canvas = TCanvas()
+    canvas.SetGrid(1,1)
 
     # open the root file and grab the tree
     root_file = TFile(filename)
@@ -85,7 +92,7 @@ def process_file(filename):
         n_channels = 1
         is_tier1 = True
 
-    out_file = TFile("test_%s.root" % basename, "recreate")
+    out_file = TFile("tier3_%s.root" % basename, "recreate")
     out_tree = TTree("tree", "%s processed wfm tree" % basename)
 
     event = array('I', [0]) # unsigned int
@@ -98,8 +105,17 @@ def process_file(filename):
     n_baseline_samples = array('I', [0]) # double
     out_tree.Branch('n_baseline_samples', n_baseline_samples, 'n_baseline_samples/i')
 
-    decay_time = array('d', [0]) # double
+    decay_time = array('d', [0]*n_channels) # double
     out_tree.Branch('decay_time', decay_time, 'decay_time/D')
+
+    # values from Peihao, 31 Oct 2015:
+    decay_time[0] = 850.0*CLHEP.microsecond
+    decay_time[1] = 725.0*CLHEP.microsecond
+    decay_time[2] = 775.0*CLHEP.microsecond
+    decay_time[3] = 750.0*CLHEP.microsecond
+    decay_time[4] = 500.0*CLHEP.microsecond
+    decay_time[5] = 0.0*CLHEP.microsecond
+
 
     # set the processing parameters:
     n_baseline_samples[0] = 50
@@ -176,8 +192,10 @@ def process_file(filename):
 
             if is_tier1:
                 wfm = tree.wfm
+                channel[i] = tree.channel
 
             else:
+                channel[i] = tree.channel[i]
                 if i == 0: 
                     wfm = tree.wfm0
                 elif i == 1: 
@@ -211,20 +229,24 @@ def process_file(filename):
             baseline_rms[i] = baseline_remover.GetBaselineRMS()
 
             if do_debug:
-                if exo_wfm.GetMaxValue() < 50: continue # FIXME
-                if i == 5: continue # FIXME
+                print "channel %i" % channel[i]
+                if exo_wfm.GetMaxValue() < 50: continue # skip low energy wfms
+                if i == 5: continue # skip PMT
 
             # measure energy before PZ correction
             baseline_remover.SetStartSample(wfm_length - n_baseline_samples[0] - 1)
             baseline_remover.Transform(exo_wfm, energy_wfm)
             energy[i] = baseline_remover.GetBaselineMean()
             energy_rms[i] = baseline_remover.GetBaselineRMS()
+            if channel[i] == 8:
+                energy[i] = exo_wfm.GetMaxValue()
 
             if do_debug:
-                print energy[i]
+                print "energy measurement with %i samples: %.2f" % (
+                    n_baseline_samples[0], energy[i])
                 energy_wfm.GimmeHist().Draw()
                 canvas.Update()
-                val = raw_input("enter to continue (q=quit, b=batch, p=print) ")
+                val = raw_input("press enter ")
 
             # measure energy before PZ correction, use 2x n_baseline_samples
             baseline_remover.SetBaselineSamples(2*n_baseline_samples[0])
@@ -236,18 +258,16 @@ def process_file(filename):
             energy_rms1[i] = baseline_remover.GetBaselineRMS()
 
             if do_debug:
-                print energy1[i]
+                print "energy measurement with %i samples: %.2f" % (
+                    2*n_baseline_samples[0], energy1[i])
                 energy_wfm.GimmeHist().Draw()
                 canvas.Update()
-                val = raw_input("enter to continue (q=quit, b=batch, p=print) ")
+                val = raw_input("press enter ")
 
             # correct for exponential decay
             pole_zero = EXOPoleZeroCorrection()
-            decay_time[0] = 0.0
             
-            if i < 5:
-                decay_time[0] = decay_times[i]
-            pole_zero.SetDecayConstant(decay_time[0])
+            pole_zero.SetDecayConstant(decay_time[i])
             pole_zero.Transform(exo_wfm, energy_wfm)
 
             # measure energy after PZ correction
@@ -259,10 +279,11 @@ def process_file(filename):
 
 
             if do_debug:
-                print energy_pz[i]
+                print "energy measurement after PZ with %i samples: %.2f" % (
+                    n_baseline_samples[0], energy_pz[i])
                 energy_wfm.GimmeHist().Draw()
                 canvas.Update()
-                val = raw_input("enter to continue (q=quit, b=batch, p=print) ")
+                val = raw_input("press enter ")
 
 
             # measure energy after PZ correction, use 2x n_baseline_samples
@@ -275,7 +296,7 @@ def process_file(filename):
                 energy_wfm.GimmeHist().Draw()
                 canvas.Update()
                 print "removed baseline"
-                val = raw_input("enter to continue (q=quit, b=batch, p=print) ")
+                val = raw_input("press enter ")
 
             # FIXME -- having trouble doing PZ transform in place!!
             #pole_zero.Transform(energy_wfm, energy_wfm)
@@ -294,7 +315,8 @@ def process_file(filename):
             energy_rms1_pz[i] = baseline_remover.GetBaselineRMS()
 
             if do_debug:
-                print energy1_pz[i]
+                print "energy measurement after PZ with %i samples: %.2f" % (
+                    2*n_baseline_samples[0], energy1_pz[i])
                 energy_wfm.GimmeHist().Draw()
                 canvas.Update()
                 print "energy calc"
@@ -318,20 +340,18 @@ def process_file(filename):
             rise_time_calculator.SetPulsePeakHeight(max_val)
             rise_time_calculator.SetInitialThresholdPercentage(0.1)
             rise_time_calculator.SetFinalThresholdPercentage(0.90)
-            rise_time_calculator.Transform(exo_wfm,exo_wfm)
+            # throws an alert if max_val is 0
+            if max_val > 0.0:
+                rise_time_calculator.Transform(exo_wfm,exo_wfm)
 
             # set output tree variables
             event[0] = tree.event
-            if is_tier1:
-                channel[i] = tree.channel
-            else:
-                channel[i] = int(tree.channel[i])
             wfm_max[i] = exo_wfm.GetMaxValue()
             wfm_min[i] = exo_wfm.GetMinValue()
             smoothed_max[i] = new_wfm.GetMaxValue()
             rise_time[i] = rise_time_calculator.GetRiseTime()/CLHEP.microsecond
             rise_time_start[i] = rise_time_calculator.GetInitialThresholdCrossing()*period/CLHEP.microsecond
-            rise_time_stop[i] = rise_time_calculator.GetFinalThresholdCrossing()*period//CLHEP.microsecond
+            rise_time_stop[i] = rise_time_calculator.GetFinalThresholdCrossing()*period/CLHEP.microsecond
 
 
             """
@@ -343,8 +363,9 @@ def process_file(filename):
          
 
             # pause & draw
-            if not gROOT.IsBatch() and smoothed_max[i] > 60 and channel[i] != 8:
-            #if not gROOT.IsBatch():
+            #if not gROOT.IsBatch() and smoothed_max[i] > 60 and channel[i] != 8:
+            #if not gROOT.IsBatch() and i_entry > 176:
+            if not gROOT.IsBatch():
 
                 print "--> entry %i | channel %i" % (i_entry, channel[i])
                 print "\t n samples: %i" % wfm_length
@@ -364,7 +385,6 @@ def process_file(filename):
                 print "\t energy RMS pz: %.3f" % energy_rms_pz[i]
                 print "\t energy1 pz: %.3f" % energy1_pz[i]
                 print "\t energy1 RMS pz: %.3f" % energy_rms1_pz[i]
-                print energy_rms1[i] - energy_rms1_pz[i]
 
 
                 hist = exo_wfm.GimmeHist("hist")
