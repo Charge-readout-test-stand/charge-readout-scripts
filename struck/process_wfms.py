@@ -81,6 +81,7 @@ def process_file(filename):
 
     print "processing file: ", filename
 
+    # construct a basename to use as output file name
     basename = os.path.basename(filename)
     basename = os.path.splitext(basename)[0]
     basename = "_".join(basename.split("_")[1:])
@@ -93,6 +94,7 @@ def process_file(filename):
     tree = root_file.Get("tree")
     n_entries = tree.GetEntries()
 
+    # decide if this is a tier1 or tier2 file
     is_tier1 = False
     try:
         tree.GetEntry(0)
@@ -103,8 +105,17 @@ def process_file(filename):
         n_channels = 1
         is_tier1 = True
 
+    # open output file and tree
     out_file = TFile("tier3_%s.root" % basename, "recreate")
     out_tree = TTree("tree", "%s processed wfm tree" % basename)
+    out_tree.SetLineColor(TColor.kBlue)
+    out_tree.SetLineWidth(2)
+    out_tree.SetMarkerColor(TColor.kBlue)
+
+
+    # Writing trees in pyroot is clunky... need to use python arrays to provide
+    # branch addresses, see:
+    # http://wlav.web.cern.ch/wlav/pyroot/tpytree.html
 
     event = array('I', [0]) # unsigned int
     out_tree.Branch('event', event, 'event/i')
@@ -115,34 +126,31 @@ def process_file(filename):
     # store some processing parameters:
     n_baseline_samples = array('I', [0]) # double
     out_tree.Branch('n_baseline_samples', n_baseline_samples, 'n_baseline_samples/i')
+    n_baseline_samples[0] = n_baseline_samples_to_use
 
     decay_time = array('d', [0]*n_channels) # double
     out_tree.Branch('decay_time', decay_time, 'decay_time[%i]/D' % n_channels)
 
     # values from Peihao, 31 Oct 2015:
-    if not is_tier1:
-        decay_time[0] = 850.0*CLHEP.microsecond
-        decay_time[1] = 725.0*CLHEP.microsecond
-        decay_time[2] = 775.0*CLHEP.microsecond
-        decay_time[3] = 750.0*CLHEP.microsecond
-        decay_time[4] = 500.0*CLHEP.microsecond
-        decay_time[5] = 0.0*CLHEP.microsecond
+    decay_time_values = {}
+    decay_time_values[0] = 850.0*CLHEP.microsecond
+    decay_time_values[1] = 725.0*CLHEP.microsecond
+    decay_time_values[2] = 775.0*CLHEP.microsecond
+    decay_time_values[3] = 750.0*CLHEP.microsecond
+    decay_time_values[4] = 500.0*CLHEP.microsecond
+    decay_time_values[8] = 1e9*CLHEP.microsecond # FIXME -- should skip PZ for PMT
 
     # relative calibration:
-    calibration = array('d', [1.0]*n_channels) # double
+    calibration = array('d', [0.0]*n_channels) # double
     out_tree.Branch('calibration', calibration, 'calibration[%i]/D' % n_channels)
 
     # from tier1_LXe_Run1_Amplifier_100mVPulse_10dB_5chargechannels_736AM_0
-    if not is_tier1:
-        calibration[0] = 1.0/3.76194501827427302e+02
-        calibration[1] = 1.0/1.84579440737210035e+02
-        calibration[2] = 1.0/1.90907907272149885e+02
-        calibration[3] = 1.0/2.94300492610837466e+02
-        calibration[4] = 1.0/1.40734817170111285e+02
-
-
-    # set the processing parameters:
-    n_baseline_samples[0] = 50
+    calibration_values = {}
+    calibration_values[0] = 1.0/3.76194501827427302e+02
+    calibration_values[1] = 1.0/1.84579440737210035e+02
+    calibration_values[2] = 1.0/1.90907907272149885e+02
+    calibration_values[3] = 1.0/2.94300492610837466e+02
+    calibration_values[4] = 1.0/1.40734817170111285e+02
 
     rise_time = array('d', [0]*n_channels) # double
     out_tree.Branch('rise_time', rise_time, 'rise_time[%i]/D' % n_channels)
@@ -161,7 +169,6 @@ def process_file(filename):
 
     wfm_min = array('d', [0]*n_channels) # double
     out_tree.Branch('wfm_min', wfm_min, 'wfm_min[%i]/D' % n_channels)
-
 
     baseline_mean = array('d', [0]*n_channels) # double
     out_tree.Branch('baseline_mean', baseline_mean, 'baseline_mean[%i]/D' % n_channels)
@@ -197,6 +204,14 @@ def process_file(filename):
         baseline_rms_file[i] = hist.GetRMS()
     print "\t done"
 
+    is_amplified = array('B', [0]) # unsigned 1-byte
+    out_tree.Branch('is_amplified', is_amplified, 'is_amplified/b')
+
+    # decide whether the amplifier was used or not. The file-averaged baseline
+    # mean for channel 0 seems like a good indicator of this -- should also
+    # figure out if any channels are shaped...
+    if baseline_mean_file[0] < 6000:
+        is_amplified[0] = 1
 
     # energy & rms before any processing
     energy = array('d', [0]*n_channels) # double
@@ -250,12 +265,6 @@ def process_file(filename):
             if is_tier1:
                 wfm = tree.wfm
                 channel[i] = tree.channel
-                calibration[i] = 1.0
-                if tree.channel == 0: calibration[i] = 1.0/3.76194501827427302e+02
-                if tree.channel == 1: calibration[i] = 1.0/1.84579440737210035e+02
-                if tree.channel == 2: calibration[i] = 1.0/1.90907907272149885e+02
-                if tree.channel == 3: calibration[i] = 1.0/2.94300492610837466e+02
-                if tree.channel == 4: calibration[i] = 1.0/1.40734817170111285e+02
 
             else:
                 channel[i] = tree.channel[i]
@@ -303,6 +312,12 @@ def process_file(filename):
             # measure energy before PZ correction
             baseline_remover.SetStartSample(wfm_length - n_baseline_samples[0] - 1)
             baseline_remover.Transform(exo_wfm, energy_wfm)
+            try:
+                calibration[i] = calibration_values[channel[i]]
+            except KeyError:
+                #print channel[i]
+                calibration[i] = 1.0
+                
             energy[i] = baseline_remover.GetBaselineMean()*calibration[i]
             energy_rms[i] = baseline_remover.GetBaselineRMS()*calibration[i]
             if channel[i] == 8:
@@ -334,6 +349,7 @@ def process_file(filename):
             # correct for exponential decay
             pole_zero = EXOPoleZeroCorrection()
             
+            decay_time[i] = decay_time_values[channel[i]]
             pole_zero.SetDecayConstant(decay_time[i])
             pole_zero.Transform(exo_wfm, energy_wfm)
 
