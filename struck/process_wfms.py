@@ -3,6 +3,11 @@
 """
 Do some waveform processing to extract energies, etc. 
 
+to do:
+  * add other rise times: 95, 99 
+  * add slope of PZ-corrected section ?
+  * fix decay time and calibration to work for tier 1 files
+
 available CLHEP units are in 
 http://java.freehep.org/svn/repos/exo/show/offline/trunk/utilities/misc/EXOUtilities/SystemOfUnits.hh?revision=HEAD
 
@@ -10,11 +15,16 @@ Use on tier 1 or tier2 files:
     *NotShaped_Amplified*DT*.root
 
 Submit batch jobs:
-python ~/alexis-exo/testScripts/submitPythonJobsSLAC.py process_wfms.py ../tier2/tier2_*NotShaped_Amplified*DT*.root
+python /afs/slac.stanford.edu/u/xo/alexis4/alexis-exo/testScripts/submitPythonJobsSLAC.py process_wfms.py ../tier2/tier2_*NotShaped_Amplified*DT*.root
 
 Can combine files later:
-hadd -O all_tier3.root *.root
+hadd -O good_tier3.root tier3_LXe_Run1_1700VC*.root
+hadd -O all_tier3.root tier3*.root
 
+01 Nov 2015: 
+    1225546 tier3 entries in *NotShaped_Amplified_*DT*.root
+    1225546 tier2 entries in *NotShaped_Amplified_*DT*.root
+    7392227/6 = 1.478445e+06 tier0 *NotShaped_Amplified_*DT*.dat entries
 """
 
 
@@ -30,6 +40,7 @@ from ROOT import TTree
 from ROOT import TCanvas
 from ROOT import TColor
 from ROOT import TLegend
+from ROOT import TH1D
 from ROOT import gSystem
 from ROOT import gStyle
 
@@ -42,7 +53,7 @@ from ROOT import EXOBaselineRemover
 from ROOT import EXORisetimeCalculation
 from ROOT import EXOSmoother
 from ROOT import EXOPoleZeroCorrection
-
+from ROOT import TObjString
 
 from array import array
 
@@ -64,6 +75,8 @@ def process_file(filename):
     sampling_freq_Hz = 25.0e6
     n_channels = 6
 
+    channels = [0,1,2,3,4,8]
+
     #---------------------------------------------------------------
 
     print "processing file: ", filename
@@ -71,8 +84,6 @@ def process_file(filename):
     basename = os.path.basename(filename)
     basename = os.path.splitext(basename)[0]
     basename = "_".join(basename.split("_")[1:])
-
-
 
     canvas = TCanvas()
     canvas.SetGrid(1,1)
@@ -97,7 +108,7 @@ def process_file(filename):
 
     event = array('I', [0]) # unsigned int
     out_tree.Branch('event', event, 'event/i')
-  
+
     channel = array('I', [0]*n_channels) # unsigned int
     out_tree.Branch('channel', channel, 'channel[%i]/i' % n_channels)
 
@@ -106,15 +117,28 @@ def process_file(filename):
     out_tree.Branch('n_baseline_samples', n_baseline_samples, 'n_baseline_samples/i')
 
     decay_time = array('d', [0]*n_channels) # double
-    out_tree.Branch('decay_time', decay_time, 'decay_time/D')
+    out_tree.Branch('decay_time', decay_time, 'decay_time[%i]/D' % n_channels)
 
     # values from Peihao, 31 Oct 2015:
-    decay_time[0] = 850.0*CLHEP.microsecond
-    decay_time[1] = 725.0*CLHEP.microsecond
-    decay_time[2] = 775.0*CLHEP.microsecond
-    decay_time[3] = 750.0*CLHEP.microsecond
-    decay_time[4] = 500.0*CLHEP.microsecond
-    decay_time[5] = 0.0*CLHEP.microsecond
+    if not is_tier1:
+        decay_time[0] = 850.0*CLHEP.microsecond
+        decay_time[1] = 725.0*CLHEP.microsecond
+        decay_time[2] = 775.0*CLHEP.microsecond
+        decay_time[3] = 750.0*CLHEP.microsecond
+        decay_time[4] = 500.0*CLHEP.microsecond
+        decay_time[5] = 0.0*CLHEP.microsecond
+
+    # relative calibration:
+    calibration = array('d', [1.0]*n_channels) # double
+    out_tree.Branch('calibration', calibration, 'calibration[%i]/D' % n_channels)
+
+    # from tier1_LXe_Run1_Amplifier_100mVPulse_10dB_5chargechannels_736AM_0
+    if not is_tier1:
+        calibration[0] = 1.0/3.76194501827427302e+02
+        calibration[1] = 1.0/1.84579440737210035e+02
+        calibration[2] = 1.0/1.90907907272149885e+02
+        calibration[3] = 1.0/2.94300492610837466e+02
+        calibration[4] = 1.0/1.40734817170111285e+02
 
 
     # set the processing parameters:
@@ -138,11 +162,41 @@ def process_file(filename):
     wfm_min = array('d', [0]*n_channels) # double
     out_tree.Branch('wfm_min', wfm_min, 'wfm_min[%i]/D' % n_channels)
 
+
     baseline_mean = array('d', [0]*n_channels) # double
     out_tree.Branch('baseline_mean', baseline_mean, 'baseline_mean[%i]/D' % n_channels)
 
     baseline_rms = array('d', [0]*n_channels) # double
     out_tree.Branch('baseline_rms', baseline_rms, 'baseline_rms[%i]/D' % n_channels)
+
+    # some file-averaged parameters
+    baseline_mean_file = array('d', [0]*6) # double
+    out_tree.Branch('baseline_mean_file', baseline_mean_file, 'baseline_mean_file[%i]/D' % 6)
+
+    baseline_rms_file = array('d', [0]*6) # double
+    out_tree.Branch('baseline_rms_file', baseline_rms_file, 'baseline_rms_file[%i]/D' % 6)
+
+    # make a hist for calculating some averages
+    hist = TH1D("hist","",100, 0, pow(2,14))
+    print "calculating mean baseline & baseline RMS for each channel in this file..."
+    for (i, i_channel) in enumerate(channels):
+        print "%i: ch %i" % (i, i_channel)
+        draw_command = "wfm >> hist"
+        if not is_tier1:
+            draw_command = "wfm%i >> hist" % i_channel
+        print draw_command
+            
+        tree.Draw(
+            draw_command,
+            "Iteration$<%i && channel==%i" % (n_baseline_samples[0], i_channel),
+            "goff"
+        )
+        baseline_mean_file[i] = hist.GetMean()
+        #print hist.GetMean()
+        #print baseline_mean_file[i]
+        baseline_rms_file[i] = hist.GetRMS()
+    print "\t done"
+
 
     # energy & rms before any processing
     energy = array('d', [0]*n_channels) # double
@@ -167,6 +221,9 @@ def process_file(filename):
     out_tree.Branch('energy1_pz', energy1_pz, 'energy1_pz[%i]/D' % n_channels)
     energy_rms1_pz = array('d', [0]*n_channels) # double
     out_tree.Branch('energy_rms1_pz', energy_rms1_pz, 'energy_rms1_pz[%i]/D' % n_channels)
+
+    fname = TObjString(filename)
+    out_tree.Branch("filename",fname)
 
     start_time = time.clock()
     last_time = start_time
@@ -193,6 +250,12 @@ def process_file(filename):
             if is_tier1:
                 wfm = tree.wfm
                 channel[i] = tree.channel
+                calibration[i] = 1.0
+                if tree.channel == 0: calibration[i] = 1.0/3.76194501827427302e+02
+                if tree.channel == 1: calibration[i] = 1.0/1.84579440737210035e+02
+                if tree.channel == 2: calibration[i] = 1.0/1.90907907272149885e+02
+                if tree.channel == 3: calibration[i] = 1.0/2.94300492610837466e+02
+                if tree.channel == 4: calibration[i] = 1.0/1.40734817170111285e+02
 
             else:
                 channel[i] = tree.channel[i]
@@ -217,6 +280,10 @@ def process_file(filename):
             new_wfm = EXODoubleWaveform(array('d',wfm), wfm_length)
             energy_wfm = EXODoubleWaveform(array('d',wfm), wfm_length)
 
+
+            wfm_max[i] = exo_wfm.GetMaxValue()
+            wfm_min[i] = exo_wfm.GetMinValue()
+
             exo_wfm.SetSamplingFreq(25.0e6/CLHEP.second)
             #print exo_wfm.GetSamplingFreq()
             period =  exo_wfm.GetSamplingPeriod()
@@ -236,8 +303,8 @@ def process_file(filename):
             # measure energy before PZ correction
             baseline_remover.SetStartSample(wfm_length - n_baseline_samples[0] - 1)
             baseline_remover.Transform(exo_wfm, energy_wfm)
-            energy[i] = baseline_remover.GetBaselineMean()
-            energy_rms[i] = baseline_remover.GetBaselineRMS()
+            energy[i] = baseline_remover.GetBaselineMean()*calibration[i]
+            energy_rms[i] = baseline_remover.GetBaselineRMS()*calibration[i]
             if channel[i] == 8:
                 energy[i] = exo_wfm.GetMaxValue()
 
@@ -254,8 +321,8 @@ def process_file(filename):
             baseline_remover.Transform(exo_wfm, energy_wfm)
             baseline_remover.SetStartSample(wfm_length - 2*n_baseline_samples[0] - 1)
             baseline_remover.Transform(energy_wfm, energy_wfm)
-            energy1[i] = baseline_remover.GetBaselineMean()
-            energy_rms1[i] = baseline_remover.GetBaselineRMS()
+            energy1[i] = baseline_remover.GetBaselineMean()*calibration[i]
+            energy_rms1[i] = baseline_remover.GetBaselineRMS()*calibration[i]
 
             if do_debug:
                 print "energy measurement with %i samples: %.2f" % (
@@ -274,8 +341,8 @@ def process_file(filename):
             baseline_remover.SetBaselineSamples(n_baseline_samples[0])
             baseline_remover.SetStartSample(wfm_length - n_baseline_samples[0] - 1)
             baseline_remover.Transform(energy_wfm, energy_wfm)
-            energy_pz[i] = baseline_remover.GetBaselineMean()
-            energy_rms_pz[i] = baseline_remover.GetBaselineRMS()
+            energy_pz[i] = baseline_remover.GetBaselineMean()*calibration[i]
+            energy_rms_pz[i] = baseline_remover.GetBaselineRMS()*calibration[i]
 
 
             if do_debug:
@@ -311,8 +378,8 @@ def process_file(filename):
 
             baseline_remover.SetStartSample(wfm_length - 2*n_baseline_samples[0] - 1)
             baseline_remover.Transform(energy_wfm, energy_wfm)
-            energy1_pz[i] = baseline_remover.GetBaselineMean()
-            energy_rms1_pz[i] = baseline_remover.GetBaselineRMS()
+            energy1_pz[i] = baseline_remover.GetBaselineMean()*calibration[i]
+            energy_rms1_pz[i] = baseline_remover.GetBaselineRMS()*calibration[i]
 
             if do_debug:
                 print "energy measurement after PZ with %i samples: %.2f" % (
@@ -346,8 +413,6 @@ def process_file(filename):
 
             # set output tree variables
             event[0] = tree.event
-            wfm_max[i] = exo_wfm.GetMaxValue()
-            wfm_min[i] = exo_wfm.GetMinValue()
             smoothed_max[i] = new_wfm.GetMaxValue()
             rise_time[i] = rise_time_calculator.GetRiseTime()/CLHEP.microsecond
             rise_time_start[i] = rise_time_calculator.GetInitialThresholdCrossing()*period/CLHEP.microsecond
@@ -363,9 +428,10 @@ def process_file(filename):
          
 
             # pause & draw
+            if not gROOT.IsBatch() and channel[i] == 4:
             #if not gROOT.IsBatch() and smoothed_max[i] > 60 and channel[i] != 8:
             #if not gROOT.IsBatch() and i_entry > 176:
-            if not gROOT.IsBatch():
+            #if not gROOT.IsBatch():
 
                 print "--> entry %i | channel %i" % (i_entry, channel[i])
                 print "\t n samples: %i" % wfm_length
