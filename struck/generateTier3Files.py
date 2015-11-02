@@ -15,7 +15,8 @@ Use on tier 1 or tier2 files:
     *NotShaped_Amplified*DT*.root
 
 Submit batch jobs:
-python /afs/slac.stanford.edu/u/xo/alexis4/alexis-exo/testScripts/submitPythonJobsSLAC.py generateTier3Files.py ../tier2/tier2_*NotShaped_Amplified*DT*.root
+python
+/afs/slac.stanford.edu/u/xo/alexis4/alexis-exo/testScripts/submitPythonJobsSLAC.py generateTier3Files.py ../tier2/tier2_LXe_Run1_1700VC*NotShaped_Amplified*DT*.root
 
 Can combine files later:
 hadd -O good_tier3.root tier3_LXe_Run1_1700VC*.root
@@ -118,8 +119,8 @@ def process_file(filename):
     # branch addresses, see:
     # http://wlav.web.cern.ch/wlav/pyroot/tpytree.html
 
-    is_amplified = array('B', [0]) # unsigned 1-byte
-    out_tree.Branch('is_amplified', is_amplified, 'is_amplified/b')
+    is_5Vinput = array('B', [0]) # unsigned 1-byte
+    out_tree.Branch('is_5Vinput', is_5Vinput, 'is_5Vinput/b')
 
     event = array('I', [0]) # unsigned int
     out_tree.Branch('event', event, 'event/i')
@@ -141,7 +142,7 @@ def process_file(filename):
     decay_time_values[1] = 725.0*CLHEP.microsecond
     decay_time_values[2] = 775.0*CLHEP.microsecond
     decay_time_values[3] = 750.0*CLHEP.microsecond
-    decay_time_values[4] = 500.0*CLHEP.microsecond
+    decay_time_values[4] = 450.0*CLHEP.microsecond
     decay_time_values[8] = 1e9*CLHEP.microsecond # FIXME -- should skip PZ for PMT
 
     # relative calibration:
@@ -155,6 +156,15 @@ def process_file(filename):
     calibration_values[2] = 1.0/1.90907907272149885e+02
     calibration_values[3] = 1.0/2.94300492610837466e+02
     calibration_values[4] = 1.0/1.40734817170111285e+02
+
+    if is_5Vinput:
+        print "dividing calibration by 2.5"
+        for i in xrange(calibration_values):
+            calibration_values[i] /= 2.5
+
+    print "calibration values:"
+    for (i_channel, value)  in calibration_values.items():
+        print "\t ch %i: %.2f" % (i_channel, value)
 
     rise_time = array('d', [0]*n_channels) # double
     out_tree.Branch('rise_time', rise_time, 'rise_time[%i]/D' % n_channels)
@@ -208,11 +218,12 @@ def process_file(filename):
         baseline_rms_file[i] = hist.GetRMS()
     print "\t done"
 
-    # decide whether the amplifier was used or not. The file-averaged baseline
-    # mean for channel 0 seems like a good indicator of this -- should also
-    # figure out if any channels are shaped...
+    # decide whether 5V input was used for the digitizer or not. The
+    # file-averaged baseline mean for channel 0 seems like a good indicator of
+    # this -- we should also figure out if any channels are shaped...
+
     if baseline_mean_file[0] < 6000:
-        is_amplified[0] = 1
+        is_5Vinput[0] = 1
 
     # energy & rms before any processing
     energy = array('d', [0]*n_channels) # double
