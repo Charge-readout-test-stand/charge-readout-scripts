@@ -15,7 +15,7 @@ Use on tier 1 or tier2 files:
     *NotShaped_Amplified*DT*.root
 
 Submit batch jobs:
-python /afs/slac.stanford.edu/u/xo/alexis4/alexis-exo/testScripts/submitPythonJobsSLAC.py process_wfms.py ../tier2/tier2_*NotShaped_Amplified*DT*.root
+python /afs/slac.stanford.edu/u/xo/alexis4/alexis-exo/testScripts/submitPythonJobsSLAC.py generateTier3Files.py ../tier2/tier2_*NotShaped_Amplified*DT*.root
 
 Can combine files later:
 hadd -O good_tier3.root tier3_LXe_Run1_1700VC*.root
@@ -118,6 +118,9 @@ def process_file(filename):
     # branch addresses, see:
     # http://wlav.web.cern.ch/wlav/pyroot/tpytree.html
 
+    is_amplified = array('B', [0]) # unsigned 1-byte
+    out_tree.Branch('is_amplified', is_amplified, 'is_amplified/b')
+
     event = array('I', [0]) # unsigned int
     out_tree.Branch('event', event, 'event/i')
 
@@ -204,9 +207,6 @@ def process_file(filename):
         #print baseline_mean_file[i]
         baseline_rms_file[i] = hist.GetRMS()
     print "\t done"
-
-    is_amplified = array('B', [0]) # unsigned 1-byte
-    out_tree.Branch('is_amplified', is_amplified, 'is_amplified/b')
 
     # decide whether the amplifier was used or not. The file-averaged baseline
     # mean for channel 0 seems like a good indicator of this -- should also
