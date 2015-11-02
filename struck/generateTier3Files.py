@@ -15,8 +15,7 @@ Use on tier 1 or tier2 files:
     *NotShaped_Amplified*DT*.root
 
 Submit batch jobs:
-python
-/afs/slac.stanford.edu/u/xo/alexis4/alexis-exo/testScripts/submitPythonJobsSLAC.py generateTier3Files.py ../tier2/tier2_LXe_Run1_1700VC*NotShaped_Amplified*DT*.root
+python /afs/slac.stanford.edu/u/xo/alexis4/alexis-exo/testScripts/submitPythonJobsSLAC.py generateTier3Files.py ../tier2/tier2_LXe_Run1_1700VC*NotShaped_Amplified*DT*.root
 
 Can combine files later:
 hadd -O good_tier3.root tier3_LXe_Run1_1700VC*.root
@@ -159,7 +158,7 @@ def process_file(filename):
 
     if is_5Vinput:
         print "dividing calibration by 2.5"
-        for i in xrange(calibration_values):
+        for i in xrange(len(calibration_values)):
             calibration_values[i] /= 2.5
 
     print "calibration values:"
