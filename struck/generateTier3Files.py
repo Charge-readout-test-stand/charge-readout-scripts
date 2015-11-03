@@ -242,9 +242,10 @@ def process_file(filename):
             print "\t dividing calibration by 2.5"
             calibration_values[i_channel] /= 2.5
 
-        is_amplified[i] = struck_analysis_parameters.is_amplified(
-            baseline_mean_file[i], baseline_rms_file[i])
-        print is_amplified[i]
+        # this doesn't seem very reliable
+        #is_amplified[i] = struck_analysis_parameters.is_amplified(
+        #    baseline_mean_file[i], baseline_rms_file[i])
+
 
         if is_amplified[i] == 0:
             if i_channel != 8:

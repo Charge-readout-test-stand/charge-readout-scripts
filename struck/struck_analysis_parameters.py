@@ -42,6 +42,7 @@ decay_time_values[8] = 1e9*microsecond # FIXME -- should skip PZ for PMT
 # tier3_LXe_Run1_1700VC_5chargechannels_330PM_7thresh_0.root
 # tier3_LXe_Run1_1700VC_5chargechannels_238PM2_10thresh.root
 
+# convert energy to keV
 calibration_values = {}
 calibration_values[0] = 1.0/3.76194501827427302e+02*570.0/0.26
 calibration_values[1] = 1.0/1.84579440737210035e+02*570.0/0.6
@@ -63,12 +64,14 @@ def is_2Vinput(baseline_mean_file):
     return False
 
 
+#This doesn't seem reliable...
 def is_amplified(baseline_mean_file, baseline_rms_file):
     """
     If not amplified, multiply calibration by 4.0 (10x gain, 2V input) 
     Arguments: average baseline mean and RMS from a file, for a given charge
     channel
     """
+    print "identifying amplification is risky!!"
     if baseline_mean_file >= 6500:
         if baseline_rms_file < 6.0:
             return False
