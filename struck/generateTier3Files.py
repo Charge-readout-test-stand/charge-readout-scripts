@@ -118,8 +118,8 @@ def process_file(filename):
     # branch addresses, see:
     # http://wlav.web.cern.ch/wlav/pyroot/tpytree.html
 
-    is_5Vinput = array('B', [0]) # unsigned 1-byte
-    out_tree.Branch('is_5Vinput', is_5Vinput, 'is_5Vinput/b')
+    is_5Vinput = array('B', [0]*6) # unsigned 1-byte
+    out_tree.Branch('is_5Vinput', is_5Vinput, 'is_5Vinput[%i]/b' % 6)
 
     event = array('I', [0]) # unsigned int
     out_tree.Branch('event', event, 'event/i')
@@ -147,23 +147,6 @@ def process_file(filename):
     # relative calibration:
     calibration = array('d', [0.0]*n_channels) # double
     out_tree.Branch('calibration', calibration, 'calibration[%i]/D' % n_channels)
-
-    # from tier1_LXe_Run1_Amplifier_100mVPulse_10dB_5chargechannels_736AM_0
-    calibration_values = {}
-    calibration_values[0] = 1.0/3.76194501827427302e+02
-    calibration_values[1] = 1.0/1.84579440737210035e+02
-    calibration_values[2] = 1.0/1.90907907272149885e+02
-    calibration_values[3] = 1.0/2.94300492610837466e+02
-    calibration_values[4] = 1.0/1.40734817170111285e+02
-
-    if is_5Vinput:
-        print "dividing calibration by 2.5"
-        for i in xrange(len(calibration_values)):
-            calibration_values[i] /= 2.5
-
-    print "calibration values:"
-    for (i_channel, value)  in calibration_values.items():
-        print "\t ch %i: %.2f" % (i_channel, value)
 
     rise_time = array('d', [0]*n_channels) # double
     out_tree.Branch('rise_time', rise_time, 'rise_time[%i]/D' % n_channels)
@@ -204,25 +187,49 @@ def process_file(filename):
         draw_command = "wfm >> hist"
         if not is_tier1:
             draw_command = "wfm%i >> hist" % i_channel
+        selection = "Iteration$<%i && channel==%i" % (n_baseline_samples[0], i_channel)
         print draw_command
+        print selection
             
         tree.Draw(
             draw_command,
-            "Iteration$<%i && channel==%i" % (n_baseline_samples[0], i_channel),
+            selection,
             "goff"
         )
         baseline_mean_file[i] = hist.GetMean()
-        #print hist.GetMean()
-        #print baseline_mean_file[i]
         baseline_rms_file[i] = hist.GetRMS()
+        print baseline_mean_file[i]
+        print baseline_rms_file[i]
     print "\t done"
 
     # decide whether 5V input was used for the digitizer or not. The
     # file-averaged baseline mean for channel 0 seems like a good indicator of
     # this -- we should also figure out if any channels are shaped...
 
-    if baseline_mean_file[0] < 6000:
-        is_5Vinput[0] = 1
+    # from tier1_LXe_Run1_Amplifier_100mVPulse_10dB_5chargechannels_736AM_0
+    calibration_values = {}
+    calibration_values[0] = 1.0/3.76194501827427302e+02
+    calibration_values[1] = 1.0/1.84579440737210035e+02
+    calibration_values[2] = 1.0/1.90907907272149885e+02
+    calibration_values[3] = 1.0/2.94300492610837466e+02
+    calibration_values[4] = 1.0/1.40734817170111285e+02
+
+    for (i, i_channel) in enumerate(channels):
+        if baseline_mean_file[i] < 6500:
+            is_5Vinput[i] = 1
+            print "channel %i used 5V input range" % i_channel
+            print "dividing calibration by 2.5"
+            try:
+                print calibration_values[i_channel]
+                calibration_values[i_channel] /= 2.5
+                print calibration_values[i_channel]
+            except KeyError:
+                print "no calibration data for ch %i" % i_channel
+
+    print "calibration values:"
+    for (i_channel, value)  in calibration_values.items():
+        print "\t ch %i: %.3e" % (i_channel, value)
+
 
     # energy & rms before any processing
     energy = array('d', [0]*n_channels) # double
