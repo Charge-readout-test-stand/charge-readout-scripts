@@ -7,6 +7,7 @@ to do:
   * add other rise times: 95, 99 
   * add slope of PZ-corrected section ?
   * fix decay time and calibration to work for tier 1 files
+  * FIXME -- ID of amplified/unamplified and 5V/2V input doesn't work on pulser files...
 
 available CLHEP units are in 
 http://java.freehep.org/svn/repos/exo/show/offline/trunk/utilities/misc/EXOUtilities/SystemOfUnits.hh?revision=HEAD
@@ -57,6 +58,9 @@ from ROOT import TObjString
 
 from array import array
 
+# definition of calibration constants and decay times
+import struck_analysis_parameters
+
 
 
 def process_file(filename):
@@ -75,7 +79,7 @@ def process_file(filename):
     sampling_freq_Hz = 25.0e6
     n_channels = 6
 
-    channels = [0,1,2,3,4,8]
+    channels = struck_analysis_parameters.channels
 
     #---------------------------------------------------------------
 
@@ -92,7 +96,12 @@ def process_file(filename):
     # open the root file and grab the tree
     root_file = TFile(filename)
     tree = root_file.Get("tree")
-    n_entries = tree.GetEntries()
+    try:
+        n_entries = tree.GetEntries()
+    except AttributeError:
+        print "==> problem accessing tree -- skipping this file"
+        return
+        
 
     # decide if this is a tier1 or tier2 file
     is_tier1 = False
@@ -118,8 +127,11 @@ def process_file(filename):
     # branch addresses, see:
     # http://wlav.web.cern.ch/wlav/pyroot/tpytree.html
 
-    is_5Vinput = array('B', [0]*6) # unsigned 1-byte
-    out_tree.Branch('is_5Vinput', is_5Vinput, 'is_5Vinput[%i]/b' % 6)
+    is_2Vinput = array('I', [0]*6) # unsigned int
+    out_tree.Branch('is_2Vinput', is_2Vinput, 'is_2Vinput[%i]/i' % 6)
+
+    is_amplified = array('I', [1]*6) # unsigned int
+    out_tree.Branch('is_amplified', is_amplified, 'is_amplified[%i]/i' % 6)
 
     event = array('I', [0]) # unsigned int
     out_tree.Branch('event', event, 'event/i')
@@ -135,14 +147,8 @@ def process_file(filename):
     decay_time = array('d', [0]*n_channels) # double
     out_tree.Branch('decay_time', decay_time, 'decay_time[%i]/D' % n_channels)
 
-    # values from Peihao, 31 Oct 2015:
-    decay_time_values = {}
-    decay_time_values[0] = 850.0*CLHEP.microsecond
-    decay_time_values[1] = 725.0*CLHEP.microsecond
-    decay_time_values[2] = 775.0*CLHEP.microsecond
-    decay_time_values[3] = 750.0*CLHEP.microsecond
-    decay_time_values[4] = 450.0*CLHEP.microsecond
-    decay_time_values[8] = 1e9*CLHEP.microsecond # FIXME -- should skip PZ for PMT
+    decay_time_values = struck_analysis_parameters.decay_time_values
+    decay_time_values[8] = 1e9*CLHEP.microsecond
 
     # relative calibration:
     calibration = array('d', [0.0]*n_channels) # double
@@ -184,52 +190,68 @@ def process_file(filename):
     print "calculating mean baseline & baseline RMS for each channel in this file..."
     for (i, i_channel) in enumerate(channels):
         print "%i: ch %i" % (i, i_channel)
+        selection = "Iteration$<%i && channel==%i" % (n_baseline_samples[0], i_channel)
+            
+        # calculate avg baseline:
         draw_command = "wfm >> hist"
         if not is_tier1:
             draw_command = "wfm%i >> hist" % i_channel
-        selection = "Iteration$<%i && channel==%i" % (n_baseline_samples[0], i_channel)
-        print draw_command
-        print selection
-            
         tree.Draw(
             draw_command,
             selection,
             "goff"
         )
         baseline_mean_file[i] = hist.GetMean()
+        print "\t draw command: %s | selection %s" % (draw_command, selection)
+        print "\t file baseline mean:", baseline_mean_file[i]
+
+        # calculate baseline RMS:
+        draw_command = "wfm-wfm[0] >> hist"
+        if not is_tier1:
+            draw_command = "wfm%i-wfm%i[0] >> hist" % (i_channel, i_channel)
+        tree.Draw(
+            draw_command,
+            selection,
+            "goff"
+        )
         baseline_rms_file[i] = hist.GetRMS()
-        print baseline_mean_file[i]
-        print baseline_rms_file[i]
+        print "\t draw command: %s | selection %s" % (draw_command, selection)
+        print "\t file baseline rms:", baseline_rms_file[i]
+
     print "\t done"
 
-    # decide whether 5V input was used for the digitizer or not. The
+    # decide whether 2V input was used for the digitizer or not. The
     # file-averaged baseline mean for channel 0 seems like a good indicator of
     # this -- we should also figure out if any channels are shaped...
 
-    # from tier1_LXe_Run1_Amplifier_100mVPulse_10dB_5chargechannels_736AM_0
-    calibration_values = {}
-    calibration_values[0] = 1.0/3.76194501827427302e+02
-    calibration_values[1] = 1.0/1.84579440737210035e+02
-    calibration_values[2] = 1.0/1.90907907272149885e+02
-    calibration_values[3] = 1.0/2.94300492610837466e+02
-    calibration_values[4] = 1.0/1.40734817170111285e+02
+    calibration_values = struck_analysis_parameters.calibration_values
 
+    print "choosing calibration values..."
     for (i, i_channel) in enumerate(channels):
-        if baseline_mean_file[i] < 6500:
-            is_5Vinput[i] = 1
-            print "channel %i used 5V input range" % i_channel
-            print "dividing calibration by 2.5"
-            try:
-                print calibration_values[i_channel]
-                calibration_values[i_channel] /= 2.5
-                print calibration_values[i_channel]
-            except KeyError:
-                print "no calibration data for ch %i" % i_channel
+        print "channel %i" % i_channel
 
-    print "calibration values:"
-    for (i_channel, value)  in calibration_values.items():
-        print "\t ch %i: %.3e" % (i_channel, value)
+        try:
+            print "\t original calibration value %.4e" % calibration_values[i_channel]
+        except KeyError:
+            print "\t no calibration data for ch %i" % i_channel
+            continue
 
+        is_2Vinput[i] = struck_analysis_parameters.is_2Vinput(baseline_mean_file[i])
+        if is_2Vinput[i]:
+            print "\t channel %i used 2V input range" % i_channel
+            print "\t dividing calibration by 2.5"
+            calibration_values[i_channel] /= 2.5
+
+        is_amplified[i] = struck_analysis_parameters.is_amplified(
+            baseline_mean_file[i], baseline_rms_file[i])
+        print is_amplified[i]
+
+        if is_amplified[i] == 0:
+            if i_channel != 8:
+                calibration_values[i_channel] *= 4.0
+                print "\t multiplying calibration by 4"
+                print "\t channel %i is unamplified" % i_channel
+        print "\t channel %i calibration: %.4e" % (i_channel, calibration_values[i_channel])
 
     # energy & rms before any processing
     energy = array('d', [0]*n_channels) # double
@@ -273,7 +295,7 @@ def process_file(filename):
         # print periodic output message
         if i_entry % reporting_period == 0:
             now = time.clock()
-            print "====> entry %i of %i (%.2f percent in %.1f seconds, %.1f seconds total)" % (
+            print "----> entry %i of %i (%.2f percent in %.1f seconds, %.1f seconds total)" % (
                 i_entry, n_entries, 100.0*i_entry/n_entries, now - last_time, now -
                 start_time)
             last_time = now
@@ -339,7 +361,7 @@ def process_file(filename):
             energy[i] = baseline_remover.GetBaselineMean()*calibration[i]
             energy_rms[i] = baseline_remover.GetBaselineRMS()*calibration[i]
             if channel[i] == 8:
-                energy[i] = exo_wfm.GetMaxValue()
+                energy[i] = exo_wfm.GetMaxValue()*calibration_values[channel[i]]
 
             if do_debug:
                 print "energy measurement with %i samples: %.2f" % (
