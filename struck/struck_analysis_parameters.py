@@ -32,17 +32,16 @@ decay_time_values[1] = 725.0*microsecond
 decay_time_values[2] = 775.0*microsecond
 decay_time_values[3] = 750.0*microsecond
 decay_time_values[4] = 450.0*microsecond
-decay_time_values[8] = 1e9*microsecond # FIXME -- should skip PZ for PMT
 
 
-# calbration from these files:
+# charge calbration from these files:
 # tier3_LXe_Run1_1700VC_2chargechannels_609PM_60thresh_NotShaped_Amplified_GapTime20_2_0.root
 # tier3_LXe_Run1_1700VC_5chargechannels_315PM_5thresh_0.root
 # tier3_LXe_Run1_1700VC_5chargechannels_315PM_8thresh_0.root
 # tier3_LXe_Run1_1700VC_5chargechannels_330PM_7thresh_0.root
 # tier3_LXe_Run1_1700VC_5chargechannels_238PM2_10thresh.root
 
-# convert energy to keV
+# convert energies to keV by multiplying by these factors:
 calibration_values = {}
 calibration_values[0] = 1.0/3.76194501827427302e+02*570.0/0.26
 calibration_values[1] = 1.0/1.84579440737210035e+02*570.0/0.6
@@ -50,6 +49,8 @@ calibration_values[2] = 1.0/1.90907907272149885e+02*570.0/0.56
 calibration_values[3] = 1.0/2.94300492610837466e+02*570.0/0.38
 calibration_values[4] = 1.0/1.40734817170111285e+02*570.0/0.725
 
+# PMT calibration is from PMT-triggered data
+calibration_values[8] = 570.0/2550.0
 
 
 def is_2Vinput(baseline_mean_file):
