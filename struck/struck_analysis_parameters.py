@@ -49,7 +49,6 @@ calibration_values[1] = 1.0/1.84579440737210035e+02*570.0/0.6
 calibration_values[2] = 1.0/1.90907907272149885e+02*570.0/0.56
 calibration_values[3] = 1.0/2.94300492610837466e+02*570.0/0.38
 calibration_values[4] = 1.0/1.40734817170111285e+02*570.0/0.725
-calibration_values[8] = 570.0/2550.0
 
 
 
@@ -71,7 +70,7 @@ def is_amplified(baseline_mean_file, baseline_rms_file):
     Arguments: average baseline mean and RMS from a file, for a given charge
     channel
     """
-    print "identifying amplification is risky!!"
+    print "WARNING: identifying amplification is risky!!"
     if baseline_mean_file >= 6500:
         if baseline_rms_file < 6.0:
             return False
