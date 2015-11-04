@@ -12,7 +12,6 @@ This file must be in the same directory as your script.
 
 try:
     from ROOT import gROOT
-    gROOT.SetBatch(True)
     from ROOT import gSystem
     gSystem.Load("$EXOLIB/lib/libEXOROOT")
     from ROOT import CLHEP
@@ -79,6 +78,7 @@ def is_amplified(baseline_mean_file, baseline_rms_file):
 
 
 if __name__ == "__main__":
+    gROOT.SetBatch(True)
 
     print "\nlinear calibration info:"
     for (channel, value) in calibration_values.items():
