@@ -42,6 +42,9 @@ def process_file(filename):
 
     sampling_freq_Hz = 25.0e6
 
+    min_bin = 0
+    max_bin = 2000
+
     channels = [
       0,1,2,3,4,
       #8, 
@@ -105,7 +108,7 @@ def process_file(filename):
     for (i, channel) in enumerate(channels):
         
         #print i, channel, channel_map[channel]
-        hist = TH1D("hist%i" % channel,"",10,0,10)
+        hist = TH1D("hist%i" % channel,"",500,0,2000)
         try:
             color = colors[channel]
         except IndexError:
@@ -131,9 +134,10 @@ def process_file(filename):
     #print min_val, max_val
 
     #frame_hist = TH1D("frame_hist","",100,-5,10.0) # unamplified
-    frame_hist = TH1D("frame_hist","",200,-30,40) # amplified
+    #frame_hist = TH1D("frame_hist","",200,-30,40) # amplified
     #frame_hist = TH1D("frame_hist","",100,-2,2) # pulser
     #tree.Draw("energy >> frame_hist","channel!=8")
+    frame_hist = TH1D("frame_hist","",n_bins,min_bin,max_bin)
     frame_hist.SetXTitle("Energy")
     frame_hist.SetYTitle("Counts / %.1f" % frame_hist.GetBinWidth(1))
     frame_hist.SetMaximum(n_entries)
