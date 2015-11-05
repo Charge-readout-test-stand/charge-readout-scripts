@@ -24,6 +24,17 @@ except ImportError:
 # channels for 5th LXe
 channels = [0,1,2,3,4,8]
 
+# channel names for 5th LXe    
+channel_map = {}
+channel_map[0] = "X26"
+channel_map[1] = "X27"
+channel_map[2] = "X29"
+channel_map[3] = "Y23"
+channel_map[4] = "Y24"
+channel_map[8] = "PMT"
+
+
+
 # values from Peihao, 31 Oct 2015:
 decay_time_values = {}
 decay_time_values[0] = 850.0*microsecond
