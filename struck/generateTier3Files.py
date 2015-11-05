@@ -298,10 +298,6 @@ def process_file(filename):
     lightEnergy = array('d', [0.0]) # double
     out_tree.Branch('lightEnergy', lightEnergy, 'lightEnergy/D')
 
-    energy = array('d', [0]*n_channels) # double
-    out_tree.Branch('energy', energy, 'energy[%i]/D' % n_channels)
-
-
     # energy & rms before processing, using 2x sample length
     energy1 = array('d', [0]*n_channels) # double
     out_tree.Branch('energy1', energy1, 'energy1[%i]/D' % n_channels)
@@ -581,7 +577,7 @@ def process_file(filename):
                 canvas.Update()
                 val = raw_input("enter to continue (q=quit, b=batch, p=print) ")
 
-                #print val
+                print val
                 if (val == 'q' or val == 'Q'): sys.exit(1) 
                 if val == 'b': gROOT.SetBatch(True)
                 if val == 'p': canvas.Print("entry_%i_proce_wfm_%s.png" % (i_entry, basename,))
