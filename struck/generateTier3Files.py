@@ -4,8 +4,7 @@
 Do some waveform processing to extract energies, etc. 
 
 to do:
-  * add chargeEnergy, lightEnergy
-  * add other rise times: 95, 99 
+  * add 50% rise time
   * add slope of PZ-corrected section ?
   * fix decay time and calibration to work for tier 1 files
   * FIXME -- ID of amplified/unamplified and 5V/2V input doesn't work on pulser files...
@@ -68,8 +67,8 @@ def process_file(filename):
     # options---------------------
 
     # whether to run in debug mode (draw wfms):
+    do_debug = not gROOT.IsBatch()
     do_debug = False
-    #do_debug = True
 
     reporting_period = 1000
 
@@ -135,6 +134,12 @@ def process_file(filename):
     event = array('I', [0]) # unsigned int
     out_tree.Branch('event', event, 'event/i')
 
+    time_stamp = array('L', [0]) # unsigned long
+    out_tree.Branch('time_stamp', time_stamp, 'time_stamp/l')
+
+    time_stampDouble = array('d', [0]) # double
+    out_tree.Branch('time_stampDouble', time_stampDouble, 'time_stampDouble/D')
+
     n_entries_array = array('I', [0]) # unsigned int
     out_tree.Branch('n_entries', n_entries_array, 'n_entries/i')
     n_entries_array[0] = n_entries
@@ -177,14 +182,14 @@ def process_file(filename):
     calibration = array('d', [0.0]*n_channels) # double
     out_tree.Branch('calibration', calibration, 'calibration[%i]/D' % n_channels)
 
-    rise_time = array('d', [0]*n_channels) # double
-    out_tree.Branch('rise_time', rise_time, 'rise_time[%i]/D' % n_channels)
-
     rise_time_start = array('d', [0]*n_channels) # double
     out_tree.Branch('rise_time_start', rise_time_start, 'rise_time_start[%i]/D' % n_channels)
 
-    rise_time_stop = array('d', [0]*n_channels) # double
-    out_tree.Branch('rise_time_stop', rise_time_stop, 'rise_time_stop[%i]/D' % n_channels)
+    rise_time_stop50 = array('d', [0]*n_channels) # double
+    out_tree.Branch('rise_time_stop50', rise_time_stop50, 'rise_time_stop50[%i]/D' % n_channels)
+
+    rise_time_stop90 = array('d', [0]*n_channels) # double
+    out_tree.Branch('rise_time_stop90', rise_time_stop90, 'rise_time_stop90[%i]/D' % n_channels)
 
     rise_time_stop95 = array('d', [0]*n_channels) # double
     out_tree.Branch('rise_time_stop95', rise_time_stop95, 'rise_time_stop95[%i]/D' % n_channels)
@@ -367,6 +372,7 @@ def process_file(filename):
 
             wfm_length = len(wfm)
 
+
             exo_wfm = EXODoubleWaveform(array('d',wfm), wfm_length)
             wfm_max[i] = exo_wfm.GetMaxValue()
             wfm_min[i] = exo_wfm.GetMinValue()
@@ -387,18 +393,33 @@ def process_file(filename):
 
             if do_debug:
                 print "channel %i" % channel[i]
-                if exo_wfm.GetMaxValue() < 50: continue # skip low energy wfms
-                if i == 5: continue # skip PMT
+                #if exo_wfm.GetMaxValue() < 50: continue # skip low energy wfms
+                #if i == 5: continue # skip PMT
 
-            # measure energy before PZ correction
-            baseline_remover.SetStartSample(wfm_length - n_baseline_samples[0] - 1)
-            baseline_remover.Transform(exo_wfm, energy_wfm)
             try:
                 calibration[i] = calibration_values[channel[i]]
             except KeyError:
                 #print channel[i]
                 calibration[i] = 1.0
                 
+            # build sum waveform from calibrated waveforms
+            # FIXME -- need to finish sum_wfm work and extract parameters from
+            # the sum wfm
+            if channel[i] != 8:
+                if not gROOT.IsBatch():
+                    print "adding wfm from ch %i" % channel[i]
+                temp_wfm = EXODoubleWaveform(exo_wfm)
+                temp_wfm *= calibration[i]
+                if i == 0:
+                    exo_sum_wfm = temp_wfm
+                    sum_energy = 0
+                else:
+                    exo_sum_wfm += temp_wfm
+
+            # measure energy before PZ correction
+            baseline_remover.SetStartSample(wfm_length - n_baseline_samples[0] - 1)
+            baseline_remover.Transform(exo_wfm, energy_wfm)
+
             energy[i] = baseline_remover.GetBaselineMean()*calibration[i]
             energy_rms[i] = baseline_remover.GetBaselineRMS()*calibration[i]
             if channel[i] == 8:
@@ -406,6 +427,14 @@ def process_file(filename):
                 lightEnergy[0] = energy[i]
             else:
                 chargeEnergy[0] += energy[i]
+
+
+            if not gROOT.IsBatch() and i == 4 and chargeEnergy[0] > 100:
+                print "chargeEnergy", chargeEnergy[0]
+                exo_sum_wfm.GimmeHist().Draw()
+                canvas.Update()
+                val = raw_input("sum wfm")
+
 
             if do_debug:
                 print "energy measurement with %i samples: %.2f" % (
@@ -495,36 +524,53 @@ def process_file(filename):
             #smoother.SetSmoothSize(50)
             smoother.Transform(exo_wfm,new_wfm) #FIXME
 
+            #pole_zero.Transform(new_wfm, new_wfm) # FIXME -- just for drawing
+
+            # set output tree variables
+            event[0] = tree.event
+            time_stamp[0] = tree.time_stamp
+            time_stampDouble[0] = tree.time_stampDouble
+            smoothed_max[i] = new_wfm.GetMaxValue()
+
             # used smoothed max val to calculate rise time
+            # FIXME -- maybe we should think about this...
             #max_val = exo_wfm.GetMaxValue()
             max_val = new_wfm.GetMaxValue() # smoothed max
-
-            #pole_zero.Transform(new_wfm, new_wfm) # FIXME -- just for drawing
+            #print max_val
 
             rise_time_calculator = EXORisetimeCalculation()
             rise_time_calculator.SetPulsePeakHeight(max_val)
 
-            # set output tree variables
-            event[0] = tree.event
-            smoothed_max[i] = new_wfm.GetMaxValue()
-
-
+            rise_time_calculator.SetInitialScanToPercentage(0.4)
             rise_time_calculator.SetInitialThresholdPercentage(0.1)
+            rise_time_calculator.SetFinalThresholdPercentage(0.5)
+            if max_val > 0.0: # throws an alert if max_val is 0
+                rise_time_calculator.Transform(exo_wfm, exo_wfm)
+                #print rise_time_calculator.GetInitialThresholdCrossing()
+                #print rise_time_calculator.GetFinalThresholdCrossing()
+            rise_time_start[i] = rise_time_calculator.GetInitialThresholdCrossing()*period/CLHEP.microsecond
+            rise_time_stop50[i] = rise_time_calculator.GetFinalThresholdCrossing()*period/CLHEP.microsecond
+
             rise_time_calculator.SetFinalThresholdPercentage(0.90)
             if max_val > 0.0: # throws an alert if max_val is 0
                 rise_time_calculator.Transform(exo_wfm, exo_wfm)
-            rise_time[i] = rise_time_calculator.GetRiseTime()/CLHEP.microsecond
-            rise_time_start[i] = rise_time_calculator.GetInitialThresholdCrossing()*period/CLHEP.microsecond
-            rise_time_stop[i] = rise_time_calculator.GetFinalThresholdCrossing()*period/CLHEP.microsecond
+                #print rise_time_calculator.GetInitialThresholdCrossing()
+                #print rise_time_calculator.GetFinalThresholdCrossing()
+            rise_time_stop90[i] = rise_time_calculator.GetFinalThresholdCrossing()*period/CLHEP.microsecond
+            #rise_time[i] = rise_time_calculator.GetRiseTime()/CLHEP.microsecond
 
             rise_time_calculator.SetFinalThresholdPercentage(0.95)
             if max_val > 0.0: # throws an alert if max_val is 0
                 rise_time_calculator.Transform(exo_wfm, exo_wfm)
+                #print rise_time_calculator.GetInitialThresholdCrossing()
+                #print rise_time_calculator.GetFinalThresholdCrossing()
             rise_time_stop95[i] = rise_time_calculator.GetFinalThresholdCrossing()*period/CLHEP.microsecond
 
             rise_time_calculator.SetFinalThresholdPercentage(0.99)
             if max_val > 0.0: # throws an alert if max_val is 0
                 rise_time_calculator.Transform(exo_wfm, exo_wfm)
+                #print rise_time_calculator.GetInitialThresholdCrossing()
+                #print rise_time_calculator.GetFinalThresholdCrossing()
             rise_time_stop99[i] = rise_time_calculator.GetFinalThresholdCrossing()*period/CLHEP.microsecond
 
 
@@ -540,16 +586,18 @@ def process_file(filename):
             #if not gROOT.IsBatch() and channel[i] == 4:
             #if not gROOT.IsBatch() and smoothed_max[i] > 60 and channel[i] != 8:
             #if not gROOT.IsBatch() and i_entry > 176:
-            if not gROOT.IsBatch():
+            #if not gROOT.IsBatch():
+            if not gROOT.IsBatch() and do_debug:
 
                 print "--> entry %i | channel %i" % (i_entry, channel[i])
                 print "\t n samples: %i" % wfm_length
                 print "\t max %.2f" % wfm_max[i]
                 print "\t min %.2f" % wfm_min[i]
                 print "\t smoothed max %.2f" % smoothed_max[i]
-                print "\t rise time [microsecond]: %.3f" % (rise_time[i])
-                print "\t rise start [microsecond]: %.2f" % (rise_time_start[i])
-                print "\t rise stop [microsecond]: %.2f" % (rise_time_stop[i])
+                #print "\t rise time [microsecond]: %.3f" % (rise_time[i])
+                print "\t rise start 10 [microsecond]: %.2f" % (rise_time_start[i])
+                print "\t rise stop 50 [microsecond]: %.2f" % (rise_time_stop50[i])
+                print "\t rise stop 90 [microsecond]: %.2f" % (rise_time_stop90[i])
                 print "\t rise stop 95 [microsecond]: %.2f" % (rise_time_stop95[i])
                 print "\t rise stop 99 [microsecond]: %.2f" % (rise_time_stop99[i])
                 print "\t baseline mean: %.3f" % baseline_mean[i]
