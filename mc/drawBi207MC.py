@@ -1,12 +1,9 @@
 #!/usr/bin/env python
 
 """
-This script draws a spectrum from a root tree. The following branches are
-assumed to exist:
-* max
-* channel
+This script draws a spectrum from a root tree of MC data. 
 
-arguments [sis root files]
+arguments [MC root files]
 """
 
 import os
@@ -168,7 +165,7 @@ def process_file(filename):
 if __name__ == "__main__":
 
     if len(sys.argv) < 2:
-        print "arguments: [sis root files]"
+        print "arguments: [MC root files]"
         sys.exit(1)
 
 
