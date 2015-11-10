@@ -211,7 +211,7 @@ def process_file(filename):
                 entries_of_timestamp[timestamp] = []
             entries_of_timestamp[timestamp].append(i_entry)
             if len(entries_of_timestamp[timestamp]) > 6:
-                print "more than 6 entries with timestamp", timestamp
+                print "WARNING: more than 6 entries with timestamp", timestamp
 
             if False: # debugging
                 channel =  tree.channel
@@ -241,37 +241,37 @@ def process_file(filename):
         first_channel = tree.channel
         i_entry = 0
         buffer_lengths = []
-        buffer_starts = {}
-        buffer_ends = {}
-        prev_channel =-1
+        #buffer_starts = {}
+        #buffer_ends = {}
+        #prev_channel =-1
         sum_of_previous_buffers = 0
         while i_entry < n_entries:
             tree.GetEntry(i_entry)
 
             # identify start/end of buffer spill
-            if tree.channel != prev_channel:
+            #if tree.channel != prev_channel:
 
                 # buffer start and stop method
-                if i_entry > 0:
-                    print "ch %i end at entry %i (%i entries)" % (
-                        prev_channel, i_entry-1,
-                        i_entry -buffer_starts[prev_channel][-1],
-                        )
-                    try:
-                        buffer_ends[tree.channel].append(i_entry-1)
-                    except KeyError:
-                        buffer_ends[tree.channel] = []
-                        buffer_ends[tree.channel].append(i_entry-1)
+                #if i_entry > 0:
+                #    print "ch %i end at entry %i (%i entries)" % (
+                #        prev_channel, i_entry-1,
+                #        i_entry -buffer_starts[prev_channel][-1],
+                #        )
+                #    try:
+                #        buffer_ends[tree.channel].append(i_entry-1)
+                #    except KeyError:
+                #        buffer_ends[tree.channel] = []
+                #        buffer_ends[tree.channel].append(i_entry-1)
 
-                print "ch %i start at entry %i" % (tree.channel, i_entry)
-                try:
-                    buffer_starts[tree.channel].append(i_entry)
-                except KeyError:
-                    buffer_starts[tree.channel] = []
-                    buffer_starts[tree.channel].append(i_entry)
-                prev_channel = tree.channel
+                #print "ch %i start at entry %i" % (tree.channel, i_entry)
+                #try:
+                #    buffer_starts[tree.channel].append(i_entry)
+                #except KeyError:
+                #    buffer_starts[tree.channel] = []
+                #    buffer_starts[tree.channel].append(i_entry)
+                #prev_channel = tree.channel
                     
-                
+            # fill list of buffer lengths 
             if tree.channel != first_channel:
                 buffer_length = i_entry - sum_of_previous_buffers
                 print "\t spill %i: %i events, entries %i to %i" % (
@@ -285,11 +285,9 @@ def process_file(filename):
                 i_entry = sum_of_previous_buffers
 
             i_entry += 1
-        print "ch %i end at entry %i" % (prev_channel, i_entry-1)
+        #print "ch %i end at entry %i" % (prev_channel, i_entry-1)
         buffer_ends[tree.channel].append(i_entry-1)
         print "... done"
-
-
 
 
     # open a new file for output
@@ -299,6 +297,9 @@ def process_file(filename):
     # make branches in the output tree, using horrible python syntax
     event = array('I', [0]) # unsigned int
     out_tree.Branch('event', event, 'event/i')
+ 
+    entry = array('I', [0]) # unsigned int
+    out_tree.Branch('entry', entry, 'entry/i')
  
     channel = array('I', [0]*6) # unsigned int
     out_tree.Branch('channel', channel, 'channel[6]/i')
@@ -358,9 +359,12 @@ def process_file(filename):
     if do_debug:
         reporting_period = 1
 
-    cache_size = 100000000
+    cache_size = 200*1024*1024 # 200 MB
     tree.SetCacheSize(cache_size)
-    print "cache size: %.2e" % tree.GetCacheSize()
+    print "cache size: %.2e (%.2e MB)" % (
+        tree.GetCacheSize(),
+        tree.GetCacheSize()/1024/1024,
+    )
 
     now = time.clock()
     print "%.1f seconds spent preprocessing" % (now - start_time)
@@ -372,7 +376,7 @@ def process_file(filename):
 
     # buffer spill method
 
-    
+    entry[0] = 0 
     # timestamp sorted list method
     for i_event in xrange(n_events):
 
@@ -413,7 +417,7 @@ def process_file(filename):
                 try:
                     i_entry = entries_of_timestamp[i_timestamp][i]
                 except IndexError:
-                    print "entry %i | missing data from timestamp %i (only info from %i channels)" % (
+                    print "WARNING: entry %i | missing data from timestamp %i (only info from %i channels)" % (
                       i_entry, i_timestamp, len(entries_of_timestamp[i_timestamp]))
                     is_data_missing = True
                     break
@@ -430,7 +434,7 @@ def process_file(filename):
                 maw_length[0] = tree.maw_length
 
             if tree.timestamp != time_stamp[0]:
-                print "Problem with timestamps!! "
+                print "WARNING: Problem with timestamps!! "
 
 
             if use_buffer_method:
@@ -453,7 +457,7 @@ def process_file(filename):
 
                     i_search += 1
                     if i_search > search_limit: 
-                        print "tried %i new events -- giving up!!" % i_search
+                        print "WARNING: tried %i new events -- giving up!!" % i_search
                         return
 
             # fill out values that are written to tree
@@ -486,6 +490,7 @@ def process_file(filename):
 
         if not is_data_missing:
             out_tree.Fill()
+            entry[0] += 1
 
 
     print "writing file %s.root..." % basename
