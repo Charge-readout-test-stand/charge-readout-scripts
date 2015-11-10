@@ -21,8 +21,13 @@ except ImportError:
     microsecond = 1.0e3
 
 
+
+
+sampling_freq_Hz = 25.0e6 # digitizer sampling frequency, Hz
+
 # channels for 5th LXe
 channels = [0,1,2,3,4,8]
+pmt_channel = 8
 
 # channel names for 5th LXe    
 channel_map = {}
@@ -60,7 +65,7 @@ calibration_values[3] = 1.0/2.94300492610837466e+02*570.0/0.38
 calibration_values[4] = 1.0/1.40734817170111285e+02*570.0/0.725
 
 # PMT calibration is from PMT-triggered data
-calibration_values[8] = 570.0/2550.0
+calibration_values[8] = 570.0/2550.0*2.0
 
 
 def is_2Vinput(baseline_mean_file):
