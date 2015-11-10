@@ -1,5 +1,0 @@
-gap time = 250 clockticks
-flat time = 50 clockticks
-using file "tier1_LXe_Run1_1700VC_2chargechannels_609PM_60thresh_NotShaped_Amplified_GapTime20_2_0.root"
-
-1 clocktick = 40 ns
