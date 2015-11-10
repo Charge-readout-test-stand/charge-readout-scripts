@@ -71,8 +71,8 @@ def process_file(filename):
     peaking_time = 50
     gap_time = 250
     trapFilter = EXOTrapezoidalFilter()
-    trapFilter.SetFlatTime(peaking_time * 40 * CLHEP.nanosecond)
-    trapFilter.SetRampTime(gap_time * 40 * CLHEP.nanosecond)
+    trapFilter.SetRampTime(peaking_time * 40 * CLHEP.nanosecond)
+    trapFilter.SetFlatTime(gap_time * 40 * CLHEP.nanosecond)
     trapFilter.SetDoNormalize()
 
     val = 0
