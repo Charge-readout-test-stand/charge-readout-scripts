@@ -3,15 +3,21 @@
 """
 Do some waveform processing to extract energies, etc. 
 
+EXO class index, with waveform transformers: 
+http://exo-data.slac.stanford.edu/exodoc/ClassIndex.html
+
 to do:
-  * add 50% rise time
-  * add slope of PZ-corrected section ?
+  * ID wfms with multiple PMT signals?
+  * ID noise bursts?
+  * add timestamp info for each wfm?
   * fix decay time and calibration to work for tier 1 files
   * FIXME -- ID of amplified/unamplified and 5V/2V input doesn't work on pulser files...
 
 available CLHEP units are in 
 http://java.freehep.org/svn/repos/exo/show/offline/trunk/utilities/misc/EXOUtilities/SystemOfUnits.hh?revision=HEAD
 
+--------------------------------------------------------------------
+Notes from 5th LXe:
 Use on tier 1 or tier2 files:
     *NotShaped_Amplified*DT*.root
 
@@ -34,7 +40,7 @@ import sys
 import time
 
 from ROOT import gROOT
-# run in batch mode, suppress x output:
+# run in batch mode:
 gROOT.SetBatch(True)
 from ROOT import TFile
 from ROOT import TTree
@@ -57,28 +63,35 @@ from ROOT import TObjString
 
 from array import array
 
-# definition of calibration constants and decay times
+# definition of calibration constants, decay times, channels
 import struck_analysis_parameters
 
 
 
 def process_file(filename):
 
-    # options---------------------
+    #---------------------------------------------------------------
+    # options
+    #---------------------------------------------------------------
 
     # whether to run in debug mode (draw wfms):
     do_debug = not gROOT.IsBatch()
-    do_debug = False
+    #do_debug = False
 
     reporting_period = 1000
 
     # samples at wfm start and end to use for energy calc:
     n_baseline_samples_to_use = 50
 
-    sampling_freq_Hz = 25.0e6
-    n_channels = 6
+    sampling_freq_Hz = struck_analysis_parameters.sampling_freq_Hz
 
     channels = struck_analysis_parameters.channels
+    pmt_channel = struck_analysis_parameters.pmt_channel
+    n_channels_used = len(channels)
+
+    # this is the number of channels per event (1 if we are processing tier1
+    # data, len(channels) if we are processing tier2 data
+    n_channels_in_event = n_channels_used
 
     #---------------------------------------------------------------
 
@@ -109,7 +122,7 @@ def process_file(filename):
         print "this is a tier2 file"
     except AttributeError:
         print "this is a tier1 file"
-        n_channels = 1
+        n_channels_in_event = 1
         is_tier1 = True
 
     # open output file and tree
@@ -125,11 +138,11 @@ def process_file(filename):
     # branch addresses, see:
     # http://wlav.web.cern.ch/wlav/pyroot/tpytree.html
 
-    is_2Vinput = array('I', [0]*6) # unsigned int
-    out_tree.Branch('is_2Vinput', is_2Vinput, 'is_2Vinput[%i]/i' % 6)
+    is_2Vinput = array('I', [0]*n_channels_used) # unsigned int
+    out_tree.Branch('is_2Vinput', is_2Vinput, 'is_2Vinput[%i]/i' % n_channels_used)
 
-    is_amplified = array('I', [1]*6) # unsigned int
-    out_tree.Branch('is_amplified', is_amplified, 'is_amplified[%i]/i' % 6)
+    is_amplified = array('I', [1]*n_channels_used) # unsigned int
+    out_tree.Branch('is_amplified', is_amplified, 'is_amplified[%i]/i' % n_channels_used)
 
     event = array('I', [0]) # unsigned int
     out_tree.Branch('event', event, 'event/i')
@@ -144,17 +157,24 @@ def process_file(filename):
     out_tree.Branch('n_entries', n_entries_array, 'n_entries/i')
     n_entries_array[0] = n_entries
 
-    channel = array('I', [0]*n_channels) # unsigned int
-    out_tree.Branch('channel', channel, 'channel[%i]/i' % n_channels)
+    # estimate run time by subtracting last time stamp from first time stamp
+    run_time = array('d', [0]) # double
+    out_tree.Branch('run_time', run_time, 'run_time/D')
+    run_time[0] = (tree.GetMaximum("time_stampDouble") -
+        tree.GetMinimum("time_stampDouble"))/sampling_freq_Hz
+    print "run time: %.2f seconds" % run_time[0]
+
+    channel = array('I', [0]*n_channels_in_event) # unsigned int
+    out_tree.Branch('channel', channel, 'channel[%i]/i' % n_channels_in_event)
 
     trigger_time = array('d', [0.0]) # double
     out_tree.Branch('trigger_time', trigger_time, 'trigger_time/D')
 
     # estimate trigger time, in microseconds
     trigger_hist = TH1D("trigger_hist","",5000,0,5000)
-    selection = "channel==8 && wfm_max - wfm8[0] > 20"
+    selection = "channel==%i && wfm_max - wfm%i[0] > 20" % (pmt_channel, pmt_channel)
     if is_tier1:
-        selection = "channel==8 && wfm_max - wfm[0] > 20"
+        selection = "channel==%i && wfm_max - wfm[0] > 20" % pmt_channel
         
     n_trigger_entries = tree.Draw(
         "wfm_max_time >> trigger_hist",
@@ -162,65 +182,90 @@ def process_file(filename):
         "goff"
     )
     if n_trigger_entries > 0:
-        trigger_time[0] = (trigger_hist.GetMaximumBin() - 22)*40.0/1e3
+        trigger_time[0] = (trigger_hist.GetMaximumBin() - 22)/sampling_freq_Hz*1e6
         print "trigger time is approximately %.3f microseconds" % trigger_time[0]
     else:
         print "--> Not enough PMT entries to determine trigger time"
+
+    if trigger_time[0] < 10:
+        "--> forcing trigger time to 200 samples = 8 microseconds (ok for 5th LXe)"
+        trigger_time[0] = 200/sampling_freq_Hz*1e6
 
     # store some processing parameters:
     n_baseline_samples = array('I', [0]) # double
     out_tree.Branch('n_baseline_samples', n_baseline_samples, 'n_baseline_samples/i')
     n_baseline_samples[0] = n_baseline_samples_to_use
 
-    decay_time = array('d', [0]*n_channels) # double
-    out_tree.Branch('decay_time', decay_time, 'decay_time[%i]/D' % n_channels)
+    decay_time = array('d', [0]*n_channels_in_event) # double
+    out_tree.Branch('decay_time', decay_time, 'decay_time[%i]/D' % n_channels_in_event)
 
     decay_time_values = struck_analysis_parameters.decay_time_values
-    decay_time_values[8] = 1e9*CLHEP.microsecond
+    decay_time_values[pmt_channel] = 1e9*CLHEP.microsecond
 
     # energy calibration, keV:
-    calibration = array('d', [0.0]*n_channels) # double
-    out_tree.Branch('calibration', calibration, 'calibration[%i]/D' % n_channels)
+    calibration = array('d', [0.0]*n_channels_in_event) # double
+    out_tree.Branch('calibration', calibration, 'calibration[%i]/D' % n_channels_in_event)
 
-    rise_time_start = array('d', [0]*n_channels) # double
-    out_tree.Branch('rise_time_start', rise_time_start, 'rise_time_start[%i]/D' % n_channels)
+    rise_time_stop10 = array('d', [0]*n_channels_in_event) # double
+    out_tree.Branch('rise_time_stop10', rise_time_stop10, 'rise_time_stop10[%i]/D' % n_channels_in_event)
 
-    rise_time_stop50 = array('d', [0]*n_channels) # double
-    out_tree.Branch('rise_time_stop50', rise_time_stop50, 'rise_time_stop50[%i]/D' % n_channels)
+    rise_time_stop20 = array('d', [0]*n_channels_in_event) # double
+    out_tree.Branch('rise_time_stop20', rise_time_stop20, 'rise_time_stop20[%i]/D' % n_channels_in_event)
 
-    rise_time_stop90 = array('d', [0]*n_channels) # double
-    out_tree.Branch('rise_time_stop90', rise_time_stop90, 'rise_time_stop90[%i]/D' % n_channels)
+    rise_time_stop30 = array('d', [0]*n_channels_in_event) # double
+    out_tree.Branch('rise_time_stop30', rise_time_stop30, 'rise_time_stop30[%i]/D' % n_channels_in_event)
 
-    rise_time_stop95 = array('d', [0]*n_channels) # double
-    out_tree.Branch('rise_time_stop95', rise_time_stop95, 'rise_time_stop95[%i]/D' % n_channels)
+    rise_time_stop40 = array('d', [0]*n_channels_in_event) # double
+    out_tree.Branch('rise_time_stop40', rise_time_stop40, 'rise_time_stop40[%i]/D' % n_channels_in_event)
 
-    rise_time_stop99 = array('d', [0]*n_channels) # double
-    out_tree.Branch('rise_time_stop99', rise_time_stop99, 'rise_time_stop99[%i]/D' % n_channels)
+    rise_time_stop50 = array('d', [0]*n_channels_in_event) # double
+    out_tree.Branch('rise_time_stop50', rise_time_stop50, 'rise_time_stop50[%i]/D' % n_channels_in_event)
 
-    smoothed_max = array('d', [0]*n_channels) # double
-    out_tree.Branch('smoothed_max', smoothed_max, 'smoothed_max[%i]/D' % n_channels)
+    rise_time_stop60 = array('d', [0]*n_channels_in_event) # double
+    out_tree.Branch('rise_time_stop60', rise_time_stop60, 'rise_time_stop60[%i]/D' % n_channels_in_event)
 
-    wfm_max = array('d', [0]*n_channels) # double
-    out_tree.Branch('wfm_max', wfm_max, 'wfm_max[%i]/D' % n_channels)
+    rise_time_stop70 = array('d', [0]*n_channels_in_event) # double
+    out_tree.Branch('rise_time_stop70', rise_time_stop70, 'rise_time_stop70[%i]/D' % n_channels_in_event)
 
-    wfm_max_time = array('d', [0]*n_channels) # double
-    out_tree.Branch('wfm_max_time', wfm_max_time, 'wfm_max_time[%i]/D' % n_channels)
+    rise_time_stop80 = array('d', [0]*n_channels_in_event) # double
+    out_tree.Branch('rise_time_stop80', rise_time_stop80, 'rise_time_stop80[%i]/D' % n_channels_in_event)
 
-    wfm_min = array('d', [0]*n_channels) # double
-    out_tree.Branch('wfm_min', wfm_min, 'wfm_min[%i]/D' % n_channels)
+    rise_time_stop90 = array('d', [0]*n_channels_in_event) # double
+    out_tree.Branch('rise_time_stop90', rise_time_stop90, 'rise_time_stop90[%i]/D' % n_channels_in_event)
 
-    baseline_mean = array('d', [0]*n_channels) # double
-    out_tree.Branch('baseline_mean', baseline_mean, 'baseline_mean[%i]/D' % n_channels)
+    rise_time_stop95 = array('d', [0]*n_channels_in_event) # double
+    out_tree.Branch('rise_time_stop95', rise_time_stop95, 'rise_time_stop95[%i]/D' % n_channels_in_event)
 
-    baseline_rms = array('d', [0]*n_channels) # double
-    out_tree.Branch('baseline_rms', baseline_rms, 'baseline_rms[%i]/D' % n_channels)
+    rise_time_stop99 = array('d', [0]*n_channels_in_event) # double
+    out_tree.Branch('rise_time_stop99', rise_time_stop99, 'rise_time_stop99[%i]/D' % n_channels_in_event)
+
+    smoothed_max = array('d', [0]*n_channels_in_event) # double
+    out_tree.Branch('smoothed_max', smoothed_max, 'smoothed_max[%i]/D' % n_channels_in_event)
+
+    wfm_length = array('I', [0]*n_channels_used) # unsigned int
+    out_tree.Branch('wfm_length', wfm_length, 'wfm_length[%i]/i' % n_channels_used)
+
+    wfm_max = array('d', [0]*n_channels_in_event) # double
+    out_tree.Branch('wfm_max', wfm_max, 'wfm_max[%i]/D' % n_channels_in_event)
+
+    wfm_max_time = array('d', [0]*n_channels_in_event) # double
+    out_tree.Branch('wfm_max_time', wfm_max_time, 'wfm_max_time[%i]/D' % n_channels_in_event)
+
+    wfm_min = array('d', [0]*n_channels_in_event) # double
+    out_tree.Branch('wfm_min', wfm_min, 'wfm_min[%i]/D' % n_channels_in_event)
+
+    baseline_mean = array('d', [0]*n_channels_in_event) # double
+    out_tree.Branch('baseline_mean', baseline_mean, 'baseline_mean[%i]/D' % n_channels_in_event)
+
+    baseline_rms = array('d', [0]*n_channels_in_event) # double
+    out_tree.Branch('baseline_rms', baseline_rms, 'baseline_rms[%i]/D' % n_channels_in_event)
 
     # some file-averaged parameters
-    baseline_mean_file = array('d', [0]*6) # double
-    out_tree.Branch('baseline_mean_file', baseline_mean_file, 'baseline_mean_file[%i]/D' % 6)
+    baseline_mean_file = array('d', [0]*n_channels_used) # double
+    out_tree.Branch('baseline_mean_file', baseline_mean_file, 'baseline_mean_file[%i]/D' % n_channels_used)
 
-    baseline_rms_file = array('d', [0]*6) # double
-    out_tree.Branch('baseline_rms_file', baseline_rms_file, 'baseline_rms_file[%i]/D' % 6)
+    baseline_rms_file = array('d', [0]*n_channels_used) # double
+    out_tree.Branch('baseline_rms_file', baseline_rms_file, 'baseline_rms_file[%i]/D' % n_channels_used)
 
     # make a hist for calculating some averages
     hist = TH1D("hist","",100, 0, pow(2,14))
@@ -285,17 +330,30 @@ def process_file(filename):
 
 
         if is_amplified[i] == 0:
-            if i_channel != 8:
+            if i_channel != pmt_channel:
                 calibration_values[i_channel] *= 4.0
                 print "\t multiplying calibration by 4"
                 print "\t channel %i is unamplified" % i_channel
         print "\t channel %i calibration: %.4e" % (i_channel, calibration_values[i_channel])
 
+    # PMT threshold
+    pmt_threshold = array('d', [0]) # double
+    out_tree.Branch('pmt_threshold', pmt_threshold, 'pmt_threshold/D')
+
+    # calculate PMT threshold...
+    draw_command = "wfm_max-wfm[0] >> hist"
+    if not is_tier1:
+        draw_command = "wfm_max-wfm%i[0] >> hist" % pmt_channel
+
+    tree.Draw(draw_command,"channel==%i" % pmt_channel,"goff")
+    pmt_threshold[0] = hist.GetBinLowEdge(hist.FindFirstBinAbove(0))*calibration_values[pmt_channel]
+    print "pmt_threshold:", pmt_threshold[0]
+
     # energy & rms before any processing
-    energy = array('d', [0]*n_channels) # double
-    out_tree.Branch('energy', energy, 'energy[%i]/D' % n_channels)
-    energy_rms = array('d', [0]*n_channels) # double
-    out_tree.Branch('energy_rms', energy_rms, 'energy_rms[%i]/D' % n_channels)
+    energy = array('d', [0]*n_channels_in_event) # double
+    out_tree.Branch('energy', energy, 'energy[%i]/D' % n_channels_in_event)
+    energy_rms = array('d', [0]*n_channels_in_event) # double
+    out_tree.Branch('energy_rms', energy_rms, 'energy_rms[%i]/D' % n_channels_in_event)
 
     chargeEnergy = array('d', [0.0]) # double
     out_tree.Branch('chargeEnergy', chargeEnergy, 'chargeEnergy/D')
@@ -304,24 +362,30 @@ def process_file(filename):
     out_tree.Branch('lightEnergy', lightEnergy, 'lightEnergy/D')
 
     # energy & rms before processing, using 2x sample length
-    energy1 = array('d', [0]*n_channels) # double
-    out_tree.Branch('energy1', energy1, 'energy1[%i]/D' % n_channels)
-    energy_rms1 = array('d', [0]*n_channels) # double
-    out_tree.Branch('energy_rms1', energy_rms1, 'energy_rms1[%i]/D' % n_channels)
+    energy1 = array('d', [0]*n_channels_in_event) # double
+    out_tree.Branch('energy1', energy1, 'energy1[%i]/D' % n_channels_in_event)
+    energy_rms1 = array('d', [0]*n_channels_in_event) # double
+    out_tree.Branch('energy_rms1', energy_rms1, 'energy_rms1[%i]/D' % n_channels_in_event)
 
     # energy & rms after PZ
-    energy_pz = array('d', [0]*n_channels) # double
-    out_tree.Branch('energy_pz', energy_pz, 'energy_pz[%i]/D' % n_channels)
-    energy_rms_pz = array('d', [0]*n_channels) # double
-    out_tree.Branch('energy_rms_pz', energy_rms_pz, 'energy_rms_pz[%i]/D' % n_channels)
+    energy_pz = array('d', [0]*n_channels_in_event) # double
+    out_tree.Branch('energy_pz', energy_pz, 'energy_pz[%i]/D' % n_channels_in_event)
+    energy_rms_pz = array('d', [0]*n_channels_in_event) # double
+    out_tree.Branch('energy_rms_pz', energy_rms_pz, 'energy_rms_pz[%i]/D' % n_channels_in_event)
 
     # energy & rms after PZ, using 2x sample length
-    energy1_pz = array('d', [0]*n_channels) # double
-    out_tree.Branch('energy1_pz', energy1_pz, 'energy1_pz[%i]/D' % n_channels)
-    energy_rms1_pz = array('d', [0]*n_channels) # double
-    out_tree.Branch('energy_rms1_pz', energy_rms1_pz, 'energy_rms1_pz[%i]/D' % n_channels)
+    energy1_pz = array('d', [0]*n_channels_in_event) # double
+    out_tree.Branch('energy1_pz', energy1_pz, 'energy1_pz[%i]/D' % n_channels_in_event)
+    energy_rms1_pz = array('d', [0]*n_channels_in_event) # double
+    out_tree.Branch('energy_rms1_pz', energy_rms1_pz, 'energy_rms1_pz[%i]/D' % n_channels_in_event)
+    
+    # save slope of linear fit after PZ correction:
+    pz_p1 = array('d', [0]*n_channels_in_event) # double
+    out_tree.Branch('pz_p1', pz_p1, 'pz_p1[%i]/D' % n_channels_in_event)
+    pz_p1_err = array('d', [0]*n_channels_in_event) # double
+    out_tree.Branch('pz_p1_err', pz_p1_err, 'pz_p1_err[%i]/D' % n_channels_in_event)
 
-    fname = TObjString(filename)
+    fname = TObjString(os.path.abspath(filename))
     out_tree.Branch("filename",fname)
 
     start_time = time.clock()
@@ -347,7 +411,7 @@ def process_file(filename):
         chargeEnergy[0] = 0.0
         lightEnergy[0] = 0.0
 
-        for i in xrange(n_channels):
+        for i in xrange(n_channels_in_event):
 
             if is_tier1:
                 wfm = tree.wfm
@@ -370,17 +434,17 @@ def process_file(filename):
                     wfm = tree.wfm8
                 wfm_max_time[i] = tree.wfm_max_time[i]
 
-            wfm_length = len(wfm)
+            wfm_length[i] = len(wfm)
 
 
-            exo_wfm = EXODoubleWaveform(array('d',wfm), wfm_length)
+            exo_wfm = EXODoubleWaveform(array('d',wfm), wfm_length[i])
             wfm_max[i] = exo_wfm.GetMaxValue()
             wfm_min[i] = exo_wfm.GetMinValue()
 
-            new_wfm = EXODoubleWaveform(array('d',wfm), wfm_length)
-            energy_wfm = EXODoubleWaveform(array('d',wfm), wfm_length)
+            new_wfm = EXODoubleWaveform(array('d',wfm), wfm_length[i])
+            energy_wfm = EXODoubleWaveform(array('d',wfm), wfm_length[i])
 
-            exo_wfm.SetSamplingFreq(25.0e6/CLHEP.second)
+            exo_wfm.SetSamplingFreq(sampling_freq_Hz/CLHEP.second)
             #print exo_wfm.GetSamplingFreq()
             period =  exo_wfm.GetSamplingPeriod()
             
@@ -405,7 +469,7 @@ def process_file(filename):
             # build sum waveform from calibrated waveforms
             # FIXME -- need to finish sum_wfm work and extract parameters from
             # the sum wfm
-            if channel[i] != 8:
+            if channel[i] != pmt_channel:
                 if not gROOT.IsBatch():
                     print "adding wfm from ch %i" % channel[i]
                 temp_wfm = EXODoubleWaveform(exo_wfm)
@@ -417,12 +481,12 @@ def process_file(filename):
                     exo_sum_wfm += temp_wfm
 
             # measure energy before PZ correction
-            baseline_remover.SetStartSample(wfm_length - n_baseline_samples[0] - 1)
+            baseline_remover.SetStartSample(wfm_length[i] - n_baseline_samples[0] - 1)
             baseline_remover.Transform(exo_wfm, energy_wfm)
 
             energy[i] = baseline_remover.GetBaselineMean()*calibration[i]
             energy_rms[i] = baseline_remover.GetBaselineRMS()*calibration[i]
-            if channel[i] == 8:
+            if channel[i] == pmt_channel:
                 energy[i] = exo_wfm.GetMaxValue()*calibration_values[channel[i]]
                 lightEnergy[0] = energy[i]
             else:
@@ -436,7 +500,8 @@ def process_file(filename):
                 val = raw_input("sum wfm")
 
 
-            if do_debug:
+            #if do_debug:
+            if False:
                 print "energy measurement with %i samples: %.2f" % (
                     n_baseline_samples[0], energy[i])
                 energy_wfm.GimmeHist().Draw()
@@ -447,12 +512,13 @@ def process_file(filename):
             baseline_remover.SetBaselineSamples(2*n_baseline_samples[0])
             baseline_remover.SetStartSample(0)
             baseline_remover.Transform(exo_wfm)
-            baseline_remover.SetStartSample(wfm_length - 2*n_baseline_samples[0] - 1)
+            baseline_remover.SetStartSample(wfm_length[i] - 2*n_baseline_samples[0] - 1)
             baseline_remover.Transform(exo_wfm,energy_wfm)
             energy1[i] = baseline_remover.GetBaselineMean()*calibration[i]
             energy_rms1[i] = baseline_remover.GetBaselineRMS()*calibration[i]
 
-            if do_debug:
+            #if do_debug:
+            if False:
                 print "energy measurement with %i samples: %.2f" % (
                     2*n_baseline_samples[0], energy1[i])
                 energy_wfm.GimmeHist().Draw()
@@ -468,15 +534,34 @@ def process_file(filename):
 
             # measure energy after PZ correction
             baseline_remover.SetBaselineSamples(n_baseline_samples[0])
-            baseline_remover.SetStartSample(wfm_length - n_baseline_samples[0] - 1)
+            baseline_remover.SetStartSample(wfm_length[i] - n_baseline_samples[0] - 1)
             baseline_remover.Transform(energy_wfm)
             energy_pz[i] = baseline_remover.GetBaselineMean()*calibration[i]
             energy_rms_pz[i] = baseline_remover.GetBaselineRMS()*calibration[i]
 
+                
+            # perform a fit to pz-corrected waveform:
+            wfm_hist = energy_wfm.GimmeHist()
+            # wfm times are in ns, wfm hist x-axis is in microseconds:
+            fit_min = (energy_wfm.GetMaxTime()-n_baseline_samples[0]*period)/CLHEP.microsecond # x min
+            fit_max = (energy_wfm.GetMaxTime())/CLHEP.microsecond  # x max
+            #print fit_min, fit_max
+            fit_result = wfm_hist.Fit(
+                "pol1", # fit function
+                "SQ", # fit options: S=save result, Q=quiet mode
+                "L", # graphing options
+                fit_min, # x min
+                fit_max  # x max
+            )
+            pz_p1[i] = fit_result.Get().Parameter(1)
+            pz_p1_err[i] = fit_result.Get().ParError(1)
+
             if do_debug:
                 print "energy measurement after PZ with %i samples: %.2f" % (
                     n_baseline_samples[0], energy_pz[i])
-                energy_wfm.GimmeHist().Draw()
+                print fit_result
+                #print pz_p1[i], pz_p1_err[i]
+                wfm_hist.Draw()
                 canvas.Update()
                 val = raw_input("press enter ")
 
@@ -503,7 +588,7 @@ def process_file(filename):
                 print "PZ transform"
                 val = raw_input("enter to continue")
 
-            baseline_remover.SetStartSample(wfm_length - 2*n_baseline_samples[0] - 1)
+            baseline_remover.SetStartSample(wfm_length[i] - 2*n_baseline_samples[0] - 1)
             baseline_remover.Transform(energy_wfm)
             energy1_pz[i] = baseline_remover.GetBaselineMean()*calibration[i]
             energy_rms1_pz[i] = baseline_remover.GetBaselineRMS()*calibration[i]
@@ -541,15 +626,48 @@ def process_file(filename):
             rise_time_calculator = EXORisetimeCalculation()
             rise_time_calculator.SetPulsePeakHeight(max_val)
 
-            rise_time_calculator.SetInitialScanToPercentage(0.4)
-            rise_time_calculator.SetInitialThresholdPercentage(0.1)
+            rise_time_calculator.SetInitialScanToPercentage(0.05) # must be < smallest final threshold crossing
+            rise_time_calculator.SetInitialThresholdPercentage(0.0)
+
+            rise_time_calculator.SetFinalThresholdPercentage(0.1)
+            if max_val > 0.0: # throws an alert if max_val is 0
+                rise_time_calculator.Transform(exo_wfm, exo_wfm)
+            rise_time_stop10[i] = rise_time_calculator.GetFinalThresholdCrossing()*period/CLHEP.microsecond
+
+            rise_time_calculator.SetFinalThresholdPercentage(0.2)
+            if max_val > 0.0: # throws an alert if max_val is 0
+                rise_time_calculator.Transform(exo_wfm, exo_wfm)
+            rise_time_stop20[i] = rise_time_calculator.GetFinalThresholdCrossing()*period/CLHEP.microsecond
+
+            rise_time_calculator.SetFinalThresholdPercentage(0.3)
+            if max_val > 0.0: # throws an alert if max_val is 0
+                rise_time_calculator.Transform(exo_wfm, exo_wfm)
+            rise_time_stop30[i] = rise_time_calculator.GetFinalThresholdCrossing()*period/CLHEP.microsecond
+
+            rise_time_calculator.SetFinalThresholdPercentage(0.4)
+            if max_val > 0.0: # throws an alert if max_val is 0
+                rise_time_calculator.Transform(exo_wfm, exo_wfm)
+            rise_time_stop40[i] = rise_time_calculator.GetFinalThresholdCrossing()*period/CLHEP.microsecond
+
             rise_time_calculator.SetFinalThresholdPercentage(0.5)
             if max_val > 0.0: # throws an alert if max_val is 0
                 rise_time_calculator.Transform(exo_wfm, exo_wfm)
-                #print rise_time_calculator.GetInitialThresholdCrossing()
-                #print rise_time_calculator.GetFinalThresholdCrossing()
-            rise_time_start[i] = rise_time_calculator.GetInitialThresholdCrossing()*period/CLHEP.microsecond
             rise_time_stop50[i] = rise_time_calculator.GetFinalThresholdCrossing()*period/CLHEP.microsecond
+
+            rise_time_calculator.SetFinalThresholdPercentage(0.6)
+            if max_val > 0.0: # throws an alert if max_val is 0
+                rise_time_calculator.Transform(exo_wfm, exo_wfm)
+            rise_time_stop60[i] = rise_time_calculator.GetFinalThresholdCrossing()*period/CLHEP.microsecond
+
+            rise_time_calculator.SetFinalThresholdPercentage(0.7)
+            if max_val > 0.0: # throws an alert if max_val is 0
+                rise_time_calculator.Transform(exo_wfm, exo_wfm)
+            rise_time_stop70[i] = rise_time_calculator.GetFinalThresholdCrossing()*period/CLHEP.microsecond
+
+            rise_time_calculator.SetFinalThresholdPercentage(0.8)
+            if max_val > 0.0: # throws an alert if max_val is 0
+                rise_time_calculator.Transform(exo_wfm, exo_wfm)
+            rise_time_stop80[i] = rise_time_calculator.GetFinalThresholdCrossing()*period/CLHEP.microsecond
 
             rise_time_calculator.SetFinalThresholdPercentage(0.90)
             if max_val > 0.0: # throws an alert if max_val is 0
@@ -584,18 +702,17 @@ def process_file(filename):
 
             # pause & draw
             #if not gROOT.IsBatch() and channel[i] == 4:
-            #if not gROOT.IsBatch() and smoothed_max[i] > 60 and channel[i] != 8:
+            #if not gROOT.IsBatch() and smoothed_max[i] > 60 and channel[i] != pmt_channel:
             #if not gROOT.IsBatch() and i_entry > 176:
             #if not gROOT.IsBatch():
             if not gROOT.IsBatch() and do_debug:
 
                 print "--> entry %i | channel %i" % (i_entry, channel[i])
-                print "\t n samples: %i" % wfm_length
+                print "\t n samples: %i" % wfm_length[i]
                 print "\t max %.2f" % wfm_max[i]
                 print "\t min %.2f" % wfm_min[i]
                 print "\t smoothed max %.2f" % smoothed_max[i]
                 #print "\t rise time [microsecond]: %.3f" % (rise_time[i])
-                print "\t rise start 10 [microsecond]: %.2f" % (rise_time_start[i])
                 print "\t rise stop 50 [microsecond]: %.2f" % (rise_time_stop50[i])
                 print "\t rise stop 90 [microsecond]: %.2f" % (rise_time_stop90[i])
                 print "\t rise stop 95 [microsecond]: %.2f" % (rise_time_stop95[i])
@@ -628,7 +745,7 @@ def process_file(filename):
                 print val
                 if (val == 'q' or val == 'Q'): sys.exit(1) 
                 if val == 'b': gROOT.SetBatch(True)
-                if val == 'p': canvas.Print("entry_%i_proce_wfm_%s.png" % (i_entry, basename,))
+                if val == 'p': canvas.Print("entry_%i_proc_wfm_%s.png" % (i_entry, basename,))
                 
             # end loop over channels
 
