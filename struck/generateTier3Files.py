@@ -131,7 +131,9 @@ def process_file(filename):
     out_tree = TTree("tree", "%s processed wfm tree" % basename)
     out_tree.SetLineColor(TColor.kBlue)
     out_tree.SetLineWidth(2)
-    out_tree.SetMarkerColor(TColor.kBlue)
+    out_tree.SetMarkerColor(TColor.kRed)
+    out_tree.SetMarkerStyle(8)
+    out_tree.SetMarkerSize(0.5)
 
 
     # Writing trees in pyroot is clunky... need to use python arrays to provide
@@ -150,8 +152,15 @@ def process_file(filename):
     time_stamp = array('L', [0]) # unsigned long
     out_tree.Branch('time_stamp', time_stamp, 'time_stamp/l')
 
+    sampling_frequency_Hz = array('d', [0]) # double
+    out_tree.Branch('sampling_freq_Hz', sampling_frequency_Hz, 'sampling_freq_Hz/D')
+    sampling_frequency_Hz[0] = sampling_freq_Hz
+
     time_stampDouble = array('d', [0]) # double
     out_tree.Branch('time_stampDouble', time_stampDouble, 'time_stampDouble/D')
+
+    time_since_last = array('d', [0]) # double
+    out_tree.Branch('time_since_last', time_since_last, 'time_since_last/D')
 
     n_entries_array = array('I', [0]) # unsigned int
     out_tree.Branch('n_entries', n_entries_array, 'n_entries/i')
@@ -390,6 +399,7 @@ def process_file(filename):
 
     start_time = time.clock()
     last_time = start_time
+    prev_time_stamp = 0.0
 
     if do_debug:
         reporting_period = 1
@@ -408,6 +418,20 @@ def process_file(filename):
                 start_time)
             last_time = now
 
+
+        # set event-level output tree variables
+        event[0] = tree.event
+        time_stamp[0] = tree.time_stamp
+        time_stampDouble[0] = tree.time_stampDouble
+
+        # calculate time since previous event
+        if prev_time_stamp > 0:
+            time_since_last[0] = time_stampDouble[0] - prev_time_stamp
+        else:
+            time_since_last[0] = -1.0
+        prev_time_stamp = time_stampDouble[0]
+
+        # initialize these two to zero
         chargeEnergy[0] = 0.0
         lightEnergy[0] = 0.0
 
@@ -593,6 +617,7 @@ def process_file(filename):
             energy1_pz[i] = baseline_remover.GetBaselineMean()*calibration[i]
             energy_rms1_pz[i] = baseline_remover.GetBaselineRMS()*calibration[i]
 
+
             if do_debug:
                 print "energy measurement after PZ with %i samples: %.2f" % (
                     2*n_baseline_samples[0], energy1_pz[i])
@@ -611,10 +636,6 @@ def process_file(filename):
 
             #pole_zero.Transform(new_wfm, new_wfm) # FIXME -- just for drawing
 
-            # set output tree variables
-            event[0] = tree.event
-            time_stamp[0] = tree.time_stamp
-            time_stampDouble[0] = tree.time_stampDouble
             smoothed_max[i] = new_wfm.GetMaxValue()
 
             # used smoothed max val to calculate rise time
