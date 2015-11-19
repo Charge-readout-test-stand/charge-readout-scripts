@@ -9,11 +9,11 @@ Plot names = DataType_Date_Index*.jpeg
 
 *.dat file columns:
 0: time [seconds]
-1: TC0 [K]
-2: TC1
-3: TC2 
-4: TC3 
-5: TC4
+1: TC0 Cu Bot [K]
+2: TC1 Cell Top
+3: TC2 Cell Mid
+4: TC3 Cell Bot
+5: TC4 Cu Top (control TC)
 6: T_ambient
 7: LN F/T inlet TC [K]
 8: LN F/T outlet TC [K]
@@ -251,6 +251,8 @@ def main(
 ):
     
     # options
+    is_argon = False
+    #is_argon = True
     recent_time_span = 3600.0 # seconds to use for "recent" plots
 
     # print some status info 
@@ -287,8 +289,10 @@ def main(
     # offset, in grams/minute, for the mass flow meter (we can never exactly zero  the mass flow meter, so
     # we compensate for this)
     # compensation from test_20150609_173311.dat
-    mass_flow_rate_offset = 326.33/897.16 
-    #print "mass_flow_rate_offset", mass_flow_rate_offset
+    #mass_flow_rate_offset = 326.33/897.16 
+    #mass_flow_rate_offset = 0.0 
+    mass_flow_rate_offset = 30.0/60.0 + 12.0/16.0/60.0 
+    print "mass_flow_rate_offset: [grams/minute]", mass_flow_rate_offset
 
     
     # construct file names of plots
@@ -362,13 +366,29 @@ def main(
     #print "xenon_density_ratio: ", xenon_density_ratio
 
     xenon_gas_correction_factor = 1.32
+    argon_gas_correction_factor = 1.39
+    argon_density = 1.782 # g/L
     #nitrogen_density = 1.25
+
+    correction_factor = 1.0
+
+    if is_argon:
+        print "This is ARGON!!!"
+        correction_factor = argon_density / xenon_density / xenon_gas_correction_factor * argon_gas_correction_factor
+        xenon_density_ratio = xenon_density_ratio*correction_factor
+        mass_flow_rate_offset *= correction_factor
+
 
     # read values from input file:
     for (i_line, line) in enumerate(testfile):
         split_line = line.split()
         data = []
-        time_stamp = float(split_line[0])
+        try:
+            time_stamp = float(split_line[0])
+        except ValueError:
+            print "====> problem with line %i, skipping rest of lines in file...  !!!" % i_line
+            continue
+
         time_stamps.append(time_stamp)
 
         # handling for changes to LabView...
@@ -634,10 +654,15 @@ def main(
 
       lxe_density = 2.978 # kg/L
       xenon_volume = mass/lxe_density/1e3
+      if is_argon:
+          xenon_volume = mass / argon_density
       plt.figure(3)
       plt.grid(b=True)
-      plt.title('Integrated mass flow (%.1f g of xenon = %.1f L LXe)' %
-      (mass, xenon_volume))
+      title = 'Integrated mass flow (%.1f g of xenon = %.2f L LXe)' % (Vol[last_index], xenon_volume)
+      if is_argon:
+          title = 'Integrated mass flow (%.1f g of argon = %.2f L gAr)' % (Vol[last_index], xenon_volume)
+          
+      plt.title(title)
       uline1 = plt.plot(time_hours[first_index:last_index],
       Vol[first_index:last_index])
       plt.setp(uline1, color = 'b', linewidth = linewidth)
@@ -718,7 +743,7 @@ def main(
       
     if len(mass_flow_rate) > 0:
       plt.figure(7)
-      plt.title('Mass Flow Rate: [g/min] %.2f' % mass_flow_rate[-1])
+      plt.title('Mass Flow Rate: [g/min] %.2f' % mass_flow_rate[last_index])
       plt.grid(b=True)
       mfline1 = plt.plot(time_hours[first_index:last_index],
       mass_flow_rate[first_index:last_index])
