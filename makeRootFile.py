@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-this script converts *.dat files to root files
+this script converts slow controls *.dat files to root files
 
 using TTree:ReadFile()
 https://root.cern.ch/root/html/TTree.html#TTree:ReadFile
@@ -18,6 +18,7 @@ from ROOT import gROOT
 gROOT.SetBatch(True) #run in batch mode
 from ROOT import TTree
 from ROOT import TFile
+from ROOT import TColor
 
 
 def main(filename):
@@ -33,16 +34,35 @@ def main(filename):
 
     # identify the first few columns of variables in the .dat file:
     branchList = [
-      "timeStamp",
-      "tCuBot0",
+      "timeStamp/D",
+      "tCuBot",
       "tCellTop",
       "tCellMid",
       "tCellBot",
       "tCuTop",
       "tAmbient",
-      "pLN",
-      "sLN",
-      "heat",
+      "tLnFtIn",
+      "tLnFtOut",
+      "tXeRecoveryBottle",
+      "T_min_set",
+      "T_max_set",
+      "tXV5",
+      "tReg",
+      "tOmega",
+      "lnValveOpen",
+      "lnEnabled",
+      "heaterOn",
+      "massFlowRateUncorr",
+      "pXenon",
+      "pVacuum",
+      "pCCG",
+      "massLN",
+      "massXe",
+      "capacitance",
+      "T_max_offset",
+      "T_min_offset",
+      "massLnTare",
+      "rmsNoise",
       ]
 
     # ignore the rest of the columns
@@ -67,7 +87,14 @@ def main(filename):
     print "...done"
 
     #tree.Print()
+    tree.SetLineColor(TColor.kBlue)
+    tree.SetLineWidth(2)
+    tree.SetMarkerColor(TColor.kBlue)
+    tree.SetMarkerStyle(8)
+    tree.SetMarkerSize(0.5)
     tree.Write()
+    n_entries = tree.GetEntries()
+    print "%i entries in tree" % n_entries
 
 
     output_file.Close()
