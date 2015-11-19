@@ -251,8 +251,6 @@ def main(
 ):
     
     # options
-    is_argon = False
-    #is_argon = True
     recent_time_span = 3600.0 # seconds to use for "recent" plots
 
     # print some status info 
@@ -371,12 +369,12 @@ def main(
     #nitrogen_density = 1.25
 
     correction_factor = 1.0
+    argon_factor = argon_density / xenon_density / xenon_gas_correction_factor * argon_gas_correction_factor
 
-    if is_argon:
-        print "This is ARGON!!!"
-        correction_factor = argon_density / xenon_density / xenon_gas_correction_factor * argon_gas_correction_factor
-        xenon_density_ratio = xenon_density_ratio*correction_factor
-        mass_flow_rate_offset *= correction_factor
+    #if is_argon:
+    #    print "This is ARGON!!!"
+    #    xenon_density_ratio = xenon_density_ratio*correction_factor
+    #    mass_flow_rate_offset *= argon_factor
 
 
     # read values from input file:
@@ -654,13 +652,10 @@ def main(
 
       lxe_density = 2.978 # kg/L
       xenon_volume = mass/lxe_density/1e3
-      if is_argon:
-          xenon_volume = mass / argon_density
       plt.figure(3)
       plt.grid(b=True)
-      title = 'Integrated mass flow (%.1f g of xenon = %.2f L LXe)' % (Vol[last_index], xenon_volume)
-      if is_argon:
-          title = 'Integrated mass flow (%.1f g of argon = %.2f L gAr)' % (Vol[last_index], xenon_volume)
+      title = 'Integrated mass flow\nxenon: %.1f g = %.2f L LXe' % (Vol[last_index], xenon_volume)
+      title += '  (argon: %.1f g  = %.1f L gAr)' % (Vol[last_index]*argon_factor, mass/argon_density)
           
       plt.title(title)
       uline1 = plt.plot(time_hours[first_index:last_index],
