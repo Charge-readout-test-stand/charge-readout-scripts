@@ -133,7 +133,7 @@ def plot_temp_vs_lmass(filename, title, time_hours, time_stamps, T_ambient, mass
    
 def plot_temperatures(filename, title, time_hours, time_stamps, TC0=None, TC1=None, TC2=None,
     TC3=None, TC4=None, TC15=None, TC10=None, T_ambient=None, T_LN_in=None, T_LN_out=None,
-    T_Xe_bottle=None, T_max_set=None, T_min_set=None, first_index=0, last_index=-1):
+    T_Xe_bottle=None, T_max_set=None, T_min_set=None, T_omega=None,first_index=0, last_index=-1):
 
     """
     This function makes a temperature plot
@@ -176,6 +176,11 @@ def plot_temperatures(filename, title, time_hours, time_stamps, TC0=None, TC1=No
         line5 = plt.plot(time_hours[first_index:last_index],
         TC4[first_index:last_index])
         plt.setp(line5, color = 'k', linewidth = linewidth, label = 'Cu Top (%.1fK = %.1fC)' % (TC4[last_index], TC4[last_index]-kelvin_offset))
+
+    if T_omega and len(T_omega) > 0:
+        line5 = plt.plot(time_hours[first_index:last_index],
+        T_omega[first_index:last_index])
+        plt.setp(line5, color = 'c', linewidth = linewidth, label = 'Cu Top Omega (%.1fK = %.1fC)' % (T_omega[last_index], T_omega[last_index]-kelvin_offset))
 
     if T_ambient and len(T_ambient) > 0:
         line6 = plt.plot(time_hours[first_index:last_index],
@@ -323,6 +328,7 @@ def main(
     TC4 = []
     TC10 = []
     TC15 = []
+    T_omega = []
     T_ambient = []
     T_LN_in = []
     T_LN_out = []
@@ -421,6 +427,7 @@ def main(
         TC3.append(float(split_line[4]))
         TC4.append(float(split_line[5]))
         T_ambient.append(float(split_line[6]))
+        T_omega.append(float(split_line[14]))
 
         # LN TCs added to LabView output 06 Nov 2014
         # LabView modified again 11 Nov 2014
@@ -620,26 +627,26 @@ def main(
     filename = os.path.join(directory, "11-Temp_%s.%s" % (basename, filetype))
     plot_temperatures(filename, 'Temperature', time_hours, time_stamps, TC0,
     TC1, TC2, TC3, TC4, TC15, TC10, T_ambient, T_LN_in, T_LN_out, T_Xe_bottle,
-    T_max_set, T_min_set, first_index, last_index)
+    T_max_set, T_min_set, T_omega, first_index, last_index)
 
     # plot recent temperatures
     filename = os.path.join(directory, "11-Temp-recent_%s.%s" % (basename, filetype)) 
     plot_temperatures(filename, 'Recent Temperature', time_hours,
     time_stamps, TC0, TC1, TC2, TC3, TC4, TC15, TC10, T_ambient, T_LN_in,
     T_LN_out, T_Xe_bottle, T_max_set=T_max_set, T_min_set=T_min_set,
-    first_index=start_index_of_last_hour, last_index=last_index)
+    T_omega=T_omega, first_index=start_index_of_last_hour, last_index=last_index)
 
     # plot LXe cell and Cu plate temperatures
     filename = os.path.join(directory, "01-Temp-cell_%s.%s" % (basename, filetype))
     plot_temperatures(filename, 'LXe cell and Cu plate temperature', time_hours,
     time_stamps, TC0, TC1, TC2, TC3, TC4, T_max_set=T_max_set, T_min_set=T_min_set,
-    first_index=first_index, last_index=last_index)
+    T_omega=T_omega, first_index=first_index, last_index=last_index)
 
     # plot LXe cell and Cu plate recent temperatures
     filename = os.path.join(directory, "01-Temp-cell-recent_%s.%s" % (basename, filetype))
     plot_temperatures(filename, 'Recent LXe cell and Cu plate temperature',
     time_hours,time_stamps, TC0, TC1, TC2, TC3, TC4, T_max_set=T_max_set,
-    T_min_set=T_min_set, first_index=start_index_of_last_hour, last_index=last_index)
+    T_min_set=T_min_set, T_omega=T_omega, first_index=start_index_of_last_hour, last_index=last_index)
     
     #plot Ambient Temperature vs. xenon bottle mass
     #filename = os.path.join(directory, "Ambient_Only_%s.%s" % (basename, filetype))
