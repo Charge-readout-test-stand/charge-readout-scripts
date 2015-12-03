@@ -421,8 +421,14 @@ def process_file(filename):
 
         # set event-level output tree variables
         event[0] = tree.event
-        time_stamp[0] = tree.time_stamp
-        time_stampDouble[0] = tree.time_stampDouble
+
+        if is_tier1:
+            time_stamp[0] = tree.timestamp
+            time_stampDouble[0] = tree.timestampDouble
+            
+        else:
+            time_stamp[0] = tree.time_stamp
+            time_stampDouble[0] = tree.time_stampDouble
 
         # calculate time since previous event
         if prev_time_stamp > 0:
