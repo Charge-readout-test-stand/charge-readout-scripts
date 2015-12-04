@@ -95,10 +95,11 @@ def are_jobs_pending():
     # if jobs are pending (not running yet), we don't want to submit them
     # again... 
 
+    # crummy workaround -- looking at jobs for all users, then grepping for the
+    # known user avoids trouble when the user is running 0 jobs. 
     user = os.environ["USER"]
-    cmd = "bjobs -u %s | grep PEND | wc -l" % user
+    cmd = "bjobs -u all | grep %s | grep PEND | wc -l" % user
     output = commands.getstatusoutput(cmd)
-    #print output
     if int(output[1]) != 0:
         print "--> jobs are pending... wait until they start."
         return 1
