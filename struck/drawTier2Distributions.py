@@ -64,6 +64,14 @@ def process_file(filename):
     n_entries = tree.GetEntries()
     print "%i entries" % n_entries
 
+    # is this was created from tier1, branches like energy are just elements
+    created_from_tier1 = False
+    try:
+        tree.GetEntry(0)
+        tree.energy[1]
+    except TypeError:
+        created_from_tier1 = True
+
     # set up a canvas
     canvas = TCanvas("canvas","")
     canvas.SetLogy(1)
@@ -122,21 +130,23 @@ def process_file(filename):
     #energy[4]>200")
 
     selections = [
-        "lightEnergy>700", # keep the light threshold high (some runs had low thresholds)
+        #"lightEnergy>700", # keep the light threshold high (some runs had low thresholds)
         #"adc_max_time[5]*40.0/1000<10", # light signal is within 10 microseconds of trigger
     ]
 
     for (i, channel) in enumerate(channels):
 
         index = channel
-        if channel == 8: index = 5
+        if channel == 8: index = 6
         print "%i | channel %i | %s " % (i, channel, channel_map[channel])
-        draw_command = "energy[%i]" % index
-        draw_command = "(adc_max_time[%i] - adc_max_time[5])*40.0/1000" % index
+        #draw_command = "energy[%i]" % index
+        draw_command = "energy"
+        #draw_command = "(adc_max_time[%i] - trigger_time)*40.0/1000" % index
         print "\t draw command: %s" % draw_command
 
         extra_selections = [
-            "energy[%i] > 300" % index,
+            "channel==%i" % channel,
+            #"energy[%i] > 300" % index,
             #"(adc_max_time[%i] - adc_max_time[5])*40.0/1000 < 15" % i
         ]
         selection = " && ".join(selections + extra_selections)
