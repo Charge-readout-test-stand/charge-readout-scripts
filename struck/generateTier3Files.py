@@ -38,6 +38,8 @@ hadd -O all_tier3.root tier3*.root
 import os
 import sys
 import time
+from optparse import OptionParser
+
 
 from ROOT import gROOT
 # run in batch mode:
@@ -66,17 +68,34 @@ from array import array
 # definition of calibration constants, decay times, channels
 import struck_analysis_parameters
 
+def create_basename(filename):
+
+    # construct a basename to use as output file name
+    basename = os.path.basename(filename)
+    basename = os.path.splitext(basename)[0]
+    basename = "_".join(basename.split("_")[1:])
+    return basename
+
+def create_outfile_name(filename):
+
+    basename = create_basename(filename)
+    out_filename = "tier3_%s.root" % basename
+    return out_filename
 
 
-def process_file(filename):
+def process_file(filename, verbose=True, do_overwrite=True):
 
     #---------------------------------------------------------------
     # options
     #---------------------------------------------------------------
 
+    #print "verbose:", verbose
+    #print "do_overwrite:", do_overwrite
+    #return # debugging
+
     # whether to run in debug mode (draw wfms):
     do_debug = not gROOT.IsBatch()
-    #do_debug = False
+    do_draw_extra = not gROOT.IsBatch()
 
     reporting_period = 1000
 
@@ -97,10 +116,7 @@ def process_file(filename):
 
     print "processing file: ", filename
 
-    # construct a basename to use as output file name
-    basename = os.path.basename(filename)
-    basename = os.path.splitext(basename)[0]
-    basename = "_".join(basename.split("_")[1:])
+    basename = create_basename(filename)
 
     canvas = TCanvas()
     canvas.SetGrid(1,1)
@@ -112,7 +128,7 @@ def process_file(filename):
         n_entries = tree.GetEntries()
     except AttributeError:
         print "==> problem accessing tree -- skipping this file"
-        return
+        return 0
 
     # decide if this is a tier1 or tier2 file
     is_tier1 = False
@@ -126,7 +142,11 @@ def process_file(filename):
         is_tier1 = True
 
     # open output file and tree
-    out_filename = "tier3_%s.root" % basename
+    out_filename = create_outfile_name(filename)
+    if not do_overwrite:
+        if os.path.isfile(out_filename):
+            print "file exists!"
+            return 0
     out_file = TFile(out_filename, "recreate")
     out_tree = TTree("tree", "%s processed wfm tree" % basename)
     out_tree.SetLineColor(TColor.kBlue)
@@ -282,6 +302,8 @@ def process_file(filename):
     for (i, i_channel) in enumerate(channels):
         print "%i: ch %i" % (i, i_channel)
         selection = "Iteration$<%i && channel==%i" % (n_baseline_samples[0], i_channel)
+
+        if do_debug: continue
             
         # calculate avg baseline:
         draw_command = "wfm >> hist"
@@ -487,6 +509,7 @@ def process_file(filename):
 
             if do_debug:
                 print "channel %i" % channel[i]
+                print wfm_length[i]
                 #if exo_wfm.GetMaxValue() < 50: continue # skip low energy wfms
                 #if i == 5: continue # skip PMT
 
@@ -530,13 +553,13 @@ def process_file(filename):
                 val = raw_input("sum wfm")
 
 
-            #if do_debug:
-            if False:
-                print "energy measurement with %i samples: %.2f" % (
-                    n_baseline_samples[0], energy[i])
-                energy_wfm.GimmeHist().Draw()
-                canvas.Update()
-                val = raw_input("press enter ")
+            if do_debug:
+                if do_draw_extra:
+                    print "energy measurement with %i samples: %.2f" % (
+                        n_baseline_samples[0], energy[i])
+                    energy_wfm.GimmeHist().Draw()
+                    canvas.Update()
+                    val = raw_input("press enter ")
 
             # measure energy before PZ correction, use 2x n_baseline_samples
             baseline_remover.SetBaselineSamples(2*n_baseline_samples[0])
@@ -547,18 +570,23 @@ def process_file(filename):
             energy1[i] = baseline_remover.GetBaselineMean()*calibration[i]
             energy_rms1[i] = baseline_remover.GetBaselineRMS()*calibration[i]
 
-            #if do_debug:
-            if False:
-                print "energy measurement with %i samples: %.2f" % (
-                    2*n_baseline_samples[0], energy1[i])
-                energy_wfm.GimmeHist().Draw()
-                canvas.Update()
-                val = raw_input("press enter ")
+            if do_debug:
+                if do_draw_extra:
+                    print "energy measurement with %i samples: %.2f" % (
+                        2*n_baseline_samples[0], energy1[i])
+                    energy_wfm.GimmeHist().Draw()
+                    canvas.Update()
+                    val = raw_input("press enter ")
 
             # correct for exponential decay
             pole_zero = EXOPoleZeroCorrection()
             
-            decay_time[i] = decay_time_values[channel[i]]
+            try:
+                decay_time[i] = decay_time_values[channel[i]]
+            except KeyError:
+                print "no decay info for channel %i" % channel[i]
+                decay_time[i] = 1e9*CLHEP.microsecond
+
             pole_zero.SetDecayConstant(decay_time[i])
             pole_zero.Transform(exo_wfm,energy_wfm)
 
@@ -583,8 +611,13 @@ def process_file(filename):
                 fit_min, # x min
                 fit_max  # x max
             )
-            pz_p1[i] = fit_result.Get().Parameter(1)
-            pz_p1_err[i] = fit_result.Get().ParError(1)
+            try:
+                pz_p1[i] = fit_result.Get().Parameter(1)
+                pz_p1_err[i] = fit_result.Get().ParError(1)
+            except ReferenceError:
+                # if wfm is zeroes,  fit ptr is null:
+                pz_p1[i] = 0.0
+                pz_p1_err[i] = 0.0
 
             if do_debug:
                 print "energy measurement after PZ with %i samples: %.2f" % (
@@ -786,15 +819,24 @@ def process_file(filename):
 
 if __name__ == "__main__":
 
-    if len(sys.argv) < 2:
+
+    parser = OptionParser()
+    parser.add_option("--no-overwrite", dest="do_overwrite", default=True,
+                      action="store_false", help="whether to overwrite files")
+    parser.add_option("-q", "--quiet",
+                      action="store_false", dest="verbose", default=True,
+                      help="don't print status messages to stdout")
+
+    (options, filenames) = parser.parse_args()
+
+    if len(filenames) < 1:
         print "arguments: [sis root files]"
         sys.exit(1)
 
-    print "%i files to process" % len(sys.argv[1:])
+    print "%i files to process" % len(filenames)
 
-
-    for filename in sys.argv[1:]:
-        process_file(filename)
+    for filename in filenames:
+        process_file(filename, verbose=options.verbose, do_overwrite=options.do_overwrite)
 
 
 
