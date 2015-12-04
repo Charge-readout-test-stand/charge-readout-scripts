@@ -20,28 +20,31 @@ import os
 import sys
 import commands
 
-import buildEventsUsingTriggerInput
+import buildTier2EventsUsingTriggerInput
 
 
-def process_file(filename):
+def process_file(filename, verbose=True):
 
-    print "---> processing file: ", filename
+    if verbose:
+        print "---> processing file: ", filename
 
     do_batch = True
     #do_batch = False
 
-    basename = buildEventsUsingTriggerInput.get_basename(filename)
+    basename = buildTier2EventsUsingTriggerInput.get_basename(filename)
     #print basename
 
     if os.path.isfile("%s.root" % basename):
-        print "--> %s.root already exists!!" % basename
-        return
+        if verbose:
+            print "--> %s.root already exists!!" % basename
+        return 0
 
-    cmd =  '(time buildEventsUsingTriggerInput.py %s ) >& %s.out' % (
+    cmd =  '(time buildEventsUsingTier2TriggerInput.py %s ) >& %s.out' % (
         filename,
         basename,
     )
-    print cmd
+    if verbose:
+        print cmd
 
     # write an executable csh  script
     script = os.fdopen(os.open("%s.csh" % basename, os.O_WRONLY | os.O_CREAT, int("0777", 8)), 'w')
@@ -63,13 +66,26 @@ def process_file(filename):
         # run the script from the command line
         cmd = "./%s.csh " % (basename, )
 
-    print cmd
+    if verbose:
+        print cmd
+
+    #return 1 # debugging
     output = commands.getstatusoutput(cmd)
-    #print output[0]
-    print output[1]
-    #print output
+    if verbose:
+        print output[1]
+    elif output[0] != 0:
+        print output[1]
+
+    return 1
 
 
+
+def main(filenames,verbose=True):
+
+    n_files = 0
+    for filename in filenames:
+        n_files += process_file(filename,verbose)
+    return n_files
 
 
 if __name__ == "__main__":
@@ -78,8 +94,6 @@ if __name__ == "__main__":
         print "arguments: [sis root files]"
         sys.exit(1)
 
+    main(sys.argv[1:])
 
-    for filename in sys.argv[1:]:
-
-        process_file(filename)
 
