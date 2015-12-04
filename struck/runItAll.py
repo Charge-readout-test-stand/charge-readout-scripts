@@ -123,8 +123,9 @@ def process_files():
         submitTier1()
 
     if do_tier2:
-        print "nooooo!!!"
-        #submitTier2()
+        val = raw_input("--> really submit tier2 jobs? (y/n): ")
+        if val == 'y':
+            submitTier2()
 
     if do_tier3_from_tier1:
         submitTier3_from_tier1()
@@ -132,17 +133,12 @@ def process_files():
     if do_tier3_from_tier2:
         submitTier3_from_tier2()
 
-
     
 def main():
-
-    
     process_files()
 
     
 if __name__ == "__main__":
-
-
 
     main()
     #process_files()
