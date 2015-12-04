@@ -7,12 +7,12 @@ assumed to exist:
 * energy
 * nHits
 
-arguments [sis tier 2 root files of events]
+arguments [sis tier 3 root files of events]
 """
 
 import os
 import sys
-import glob
+import math
 
 from ROOT import gROOT
 #gROOT.SetBatch(True)
@@ -28,6 +28,7 @@ from ROOT import gStyle
 from ROOT import TH1D
 from ROOT import TH2D
 
+import struck_analysis_parameters
 
 gROOT.SetStyle("Plain")     
 gStyle.SetOptStat(0)        
@@ -40,23 +41,25 @@ def process_file(filename):
 
     print "processing file: ", filename
 
-    sampling_freq_Hz = 25.0e6
 
+    # options
     min_bin = 0
-    max_bin = 2000
+    max_bin = 3500
+    bin_width = 20
+    n_bins = int(math.floor(max_bin*1.0 / bin_width))
 
-    channels = [
-      0,1,2,3,4,
-      #8, 
+    sampling_freq_Hz = struck_analysis_parameters.sampling_freq_Hz
+    channels = struck_analysis_parameters.channels
+    channel_map = struck_analysis_parameters.channel_map
+
+    colors = [
+        TColor.kBlue, 
+        TColor.kGreen+2, 
+        TColor.kViolet+1,
+        TColor.kRed, 
+        TColor.kOrange+1,
+        TColor.kMagenta,
     ]
-
-    channel_map = {}
-    channel_map[0] = "X26"
-    channel_map[1] = "X27"
-    channel_map[2] = "X29"
-    channel_map[3] = "Y23"
-    channel_map[4] = "Y24"
-    channel_map[8] = "PMT"
 
     # open the root file and grab the tree
     root_file = TFile(filename)
@@ -93,40 +96,23 @@ def process_file(filename):
     legend.SetNColumns(len(channels))
 
 
-    colors = [
-        TColor.kBlue, 
-        TColor.kGreen+2, 
-        TColor.kViolet+1,
-        TColor.kRed, 
-        TColor.kOrange+1,
-    ]
-
-
 
     # set up some placeholder hists for the legend
     hists = []
     for (i, channel) in enumerate(channels):
-        
-        #print i, channel, channel_map[channel]
-        hist = TH1D("hist%i" % channel,"",500,0,2000)
-        try:
-            color = colors[channel]
-        except IndexError:
-            color = TColor.kBlack
-
-        hist.SetLineColor(color)
-        hist.SetFillColor(color)
-        hists.append(hist)
-        legend.AddEntry(hist, channel_map[channel],"f")
-
-
+        pass
+    
     #tree.Draw("energy[4]","lightEnergy>700 && adc_max_time[5]*40.0/1000<10 &&
     #energy[4]>200")
 
     selections = [
         #"lightEnergy>700", # keep the light threshold high (some runs had low thresholds)
         #"adc_max_time[5]*40.0/1000<10", # light signal is within 10 microseconds of trigger
-        "is_amplified",
+        #"is_amplified",
+        #"energy>100",
+        #"energy[5]>15",
+        #"rise_time_stop-trigger_time <15",
+        #"rise_time_stop-trigger_time >5"
     ]
 
     #min_val = tree.GetMinimum("energy")
@@ -138,18 +124,38 @@ def process_file(filename):
     #frame_hist = TH1D("frame_hist","",100,-2,2) # pulser
     #tree.Draw("energy >> frame_hist","channel!=8")
     frame_hist = TH1D("frame_hist","",n_bins,min_bin,max_bin)
-    frame_hist.SetXTitle("Energy")
-    frame_hist.SetYTitle("Counts / %.1f" % frame_hist.GetBinWidth(1))
-    frame_hist.SetMaximum(n_entries)
+    frame_hist.SetLineWidth(2)
+    frame_hist.SetXTitle("Energy [keV]")
+    frame_hist.SetYTitle("Counts / %.1f keV" % frame_hist.GetBinWidth(1))
     frame_hist.SetMinimum(0.1)
-    frame_hist.Draw()
+    tree.Draw("")
+    selection = " && ".join(selections)
+    print "%i entries" % tree.Draw("chargeEnergy >> frame_hist",selection)
 
+    y_max = 0
     for (i, channel) in enumerate(channels):
+
+ 
+        #print i, channel, channel_map[channel]
+        hist = TH1D("hist%i" % channel,"",n_bins,min_bin,max_bin)
+        try:
+            color = colors[channel]
+        except IndexError:
+            color = TColor.kBlack
+
+        hist.SetLineColor(color)
+        hist.SetMarkerStyle(8)
+        hist.SetMarkerSize(1.5)
+        hist.SetMarkerColor(color)
+        hist.SetLineWidth(2)
+        #hist.SetFillColor(color)
+        hists.append(hist)
+        legend.AddEntry(hist, channel_map[channel],"pl")
 
         index = channel
         if channel == 8: index = 5
         print "%i | channel %i | %s " % (i, channel, channel_map[channel])
-        draw_command = "energy"
+        draw_command = "energy >> %s" % hist.GetName()
         #draw_command = "(adc_max_time[%i] - adc_max_time[5])*40.0/1000" % index
         print "\t draw command: %s" % draw_command
 
@@ -173,18 +179,22 @@ def process_file(filename):
             color = TColor.kBlack
         tree.SetLineColor(color)
 
+   
+
         n_entries = tree.Draw(draw_command, selection, options)
+        if y_max < hist.GetMaximum(): y_max = hist.GetMaximum()
         print "\t %i entries" % n_entries
 
     legend.Draw()
+    #frame_hist.SetMaximum(y_max)
     canvas.Update()
 
     val = raw_input("--> enter to continue (q to quit, p to print) ")
 
     if val == 'q': return
-    if val == 'p':
-        canvas.Update()
-        canvas.Print("%s_test.png" % (basename))
+    canvas.Update()
+    canvas.Print("%s_test.png" % (basename))
+    canvas.Print("%s_test.pdf" % (basename))
 
 
 
