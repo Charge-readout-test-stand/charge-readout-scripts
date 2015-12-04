@@ -28,6 +28,7 @@ from ROOT import gStyle
 from ROOT import TH1D
 from ROOT import TH2D
 
+import struck_analysis_parameters
 
 gROOT.SetStyle("Plain")     
 gStyle.SetOptStat(0)        
@@ -42,18 +43,8 @@ def process_file(filename):
 
     sampling_freq_Hz = 25.0e6
 
-    channels = [
-      0,1,2,3,4,
-      8, 
-    ]
-
-    channel_map = {}
-    channel_map[0] = "X26"
-    channel_map[1] = "X27"
-    channel_map[2] = "X29"
-    channel_map[3] = "Y23"
-    channel_map[4] = "Y24"
-    channel_map[8] = "PMT"
+    channels = struck_analysis_parameters.channels
+    channel_map = struck_analysis_parameters.channel_map
 
     basename = os.path.basename(filename)
     basename = os.path.splitext(basename)[0]
@@ -94,6 +85,7 @@ def process_file(filename):
         TColor.kViolet+1,
         TColor.kRed, 
         TColor.kOrange+1,
+        TColor.kMagenta,
     ]
 
 
@@ -136,18 +128,16 @@ def process_file(filename):
 
     for (i, channel) in enumerate(channels):
 
-        index = channel
         if channel == 8: index = 6
         print "%i | channel %i | %s " % (i, channel, channel_map[channel])
-        #draw_command = "energy[%i]" % index
         draw_command = "energy"
-        #draw_command = "(adc_max_time[%i] - trigger_time)*40.0/1000" % index
+        #draw_command = "(adc_max_time - trigger_time)*40.0/1000"
         print "\t draw command: %s" % draw_command
 
         extra_selections = [
             "channel==%i" % channel,
-            #"energy[%i] > 300" % index,
-            #"(adc_max_time[%i] - adc_max_time[5])*40.0/1000 < 15" % i
+            #"energy > 300" % index,
+            #"(adc_max_time - adc_max_time[5])*40.0/1000 < 15"
         ]
         selection = " && ".join(selections + extra_selections)
         print "\t selection: %s" % selection
