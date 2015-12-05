@@ -12,7 +12,7 @@ import os
 import sys
 
 from ROOT import gROOT
-gROOT.SetBatch(True)
+#gROOT.SetBatch(True)
 from ROOT import TTree
 from ROOT import TFile
 from ROOT import TColor
@@ -50,7 +50,7 @@ if __name__ == "__main__":
         TColor.kRed,
         TColor.kGreen+2,
         TColor.kBlue,
-        TColor.kOrange+2,
+        TColor.kOrange+1,
         TColor.kViolet,
     ]
 
@@ -82,6 +82,10 @@ if __name__ == "__main__":
             entry = "befpre Ar, after valve swap"
         if filename == "test_20151130_164223.root":
             entry = "after Ar, after valve swap"
+
+        # xenon purge
+        if filename == "test_20151204_135813.root":
+            entry = "after Xe"
 
         basename = os.path.splitext(filename)[0]
         basename = basename.split("_")[1:]
