@@ -18,6 +18,7 @@ http://glast-ground.slac.stanford.edu/workbook/pages/installingOfflineSW/usingSl
 
 import os
 import sys
+import inspect
 import commands
 
 import buildTier2EventsUsingTriggerInput
@@ -39,7 +40,9 @@ def process_file(filename, verbose=True):
             print "--> %s.root already exists!!" % basename
         return 0
 
-    cmd =  '(time buildEventsUsingTier2TriggerInput.py %s ) >& %s.out' % (
+    script_name = os.path.splitext(inspect.getfile(buildTier2EventsUsingTriggerInput))[0] + ".py"
+    cmd =  '(time %s %s ) >& %s.out' % (
+        script_name,
         filename,
         basename,
     )
