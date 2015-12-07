@@ -154,7 +154,31 @@ def process_file(filename, verbose=True, do_overwrite=True):
     out_tree.SetMarkerColor(TColor.kRed)
     out_tree.SetMarkerStyle(8)
     out_tree.SetMarkerSize(0.5)
+    run_tree = TTree("run_tree", "run-level data")
 
+    
+    # set up some energy spectra hists here:
+    # tried drawing the output tree to these, but kept getting weird errors, so
+    # filling with TTree:Fill() instead
+    energy_hists = {}
+    for channel in channels:
+        
+        n_bins = 2000
+        bin_width = 8 # keV
+
+        hist = TH1D(
+            "hist%i" % channel, 
+            "energy spectrum for channel %i" % channel,
+            n_bins,
+            0,
+            n_bins*bin_width
+        )
+        energy_hists[channel] = hist
+        #hist.SetDirectory(0)
+        hist.SetXTitle("Energy [keV]")
+        hist.SetYTitle("Counts / %i keV / second" % bin_width)
+        hist.SetLineWidth(2)
+        hist.SetLineColor(TColor.kBlue)
 
     # Writing trees in pyroot is clunky... need to use python arrays to provide
     # branch addresses, see:
@@ -184,13 +208,19 @@ def process_file(filename, verbose=True, do_overwrite=True):
 
     n_entries_array = array('I', [0]) # unsigned int
     out_tree.Branch('n_entries', n_entries_array, 'n_entries/i')
+    run_tree.Branch('n_entries', n_entries_array, 'n_entries/i')
     n_entries_array[0] = n_entries
 
     # estimate run time by subtracting last time stamp from first time stamp
     run_time = array('d', [0]) # double
     out_tree.Branch('run_time', run_time, 'run_time/D')
-    run_time[0] = (tree.GetMaximum("time_stampDouble") -
-        tree.GetMinimum("time_stampDouble"))/sampling_freq_Hz
+    run_tree.Branch('run_time', run_time, 'run_time/D')
+    if is_tier1:
+        run_time[0] = (tree.GetMaximum("timestampDouble") -
+            tree.GetMinimum("timestampDouble"))/sampling_freq_Hz
+    else:
+        run_time[0] = (tree.GetMaximum("time_stampDouble") -
+            tree.GetMinimum("time_stampDouble"))/sampling_freq_Hz
     print "run time: %.2f seconds" % run_time[0]
 
     channel = array('I', [0]*n_channels_in_event) # unsigned int
@@ -198,6 +228,7 @@ def process_file(filename, verbose=True, do_overwrite=True):
 
     trigger_time = array('d', [0.0]) # double
     out_tree.Branch('trigger_time', trigger_time, 'trigger_time/D')
+    run_tree.Branch('trigger_time', trigger_time, 'trigger_time/D')
 
     # estimate trigger time, in microseconds
     trigger_hist = TH1D("trigger_hist","",5000,0,5000)
@@ -292,9 +323,11 @@ def process_file(filename, verbose=True, do_overwrite=True):
     # some file-averaged parameters
     baseline_mean_file = array('d', [0]*n_channels_used) # double
     out_tree.Branch('baseline_mean_file', baseline_mean_file, 'baseline_mean_file[%i]/D' % n_channels_used)
+    run_tree.Branch('baseline_mean_file', baseline_mean_file, 'baseline_mean_file[%i]/D' % n_channels_used)
 
     baseline_rms_file = array('d', [0]*n_channels_used) # double
     out_tree.Branch('baseline_rms_file', baseline_rms_file, 'baseline_rms_file[%i]/D' % n_channels_used)
+    run_tree.Branch('baseline_rms_file', baseline_rms_file, 'baseline_rms_file[%i]/D' % n_channels_used)
 
     # make a hist for calculating some averages
     hist = TH1D("hist","",100, 0, pow(2,14))
@@ -370,6 +403,7 @@ def process_file(filename, verbose=True, do_overwrite=True):
     # PMT threshold
     pmt_threshold = array('d', [0]) # double
     out_tree.Branch('pmt_threshold', pmt_threshold, 'pmt_threshold/D')
+    run_tree.Branch('pmt_threshold', pmt_threshold, 'pmt_threshold/D')
 
     # calculate PMT threshold...
     draw_command = "wfm_max-wfm[0] >> hist"
@@ -418,6 +452,7 @@ def process_file(filename, verbose=True, do_overwrite=True):
 
     fname = TObjString(os.path.abspath(filename))
     out_tree.Branch("filename",fname)
+    run_tree.Branch("filename",fname)
 
     start_time = time.clock()
     last_time = start_time
@@ -428,9 +463,15 @@ def process_file(filename, verbose=True, do_overwrite=True):
 
     print "%i entries" % n_entries
 
+
+    run_tree.Fill() # this tree only has one entry with run-level entries
+
     # loop over all entries in tree
     for i_entry in xrange(n_entries):
         tree.GetEntry(i_entry)
+
+
+        #if i_entry > 1000: break # debugging
 
         # print periodic output message
         if i_entry % reporting_period == 0:
@@ -656,6 +697,12 @@ def process_file(filename, verbose=True, do_overwrite=True):
             energy1_pz[i] = baseline_remover.GetBaselineMean()*calibration[i]
             energy_rms1_pz[i] = baseline_remover.GetBaselineRMS()*calibration[i]
 
+            hist = energy_hists[channel[i]]
+            if channel[i] == 8:
+                hist.Fill(energy[i])
+            else:
+                hist.Fill(energy1_pz[i])
+
 
             if do_debug:
                 print "energy measurement after PZ with %i samples: %.2f" % (
@@ -811,10 +858,19 @@ def process_file(filename, verbose=True, do_overwrite=True):
 
         out_tree.Fill()
 
+
+    print "energy histograms:"
+    
+    run_tree.Write()
+    for channel in channels:
+        
+        hist = energy_hists[channel]
+        print "\t channel %i : %i counts" % (channel, hist.GetEntries())
+        hist.Write()
+
     print "done processing"
     print "writing", out_filename
     out_tree.Write()
-    out_file.Close()
 
 
 if __name__ == "__main__":
