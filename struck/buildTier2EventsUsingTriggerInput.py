@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 
 """
+
+FIXME to rely on struck analysis parameters!!!
+
 This script builds events, assuming that the trigger input is used. 
 
 argument(s): [sis tier 1 root file(s)]
@@ -49,6 +52,9 @@ gStyle.SetOptStat(0)
 gStyle.SetPalette(1)        
 gStyle.SetTitleStyle(0)     
 gStyle.SetTitleBorderSize(0)       
+
+import struck_analysis_parameters
+
 
 # a placeholder to get different colors in the legend
 hists = []
@@ -172,8 +178,10 @@ def process_file(filename):
     # keep track of start time, since this script takes forever
     start_time = time.clock()
 
-    freq_Hz = 25.0*1e6 # clock frequency
-    n_channels = 6 # from 5th LXs
+    freq_Hz = struck_analysis_parameters.sampling_freq_Hz
+    #n_channels = 6 # from 5th LXs
+    channels = struck_analysis_parameters.channels
+    n_channels = len(channels)
 
     print "---> processing file: ", filename
     basename = get_basename(filename)
@@ -210,8 +218,11 @@ def process_file(filename):
             except KeyError:
                 entries_of_timestamp[timestamp] = []
             entries_of_timestamp[timestamp].append(i_entry)
-            if len(entries_of_timestamp[timestamp]) > 6:
-                print "WARNING: more than 6 entries with timestamp", timestamp
+            if len(entries_of_timestamp[timestamp]) > len(channels):
+                print "WARNING: more than %i entries with timestamp" % (
+                    len(channels), 
+                    timestamp,
+                )
 
             if False: # debugging
                 channel =  tree.channel
