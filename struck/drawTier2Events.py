@@ -51,16 +51,17 @@ canvas.SetBottomMargin(0.12)
 
 
 def print_tier2_info(tree, energies, sampling_freq_Hz=25.0e6):
+    n_channels = struck_analysis_parameters.n_channels
 
     chargeEnergy = 0.0
-    for energy in energies[:5]:
+    for energy in energies[:-1]:
         chargeEnergy += energy
     print "\t event: %i" % tree.event
     print "\t time stamp: %.2f" % (tree.time_stamp/sampling_freq_Hz)
     print "\t charge energy: %i" % chargeEnergy
-    print "\t light energy: %i" % energies[5]
+    print "\t light energy: %i" % energies[-1]
 
-    for i in xrange(6):
+    for i in xrange(n_channels):
         print "\t ch %i | energy %i | maw max %i | max time [us]: %.2f" % (
             tree.channel[i],
             #tree.energy[i],
@@ -94,6 +95,7 @@ def process_file(filename, n_plots=0):
     calibration_values = struck_analysis_parameters.calibration_values
     channel_map = struck_analysis_parameters.channel_map
     channels = struck_analysis_parameters.channels
+    n_channels = struck_analysis_parameters.n_channels
 
     sampling_freq_Hz = 25.0e6
 
@@ -142,7 +144,7 @@ def process_file(filename, n_plots=0):
         label_size = gStyle.GetLabelSize("Y")
         gStyle.SetLabelSize(label_size*4.0,"Y")
 
-        canvas.Divide(1,6)
+        canvas.Divide(1,n_channels)
 
     channels = struck_analysis_parameters.channels
     channel_map = struck_analysis_parameters.channel_map
@@ -220,7 +222,7 @@ def process_file(filename, n_plots=0):
                 continue
 
             n_above_threshold = 0
-            for i in xrange(5): 
+            for i in xrange(n_channels-1): 
                 if tree.energy[i]*calibration_values[tree.channel[i]] > threshold: 
                     #print "ch %i | E: %.2f " % (
                     #    tree.channel[i],
@@ -238,6 +240,7 @@ def process_file(filename, n_plots=0):
         wfm2_e = 0.0
         wfm3_e = 0.0
         wfm4_e = 0.0
+        wfm5_e = 0.0
         wfm8_e = 0.0
         wfm_length = tree.wfm_length
         for i_sample in xrange(samples_to_avg):
@@ -247,8 +250,9 @@ def process_file(filename, n_plots=0):
             wfm2_e += tree.wfm2[wfm_length - i_sample - 1]- tree.wfm2[i_sample]
             wfm3_e += tree.wfm3[wfm_length - i_sample - 1]- tree.wfm3[i_sample]
             wfm4_e += tree.wfm4[wfm_length - i_sample - 1]- tree.wfm4[i_sample]
+            wfm5_e += tree.wfm5[wfm_length - i_sample - 1]- tree.wfm5[i_sample]
             wfm8_e += tree.wfm8[wfm_length - i_sample - 1]- tree.wfm8[i_sample]
-        energies = [wfm0_e, wfm1_e, wfm2_e, wfm3_e, wfm4_e, wfm8_e]
+        energies = [wfm0_e, wfm1_e, wfm2_e, wfm3_e, wfm4_e, wfm5_e, wfm8_e]
         for i in xrange(len(energies)): energies[i] = energies[i]/samples_to_avg
 
         #print "threshold test..."
@@ -356,7 +360,7 @@ def process_file(filename, n_plots=0):
                 pave_text.AddText("E=%i" % tree.energy[i])
             else:
                 chargeEnergy = 0.0
-                for energy in energies[:5]:
+                for energy in energies[:-1]:
                     chargeEnergy += energy
 
                 pave_text.AddText("page %i, event %i" % (n_plots+1, i_entry))
