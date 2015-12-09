@@ -8,13 +8,14 @@ This script builds events, assuming that the trigger input is used.
 
 argument(s): [sis tier 1 root file(s)]
 
-These are the channels we used for 5th LXe:
+These are the channels we used for 6th LXe:
 
 0: X26
 1: X27
 2: X29
 3: Y23
 4: Y24
+5: X2 with external preamp
 8: PMT
 
 processed 5th LXe files w/o the buffer method. Some runs took a long time :
@@ -100,7 +101,7 @@ def draw_event(tree, i_event, buffer_lengths, n_channels):
     canvas.SetGrid(1,1)
 
     legend = TLegend(0.1, 0.91, 0.9, 0.97)
-    legend.SetNColumns(6)
+    legend.SetNColumns(n_channels)
 
     # find the min and max adc values in this event
     event_max = 0
@@ -252,7 +253,7 @@ def process_file(filename):
         first_channel = tree.channel
         i_entry = 0
         buffer_lengths = []
-        #buffer_starts = {}
+        #buffer_srts = {}
         #buffer_ends = {}
         #prev_channel =-1
         sum_of_previous_buffers = 0
@@ -312,8 +313,8 @@ def process_file(filename):
     entry = array('I', [0]) # unsigned int
     out_tree.Branch('entry', entry, 'entry/i')
  
-    channel = array('I', [0]*6) # unsigned int
-    out_tree.Branch('channel', channel, 'channel[6]/i')
+    channel = array('I', [0]*n_channels) # unsigned int
+    out_tree.Branch('channel', channel, 'channel[%i]/i' % (n_channels))
 
     time_stamp = array('L', [0]) # unsigned long
     out_tree.Branch('time_stamp', time_stamp, 'time_stamp/l')
@@ -330,17 +331,17 @@ def process_file(filename):
     lightEnergy = array('d', [0]) # double
     out_tree.Branch('lightEnergy', lightEnergy, 'lightEnergy/D')
 
-    energy = array('d', [0]*6) # double
-    out_tree.Branch('energy', energy, 'energy[6]/D')
+    energy = array('d', [0]*n_channels) # double
+    out_tree.Branch('energy', energy, 'energy[%i]/D' % (n_channels))
 
-    maw_max = array('I', [0]*6) # unsigned int
-    out_tree.Branch('maw_max', maw_max, 'maw_max[6]/i')
+    maw_max = array('I', [0]*n_channels) # unsigned int
+    out_tree.Branch('maw_max', maw_max, 'maw_max[%i]/i' % (n_channels))
 
-    wfm_max_time = array('I', [0]*6) # unsigned int
-    out_tree.Branch('wfm_max_time', wfm_max_time, 'wfm_max_time[6]/i')
+    wfm_max_time = array('I', [0]*n_channels) # unsigned int
+    out_tree.Branch('wfm_max_time', wfm_max_time, 'wfm_max_time[%i]/i' % (n_channels))
 
-    wfm_max = array('I', [0]*6) # unsigned int
-    out_tree.Branch('wfm_max', wfm_max, 'wfm_max[6]/i')
+    wfm_max = array('I', [0]*n_channels) # unsigned int
+    out_tree.Branch('wfm_max', wfm_max, 'wfm_max[%i]/i' % (n_channels))
 
     wfm_length = array('I', [0]) # unsigned int
     out_tree.Branch('wfm_length', wfm_length, 'wfm_length/i')
@@ -348,7 +349,6 @@ def process_file(filename):
     maw_length = array('I', [0]) # unsigned int
     out_tree.Branch('maw_length', maw_length, 'maw_length/i')
 
-    channels = [0,1,2,3,4,8]
     waveforms = []
     maws = []
 
