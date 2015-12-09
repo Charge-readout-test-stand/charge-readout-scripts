@@ -21,9 +21,9 @@ import generateTier3Files
 #directory = "/nfs/slac/g/exo_data4/users/alexis4/test-stand/2015_12_03_testing"
 directory = os.getcwd()
 
-do_tier1 = True
-do_tier2 = False
-do_tier3_from_tier1 = True
+do_tier1 = False
+do_tier2 = False 
+do_tier3_from_tier1 = True 
 do_tier3_from_tier2 = True
 
 
