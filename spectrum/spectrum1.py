@@ -59,40 +59,71 @@ def process_file(filename):
     tree = root_file.Get("tree")
     tree.SetLineWidth(2)
 
-    fout = TFile("ChargeSpectrum.root", "RECREATE") ## file to save event lists
+    fout = TFile("Eventlists.root", "RECREATE") ## file to save event lists
 
     canvas = TCanvas("canvas","", 1700, 900)
     pad = canvas.cd(1)
     pad.SetGrid(1,1)
-    pad.SetLogy()
 
     tree.Draw(">>elist0") ## elist0: all events
     elist0 = gDirectory.Get("elist0")
 
     ## elist1: at least one channel has negative energy < -50keV
-    for i in xrange(n_chargechannels):
-        tree.Draw(">>+elist1","energy1_pz[%i]<-50" % (i))
+    selection1 = "energy1_pz[0]<-50"
+    for i in range(1, n_chargechannels):
+        selection1 += "||energy1_pz[%i]<-50" % (i)
+    tree.Draw(">>elist1", selection1)
     elist1 = gDirectory.Get("elist1")
 
     ## elist2: at least one channel has drift time < 5us and energy > 100keV
-    for i in xrange(n_chargechannels):
-        tree.Draw(">>+elist2","energy1_pz[%i]>100&&rise_time_stop95[%i]-trigger_time<5" % (i,i))
+    selection2 = "(energy1_pz[0]>100&&rise_time_stop95[0]-trigger_time<5)"
+    for i in range(1, n_chargechannels):
+        selection2 +="||(energy1_pz[%i]>100&&rise_time_stop95[%i]-trigger_time<5)" % (i,i)
+    tree.Draw(">>elist2", selection2)
     elist2 = gDirectory.Get("elist2")
 
     ## elist3: at least one channel has energy > 200 and drift time between 8.5 and 10.0 us, and not meeting any criteria above
-    for i in xrange(n_chargechannels):
-        tree.Draw(">>+elist3","energy1_pz[%i]>200&&rise_time_stop95[%i]-trigger_time>8.5&&rise_time_stop95[%i]-trigger_time<10" % (i,i,i))
+    selection3 = "(energy1_pz[0]>200&&rise_time_stop95[0]-trigger_time>8.5&&rise_time_stop95[0]-trigger_time<10)"
+    for i in range(1, n_chargechannels):
+        selection3 += "||(energy1_pz[%i]>200&&rise_time_stop95[%i]-trigger_time>8.5&&rise_time_stop95[%i]-trigger_time<10)" % (i,i,i)
+    selection3 = "(%s)&&(!(%s))&&(!(%s))" % (selection3, selection1, selection2)
+    tree.Draw(">>elist3", selection3)
     elist3 = gDirectory.Get("elist3")
-    elist3.Subtract(elist1)
-    elist3.Subtract(elist2)
+    elist3.Print()
 
-    tree.Draw("energy1_pz[0]+energy1_pz[1]+energy1_pz[2]+energy1_pz[3]+energy1_pz[4] >> h1(250,0.,2000.)")
+    #tree.Draw("energy1_pz[0]+energy1_pz[1]+energy1_pz[2]+energy1_pz[3]+energy1_pz[4] >> h1(250,0.,2000.)")
+
+    ## drawing histograms
     tree.SetEventList(elist3)
-    tree.Draw("energy1_pz[0]+energy1_pz[1]+energy1_pz[2]+energy1_pz[3]+energy1_pz[4] >> h2(250,0.,2000.)","","SAME")
+    
+    canvas.Clear()
+    pad.SetLogy()
+    tree.Draw("energy1_pz[0]+energy1_pz[1]+energy1_pz[2]+energy1_pz[3]+energy1_pz[4] >> h2(250,0.,2000.)")
+    canvas.Update()
+    canvas.Print("charge.pdf")
+    canvas.Print("charge.png")
+    
+    canvas.Clear()
+    tree.Draw("lightEnergy >> h3(250,0.,1000.)")
+    canvas.Update()
+    canvas.Print("light.pdf")
+    canvas.Print("light.png")
+    
+    canvas.Clear()
+    pad.SetLogy(False)
+    pad.SetLogz()
+    tree.Draw("lightEnergy:energy1_pz[0]+energy1_pz[1]+energy1_pz[2]+energy1_pz[3]+energy1_pz[4] >> h4(250,0.,2000.,250,0.,1000.)","","colz")
+    canvas.Update()
+    canvas.Print("lightvscharge.pdf")
+    canvas.Print("lightvscharge.png")
+
+    tree_selected = tree.CopyTree("")
+    tree_selected.Write()
+
     end_time = time.clock()
     print "processing time = ", end_time, " s" 
 
-    raw_input("Press Enter to continue...")
+    #raw_input("Press Enter to continue...")
 
     '''
     ## Event categories
