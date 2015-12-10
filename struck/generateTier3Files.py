@@ -564,7 +564,7 @@ def process_file(filename, verbose=True, do_overwrite=True):
             # FIXME -- need to finish sum_wfm work and extract parameters from
             # the sum wfm
             if channel[i] != pmt_channel:
-                if not gROOT.IsBatch():
+                if do_debug:
                     print "adding wfm from ch %i" % channel[i]
                 temp_wfm = EXODoubleWaveform(exo_wfm)
                 temp_wfm *= calibration[i]
@@ -587,7 +587,7 @@ def process_file(filename, verbose=True, do_overwrite=True):
                 chargeEnergy[0] += energy[i]
 
 
-            if not gROOT.IsBatch() and i == 4 and chargeEnergy[0] > 100:
+            if do_debug and i == 4 and chargeEnergy[0] > 100:
                 print "chargeEnergy", chargeEnergy[0]
                 exo_sum_wfm.GimmeHist().Draw()
                 canvas.Update()
@@ -723,6 +723,8 @@ def process_file(filename, verbose=True, do_overwrite=True):
             #pole_zero.Transform(new_wfm, new_wfm) # FIXME -- just for drawing
 
             smoothed_max[i] = new_wfm.GetMaxValue()
+            if do_debug:
+                print "smoothed_max", smoothed_max
 
             # used smoothed max val to calculate rise time
             # FIXME -- maybe we should think about this...
@@ -733,50 +735,65 @@ def process_file(filename, verbose=True, do_overwrite=True):
             rise_time_calculator = EXORisetimeCalculation()
             rise_time_calculator.SetPulsePeakHeight(max_val)
 
-            rise_time_calculator.SetInitialScanToPercentage(0.05) # must be < smallest final threshold crossing
-            rise_time_calculator.SetInitialThresholdPercentage(0.0)
-
             rise_time_calculator.SetFinalThresholdPercentage(0.1)
+            rise_time_calculator.SetInitialScanToPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.01) # must be < smallest final threshold crossing
+            rise_time_calculator.SetInitialThresholdPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.02)
             if max_val > 0.0: # throws an alert if max_val is 0
                 rise_time_calculator.Transform(exo_wfm, exo_wfm)
             rise_time_stop10[i] = rise_time_calculator.GetFinalThresholdCrossing()*period/CLHEP.microsecond
 
             rise_time_calculator.SetFinalThresholdPercentage(0.2)
+            rise_time_calculator.SetInitialScanToPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.01) # must be < smallest final threshold crossing
+            rise_time_calculator.SetInitialThresholdPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.02)
             if max_val > 0.0: # throws an alert if max_val is 0
                 rise_time_calculator.Transform(exo_wfm, exo_wfm)
             rise_time_stop20[i] = rise_time_calculator.GetFinalThresholdCrossing()*period/CLHEP.microsecond
 
             rise_time_calculator.SetFinalThresholdPercentage(0.3)
+            rise_time_calculator.SetInitialScanToPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.01) # must be < smallest final threshold crossing
+            rise_time_calculator.SetInitialThresholdPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.02)
             if max_val > 0.0: # throws an alert if max_val is 0
                 rise_time_calculator.Transform(exo_wfm, exo_wfm)
             rise_time_stop30[i] = rise_time_calculator.GetFinalThresholdCrossing()*period/CLHEP.microsecond
 
             rise_time_calculator.SetFinalThresholdPercentage(0.4)
+            rise_time_calculator.SetInitialScanToPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.01) # must be < smallest final threshold crossing
+            rise_time_calculator.SetInitialThresholdPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.02)
             if max_val > 0.0: # throws an alert if max_val is 0
                 rise_time_calculator.Transform(exo_wfm, exo_wfm)
             rise_time_stop40[i] = rise_time_calculator.GetFinalThresholdCrossing()*period/CLHEP.microsecond
 
             rise_time_calculator.SetFinalThresholdPercentage(0.5)
+            rise_time_calculator.SetInitialScanToPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.01) # must be < smallest final threshold crossing
+            rise_time_calculator.SetInitialThresholdPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.02)
             if max_val > 0.0: # throws an alert if max_val is 0
                 rise_time_calculator.Transform(exo_wfm, exo_wfm)
             rise_time_stop50[i] = rise_time_calculator.GetFinalThresholdCrossing()*period/CLHEP.microsecond
 
             rise_time_calculator.SetFinalThresholdPercentage(0.6)
+            rise_time_calculator.SetInitialScanToPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.01) # must be < smallest final threshold crossing
+            rise_time_calculator.SetInitialThresholdPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.02)
             if max_val > 0.0: # throws an alert if max_val is 0
                 rise_time_calculator.Transform(exo_wfm, exo_wfm)
             rise_time_stop60[i] = rise_time_calculator.GetFinalThresholdCrossing()*period/CLHEP.microsecond
 
             rise_time_calculator.SetFinalThresholdPercentage(0.7)
+            rise_time_calculator.SetInitialScanToPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.01) # must be < smallest final threshold crossing
+            rise_time_calculator.SetInitialThresholdPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.02)
             if max_val > 0.0: # throws an alert if max_val is 0
                 rise_time_calculator.Transform(exo_wfm, exo_wfm)
             rise_time_stop70[i] = rise_time_calculator.GetFinalThresholdCrossing()*period/CLHEP.microsecond
 
             rise_time_calculator.SetFinalThresholdPercentage(0.8)
+            rise_time_calculator.SetInitialScanToPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.01) # must be < smallest final threshold crossing
+            rise_time_calculator.SetInitialThresholdPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.02)
             if max_val > 0.0: # throws an alert if max_val is 0
                 rise_time_calculator.Transform(exo_wfm, exo_wfm)
             rise_time_stop80[i] = rise_time_calculator.GetFinalThresholdCrossing()*period/CLHEP.microsecond
 
             rise_time_calculator.SetFinalThresholdPercentage(0.90)
+            rise_time_calculator.SetInitialScanToPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.01) # must be < smallest final threshold crossing
+            rise_time_calculator.SetInitialThresholdPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.02)
             if max_val > 0.0: # throws an alert if max_val is 0
                 rise_time_calculator.Transform(exo_wfm, exo_wfm)
                 #print rise_time_calculator.GetInitialThresholdCrossing()
@@ -785,6 +802,8 @@ def process_file(filename, verbose=True, do_overwrite=True):
             #rise_time[i] = rise_time_calculator.GetRiseTime()/CLHEP.microsecond
 
             rise_time_calculator.SetFinalThresholdPercentage(0.95)
+            rise_time_calculator.SetInitialScanToPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.01) # must be < smallest final threshold crossing
+            rise_time_calculator.SetInitialThresholdPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.02)
             if max_val > 0.0: # throws an alert if max_val is 0
                 rise_time_calculator.Transform(exo_wfm, exo_wfm)
                 #print rise_time_calculator.GetInitialThresholdCrossing()
@@ -792,6 +811,8 @@ def process_file(filename, verbose=True, do_overwrite=True):
             rise_time_stop95[i] = rise_time_calculator.GetFinalThresholdCrossing()*period/CLHEP.microsecond
 
             rise_time_calculator.SetFinalThresholdPercentage(0.99)
+            rise_time_calculator.SetInitialScanToPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.01) # must be < smallest final threshold crossing
+            rise_time_calculator.SetInitialThresholdPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.02)
             if max_val > 0.0: # throws an alert if max_val is 0
                 rise_time_calculator.Transform(exo_wfm, exo_wfm)
                 #print rise_time_calculator.GetInitialThresholdCrossing()
