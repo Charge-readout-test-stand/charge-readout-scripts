@@ -15,6 +15,7 @@ python /path/to/this/script /path/to/tier3_root_file
 import os
 import sys
 import glob
+import time
 
 from ROOT import gROOT
 #gROOT.SetBatch(True)
@@ -79,8 +80,24 @@ def process_file(filename):
     trigger_time_0 = tree.trigger_time
 
     events = 0
-    
-    for i_entry in xrange(tree.GetEntries()):
+    reporting_period = 10000
+    now = time.clock()
+    start_time = now
+    last_time = now
+    n_events = tree.GetEntries()
+    for i_entry in xrange(n_events):
+        if i_entry % reporting_period == 0:
+            now = time.clock()
+            print "==> event %i of %i (%.2f percent, %i events in %.1f seconds, %.2f seconds elapsed)" % (
+                i_entry,
+                n_events, 
+                100.0*i_entry/n_events,
+                reporting_period,
+                now - last_time,
+                now - start_time,
+            )
+            last_time = now
+
         tree.GetEntry(i_entry)
 
         energy = 0
@@ -170,8 +187,9 @@ def process_file(filename):
 
     legend.Draw()
     canvas.Update()
-    raw_input("Press Enter to continue...")
+    #raw_input("Press Enter to continue...")
     canvas.Print("ChargeSpectrum.png")
+    canvas.Print("ChargeSpectrum.pdf")
 
     ## write histograms to file
     hist_charge0.Write()
