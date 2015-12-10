@@ -28,6 +28,7 @@ from ROOT import TPad
 from ROOT import TLegend
 from ROOT import TPaveText
 from ROOT import gSystem
+from ROOT import gDirectory
 from ROOT import gStyle
 from ROOT import TGraph
 from ROOT import TMath
@@ -41,6 +42,7 @@ gStyle.SetTitleStyle(0)
 gStyle.SetTitleBorderSize(0)
 
 import struck_analysis_parameters
+n_chargechannels = struck_analysis_parameters.n_chargechannels
 
 gSystem.Load("$EXOLIB/lib/libEXOUtilities")
 from ROOT import CLHEP
@@ -48,6 +50,7 @@ from ROOT import CLHEP
 def process_file(filename):
 
     print "processing file: ", filename
+    start_time = time.clock()
 
     basename = os.path.basename(filename)
     basename = os.path.splitext(basename)[0]
@@ -58,13 +61,38 @@ def process_file(filename):
 
     fout = TFile("ChargeSpectrum.root", "RECREATE") ## file to save event lists
 
-    #canvas = TCanvas("canvas","", 1700, 900)
+    canvas = TCanvas("canvas","", 1700, 900)
+    pad = canvas.cd(1)
+    pad.SetGrid(1,1)
+    pad.SetLogy()
 
     tree.Draw(">>elist0") ## elist0: all events
+    elist0 = gDirectory.Get("elist0")
 
-    elist1 = TEventList()
-    for i in xrange():
-        tree.Draw(">>elist1","energy1_pz[%i]")
+    ## elist1: at least one channel has negative energy < -50keV
+    for i in xrange(n_chargechannels):
+        tree.Draw(">>+elist1","energy1_pz[%i]<-50" % (i))
+    elist1 = gDirectory.Get("elist1")
+
+    ## elist2: at least one channel has drift time < 5us and energy > 100keV
+    for i in xrange(n_chargechannels):
+        tree.Draw(">>+elist2","energy1_pz[%i]>100&&rise_time_stop95[%i]-trigger_time<5" % (i,i))
+    elist2 = gDirectory.Get("elist2")
+
+    ## elist3: at least one channel has energy > 200 and drift time between 8.5 and 10.0 us, and not meeting any criteria above
+    for i in xrange(n_chargechannels):
+        tree.Draw(">>+elist3","energy1_pz[%i]>200&&rise_time_stop95[%i]-trigger_time>8.5&&rise_time_stop95[%i]-trigger_time<10" % (i,i,i))
+    elist3 = gDirectory.Get("elist3")
+    elist3.Subtract(elist1)
+    elist3.Subtract(elist2)
+
+    tree.Draw("energy1_pz[0]+energy1_pz[1]+energy1_pz[2]+energy1_pz[3]+energy1_pz[4] >> h1(250,0.,2000.)")
+    tree.SetEventList(elist3)
+    tree.Draw("energy1_pz[0]+energy1_pz[1]+energy1_pz[2]+energy1_pz[3]+energy1_pz[4] >> h2(250,0.,2000.)","","SAME")
+    end_time = time.clock()
+    print "processing time = ", end_time, " s" 
+
+    raw_input("Press Enter to continue...")
 
     '''
     ## Event categories
@@ -211,6 +239,11 @@ def process_file(filename):
     hist_charge5.Write()
     '''
     
+    ## write event lists to file
+    elist1.Write()
+    elist2.Write()
+    elist3.Write()
+
     root_file.Close()
     fout.Close()
 
