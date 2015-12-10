@@ -123,7 +123,7 @@ def draw_event(tree, i_event, buffer_lengths, n_channels):
     TColor.kOrange, TColor.kBlack] 
 
     # loop over all tree entries for this timestamp
-    for i in xrange(5):
+    for i in xrange(n_channels-1):
         i_entry =get_entry_number(i_event, buffer_lengths, i, n_channels)
         tree.GetEntry(i_entry)
         channel = tree.channel

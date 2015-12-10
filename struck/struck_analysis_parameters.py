@@ -35,6 +35,7 @@ if is_6th_LXe:
     # channels for 6th LXe
     channels = [0,1,2,3,4,5,8]
     n_channels = 6
+    n_chargechannels = 5 ## number of useful charge channels
 else:
     # channels for 5th LXe
     channels = [0,1,2,3,4,8]
