@@ -1,0 +1,15 @@
+K 10
+svn:ignore
+V 87
+*.d
+*.png
+*.root
+*.dat
+*.pdf
+.project
+.cproject
+sis3316_offline
+datafiles/*
+datafiles/
+
+END
