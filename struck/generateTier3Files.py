@@ -105,12 +105,13 @@ def process_file(filename, verbose=True, do_overwrite=True):
     sampling_freq_Hz = struck_analysis_parameters.sampling_freq_Hz
 
     channels = struck_analysis_parameters.channels
+    n_chargechannels = struck_analysis_parameters.n_chargechannels
     pmt_channel = struck_analysis_parameters.pmt_channel
-    n_channels_used = len(channels)
+    n_channels = struck_analysis_parameters.n_channels
 
     # this is the number of channels per event (1 if we are processing tier1
     # data, len(channels) if we are processing tier2 data
-    n_channels_in_event = n_channels_used
+    n_channels_in_event = n_channels
 
     #---------------------------------------------------------------
 
@@ -184,11 +185,11 @@ def process_file(filename, verbose=True, do_overwrite=True):
     # branch addresses, see:
     # http://wlav.web.cern.ch/wlav/pyroot/tpytree.html
 
-    is_2Vinput = array('I', [0]*n_channels_used) # unsigned int
-    out_tree.Branch('is_2Vinput', is_2Vinput, 'is_2Vinput[%i]/i' % n_channels_used)
+    is_2Vinput = array('I', [0]*n_channels) # unsigned int
+    out_tree.Branch('is_2Vinput', is_2Vinput, 'is_2Vinput[%i]/i' % n_channels)
 
-    is_amplified = array('I', [1]*n_channels_used) # unsigned int
-    out_tree.Branch('is_amplified', is_amplified, 'is_amplified[%i]/i' % n_channels_used)
+    is_amplified = array('I', [1]*n_channels) # unsigned int
+    out_tree.Branch('is_amplified', is_amplified, 'is_amplified[%i]/i' % n_channels)
 
     event = array('I', [0]) # unsigned int
     out_tree.Branch('event', event, 'event/i')
@@ -302,8 +303,8 @@ def process_file(filename, verbose=True, do_overwrite=True):
     smoothed_max = array('d', [0]*n_channels_in_event) # double
     out_tree.Branch('smoothed_max', smoothed_max, 'smoothed_max[%i]/D' % n_channels_in_event)
 
-    wfm_length = array('I', [0]*n_channels_used) # unsigned int
-    out_tree.Branch('wfm_length', wfm_length, 'wfm_length[%i]/i' % n_channels_used)
+    wfm_length = array('I', [0]*n_channels) # unsigned int
+    out_tree.Branch('wfm_length', wfm_length, 'wfm_length[%i]/i' % n_channels)
 
     wfm_max = array('d', [0]*n_channels_in_event) # double
     out_tree.Branch('wfm_max', wfm_max, 'wfm_max[%i]/D' % n_channels_in_event)
@@ -321,13 +322,13 @@ def process_file(filename, verbose=True, do_overwrite=True):
     out_tree.Branch('baseline_rms', baseline_rms, 'baseline_rms[%i]/D' % n_channels_in_event)
 
     # some file-averaged parameters
-    baseline_mean_file = array('d', [0]*n_channels_used) # double
-    out_tree.Branch('baseline_mean_file', baseline_mean_file, 'baseline_mean_file[%i]/D' % n_channels_used)
-    run_tree.Branch('baseline_mean_file', baseline_mean_file, 'baseline_mean_file[%i]/D' % n_channels_used)
+    baseline_mean_file = array('d', [0]*n_channels) # double
+    out_tree.Branch('baseline_mean_file', baseline_mean_file, 'baseline_mean_file[%i]/D' % n_channels)
+    run_tree.Branch('baseline_mean_file', baseline_mean_file, 'baseline_mean_file[%i]/D' % n_channels)
 
-    baseline_rms_file = array('d', [0]*n_channels_used) # double
-    out_tree.Branch('baseline_rms_file', baseline_rms_file, 'baseline_rms_file[%i]/D' % n_channels_used)
-    run_tree.Branch('baseline_rms_file', baseline_rms_file, 'baseline_rms_file[%i]/D' % n_channels_used)
+    baseline_rms_file = array('d', [0]*n_channels) # double
+    out_tree.Branch('baseline_rms_file', baseline_rms_file, 'baseline_rms_file[%i]/D' % n_channels)
+    run_tree.Branch('baseline_rms_file', baseline_rms_file, 'baseline_rms_file[%i]/D' % n_channels)
 
     # make a hist for calculating some averages
     hist = TH1D("hist","",100, 0, pow(2,14))
@@ -524,6 +525,8 @@ def process_file(filename, verbose=True, do_overwrite=True):
                 elif i == 4: 
                     wfm = tree.wfm4
                 elif i == 5: 
+                    wfm = tree.wfm5
+                elif i == 6:
                     wfm = tree.wfm8
                 wfm_max_time[i] = tree.wfm_max_time[i]
 
