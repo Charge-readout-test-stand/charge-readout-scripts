@@ -28,11 +28,12 @@ from ROOT import TPad
 from ROOT import TLegend
 from ROOT import TPaveText
 from ROOT import gSystem
+from ROOT import gDirectory
 from ROOT import gStyle
 from ROOT import TGraph
 from ROOT import TMath
 from ROOT import TTree
-
+from ROOT import TEventList
 
 gROOT.SetStyle("Plain")     
 gStyle.SetOptStat(0)        
@@ -40,12 +41,16 @@ gStyle.SetPalette(1)
 gStyle.SetTitleStyle(0)     
 gStyle.SetTitleBorderSize(0)
 
+import struck_analysis_parameters
+n_chargechannels = struck_analysis_parameters.n_chargechannels
+
 gSystem.Load("$EXOLIB/lib/libEXOUtilities")
 from ROOT import CLHEP
 
 def process_file(filename):
 
     print "processing file: ", filename
+    start_time = time.clock()
 
     basename = os.path.basename(filename)
     basename = os.path.splitext(basename)[0]
@@ -54,10 +59,73 @@ def process_file(filename):
     tree = root_file.Get("tree")
     tree.SetLineWidth(2)
 
-    fout = TFile("ChargeSpectrum.root", "RECREATE") ## file to save histograms
+    fout = TFile("Eventlists.root", "RECREATE") ## file to save event lists
 
     canvas = TCanvas("canvas","", 1700, 900)
+    pad = canvas.cd(1)
+    pad.SetGrid(1,1)
 
+    tree.Draw(">>elist0") ## elist0: all events
+    elist0 = gDirectory.Get("elist0")
+
+    ## elist1: at least one channel has negative energy < -50keV
+    selection1 = "energy1_pz[0]<-50"
+    for i in range(1, n_chargechannels):
+        selection1 += "||energy1_pz[%i]<-50" % (i)
+    tree.Draw(">>elist1", selection1)
+    elist1 = gDirectory.Get("elist1")
+
+    ## elist2: at least one channel has drift time < 5us and energy > 100keV
+    selection2 = "(energy1_pz[0]>100&&rise_time_stop95[0]-trigger_time<5)"
+    for i in range(1, n_chargechannels):
+        selection2 +="||(energy1_pz[%i]>100&&rise_time_stop95[%i]-trigger_time<5)" % (i,i)
+    tree.Draw(">>elist2", selection2)
+    elist2 = gDirectory.Get("elist2")
+
+    ## elist3: at least one channel has energy > 200 and drift time between 8.5 and 10.0 us, and not meeting any criteria above
+    selection3 = "(energy1_pz[0]>200&&rise_time_stop95[0]-trigger_time>8.5&&rise_time_stop95[0]-trigger_time<10)"
+    for i in range(1, n_chargechannels):
+        selection3 += "||(energy1_pz[%i]>200&&rise_time_stop95[%i]-trigger_time>8.5&&rise_time_stop95[%i]-trigger_time<10)" % (i,i,i)
+    selection3 = "(%s)&&(!(%s))&&(!(%s))" % (selection3, selection1, selection2)
+    tree.Draw(">>elist3", selection3)
+    elist3 = gDirectory.Get("elist3")
+    elist3.Print()
+
+    #tree.Draw("energy1_pz[0]+energy1_pz[1]+energy1_pz[2]+energy1_pz[3]+energy1_pz[4] >> h1(250,0.,2000.)")
+
+    ## drawing histograms
+    tree.SetEventList(elist3)
+    
+    canvas.Clear()
+    pad.SetLogy()
+    tree.Draw("energy1_pz[0]+energy1_pz[1]+energy1_pz[2]+energy1_pz[3]+energy1_pz[4] >> h2(250,0.,2000.)")
+    canvas.Update()
+    canvas.Print("charge.pdf")
+    canvas.Print("charge.png")
+    
+    canvas.Clear()
+    tree.Draw("lightEnergy >> h3(250,0.,1000.)")
+    canvas.Update()
+    canvas.Print("light.pdf")
+    canvas.Print("light.png")
+    
+    canvas.Clear()
+    pad.SetLogy(False)
+    pad.SetLogz()
+    tree.Draw("lightEnergy:energy1_pz[0]+energy1_pz[1]+energy1_pz[2]+energy1_pz[3]+energy1_pz[4] >> h4(250,0.,2000.,250,0.,1000.)","","colz")
+    canvas.Update()
+    canvas.Print("lightvscharge.pdf")
+    canvas.Print("lightvscharge.png")
+
+    tree_selected = tree.CopyTree("")
+    tree_selected.Write()
+
+    end_time = time.clock()
+    print "processing time = ", end_time, " s" 
+
+    #raw_input("Press Enter to continue...")
+
+    '''
     ## Event categories
     hist_charge0 = TH1D("spectrum_charge0", "Spectrum: no energy cut", 250, 100., 2100.) # all events   
     hist_charge1 = TH1D("spectrum_charge1", "Spectrum: no energy cut", 250, 100., 2100.)
@@ -80,7 +148,7 @@ def process_file(filename):
     trigger_time_0 = tree.trigger_time
 
     events = 0
-    reporting_period = 10000
+    reporting_period = 5000
     now = time.clock()
     start_time = now
     last_time = now
@@ -103,7 +171,7 @@ def process_file(filename):
         energy = 0
         for i in xrange(5):
             energy = energy + tree.energy1_pz[i]
-        hist_charge0.Fill(energy)  ## Calculate total energy and fill in histogram for all drift times
+        #hist_charge0.Fill(energy)  ## Calculate total energy and fill in histogram for all drift times
 
         if tree.trigger_time == 0:
             trigger_time = trigger_time_0
@@ -116,8 +184,8 @@ def process_file(filename):
         for i in xrange(5):
             if tree.energy1_pz[i] < -50:
                 flag = 1
-                hist_charge2.Fill(energy)
-                eventlist2.append(i_entry)
+                #hist_charge2.Fill(energy)
+                #eventlist2.append(i_entry)
                 break
             elif tree.energy1_pz[i] > 200:
                 counts = counts + 1
@@ -125,23 +193,25 @@ def process_file(filename):
             drift_time = tree.rise_time_stop95[i] - trigger_time
             if drift_time < 5.0 and tree.energy1_pz[i] > 100:
                 flag = 1
-                hist_charge3.Fill(energy)
-                eventlist3.append(i_entry)
+                #hist_charge3.Fill(energy)
+                #eventlist3.append(i_entry)
                 break
             
             if tree.energy1_pz[i] > 300 and 8.5 < drift_time and drift_time < 10.0:
                 flag = 2
 
         if counts > 2:
-            eventlist4.append(i_entry)
-            hist_charge4.Fill(energy)        
+            #eventlist4.append(i_entry)
+            #hist_charge4.Fill(energy)
+            pass
         elif flag == 2:
-            hist_charge1.Fill(energy)
-            eventlist1.append(i_entry)
+            #hist_charge1.Fill(energy)
+            #eventlist1.append(i_entry)
             events = events + 1
         else:
-            hist_charge5.Fill(energy)
-            eventlist5.append(i_entry)
+            #hist_charge5.Fill(energy)
+            #eventlist5.append(i_entry)
+            pass
 
 
     print "Number of events: ", events
@@ -198,15 +268,16 @@ def process_file(filename):
     hist_charge3.Write()
     hist_charge4.Write()
     hist_charge5.Write()
+    '''
+    
+    ## write event lists to file
+    elist1.Write()
+    elist2.Write()
+    elist3.Write()
 
     root_file.Close()
     fout.Close()
 
-    ## write eventlists to file
-    import json
-    eventlists = {'list1': eventlist1, 'list2': eventlist2, 'list3': eventlist3, 'list4': eventlist4, 'list5': eventlist5}
-    with open("ChargeSpectrum_eventlist.txt", "w") as fout:
-        json.dump(eventlists, fout)
 
 
 if __name__ == "__main__":
