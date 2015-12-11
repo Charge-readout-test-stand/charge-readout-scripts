@@ -3,6 +3,14 @@
 """
 Script to calibrate energies based on location of 570-keV peak. 
 Currently doing binned fit, using exponential background model
+
+This script was adapted from mca/fit_to_resolution.py 
+
+to do:
+* draw residuals
+* goodness of fit
+* try different background models
+* unbinned fit / test different binning
 """
 
 
@@ -112,7 +120,7 @@ def fit_channel(tree, channel, basename):
 
 
     calibration_ratio = line_energy/testfit.GetParameter(1)
-    sigma = testfit.GetParameter(2)*calibration_ratio
+    sigma = testfit.GetParameter(2) # *calibration_ratio
     new_calibration_value = struck_analysis_parameters.calibration_values[channel]*calibration_ratio
 
 
@@ -150,7 +158,11 @@ def fit_channel(tree, channel, basename):
     result["channel"] = channel
     result["calibration_value"] = "%.6e" % new_calibration_value
     result["peak counts"] = "%.2f" % testfit.GetParameter(0)
-    result["sigma"] = "%.3f" % sigma  # sigma, keV
+    result["peak counts_err"] = "%.2f" % testfit.GetParError(0)
+    result["centroid"] = "%.2f" % testfit.GetParameter(1)
+    result["centroid_err"] = "%.2f" % testfit.GetParError(1)
+    result["sigma"] = "%.2f" % sigma
+    result["sigma_err"] = "%.2f" % testfit.GetParError(2)
     result["line_energy"] = "%.2f" % line_energy
     result["sigma_over_E"] = "%.3e" % (sigma/line_energy)
     result["ratio"] = "%.4f" % calibration_ratio # correction ratio
