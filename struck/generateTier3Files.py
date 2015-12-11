@@ -587,7 +587,8 @@ def process_file(filename, verbose=True, do_overwrite=True):
                 energy[i] = exo_wfm.GetMaxValue()*calibration_values[channel[i]]
                 lightEnergy[0] = energy[i]
             else:
-                chargeEnergy[0] += energy[i]
+                if struck_analysis_parameters.charge_channels_to_use[channel[i]]:
+                    chargeEnergy[0] += energy[i]
 
 
             if do_debug and i == 4 and chargeEnergy[0] > 100:
