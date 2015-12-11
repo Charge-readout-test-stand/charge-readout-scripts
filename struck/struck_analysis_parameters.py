@@ -28,6 +28,7 @@ is_6th_LXe = True
 
 sampling_freq_Hz = 25.0e6 # digitizer sampling frequency, Hz
 
+charge_channels_to_use = [0]*16
 
 # in software, struck channels start from 0, not 1
 pmt_channel = 8
@@ -35,12 +36,23 @@ if is_6th_LXe:
     # channels for 6th LXe
     channels = [0,1,2,3,4,5,8]
     n_channels = len(channels)
-    n_chargechannels = 5 ## number of useful charge channels
+    charge_channels_to_use[0] = 1
+    charge_channels_to_use[1] = 1
+    charge_channels_to_use[2] = 1
+    charge_channels_to_use[3] = 1
+    charge_channels_to_use[4] = 1
+    n_chargechannels = len(charge_channels_to_use)  ## number of useful charge channels
 else:
     # channels for 5th LXe
     channels = [0,1,2,3,4,8]
     n_channels = len(channels)
+    charge_channels_to_use[0] = 1
+    charge_channels_to_use[1] = 1
+    charge_channels_to_use[2] = 1
+    charge_channels_to_use[3] = 1
+    charge_channels_to_use[4] = 1
 
+    n_chargechannels = len(charge_channels_to_use)  ## number of useful charge channels
 
 # channel names for 6th LXe    
 channel_map = {}
@@ -83,7 +95,15 @@ calibration_values[2] = 1.0/1.90907907272149885e+02*570.0/0.56
 calibration_values[3] = 1.0/2.94300492610837466e+02*570.0/0.38
 calibration_values[4] = 1.0/1.40734817170111285e+02*570.0/0.725
 
+
+
 if is_6th_LXe:
+    calibration_values[0] = 5.388958
+    calibration_values[1] = 5.072361
+    calibration_values[2] = 5.243364 
+    calibration_values[3] = 5.026291
+    calibration_values[4] = 5.273221 
+
     # a guess
     calibration_values[5] = 1.0/1.40734817170111285e+02*570.0/0.725
 
