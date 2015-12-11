@@ -1,0 +1,62 @@
+{
+    "channel 0": {
+        "calibration_value": "5.401905e+00", 
+        "channel": 0, 
+        "fit_formula": "gausn(0) + [3]*TMath::Exp(-[4]*x)", 
+        "fit_start_energy": "370.00", 
+        "fit_stop_energy": "820.00", 
+        "line_energy": "570.00", 
+        "peak counts": "38510.95", 
+        "ratio": "1.0024", 
+        "sigma": "32.971", 
+        "sigma_over_E": "5.784e-02"
+    }, 
+    "channel 1": {
+        "calibration_value": "5.075113e+00", 
+        "channel": 1, 
+        "fit_formula": "gausn(0) + [3]*TMath::Exp(-[4]*x)", 
+        "fit_start_energy": "370.00", 
+        "fit_stop_energy": "820.00", 
+        "line_energy": "570.00", 
+        "peak counts": "70568.17", 
+        "ratio": "1.0005", 
+        "sigma": "38.057", 
+        "sigma_over_E": "6.677e-02"
+    }, 
+    "channel 2": {
+        "calibration_value": "5.246047e+00", 
+        "channel": 2, 
+        "fit_formula": "gausn(0) + [3]*TMath::Exp(-[4]*x)", 
+        "fit_start_energy": "370.00", 
+        "fit_stop_energy": "820.00", 
+        "line_energy": "570.00", 
+        "peak counts": "42795.73", 
+        "ratio": "1.0005", 
+        "sigma": "35.379", 
+        "sigma_over_E": "6.207e-02"
+    }, 
+    "channel 3": {
+        "calibration_value": "5.028723e+00", 
+        "channel": 3, 
+        "fit_formula": "gausn(0) + [3]*TMath::Exp(-[4]*x)", 
+        "fit_start_energy": "370.00", 
+        "fit_stop_energy": "820.00", 
+        "line_energy": "570.00", 
+        "peak counts": "60540.45", 
+        "ratio": "1.0005", 
+        "sigma": "34.935", 
+        "sigma_over_E": "6.129e-02"
+    }, 
+    "channel 4": {
+        "calibration_value": "5.284744e+00", 
+        "channel": 4, 
+        "fit_formula": "gausn(0) + [3]*TMath::Exp(-[4]*x)", 
+        "fit_start_energy": "370.00", 
+        "fit_stop_energy": "820.00", 
+        "line_energy": "570.00", 
+        "peak counts": "55391.23", 
+        "ratio": "1.0022", 
+        "sigma": "35.327", 
+        "sigma_over_E": "6.198e-02"
+    }
+}
