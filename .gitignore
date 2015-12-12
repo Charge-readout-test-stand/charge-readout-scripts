@@ -1,1 +1,8 @@
 *.pyc
+*.d
+*.o
+*.lib
+sis3316_root_gui
+*.pdf
+*.png
+*.root
