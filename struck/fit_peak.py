@@ -22,7 +22,7 @@ import math
 
 from ROOT import gROOT
 # run in batch mode:
-gROOT.SetBatch(True)
+#gROOT.SetBatch(True)
 from ROOT import TFile
 from ROOT import TTree
 from ROOT import TCanvas
@@ -48,10 +48,9 @@ def fit_channel(tree, channel, basename):
     line_energy = 570
     sigma_guess = 40
 
-    fit_start_energy = 300
-    fit_stop_energy = 800
     fit_start_energy = line_energy - 200
-    fit_stop_energy = line_energy + 250
+    #fit_stop_energy = line_energy + 250
+    fit_stop_energy = line_energy + 130
 
     fit_formula = "gausn(0) + [3]*TMath::Exp(-[4]*x)"
     #-------------------------------------------------------------------------------
@@ -60,23 +59,32 @@ def fit_channel(tree, channel, basename):
     canvas.SetLogy(1)
     canvas.SetGrid(1,1)
     canvas.SetLeftMargin(0.12)
-    channel_name = struck_analysis_parameters.channel_map[channel]
+    if channel:
+        channel_name = struck_analysis_parameters.channel_map[channel]
+        hist_title = "channel %i: %s" % (channel, channel_name)
+    else:
+        channel_name = "all"
+        hist_title = "all channels"
 
-    hist = TH1D("fit_hist", "channel %i: %s" % (channel, channel_name), 
-        n_bins, 0, max_bin)
+    hist = TH1D("fit_hist", hist_title, n_bins, 0, max_bin)
     bin_width = hist.GetBinWidth(1)
     hist.SetXTitle("Energy [keV]")
     hist.SetYTitle("Counts / %.1f keV" % bin_width)
-    hist.GetYaxis().SetTitleOffset(1.3)
+    hist.GetYaxis().SetTitleOffset(1.5)
+
+
+    if channel == None:
+        energy_var = "energy1_pz[0] + energy1_pz[1] + energy1_pz[2] + energy1_pz[3] + energy1_pz[4]"
 
 
     draw_cmd = "%s >> fit_hist" % energy_var
     print "draw command:", draw_cmd
 
     selection = [
-        "channel==%i" % channel,
         #"%s > 100" % energy_var,
     ]
+    if channel:
+        selection.append( "channel==%i" % channel)
     #print "\n".join(selection)
 
     selection = " && ".join(selection)
@@ -104,11 +112,14 @@ def fit_channel(tree, channel, basename):
         line_energy,    # peak centroid
         sigma_guess,     # peak resolution
         exp_height_guess,    # exp decay height at zero energy
-        decay_const_guess   # exp decay constant
+        decay_const_guess,   # exp decay constant
     )
 
 
-    hist.Fit(testfit,"IRLS")
+    fit_result = hist.Fit(testfit,"IRLS")
+    prob = fit_result.Prob()
+    chi2 = fit_result.Chi2()
+    ndf = fit_result.Ndf()
 
     bestfit_exp = TF1("bestfite","[0]*TMath::Exp(-[1]*x)", fit_start_energy, fit_stop_energy)
     bestfit_exp.SetParameters(testfit.GetParameter(3), testfit.GetParameter(4))
@@ -121,7 +132,10 @@ def fit_channel(tree, channel, basename):
 
     calibration_ratio = line_energy/testfit.GetParameter(1)
     sigma = testfit.GetParameter(2) # *calibration_ratio
-    new_calibration_value = struck_analysis_parameters.calibration_values[channel]*calibration_ratio
+    if channel:
+        new_calibration_value = struck_analysis_parameters.calibration_values[channel]*calibration_ratio
+    else:
+        new_calibration_value = calibration_ratio
 
 
     hist.Draw()
@@ -129,29 +143,29 @@ def fit_channel(tree, channel, basename):
     bestfit_exp.Draw("same")
 
 
-    leg = TLegend(0.6, 0.7, 0.95, 0.90)
+    leg = TLegend(0.45, 0.7, 0.95, 0.90)
     leg.AddEntry(hist, "Data")
-    leg.AddEntry(testfit, "Total Fit","l")
-    leg.AddEntry(bestfit_gaus, "Gaus Peak Fit (#sigma = %.1f keV)" % sigma, "l")
+    leg.AddEntry(testfit, "Total Fit: #chi^{2}/DOF = %.1f/%i, P-val = %.1E" % (chi2, ndf, prob),"l")
+    leg.AddEntry(bestfit_gaus, "Gaus Peak Fit: #sigma = %.1f keV, %.1E counts" % (sigma, testfit.GetParameter(0)), "l")
     leg.AddEntry(bestfit_exp,  "Exp Background Fit", "l")
     leg.SetFillColor(0)
     leg.Draw()
 
+    if channel:
+        plot_name = "fit_ch%i_%s" % (channel, basename)
+    else:
+        plot_name = "fit_all_%s" % basename
+
     # log scale
     canvas.Update()
-    canvas.Print("fit_ch%i_%s_log.pdf" % (channel, basename))
+    canvas.Print("%s_log.pdf" % plot_name)
 
     # lin scale
     #hist.SetMaximum(1.5*hist.GetBinContent(hist.FindBin(line_energy)))
     hist.SetMaximum(1.1*fit_start_height)
     canvas.SetLogy(0)
     canvas.Update()
-    canvas.Print("fit_ch%i_%s_lin.pdf" % (channel, basename))
-
-    if not gROOT.IsBatch():
-        value = raw_input("any key to continue (q to quit) ")
-        if value == 'q':
-            sys.exit()
+    canvas.Print("%s_lin.pdf" % plot_name)
 
     # save some results
     result = {}
@@ -169,9 +183,19 @@ def fit_channel(tree, channel, basename):
     result["fit_formula"] = fit_formula
     result["fit_start_energy"] = "%.2f" % fit_start_energy
     result["fit_stop_energy"] = "%.2f" % fit_stop_energy
+    result["chi2"] = "%.3f" % chi2
+    result["ndf"] = "%i" % ndf
+    result["prob"] = "%.3e" % prob
 
     for (key, value) in result.items():
         print "%s : %s" % (key, value)
+
+
+    if not gROOT.IsBatch():
+        value = raw_input("any key to continue (q to quit) ")
+        if value == 'q':
+            sys.exit()
+
 
     return result
 
@@ -191,6 +215,9 @@ def process_file(filename):
         print "could not get entries from tree"
 
     all_results = {}
+    result = fit_channel(tree, None, basename)
+    all_results["all"] = result
+
 
     for channel in struck_analysis_parameters.channels:
         if struck_analysis_parameters.charge_channels_to_use[channel]:
