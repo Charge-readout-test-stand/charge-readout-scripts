@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-These are some parameters used for 5th LXe analysis
+These are some parameters used for LXe analyses
 
 import this into your script with this line:
 import struck_analysis_parameters
@@ -89,13 +89,15 @@ if is_6th_LXe:
 
 # convert energies to keV by multiplying by these factors:
 calibration_values = {}
-calibration_values[0] = 1.0/3.76194501827427302e+02*570.0/0.26
-calibration_values[1] = 1.0/1.84579440737210035e+02*570.0/0.6
-calibration_values[2] = 1.0/1.90907907272149885e+02*570.0/0.56
-calibration_values[3] = 1.0/2.94300492610837466e+02*570.0/0.38
-calibration_values[4] = 1.0/1.40734817170111285e+02*570.0/0.725
+calibration_values[0] = 5.827591
+calibration_values[1] = 5.146835
+calibration_values[2] = 5.331666
+calibration_values[3] = 5.096831
+calibration_values[4] = 5.586442
 
-
+# PMT calibration is from PMT-triggered data
+# EMI 9531QB, 1200V PMT bias, 1700V cathode bias
+calibration_values[8] = 0.4470588
 
 if is_6th_LXe:
     calibration_values[0] = 5.388958
@@ -107,8 +109,9 @@ if is_6th_LXe:
     # a guess
     calibration_values[5] = 1.0/1.40734817170111285e+02*570.0/0.725
 
-# PMT calibration is from PMT-triggered data
-calibration_values[8] = 570.0/2550.0*2.0
+    # PMT calibration from correlation with charge energy
+    # EMI 9531QB, 1300V PMT bias, 1700V cathode bias
+    calibration_values[8] = 2.12352
 
 
 def is_2Vinput(baseline_mean_file):
@@ -139,10 +142,16 @@ def is_amplified(baseline_mean_file, baseline_rms_file):
 if __name__ == "__main__":
     gROOT.SetBatch(True)
 
-
     print "\nchannels used:"
     for channel in channels:
         print "\t channel %i" % channel
+
+    print "\npmt channel:", pmt_channel
+
+    print "\ncharge channels to use:"
+    for channel, value  in enumerate(charge_channels_to_use):
+        if value:
+            print "\t channel %i" % channel
 
     print "\nchannel names:"
     for (channel, name) in channel_map.items():
