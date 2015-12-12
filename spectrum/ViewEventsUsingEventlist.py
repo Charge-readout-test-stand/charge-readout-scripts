@@ -75,10 +75,7 @@ def process_file(eventlist_filename, filename):
         pad.SetGrid(1,1)
         
         tree.GetEntry(elist.GetEntry(i_entry))
-        energy = 0
-        for i in xrange(n_chargechannels):
-            energy = energy + tree.energy1_pz[i]
-        pad.DrawFrame(0., -200., 32., 3000., "Event %i, total energy=%f" % (i_entry, energy))
+        pad.DrawFrame(0., -200., 32., 3000., "Event %i, chargeEnergy=%f, lightEnergy*570/120=%f" % (i_entry, tree.chargeEnergy, tree.lightEnergy*570/120))
 
         original_file = TFile(tree.filename.GetString().Data(), "READ")
         original_tree = original_file.Get("tree")
