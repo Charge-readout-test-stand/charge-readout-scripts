@@ -81,10 +81,10 @@ def process_file(filename):
     energylow = 1000 
     energyhigh = 1150
     with_lightenergyselection = True
-    lightenergylow = 450
-    lightenergyhigh = 800
+    lightenergylow = 800
+    lightenergyhigh = 1200
     with_channelselection = False 
-    channelselection = [0,0,0,1,0] ## 1-selected, 0-unselected
+    channelselection = [0,1,0,0,0] ## 1-selected, 0-unselected
     with_allevents = False 
 
     append = ""
@@ -100,9 +100,9 @@ def process_file(filename):
                 else:
                     selection3 += "||(energy1_pz[%i]>%f&&rise_time_stop95[%i]-trigger_time>%f&&rise_time_stop95[%i]-trigger_time<%f)" % (i, energy_threshold, i, drifttime_low, i, drifttime_high)
                     append +="_%i" % i
-            if selection3 == "": ## if no channel is selected
-                print "no channel selected!"
-                sys.exit(1)
+        if selection3 == "": ## if no channel is selected
+            print "no channel selected!"
+            sys.exit(1)
     else:
         append += "_allchannels"
         selection3 = "(energy1_pz[0]>%f&&rise_time_stop95[0]-trigger_time>%f&&rise_time_stop95[0]-trigger_time<%f)" % (energy_threshold, drifttime_low, drifttime_high)
@@ -152,6 +152,15 @@ def process_file(filename):
     canvas.Update()
     canvas.Print("lightvscharge%s.pdf" % append)
     canvas.Print("lightvscharge%s.png" % append)
+
+    pad.SetLogy(True)
+    pad.SetLogz(False)
+    for i in xrange(n_chargechannels):
+        canvas.Clear()
+        tree.Draw("energy1_pz[%i] >> h(250,0.,2000.)" % i)
+        canvas.Update()
+        canvas.Print("charge%i%s.pdf" % (i, append))
+        canvas.Print("charge%i%s.png" % (i, append))
 
     # write selected events to file
     fout = TFile("event%s.root" % append, "RECREATE") 
