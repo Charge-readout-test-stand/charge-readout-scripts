@@ -78,7 +78,7 @@ def process_file(filename):
     
     ## settings
     energy_threshold = 100
-    drifttime_low = 5.0
+    drifttime_low = 5
     drifttime_high = 10.0
     with_energyselection = False 
     energylow = 500

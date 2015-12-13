@@ -77,16 +77,20 @@ def process_file(filename):
     energy_threshold = 100
     drifttime_low = 5.0
     drifttime_high = 10.0
-    with_energyselection = False 
-    energylow = 950
+    with_chargeenergyselection = False 
+    energylow = 1000 
     energyhigh = 1150
-    with_channelselection = True 
+    with_lightenergyselection = True
+    lightenergylow = 450
+    lightenergyhigh = 800
+    with_channelselection = False 
     channelselection = [0,0,0,1,0] ## 1-selected, 0-unselected
     with_allevents = False 
 
     append = ""
     selection3 = ""
 
+    ## start making selection string
     if with_channelselection:
         for i in xrange(len(channelselection)):
             if channelselection[i] == 1:
@@ -96,16 +100,24 @@ def process_file(filename):
                 else:
                     selection3 += "||(energy1_pz[%i]>%f&&rise_time_stop95[%i]-trigger_time>%f&&rise_time_stop95[%i]-trigger_time<%f)" % (i, energy_threshold, i, drifttime_low, i, drifttime_high)
                     append +="_%i" % i
+            if selection3 == "": ## if no channel is selected
+                print "no channel selected!"
+                sys.exit(1)
     else:
         append += "_allchannels"
         selection3 = "(energy1_pz[0]>%f&&rise_time_stop95[0]-trigger_time>%f&&rise_time_stop95[0]-trigger_time<%f)" % (energy_threshold, drifttime_low, drifttime_high)
         for i in range(1, n_chargechannels):
             selection3 += "||(energy1_pz[%i]>%f&&rise_time_stop95[%i]-trigger_time>%s&&rise_time_stop95[%i]-trigger_time<%s)" % (i, energy_threshold, i, drifttime_low, i, drifttime_high)
+    selection3 = "(%s)" % selection3  ## wrap the conditions
 
-    if with_energyselection:
+    if with_chargeenergyselection:
         append += "_energy_%ito%i" % (energylow, energyhigh)
-        selection3 = "(chargeEnergy>%i&&chargeEnergy<%i)&&(%s)" % (
+        selection3 = "(chargeEnergy>%i&&chargeEnergy<%i&&(%s))" % (
                                     energylow, energyhigh, selection3)
+    if with_lightenergyselection:
+        append += "_lightenergy_%ito%i" % (lightenergylow, lightenergyhigh)
+        selection3 = "(lightEnergy>%i&&lightEnergy<%i&&(%s))" % (
+                                    lightenergylow, lightenergyhigh, selection3)
     
     selection3 = "(%s)&&(!(%s))&&(!(%s))" % (selection3, selection1, selection2)
 
@@ -128,7 +140,7 @@ def process_file(filename):
     canvas.Print("charge%s.png" % append)
     
     canvas.Clear()
-    tree.Draw("lightEnergy*570/120 >> h3(500,0.,4000.)")
+    tree.Draw("lightEnergy >> h3(500,0.,4000.)")
     canvas.Update()
     canvas.Print("light%s.pdf" % append)
     canvas.Print("light%s.png" % append)
@@ -136,7 +148,7 @@ def process_file(filename):
     canvas.Clear()
     pad.SetLogy(False)
     pad.SetLogz()
-    tree.Draw("lightEnergy*570/120:chargeEnergy >> h4(100,0.,2000.,100,0.,2000.)","","colz")
+    tree.Draw("lightEnergy:chargeEnergy >> h4(100,0.,2000.,100,0.,2000.)","","colz")
     canvas.Update()
     canvas.Print("lightvscharge%s.pdf" % append)
     canvas.Print("lightvscharge%s.png" % append)
