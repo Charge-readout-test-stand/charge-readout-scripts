@@ -38,6 +38,7 @@ hadd -O all_tier3.root tier3*.root
 import os
 import sys
 import time
+import datetime
 from optparse import OptionParser
 
 
@@ -117,8 +118,30 @@ def process_file(filename, verbose=True, do_overwrite=True):
 
     print "processing file: ", filename
 
+    # keep track of how long it takes to process file:
+    start_time = time.clock()
+    last_time = start_time
+    prev_time_stamp = 0.0
+
+    # make a basename for names of output file, plots, etc:
     basename = create_basename(filename)
 
+
+    # calculate file start time, in POSIX time, from filename suffix
+    # date and time are last two parts of filename separated with "_":
+    try:
+        file_start = "_".join(basename.split("_")[-2:])
+        #print file_start
+        # create datetime object from relevant parts of filename:
+        file_start  = datetime.datetime.strptime(file_start, "%Y-%m-%d_%H-%M-%S")
+        # get the POSIX timestamp, in seconds:
+        posix_start_time = int(time.mktime(file_start.timetuple()))
+        #print posix_start_time
+        #print "this file was started at:", file_start
+    except:
+        posix_start_time = 0
+
+    # a canvas for drawing, if debugging:
     canvas = TCanvas()
     canvas.SetGrid(1,1)
 
@@ -194,7 +217,12 @@ def process_file(filename, verbose=True, do_overwrite=True):
     event = array('I', [0]) # unsigned int
     out_tree.Branch('event', event, 'event/i')
 
-    time_stamp = array('L', [0]) # unsigned long
+    file_start_time = array('I', [0]) # unsigned int
+    file_start_time[0] = posix_start_time
+    out_tree.Branch('file_start_time', file_start_time, 'file_start_time/i')
+    run_tree.Branch('file_start_time', file_start_time, 'file_start_time/i')
+
+    time_stamp = array('L', [0]) # timestamp for each event, unsigned long
     out_tree.Branch('time_stamp', time_stamp, 'time_stamp/l')
 
     sampling_frequency_Hz = array('d', [0]) # double
@@ -353,6 +381,9 @@ def process_file(filename, verbose=True, do_overwrite=True):
         print "\t file baseline mean:", baseline_mean_file[i]
 
         # calculate baseline RMS:
+        # this is an appxorimation -- we can't calculate the real RMS until we
+        # know the baseline average for each wfm -- it would be better to do
+        # this in the loop over events
         draw_command = "wfm-wfm[0] >> hist"
         if not is_tier1:
             draw_command = "wfm%i-wfm%i[0] >> hist" % (i_channel, i_channel)
@@ -454,10 +485,6 @@ def process_file(filename, verbose=True, do_overwrite=True):
     fname = TObjString(os.path.abspath(filename))
     out_tree.Branch("filename",fname)
     run_tree.Branch("filename",fname)
-
-    start_time = time.clock()
-    last_time = start_time
-    prev_time_stamp = 0.0
 
     if do_debug:
         reporting_period = 1
@@ -586,9 +613,6 @@ def process_file(filename, verbose=True, do_overwrite=True):
             if channel[i] == pmt_channel:
                 energy[i] = exo_wfm.GetMaxValue()*calibration_values[channel[i]]
                 lightEnergy[0] = energy[i]
-            else:
-                if struck_analysis_parameters.charge_channels_to_use[channel[i]]:
-                    chargeEnergy[0] += energy[i]
 
 
             if do_debug and i == 4 and chargeEnergy[0] > 100:
@@ -702,11 +726,13 @@ def process_file(filename, verbose=True, do_overwrite=True):
             energy_rms1_pz[i] = baseline_remover.GetBaselineRMS()*calibration[i]
 
             hist = energy_hists[channel[i]]
-            if channel[i] == 8:
+            if channel[i] == pmt_channel:
                 hist.Fill(energy[i])
             else:
                 hist.Fill(energy1_pz[i])
 
+            if struck_analysis_parameters.charge_channels_to_use[channel[i]]:
+                chargeEnergy[0] += energy1_pz[i]
 
             if do_debug:
                 print "energy measurement after PZ with %i samples: %.2f" % (
@@ -739,6 +765,8 @@ def process_file(filename, verbose=True, do_overwrite=True):
             rise_time_calculator = EXORisetimeCalculation()
             rise_time_calculator.SetPulsePeakHeight(max_val)
 
+            # rise time calculator thresholds are called precentage, but they
+            # are really fractions...
             rise_time_calculator.SetFinalThresholdPercentage(0.1)
             rise_time_calculator.SetInitialScanToPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.01) # must be < smallest final threshold crossing
             rise_time_calculator.SetInitialThresholdPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.02)
