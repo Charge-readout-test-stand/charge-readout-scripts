@@ -72,7 +72,7 @@ def process_file(filename):
     min_bin = -10.02
     max_bin = 30.02
     bin_width = 0.04
-    n_bins = int(math.floor(max_bin*1.0 / bin_width))
+    n_bins = int(math.floor((max_bin - min_bin)*1.0 / bin_width))
 
     xtitle = "Energy [keV]"
 
@@ -83,15 +83,7 @@ def process_file(filename):
     channel_map = struck_analysis_parameters.channel_map
     charge_channels_to_use = struck_analysis_parameters.charge_channels_to_use
     pmt_channel = struck_analysis_parameters.pmt_channel
-
-    colors = [
-        TColor.kBlue, 
-        TColor.kGreen+2, 
-        TColor.kViolet+1,
-        TColor.kRed, 
-        TColor.kOrange+1,
-        TColor.kMagenta,
-    ]
+    colors = struck_analysis_parameters.get_colors() 
 
     # open the root file and grab the tree
     root_file = TFile(filename)
