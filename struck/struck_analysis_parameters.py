@@ -35,24 +35,26 @@ pmt_channel = 8
 if is_6th_LXe:
     # channels for 6th LXe
     channels = [0,1,2,3,4,5,8]
-    n_channels = len(channels)
-    charge_channels_to_use[0] = 1
-    charge_channels_to_use[1] = 1
-    charge_channels_to_use[2] = 1
-    charge_channels_to_use[3] = 1
-    charge_channels_to_use[4] = 1
-    n_chargechannels = len(charge_channels_to_use)  ## number of useful charge channels
-else:
-    # channels for 5th LXe
-    channels = [0,1,2,3,4,8]
-    n_channels = len(channels)
     charge_channels_to_use[0] = 1
     charge_channels_to_use[1] = 1
     charge_channels_to_use[2] = 1
     charge_channels_to_use[3] = 1
     charge_channels_to_use[4] = 1
 
-    n_chargechannels = len(charge_channels_to_use)  ## number of useful charge channels
+else:
+    # channels for 5th LXe
+    channels = [0,1,2,3,4,8]
+    charge_channels_to_use[0] = 1
+    charge_channels_to_use[1] = 1
+    charge_channels_to_use[2] = 1
+    charge_channels_to_use[3] = 1
+    charge_channels_to_use[4] = 1
+
+n_channels = len(channels) # channels that are active
+
+n_chargechannels = 0
+for value in charge_channels_to_use:
+    n_chargechannels += value  ## number of useful charge channels
 
 # channel names for 6th LXe    
 channel_map = {}
@@ -164,6 +166,7 @@ if __name__ == "__main__":
     print "\npmt channel:", pmt_channel
 
     print "\ncharge channels to use:"
+    print "n_chargechannels", n_chargechannels
     for channel, value  in enumerate(charge_channels_to_use):
         if value:
             print "\t channel %i" % channel
