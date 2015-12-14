@@ -74,11 +74,17 @@ def process_file(filename):
     hist3.SetLineColor(TColor.kRed)
     legend.AddEntry(hist3, "Charge energy 1000 - 1200 keV", "l")
 
+    ## charge energy > 150keV
+    tree.Draw("rise_time_stop95-trigger_time >> hist4(300, -0.02, 11.98)", "channel!=5&&channel!=8&&chargeEnergy>150", "SAME")
+    hist4 = gDirectory.Get("hist4")
+    hist4.SetLineColor(TColor.kGreen + 3)
+    legend.AddEntry(hist4, "Charge energy > 150 keV", "l")
+
+
     legend.Draw()
     canvas.Update()
     canvas.Print("drifttime.png")
     canvas.Print("drifttime.pdf")
-
 
     
 
