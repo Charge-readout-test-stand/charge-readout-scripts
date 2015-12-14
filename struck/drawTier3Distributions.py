@@ -1,11 +1,14 @@
 #!/usr/bin/env python
 
 """
-This script draws a spectrum from a root tree. The following branches are
-assumed to exist:
-* totalEnergy
-* energy
-* nHits
+This script draws a spectrum from a root tree. 
+
+The following things should be edited to draw different distributions:
+* options (many variables in this section)
+* selections
+* extra_selections
+* frame_hist -- the draw commmand to fill this and the y axis titles need to be
+  edited by hand, if do_draw_sum is True
 
 arguments [sis tier 3 root files of events]
 """
@@ -58,10 +61,20 @@ def process_file(filename):
     #-------------------------------------------------------------------------------
     # options
 
-    min_bin = 0
-    max_bin = 2500
-    bin_width = 10
+    #do_draw_sum = False # sum energy
+    do_draw_sum = True # sum energy
+    #draw_command = "energy1_pz"
+    #draw_command = "wfm-baseline_mean"
+    min_bin = -200
+    max_bin = 200
+    bin_width = 5
+    draw_command = "rise_time_stop95 - trigger_time"
+    min_bin = -10.02
+    max_bin = 30.02
+    bin_width = 0.04
     n_bins = int(math.floor(max_bin*1.0 / bin_width))
+
+    xtitle = "Energy [keV]"
 
     #-------------------------------------------------------------------------------
 
@@ -69,6 +82,7 @@ def process_file(filename):
     channels = struck_analysis_parameters.channels
     channel_map = struck_analysis_parameters.channel_map
     charge_channels_to_use = struck_analysis_parameters.charge_channels_to_use
+    pmt_channel = struck_analysis_parameters.pmt_channel
 
     colors = [
         TColor.kBlue, 
@@ -122,23 +136,29 @@ def process_file(filename):
         #"lightEnergy>700", # keep the light threshold high (some runs had low thresholds)
         #"adc_max_time[5]*40.0/1000<10", # light signal is within 10 microseconds of trigger
         #"is_amplified",
-        #"energy>100",
+        "energy>100",
         #"energy[5]>15",
         #"rise_time_stop-trigger_time <15",
         #"rise_time_stop-trigger_time >5"
+        #"Iteration$<=50", # baseline average
+        "channel!=%i" % pmt_channel,
+        "channel!=5", # ortec channel
     ]
 
     frame_hist = TH1D("frame_hist","",n_bins,min_bin,max_bin)
     frame_hist.SetLineWidth(2)
-    frame_hist.SetXTitle("Energy [keV]")
-    frame_hist.SetYTitle("Counts / %.1f keV" % frame_hist.GetBinWidth(1))
+    frame_hist.SetXTitle(xtitle)
+    #frame_hist.SetYTitle("Counts / %.1f keV" % frame_hist.GetBinWidth(1))
+    frame_hist.SetYTitle("Counts / %.2f #mus" % frame_hist.GetBinWidth(1))
     frame_hist.SetMinimum(0.5)
     tree.Draw("")
     selection = " && ".join(selections)
 
-    print "%i entries in sum hist" % tree.Draw("chargeEnergy >> frame_hist", selection)
-    setup_hist(frame_hist, TColor.kBlack)
-    legend.AddEntry(frame_hist, "sum","lp")
+    if do_draw_sum:
+        #print "%i entries in sum hist" % tree.Draw("chargeEnergy >> frame_hist", selection)
+        print "%i entries in sum hist" % tree.Draw("%s >> frame_hist" % draw_command, selection)
+        setup_hist(frame_hist, TColor.kBlack)
+        legend.AddEntry(frame_hist, "sum","lp")
 
 
     y_max = 0
@@ -158,8 +178,12 @@ def process_file(filename):
         legend.AddEntry(hist, channel_map[channel],"pl")
 
         print "channel %i | %s " % (channel, channel_map[channel])
-        draw_command = "energy1_pz >> %s" % hist.GetName()
-        print "\t draw command: %s" % draw_command
+
+        
+        #draw_command = "wfm%i-baseline_mean" % channel
+        draw_cmd = "%s >> %s" % (draw_command, hist.GetName())
+
+        print "\t draw command: %s" % draw_cmd
 
         extra_selections = [
             "channel == %i" % channel,
@@ -171,7 +195,14 @@ def process_file(filename):
         print "\t selection: %s" % selection
 
         options = "same"
+        if not do_draw_sum and channel == 0:
+            options = ""
         print "\t options: %s" % options
+
+        hist_mean = hist.GetMean()
+        hist_rms = hist.GetRMS()
+
+        print "sigma: %.2f" % hist.GetRMS()
 
 
         try:
@@ -180,9 +211,7 @@ def process_file(filename):
             color = TColor.kBlack
         tree.SetLineColor(color)
 
-   
-
-        n_entries = tree.Draw(draw_command, selection, options)
+        n_entries = tree.Draw(draw_cmd, selection, options)
         if y_max < hist.GetMaximum(): y_max = hist.GetMaximum()
         print "\t %i entries" % n_entries
 
