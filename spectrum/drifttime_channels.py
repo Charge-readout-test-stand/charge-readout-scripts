@@ -50,8 +50,6 @@ def process_file(filename):
     tree = root_file.Get("tree")
     tree.SetLineWidth(3)
 
-    colors = [TColor.kBlue, TColor.kRed+1, TColor.kGreen+3, TColor.kViolet-1, TColor.kOrange+1]
-    
     canvas = TCanvas("canvas","", 1700, 900)
     pad = canvas.cd(1)
     pad.SetGrid(1,1)
@@ -78,8 +76,8 @@ def process_file(filename):
                 "chargeEnergy>%i&&chargeEnergy<%i" % (chargeenergy_low, chargeenergy_high),
                 "SAME")
         hist[i] = gDirectory.Get("hist%i" % i)
-        hist[i].SetLineColor(colors[i])
-        legend.AddEntry(hist[i], struck_analysis_parameters.channel_map[i], "l")
+        hist[i].SetLineColor(struck_analysis_parameters.get_colors()[i])
+        legend.AddEntry(hist[i], struck_analysis_parameters.channel_map[i], "pl")
 
     legend.Draw()
     canvas.Update()
