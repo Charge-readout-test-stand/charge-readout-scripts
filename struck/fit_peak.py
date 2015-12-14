@@ -30,6 +30,7 @@ from ROOT import TColor
 from ROOT import TLegend
 from ROOT import TH1D
 from ROOT import TF1
+from ROOT import TGraph
 from ROOT import gSystem
 
 import struck_analysis_parameters
@@ -43,34 +44,46 @@ def fit_channel(tree, channel, basename):
 
     energy_var = "energy1_pz"
 
-    n_bins = 200
-    max_bin = 2000
+    do_debug = False
+
+    min_bin = 200
+    max_bin = 1400
+    n_bins = int((max_bin-min_bin)/5)
     line_energy = 570
     sigma_guess = 40
 
-    fit_start_energy = line_energy - 200
-    #fit_stop_energy = line_energy + 250
-    fit_stop_energy = line_energy + 130
+    fit_start_energy = 400
+    fit_stop_energy = 770
 
-    fit_formula = "gausn(0) + [3]*TMath::Exp(-[4]*x)"
+    fit_formula = "gausn(0) + [3]*TMath::Exp(-[4]*x) + [5]"
+
     #-------------------------------------------------------------------------------
 
-    canvas = TCanvas("canvas","")
-    canvas.SetLogy(1)
-    canvas.SetGrid(1,1)
-    canvas.SetLeftMargin(0.12)
-    if channel:
+    print "====> fitting channel:", channel
+
+    canvas = TCanvas("canvas","", 700, 800)
+    canvas.Divide(1,2)
+    pad1 = canvas.cd(1)
+    pad1.SetLogy(1)
+    #canvas.SetLeftMargin(0.12)
+    if channel != None:
         channel_name = struck_analysis_parameters.channel_map[channel]
         hist_title = "channel %i: %s" % (channel, channel_name)
     else:
         channel_name = "all"
         hist_title = "all channels"
 
-    hist = TH1D("fit_hist", hist_title, n_bins, 0, max_bin)
+    hist = TH1D("fit_hist", hist_title, n_bins, min_bin, max_bin)
     bin_width = hist.GetBinWidth(1)
     hist.SetXTitle("Energy [keV]")
+    hist.GetYaxis().SetTitleOffset(1.2)
+    resid_hist = hist.Clone("resid_hist") # use same binning, titles, etc.
     hist.SetYTitle("Counts / %.1f keV" % bin_width)
-    hist.GetYaxis().SetTitleOffset(1.5)
+
+    resid_hist.SetYTitle("residual [#sigma]")
+    resid_hist.SetTitle("")
+    resid_hist.SetMarkerStyle(8)
+    resid_hist.SetMarkerSize(0.8)
 
 
     if channel == None:
@@ -83,7 +96,7 @@ def fit_channel(tree, channel, basename):
     selection = [
         #"%s > 100" % energy_var,
     ]
-    if channel:
+    if channel != None:
         selection.append( "channel==%i" % channel)
     #print "\n".join(selection)
 
@@ -113,16 +126,59 @@ def fit_channel(tree, channel, basename):
         sigma_guess,     # peak resolution
         exp_height_guess,    # exp decay height at zero energy
         decay_const_guess,   # exp decay constant
+        0.0,
     )
 
 
-    fit_result = hist.Fit(testfit,"IRLS")
+    fit_result = hist.Fit(testfit,"NIRLS")
     prob = fit_result.Prob()
     chi2 = fit_result.Chi2()
     ndf = fit_result.Ndf()
 
-    bestfit_exp = TF1("bestfite","[0]*TMath::Exp(-[1]*x)", fit_start_energy, fit_stop_energy)
-    bestfit_exp.SetParameters(testfit.GetParameter(3), testfit.GetParameter(4))
+
+    resid_graph = TGraph()
+    resid_graph.SetMarkerSize(0.8)
+    resid_graph.SetMarkerStyle(8)
+
+    # calculate residuals:
+    x = fit_start_energy
+    while x < fit_stop_energy:
+
+        # calculate values from hist:
+        i_bin = hist.FindBin(x)
+        counts = hist.GetBinContent(i_bin)
+        error = hist.GetBinError(i_bin)
+
+        fit_counts = testfit.Integral(x, x+bin_width)/bin_width
+        diff = counts - fit_counts
+
+        residual = diff / error
+
+
+        if do_debug:
+            print "bin: %i | low edge: %.1f | counts: %i +/- %.1f | fit counts: %.1f | diff:  %.1f | resid: %.1f" % (
+                i_bin,
+                hist.GetBinLowEdge(i_bin),
+                counts,
+                error,
+                fit_counts,
+                diff,
+                residual,
+            )
+
+        resid_graph.SetPoint(
+            resid_graph.GetN(),
+            hist.GetBinCenter(i_bin),
+            residual,
+        )
+        #resid_hist.SetBinContent(i_bin, residual)
+
+        x += bin_width
+
+
+
+    bestfit_exp = TF1("bestfite","[0]*TMath::Exp(-[1]*x) + [2]", fit_start_energy, fit_stop_energy)
+    bestfit_exp.SetParameters(testfit.GetParameter(3), testfit.GetParameter(4), testfit.GetParameter(5))
     bestfit_exp.SetLineColor(TColor.kBlack)
 
     bestfit_gaus = TF1("bestfitg", "gausn(0)", fit_start_energy, fit_stop_energy)
@@ -132,26 +188,42 @@ def fit_channel(tree, channel, basename):
 
     calibration_ratio = line_energy/testfit.GetParameter(1)
     sigma = testfit.GetParameter(2) # *calibration_ratio
-    if channel:
+    if channel != None:
         new_calibration_value = struck_analysis_parameters.calibration_values[channel]*calibration_ratio
     else:
         new_calibration_value = calibration_ratio
 
 
+    pad1 = canvas.cd(1)
+    pad1.SetGrid(1,1)
+    hist.SetMaximum(1.2*fit_start_height)
     hist.Draw()
+    testfit.Draw("same")
     bestfit_gaus.Draw("same")
     bestfit_exp.Draw("same")
+    hist.Draw("same")
+
+    n_peak_counts = testfit.GetParameter(0)/bin_width
 
 
     leg = TLegend(0.45, 0.7, 0.95, 0.90)
     leg.AddEntry(hist, "Data")
     leg.AddEntry(testfit, "Total Fit: #chi^{2}/DOF = %.1f/%i, P-val = %.1E" % (chi2, ndf, prob),"l")
-    leg.AddEntry(bestfit_gaus, "Gaus Peak Fit: #sigma = %.1f keV, %.1E counts" % (sigma, testfit.GetParameter(0)), "l")
-    leg.AddEntry(bestfit_exp,  "Exp Background Fit", "l")
+    leg.AddEntry(bestfit_gaus, "Gaus Peak Fit: #sigma = %.1f #pm %.1f keV, %.1E cts" % (sigma, testfit.GetParError(2), n_peak_counts), "l")
+    leg.AddEntry(bestfit_exp,  "Exp + const background fit", "l")
     leg.SetFillColor(0)
     leg.Draw()
 
-    if channel:
+    resid_hist.SetMaximum(3.5)
+    resid_hist.SetMinimum(-3.5)
+    pad2 = canvas.cd(2)
+    pad2.SetGrid(1,1)
+    #resid_hist.Draw("hist P")
+    resid_hist.Draw("")
+    resid_graph.Draw("p")
+    pad2.SetGrid(1,1)
+
+    if channel != None:
         plot_name = "fit_ch%i_%s" % (channel, basename)
     else:
         plot_name = "fit_all_%s" % basename
@@ -161,9 +233,7 @@ def fit_channel(tree, channel, basename):
     canvas.Print("%s_log.pdf" % plot_name)
 
     # lin scale
-    #hist.SetMaximum(1.5*hist.GetBinContent(hist.FindBin(line_energy)))
-    hist.SetMaximum(1.1*fit_start_height)
-    canvas.SetLogy(0)
+    pad1.SetLogy(0)
     canvas.Update()
     canvas.Print("%s_lin.pdf" % plot_name)
 
@@ -171,8 +241,8 @@ def fit_channel(tree, channel, basename):
     result = {}
     result["channel"] = channel
     result["calibration_value"] = "%.6e" % new_calibration_value
-    result["peak counts"] = "%.2f" % testfit.GetParameter(0)
-    result["peak counts_err"] = "%.2f" % testfit.GetParError(0)
+    result["peak counts"] = "%.2f" % n_peak_counts
+    result["peak counts_err"] = "%.2f" % (testfit.GetParError(0)/bin_width)
     result["centroid"] = "%.2f" % testfit.GetParameter(1)
     result["centroid_err"] = "%.2f" % testfit.GetParError(1)
     result["sigma"] = "%.2f" % sigma

@@ -113,6 +113,21 @@ if is_6th_LXe:
     # EMI 9531QB, 1300V PMT bias, 1700V cathode bias
     calibration_values[8] = 2.12352
 
+def get_colors():
+    from ROOT import TColor
+    
+    colors = [
+        TColor.kBlue, 
+        TColor.kGreen+2, 
+        TColor.kViolet+1,
+        TColor.kRed, 
+        TColor.kOrange+1,
+        TColor.kMagenta,
+    ]
+    return colors
+
+
+
 
 def is_2Vinput(baseline_mean_file):
     """
@@ -164,4 +179,12 @@ if __name__ == "__main__":
     print "\ndecay times:"
     for (channel, value) in decay_time_values.items():
         print "\t channel %i [microseconds]: %.1f" % (channel, value/microsecond)
+
+
+    colors = get_colors()
+    print "\ncolors:"
+    for (i, color) in enumerate(colors):
+        print "color %i:" % i, color
+
+
 
