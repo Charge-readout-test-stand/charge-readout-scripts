@@ -54,6 +54,8 @@ def process_file(filename):
 
     root_file = TFile(filename, "READ")
     tree = root_file.Get("tree")
+    tree.Draw(">>elist_all", "")  ## save eventlist_all
+    elist_all = gDirectory.Get("elist_all")
     tree.SetLineWidth(2)
 
     canvas = TCanvas("canvas","", 1700, 900)
@@ -70,109 +72,115 @@ def process_file(filename):
     for i in range(1, n_chargechannels):
         selection2 +="||(energy1_pz[%i]>100&&rise_time_stop95[%i]-trigger_time<5)" % (i,i)
 
-    ## selection3: at least one channel has energy > 200 and 
-    ## drift time between drifttime_low and drifttimme_high (in us), and not meeting any criteria above
+    ## selection3: at least one channel has energy > energy_threshold and 
+    ## drift time according to drifttime_table, and not meeting any criteria above
     
     ## settings
     energy_threshold = 100
-    drifttime_low = 5.0
-    drifttime_high = 10.0
-    with_chargeenergyselection = False 
+    drifttime_table = [7.0, 7.5, 8.0, 8.5, 9.0, 9.5, 10.0]
+    #drifttime_table = [8.0, 9.0]
+    with_chargeenergyselection = False
     energylow = 1000 
-    energyhigh = 1150
-    with_lightenergyselection = True
-    lightenergylow = 800
-    lightenergyhigh = 1200
+    energyhigh = 1200
+    with_lightenergyselection = False 
+    lightenergylow = 450
+    lightenergyhigh = 800
     with_channelselection = False 
     channelselection = [0,1,0,0,0] ## 1-selected, 0-unselected
     with_allevents = False 
 
-    append = ""
-    selection3 = ""
-
-    ## start making selection string
-    if with_channelselection:
-        for i in xrange(len(channelselection)):
-            if channelselection[i] == 1:
-                if selection3 == "":
-                    selection3 = "(energy1_pz[%i]>%f&&rise_time_stop95[%i]-trigger_time>%f&&rise_time_stop95[%i]-trigger_time<%f)" % (i, energy_threshold, i, drifttime_low, i, drifttime_high) 
-                    append += "_channel%i" % i
-                else:
-                    selection3 += "||(energy1_pz[%i]>%f&&rise_time_stop95[%i]-trigger_time>%f&&rise_time_stop95[%i]-trigger_time<%f)" % (i, energy_threshold, i, drifttime_low, i, drifttime_high)
-                    append +="_%i" % i
-        if selection3 == "": ## if no channel is selected
-            print "no channel selected!"
-            sys.exit(1)
-    else:
-        append += "_allchannels"
-        selection3 = "(energy1_pz[0]>%f&&rise_time_stop95[0]-trigger_time>%f&&rise_time_stop95[0]-trigger_time<%f)" % (energy_threshold, drifttime_low, drifttime_high)
-        for i in range(1, n_chargechannels):
-            selection3 += "||(energy1_pz[%i]>%f&&rise_time_stop95[%i]-trigger_time>%s&&rise_time_stop95[%i]-trigger_time<%s)" % (i, energy_threshold, i, drifttime_low, i, drifttime_high)
-    selection3 = "(%s)" % selection3  ## wrap the conditions
-
-    if with_chargeenergyselection:
-        append += "_energy_%ito%i" % (energylow, energyhigh)
-        selection3 = "(chargeEnergy>%i&&chargeEnergy<%i&&(%s))" % (
-                                    energylow, energyhigh, selection3)
-    if with_lightenergyselection:
-        append += "_lightenergy_%ito%i" % (lightenergylow, lightenergyhigh)
-        selection3 = "(lightEnergy>%i&&lightEnergy<%i&&(%s))" % (
-                                    lightenergylow, lightenergyhigh, selection3)
-    
-    selection3 = "(%s)&&(!(%s))&&(!(%s))" % (selection3, selection1, selection2)
-
-    ## create event list
-    if with_allevents:
-        append = "_allevents"
+    for i_drifttime in xrange(len(drifttime_table)-1):
         selection3 = ""
-    tree.Draw(">>elist", selection3)
-    elist = gDirectory.Get("elist")
-    elist.Print()
+        drifttime_low = drifttime_table[i_drifttime]
+        drifttime_high = drifttime_table[i_drifttime + 1]
+        append = "_drifttime_%.2fto%.2f" % (drifttime_low, drifttime_high)
 
-    ## drawing histograms
-    tree.SetEventList(elist)
+        ## start making selection string
+        if with_channelselection:
+            for i in xrange(len(channelselection)):
+                if channelselection[i] == 1:
+                    if selection3 == "":
+                        selection3 = "(energy1_pz[%i]>%.2f&&rise_time_stop95[%i]-trigger_time>%.2f&&rise_time_stop95[%i]-trigger_time<%.2f)" % (i, energy_threshold, i, drifttime_low, i, drifttime_high) 
+                        append += "_channel%i" % i
+                    else:
+                        selection3 += "||(energy1_pz[%i]>%.2f&&rise_time_stop95[%i]-trigger_time>%.2f&&rise_time_stop95[%i]-trigger_time<%.2f)" % (i, energy_threshold, i, drifttime_low, i, drifttime_high)
+                        append +="_%i" % i
+            if selection3 == "": ## if no channel is selected
+                print "no channel selected!"
+                sys.exit(1)
+        else:
+            append += "_allchannels"
+            selection3 = "(energy1_pz[0]>%.2f&&rise_time_stop95[0]-trigger_time>%.2f&&rise_time_stop95[0]-trigger_time<%.2f)" % (energy_threshold, drifttime_low, drifttime_high)
+            for i in range(1, n_chargechannels):
+                selection3 += "||(energy1_pz[%i]>%.2f&&rise_time_stop95[%i]-trigger_time>%.2f&&rise_time_stop95[%i]-trigger_time<%.2f)" % (i, energy_threshold, i, drifttime_low, i, drifttime_high)
+        selection3 = "(%s)" % selection3  ## wrap the conditions
 
-    canvas.Clear()
-    pad.SetLogy()
-    tree.Draw("chargeEnergy >> h2(250,0.,2000.)")
-    canvas.Update()
-    canvas.Print("charge%s.pdf" % append)
-    canvas.Print("charge%s.png" % append)
-    
-    canvas.Clear()
-    tree.Draw("lightEnergy >> h3(500,0.,4000.)")
-    canvas.Update()
-    canvas.Print("light%s.pdf" % append)
-    canvas.Print("light%s.png" % append)
-    
-    canvas.Clear()
-    pad.SetLogy(False)
-    pad.SetLogz()
-    tree.Draw("lightEnergy:chargeEnergy >> h4(100,0.,2000.,100,0.,2000.)","","colz")
-    canvas.Update()
-    canvas.Print("lightvscharge%s.pdf" % append)
-    canvas.Print("lightvscharge%s.png" % append)
+        if with_chargeenergyselection:
+            append += "_energy_%ito%i" % (energylow, energyhigh)
+            selection3 = "(chargeEnergy>%i&&chargeEnergy<%i&&(%s))" % (
+                                        energylow, energyhigh, selection3)
 
-    pad.SetLogy(True)
-    pad.SetLogz(False)
-    for i in xrange(n_chargechannels):
+        if with_lightenergyselection:
+            append += "_lightenergy_%ito%i" % (lightenergylow, lightenergyhigh)
+            selection3 = "(lightEnergy>%i&&lightEnergy<%i&&(%s))" % (
+                                        lightenergylow, lightenergyhigh, selection3)
+        
+        selection3 = "(%s)&&(!(%s))&&(!(%s))" % (selection3, selection1, selection2)
+
+        ## create event list
+        if with_allevents:
+            append = "_allevents"
+            selection3 = ""
+        tree.SetEventList(elist_all)
+        tree.Draw(">>elist", selection3)
+        elist = gDirectory.Get("elist")
+        elist.Print()
+
+        ## drawing histograms
+        tree.SetEventList(elist)
+
         canvas.Clear()
-        tree.Draw("energy1_pz[%i] >> h(250,0.,2000.)" % i)
+        pad.SetLogy()
+        tree.Draw("chargeEnergy >> h2(250,0.,2000.)")
         canvas.Update()
-        canvas.Print("charge%i%s.pdf" % (i, append))
-        canvas.Print("charge%i%s.png" % (i, append))
+        canvas.Print("charge%s.pdf" % append)
+        canvas.Print("charge%s.png" % append)
+        
+        canvas.Clear()
+        tree.Draw("lightEnergy >> h3(500,0.,4000.)")
+        canvas.Update()
+        canvas.Print("light%s.pdf" % append)
+        canvas.Print("light%s.png" % append)
+        
+        canvas.Clear()
+        pad.SetLogy(False)
+        pad.SetLogz()
+        tree.Draw("lightEnergy:chargeEnergy >> h4(100,0.,2000.,100,0.,2000.)","","colz")
+        canvas.Update()
+        canvas.Print("lightvscharge%s.pdf" % append)
+        canvas.Print("lightvscharge%s.png" % append)
 
-    # write selected events to file
-    fout = TFile("event%s.root" % append, "RECREATE") 
-    #tree_selected = tree.CopyTree("")
-    #tree_selected.Write()
-    elist.Write()
+        pad.SetLogy(True)
+        pad.SetLogz(False)
+        for i in xrange(n_chargechannels):
+            canvas.Clear()
+            tree.Draw("energy1_pz[%i] >> h(250,0.,2000.)" % i)
+            canvas.Update()
+            canvas.Print("charge%i%s.pdf" % (i, append))
+            canvas.Print("charge%i%s.png" % (i, append))
+
+        # write selected events to file
+        fout = TFile("event%s.root" % append, "RECREATE") 
+        #tree_selected = tree.CopyTree("")
+        #tree_selected.Write()
+        elist.Write()
+        elist.Clear()
+        fout.Close()
 
     end_time = time.clock()
     print "processing time = ", end_time, " s" 
 
     root_file.Close()
-    fout.Close()
 
 
 
