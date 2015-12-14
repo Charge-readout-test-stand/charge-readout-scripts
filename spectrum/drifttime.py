@@ -54,19 +54,27 @@ def process_file(filename):
     pad = canvas.cd(1)
     pad.SetGrid(1,1)
     pad.SetLogy()
+    legend = TLegend(0.1, 0.7, 0.4, 0.9)
 
     ## all events
-    tree.Draw("rise_time_stop95-trigger_time >> h1(60, 0., 12.)")
-    h1.SetLineColor(TColor.kBlack)
+    tree.Draw("rise_time_stop95-trigger_time >> hist1(300, -0.02 , 11.98)", "channel!=5&&channel!=8")
+    hist1 = gDirectory.Get("hist1")
+    hist1.SetLineColor(TColor.kBlack)
+    legend.AddEntry(hist1, "All events", "l")
 
     ## charge energy between 475keV and 675keV
-    tree.Draw("rise_time_stop95-trigger_time >> h2(60, 0., 12.)", "chargeEnergy>475&&chargeEnergy<675", "SAME")
-    h2.SetLineColor(TColor.kBlue)
+    tree.Draw("rise_time_stop95-trigger_time >> hist2(300, -0.02, 11.98)", "channel!=5&&channel!=8&&chargeEnergy>475&&chargeEnergy<675", "SAME")
+    hist2 = gDirectory.Get("hist2")
+    hist2.SetLineColor(TColor.kBlue)
+    legend.AddEntry(hist2, "Charge energy 475 - 675 keV", "l")
 
     ## charge energy between 1000keV and 1200keV
-    tree.Draw("rise_time_stop95-trigger_time >> h3(60, 0., 12.)", "chargeEnergy>1000&&chargeEnergy<1200", "SAME")
-    h3.SetLineColor(TColor.kRed)
+    tree.Draw("rise_time_stop95-trigger_time >> hist3(300, -0.02, 11.98)", "channel!=5&&channel!=8&&chargeEnergy>1000&&chargeEnergy<1200", "SAME")
+    hist3 = gDirectory.Get("hist3")
+    hist3.SetLineColor(TColor.kRed)
+    legend.AddEntry(hist3, "Charge energy 1000 - 1200 keV", "l")
 
+    legend.Draw()
     canvas.Update()
     canvas.Print("drifttime.png")
     canvas.Print("drifttime.pdf")
