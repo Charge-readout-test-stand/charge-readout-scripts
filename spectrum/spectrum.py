@@ -77,8 +77,8 @@ def process_file(filename):
     
     ## settings
     energy_threshold = 100
-    drifttime_table = [7.0, 7.5, 8.0, 8.5, 9.0, 9.5, 10.0]
-    #drifttime_table = [8.0, 9.0]
+    #drifttime_table = [7.0, 7.5, 8.0, 8.5, 9.0, 9.5, 10.0]
+    drifttime_table = [8.5, 9.5]
     with_chargeenergyselection = False
     energylow = 1000 
     energyhigh = 1200
