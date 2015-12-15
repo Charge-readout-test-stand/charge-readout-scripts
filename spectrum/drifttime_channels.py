@@ -33,7 +33,7 @@ gStyle.SetTitleStyle(0)
 gStyle.SetTitleBorderSize(0)
 
 import struck_analysis_parameters
-n_chargechannels = struck_analysis_parameters.n_chargechannels
+charge_channels_to_use = struck_analysis_parameters.charge_channels_to_use
 
 gSystem.Load("$EXOLIB/lib/libEXOUtilities")
 from ROOT import CLHEP
@@ -54,11 +54,11 @@ def process_file(filename):
     pad = canvas.cd(1)
     pad.SetGrid(1,1)
     pad.SetLogy()
-    legend = TLegend(0.1, 0.91, 0.4, 0.99)
-    legend.SetNColumns(n_chargechannels + 1)
+    legend = TLegend(0.12, 0.81, 0.55, 0.89)
+    legend.SetNColumns(struck_analysis_parameters.n_chargechannels + 1)
 
-    chargeenergy_low = 1000 
-    chargeenergy_high = 1200
+    chargeenergy_low = 475 
+    chargeenergy_high = 675
 
     ## all channels
     tree.Draw("rise_time_stop95-trigger_time >> hist_all(300, -0.02, 11.98)", "channel!=5&&channel!=8&&chargeEnergy>%i&&chargeEnergy<%i" % (chargeenergy_low, chargeenergy_high))
@@ -71,13 +71,16 @@ def process_file(filename):
 
     ## individual channels
     hist = {}
-    for i in xrange(n_chargechannels):
+    for i in xrange(len(charge_channels_to_use)):
+        if not charge_channels_to_use[i]:
+            continue
+
         tree.Draw("rise_time_stop95[%i]-trigger_time >> hist%i(300, -0.02 , 11.98)" % (i, i),
                 "chargeEnergy>%i&&chargeEnergy<%i" % (chargeenergy_low, chargeenergy_high),
                 "SAME")
         hist[i] = gDirectory.Get("hist%i" % i)
         hist[i].SetLineColor(struck_analysis_parameters.get_colors()[i])
-        legend.AddEntry(hist[i], struck_analysis_parameters.channel_map[i], "pl")
+        legend.AddEntry(hist[i], struck_analysis_parameters.channel_map[i], "l")
 
     legend.Draw()
     canvas.Update()
