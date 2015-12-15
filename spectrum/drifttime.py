@@ -59,6 +59,8 @@ def process_file(filename):
     ## all events
     tree.Draw("rise_time_stop95-trigger_time >> hist1(300, -0.02 , 11.98)", "channel!=5&&channel!=8")
     hist1 = gDirectory.Get("hist1")
+    hist1.SetXTitle("Drift time (#mus)")
+    hist1.SetYTitle("Counts per 0.04 #mus bin")
     hist1.SetLineColor(TColor.kBlack)
     legend.AddEntry(hist1, "All events", "l")
 

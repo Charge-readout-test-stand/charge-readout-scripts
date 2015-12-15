@@ -57,16 +57,16 @@ def process_file(filename):
     legend = TLegend(0.12, 0.81, 0.55, 0.89)
     legend.SetNColumns(struck_analysis_parameters.n_chargechannels + 1)
 
-    chargeenergy_low = 475 
-    chargeenergy_high = 675
+    chargeenergy_low = 1000 
+    chargeenergy_high = 1200
 
     ## all channels
     tree.Draw("rise_time_stop95-trigger_time >> hist_all(300, -0.02, 11.98)", "channel!=5&&channel!=8&&chargeEnergy>%i&&chargeEnergy<%i" % (chargeenergy_low, chargeenergy_high))
     hist_all = gDirectory.Get("hist_all")
     hist_all.SetLineColor(TColor.kBlack)
     hist_all.SetTitle("Charge energy %i to %i" % (chargeenergy_low, chargeenergy_high))
-    hist_all.SetXTitle("Drift time (us)")
-    hist_all.SetYTitle("Counts per %.2f us bin" % hist_all.GetBinWidth(1))
+    hist_all.SetXTitle("Drift time (#mus)")
+    hist_all.SetYTitle("Counts per %.2f #mus bin" % hist_all.GetBinWidth(1))
     legend.AddEntry(hist_all, "All channels", "l")
 
     ## individual channels
