@@ -1,0 +1,1 @@
+../struck/struck_analysis_parameters.py
