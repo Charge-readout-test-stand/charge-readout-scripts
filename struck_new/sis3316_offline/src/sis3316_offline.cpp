@@ -53,7 +53,7 @@ using namespace std;
 #define MAX_NUMBER_LWORDS_64MBYTE			0x1000000       /* 64MByte */
 
 // this is the data read from the file
-unsigned int gl_ch_data[MAX_NUMBER_LWORDS_64MBYTE] ;
+UInt_t gl_ch_data[MAX_NUMBER_LWORDS_64MBYTE] ;
 
 FILE *gl_FILE_DataEvenFilePointer           ;
 
@@ -61,8 +61,8 @@ FILE *gl_FILE_DataEvenFilePointer           ;
 /* Prototypes			                               		  			     */
 /*===========================================================================*/
 
-int ReadBufferHeaderCounterNofChannelToDataFile (unsigned int* indentifier, unsigned int* bank_loop_no, unsigned int* channel_no, unsigned int* nof_events, unsigned int* event_length, unsigned int* maw_length, unsigned int* reserved);
-int ReadEventsFromDataFile (unsigned int* memory_data_array, unsigned int nof_write_length_lwords);
+int ReadBufferHeaderCounterNofChannelToDataFile (UInt_t* indentifier, UInt_t* bank_loop_no, UInt_t* channel_no, UInt_t* nof_events, UInt_t* event_length, UInt_t * maw_length, UInt_t* reserved);
+int ReadEventsFromDataFile (UInt_t* memory_data_array, UInt_t nof_write_length_lwords);
 
 
 /* ***************************************************************************************************************** */
@@ -113,29 +113,29 @@ int main(int argc, char* argv[]) {
             printf("file is opened \n");
     }
   #endif
-  unsigned valid_BankBufferHeader_valid_flag ;
+  UInt_t valid_BankBufferHeader_valid_flag ;
   int nof_read ;
-  unsigned buffer_no ;
-  unsigned i_event ;
-  unsigned nof_events ;
-  unsigned buffer_length ;
-  unsigned event_length ;
-  unsigned header_length ;
-  unsigned wfm_length ;
-  unsigned channel_no ;
-  unsigned maw_length ;
-  unsigned i_ch ;
-  unsigned headerformat ;
-  unsigned header_indentifier ;
-  unsigned header_reserved ;
+  UInt_t buffer_no ;
+  UInt_t i_event ;
+  UInt_t nof_events ;
+  UInt_t buffer_length ;
+  UInt_t event_length ;
+  UInt_t header_length ;
+  UInt_t wfm_length ;
+  UInt_t channel_no ;
+  UInt_t maw_length ;
+  UInt_t i_ch ;
+  UInt_t headerformat ;
+  UInt_t header_indentifier ;
+  UInt_t header_reserved ;
 
 
   //gl_graph_raw->sis3316_draw_XYaxis (50000); // clear and draw X/Y
   //gl_graph_raw->sis3316_draw_XYaxis (wfm_length); // clear and draw X/Y
-  unsigned bank_buffer_counter ;
+  UInt_t bank_buffer_counter ;
 
   char filename[128]  ;
-  unsigned int i_file;
+  int i_file;
 
   bank_buffer_counter = 8 ;
 
@@ -181,68 +181,92 @@ int main(int argc, char* argv[]) {
     TTree *tree[16];
 
     //values for branches
-        unsigned int wfm_max = 0; 
-        unsigned int wfm_max_time = 0;
-        unsigned int wfm_min = 0; 
-        signed int maw_max = 0; 
-        signed int maw_min = 0; 
-        int channel = 0;
-        unsigned long long int timestamp = 0;
-        double  timestampDouble = 0;
-        unsigned long long int timestampLo = 0;
-        unsigned long long int timestampHi = 0;
-        unsigned short * wfm = new unsigned short[2048*4]; 
-        signed int * maw = new signed int[2048*4]; 
-    for(int i=0; i<=15; i++){
+    //FIXME--right now the global parameters are set; should be read from configuration file in the future
+    //global parameters
+        Bool_t is_external = true;
+        Float_t sampling_freq = 25e6; // in Hz
+        UShort_t wfm_delay = 200;
+        UShort_t maw_delay = 10;
+        Bool_t is_pospolarity[16];
+        Bool_t is_50ohm[16];
+        Bool_t is_2Vinput[16];
+        UShort_t maw_gap = 250;
+        UShort_t maw_peaking = 50;
+        UShort_t maw_thres = 60;
+        for(int i=0; i<=15; i++) {is_pospolarity[i] = is_50ohm[i] = is_2Vinput[i] = true;}
+        is_2Vinput[8] = false;
+
+     //other parameters
+        Int_t wfm_max = 0; 
+        UShort_t wfm_max_time = 0;
+        Int_t wfm_min = 0;
+        Int_t maw_max = 0; 
+        Int_t maw_min = 0; 
+        UChar_t channel = 0;
+        ULong64_t timestamp = 0;
+        Double_t timestampDouble = 0;
+        //ULong64_t timestampLo = 0;
+        //ULong64_t timestampHi = 0;
+        UShort_t * wfm = new UShort_t[2048*4]; 
+        Int_t * maw = new Int_t[2048*4]; 
+
+    for(int i=0; i<=15; i++) { // looping over the 16 trees
         ostringstream treename;
         treename << "tree" << i;
         tree[i] = new TTree(treename.str().c_str(), "tree of SIS waveform data");
 
+        // global parameters
+        tree[i]->Branch("is_external", &is_external, "is_external/O");
+        tree[i]->Branch("sampling_freq", &sampling_freq, "sampling_freq/F");
+        tree[i]->Branch("wfm_delay", &wfm_delay, "wfm_delay/s");
+        tree[i]->Branch("wfm_length", &wfm_length, "wfm_length/i");
+        tree[i]->Branch("maw_delay", &maw_delay, "maw_delay/s");
+        tree[i]->Branch("maw_length", &maw_length, "maw_length/i");
+        tree[i]->Branch("is_pospolarity", &is_pospolarity[i], "is_pospolarity/O");
+        tree[i]->Branch("is_50ohm", &is_50ohm[i], "is_50ohm/O");
+        tree[i]->Branch("is_2Vinput", &is_2Vinput[i], "is_2Vinput/O");
+        tree[i]->Branch("maw_gap", &maw_gap, "maw_gap/s");
+        tree[i]->Branch("maw_peaking", &maw_peaking, "maw_peaking/s");
+        tree[i]->Branch("maw_thres", &maw_thres, "maw_thres/s");
+
         // create a maximum-value branch
-        //unsigned int wfm_max = 0; 
-        tree[i]->Branch("wfm_max", &wfm_max);
+        //UInt_t wfm_max = 0; 
+        tree[i]->Branch("wfm_max", &wfm_max, "wfm_max/I");
 
         // time of waveform max value:
-        //unsigned int wfm_max_time = 0;
-        tree[i]->Branch("wfm_max_time", &wfm_max_time);
+        //UInt_t wfm_max_time = 0;
+        tree[i]->Branch("wfm_max_time", &wfm_max_time, "wfm_max_time/s");
 
         // create a mininum-value branch
-        //unsigned int wfm_min = 0; 
-        tree[i]->Branch("wfm_min", &wfm_min);
+        //UInt_t wfm_min = 0; 
+        tree[i]->Branch("wfm_min", &wfm_min, "wfm_min/I");
 
         // create a maximum-value branch
         //signed int maw_max = 0; 
-        tree[i]->Branch("maw_max", &maw_max);
+        tree[i]->Branch("maw_max", &maw_max, "maw_max/I");
 
         // create a mininum-value branch
         //signed int maw_min = 0; 
-        tree[i]->Branch("maw_min", &maw_min);
+        tree[i]->Branch("maw_min", &maw_min, "maw_min/I");
 
         // create a channel branch
         //int channel = 0;
-        tree[i]->Branch("channel", &channel);
+        tree[i]->Branch("channel", &channel, "channel/b"); // 8 bit unsigned integer
 
         // create a timestamp branch
-        //unsigned long long int timestamp = 0;
+        //ULong64_t timestamp = 0;
         //double  timestampDouble = 0;
-        tree[i]->Branch("timestamp", &timestamp);
-        tree[i]->Branch("timestampDouble", &timestampDouble);
-        //unsigned long long int timestampLo = 0;
-        //unsigned long long int timestampHi = 0;
-        tree[i]->Branch("timestampLo", &timestampLo);
-        tree[i]->Branch("timestampHi", &timestampHi);
+        tree[i]->Branch("timestamp", &timestamp, "timestamp/l"); // 64 bit unsigned integer (ULong64_t)
+        tree[i]->Branch("timestampDouble", &timestampDouble, "timestampDouble/D"); // (Double_t)
 
         // create a buffer number branch
-        tree[i]->Branch("buffer_no", &buffer_no);
+        // tree[i]->Branch("buffer_no", &buffer_no);
 
         // create an event  number branch
-        tree[i]->Branch("event", &i_event);
+        tree[i]->Branch("event", &i_event, "event/i"); // unsigned integer (UInt_t)
     
-        // sample length
-        tree[i]->Branch("wfm_length", &wfm_length);
-
         // wfm
-        //unsigned short * wfm = new unsigned short[2048*4]; 
+        //UShort_t * wfm = new UShort_t[2048*4]; 
         tree[i]->Branch("wfm", wfm, "wfm[wfm_length]/s");
 
         // maw buffer
@@ -306,7 +330,7 @@ int main(int argc, char* argv[]) {
           if((headerformat & 0x8) == 8) {header_length = header_length + 2; }
 
           // wfm_length is the number of 16-bit ADC samples in each event
-          // event_length is the number of 32-bit words in each event
+       // event_length is the number of 32-bit words in each event
           wfm_length = 2 * (gl_ch_data[header_length-1] & 0x3ffffff) ; // if headerformat == 0
 
           if(uint_plot_axis_flag == 1) {
@@ -320,8 +344,8 @@ int main(int argc, char* argv[]) {
             //if (i_event<10) { // plot ony the first 10. events
             //if (i_event<1) { // plot ony 1. event
 
-              //cout << sizeof(unsigned int) << endl;
-              // gl_ch_data is an unsigned int is 4 bytes (32 bits), at least on
+              //cout << sizeof(UInt_t) << endl;
+              // gl_ch_data is an UInt_t is 4 bytes (32 bits), at least on
               // Alexis' Mac. Bit mask each part of the timestamp, then bit shift to
               // make the 48-bit timestamp
               // 0xffff = 32 bits, 4 bytes
@@ -330,23 +354,23 @@ int main(int argc, char* argv[]) {
 
               //cout << "gl_ch_data[event_index + 1] : " << gl_ch_data[event_index + 1] << endl;
               //cout << "gl_ch_data[event_index]: " << gl_ch_data[event_index] << endl;
-              //cout << "(gl_ch_data[event_index] & 0xffff0000): " << ( (unsigned long long int) (gl_ch_data[event_index] & 0xffff0000)) << endl;
-              //cout << "(gl_ch_data[event_index] & 0xffff0000) << 16 :" << ( (unsigned long long int) (gl_ch_data[event_index] & 0xffff0000) << 16) << endl;
+              //cout << "(gl_ch_data[event_index] & 0xffff0000): " << ( (ULong64_t) (gl_ch_data[event_index] & 0xffff0000)) << endl;
+              //cout << "(gl_ch_data[event_index] & 0xffff0000) << 16 :" << ( (ULong64_t) (gl_ch_data[event_index] & 0xffff0000) << 16) << endl;
 
-              timestamp = ( (unsigned long long int) (gl_ch_data[event_index] & 0xffff0000) << 16) ;
+              timestamp = ( (ULong64_t) (gl_ch_data[event_index] & 0xffff0000) << 16) ;
               timestamp += gl_ch_data[event_index + 1];
-              timestampHi = ( (unsigned long long int) (gl_ch_data[event_index] & 0xffff0000) << 16) ;
-              timestampLo = gl_ch_data[event_index + 1];
-              timestampDouble = (double) timestamp;
+              //timestampHi = ( (ULong64_t) (gl_ch_data[event_index] & 0xffff0000) << 16) ;
+              //timestampLo = gl_ch_data[event_index + 1];
+              timestampDouble = (Double_t) timestamp;
 
 
               // find the wfm maximum value
               wfm_max = 0; 
               wfm_max_time = 0;
               wfm_min = pow(2, 14); // max value of ADC
-              unsigned short* ushort_adc_buffer_ptr = (unsigned short*) (&gl_ch_data[i_event*(event_length) + header_length]);
-              for (unsigned int i = 0; i < wfm_length; i++ ) {
-                unsigned int adc_value = (unsigned int) ushort_adc_buffer_ptr[i];
+              UShort_t* ushort_adc_buffer_ptr = (UShort_t*) (&gl_ch_data[i_event*(event_length) + header_length]);
+              for (UInt_t i = 0; i < wfm_length; i++ ) {
+                UInt_t adc_value = (UInt_t) ushort_adc_buffer_ptr[i];
                 wfm[i] = adc_value;
                 //cout << i << " | " << adc_value << endl;
                 if (adc_value > wfm_max){ 
@@ -380,7 +404,7 @@ int main(int argc, char* argv[]) {
                 }
               }
 
-              //wfm = (unsigned short*) &(gl_ch_data[event_index + header_length]);
+              //wfm = (UShort_t*) &(gl_ch_data[event_index + header_length]);
 
               //------------------------------------------------------------------------------
               // MAW
@@ -391,16 +415,16 @@ int main(int argc, char* argv[]) {
               maw_max = 0; 
               maw_min = INT_MAX; // max value of MAW
 
-              //unsigned short* maw_adc_buffer_ptr = (unsigned short*)
+              //UShort_t* maw_adc_buffer_ptr = (UShort_t*)
               //(&gl_ch_data[i_event*(event_length) + header_length +
               //wfm_length/2]);
 
               // Tino says maw is 32 bits:
-              unsigned int* maw_adc_buffer_ptr =
+              UInt_t* maw_adc_buffer_ptr =
               &gl_ch_data[i_event*(event_length) + header_length +
               wfm_length/2];
 
-              for (unsigned int i = 0; i < maw_length; i++ ) {
+              for (UInt_t i = 0; i < maw_length; i++ ) {
                 signed int maw_value = maw_adc_buffer_ptr[i] - 0x8000000; // per Tino
                 maw[i] = maw_value;
 
@@ -555,7 +579,7 @@ int main(int argc, char* argv[]) {
 
 //---------------------------------------------------------------------------
 
-int ReadBufferHeaderCounterNofChannelToDataFile (unsigned int* indentifier, unsigned int* bank_loop_no, unsigned int* channel_no, unsigned int* nof_events, unsigned int* event_length, unsigned int* maw_length, unsigned int* reserved)
+int ReadBufferHeaderCounterNofChannelToDataFile (UInt_t* indentifier, UInt_t* bank_loop_no, UInt_t* channel_no, UInt_t* nof_events, UInt_t* event_length, UInt_t* maw_length, UInt_t* reserved)
 {
 int nof_read ;
 int data ;
@@ -574,7 +598,7 @@ int data ;
 
 
 //---------------------------------------------------------------------------
-int ReadEventsFromDataFile (unsigned int* memory_data_array, unsigned int nof_write_length_lwords)
+int ReadEventsFromDataFile (UInt_t* memory_data_array, UInt_t nof_write_length_lwords)
 {
 int nof_read ;
 

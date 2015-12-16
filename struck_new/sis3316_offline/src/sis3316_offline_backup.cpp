@@ -116,7 +116,7 @@ int main(int argc, char* argv[]) {
   unsigned valid_BankBufferHeader_valid_flag ;
   int nof_read ;
   unsigned buffer_no ;
-  unsigned i_event ;
+  UInt_t i_event ;
   unsigned nof_events ;
   unsigned buffer_length ;
   unsigned event_length ;
@@ -177,63 +177,101 @@ int main(int argc, char* argv[]) {
     // open a root file
     TFile root_file((label + ".root").c_str(), "recreate");
 
-    // make a tree
-    TTree tree("tree", "tree of SIS waveform data");
+    // make trees
+    TTree *tree[16];
 
-    // create a maximum-value branch
-    unsigned int wfm_max = 0; 
-    tree.Branch("wfm_max", &wfm_max);
+    //values for branches
+    //FIXME--right now the global parameters are set; should be read from configuration file in the future
+    //global parameters
+        Bool_t is_external = true;
+        UShort_t wfm_delay = 200;
+        UShort_t maw_delay = 10;
+        Bool_t is_pospolarity[16] = {true};
+        Bool_t is_50ohm[16] = {true};
+        Bool_t is_2Vinput[16] = {true}; is_2Vinput[8] = false;
+        UShort_t maw_gap = 250;
+        UShort_t maw_peaking = 50;
+        UShort_t maw_thres = 60;
 
-    // time of waveform max value:
-    unsigned int wfm_max_time = 0;
-    tree.Branch("wfm_max_time", &wfm_max_time);
+     //other parameters
+        Int_t wfm_max = 0; 
+        UShort_t wfm_max_time = 0;
+        Int_t wfm_min = 0;
+        Int_t maw_max = 0; 
+        Int_t maw_min = 0; 
+        UChar_t channel = 0;
+        ULong64_t timestamp = 0;
+        Double_t timestampDouble = 0;
+        ULong64_t timestampLo = 0;
+        ULong64_t timestampHi = 0;
+        UShort_t * wfm = new UShort_t[2048*4]; 
+        Int_t * maw = new Int_t[2048*4]; 
 
-    // create a mininum-value branch
-    unsigned int wfm_min = 0; 
-    tree.Branch("wfm_min", &wfm_min);
+    for(int i=0; i<=15; i++) { // looping over the 16 trees
+        ostringstream treename;
+        treename << "tree" << i;
+        tree[i] = new TTree(treename.str().c_str(), "tree of SIS waveform data");
 
-    // create a maximum-value branch
-    signed int maw_max = 0; 
-    tree.Branch("maw_max", &maw_max);
+        // global parameters
+        tree[i]->Branch("is_external", &is_external, "is_external/O");
+        tree[i]->Branch("wfm_delay", &wfm_delay, "wfm_delay/s");
+        tree[i]->Branch("wfm_length", &wfm_length, "wfm_length/i");
+        tree[i]->Branch("maw_delay", &maw_delay, "maw_delay/s");
+        tree[i]->Branch("maw_length", &maw_length, "maw_length/i");
+        tree[i]->Branch("is_pospolarity", &is_pospolarity[i], "is_pospolarity/O");
+        tree[i]->Branch("is_50ohm", &is_50ohm[i], "is_50ohm/O");
+        tree[i]->Branch("is_2Vinput", &is_2Vinput[i], "is_2Vinput/O");
+        tree[i]->Branch("maw_gap", &maw_gap, "maw_gap/s");
+        tree[i]->Branch("maw_peaking", &maw_peaking, "maw_peaking/s");
+        tree[i]->Branch("maw_thres", &maw_thres, "maw_thres/s");
 
-    // create a mininum-value branch
-    signed int maw_min = 0; 
-    tree.Branch("maw_min", &maw_min);
+        // create a maximum-value branch
+        //unsigned int wfm_max = 0; 
+        tree[i]->Branch("wfm_max", &wfm_max, "wfm_max/I");
 
-    // create a channel branch
-    int channel = 0;
-    tree.Branch("channel", &channel);
+        // time of waveform max value:
+        //unsigned int wfm_max_time = 0;
+        tree[i]->Branch("wfm_max_time", &wfm_max_time, "wfm_max_time/s");
 
-    // create a timestamp branch
-    unsigned long long int timestamp = 0;
-    double  timestampDouble = 0;
-    tree.Branch("timestamp", &timestamp);
-    tree.Branch("timestampDouble", &timestampDouble);
-    unsigned long long int timestampLo = 0;
-    unsigned long long int timestampHi = 0;
-    tree.Branch("timestampLo", &timestampLo);
-    tree.Branch("timestampHi", &timestampHi);
+        // create a mininum-value branch
+        //unsigned int wfm_min = 0; 
+        tree[i]->Branch("wfm_min", &wfm_min, "wfm_min/I");
 
-    // create a buffer number branch
-    tree.Branch("buffer_no", &buffer_no);
+        // create a maximum-value branch
+        //signed int maw_max = 0; 
+        tree[i]->Branch("maw_max", &maw_max, "maw_max/I");
 
-    // create an event  number branch
-    tree.Branch("event", &i_event);
+        // create a mininum-value branch
+        //signed int maw_min = 0; 
+        tree[i]->Branch("maw_min", &maw_min, "maw_min/I");
+
+        // create a channel branch
+        //int channel = 0;
+        tree[i]->Branch("channel", &channel, "channel/b"); // 8 bit unsigned integer
+
+        // create a timestamp branch
+        //unsigned long long int timestamp = 0;
+        //double  timestampDouble = 0;
+        tree[i]->Branch("timestamp", &timestamp, "timestamp/l"); // 64 bit unsigned integer (ULong64_t)
+        tree[i]->Branch("timestampDouble", &timestampDouble, "timestampDouble/D"); // (Double_t)
+
+        // create a buffer number branch
+        // tree[i]->Branch("buffer_no", &buffer_no);
+
+        // create an event  number branch
+        tree[i]->Branch("event", &i_event, "event/i"); // unsigned integer (UInt_t)
     
-    // sample length
-    tree.Branch("wfm_length", &wfm_length);
+        // wfm
+        //unsigned short * wfm = new unsigned short[2048*4]; 
+        tree[i]->Branch("wfm", wfm, "wfm[wfm_length]/s");
 
-    // wfm
-    unsigned short * wfm = new unsigned short[2048*4]; 
-    tree.Branch("wfm", wfm, "wfm[wfm_length]/s");
+        // maw buffer
+        tree[i]->Branch("maw_length", &maw_length);
 
-    // maw buffer
-    tree.Branch("maw_length", &maw_length);
-
-    // maw
-    signed int * maw = new signed int[2048*4]; 
-    tree.Branch("maw", maw, "maw[maw_length]/I");
-
+        // maw
+        //signed int * maw = new signed int[2048*4]; 
+        tree[i]->Branch("maw", maw, "maw[maw_length]/I");
+    }
 #endif
 
     cout << "argc: " << argc << endl;
@@ -275,14 +313,6 @@ int main(int argc, char* argv[]) {
           // mask and bitshift to get the channel number 
           i_ch = (gl_ch_data[0] & 0xfff0) >> 4 ;
           
-          // skipping some channels for 5th LXe:
-          // 5th LXe used channels 1-5, 9 (0-4, 8 for zero-indexed stuff):
-          //if ( (i_ch >=9) || (i_ch > 4 && i_ch < 8) ){
-          //    cout << "--> skipping channel " << i_ch << " (not used in 5th LXe) !!" << endl;
-          //    continue;
-          //}
-
-
           printf("nof_read = %d  \tch = %d   \theaderformat = 0x%02X \n", nof_read, i_ch, headerformat);
 
           if (i_ch != channel_no) {
@@ -296,7 +326,7 @@ int main(int argc, char* argv[]) {
           if((headerformat & 0x8) == 8) {header_length = header_length + 2; }
 
           // wfm_length is the number of 16-bit ADC samples in each event
-          // event_length is the number of 32-bit words in each event
+       // event_length is the number of 32-bit words in each event
           wfm_length = 2 * (gl_ch_data[header_length-1] & 0x3ffffff) ; // if headerformat == 0
 
           if(uint_plot_axis_flag == 1) {
@@ -424,7 +454,7 @@ int main(int argc, char* argv[]) {
               */
 
               channel = (gl_ch_data[event_index] & 0xfff0) >> 4;
-              tree.Fill();
+              tree[channel]->Fill();
 
               // each buffer should contain data from only one channel
               if (i_ch != channel_no) {
@@ -502,7 +532,7 @@ int main(int argc, char* argv[]) {
 
     name << "wfm_max >> h" << i;  
     selection << "channel==" << i; 
-    int n_counts = tree.Draw(name.str().c_str(), selection.str().c_str(), "same");
+    int n_counts = tree[0]->Draw(name.str().c_str(), selection.str().c_str(), "same");
     cout << i << " | n counts = " << n_counts << " | " << name.str() << " | " << selection.str() << endl;
     entry << "ch " << i+1 << " (" << n_counts << ")";
     TH1D* hist = hist_array[i];
@@ -517,7 +547,7 @@ int main(int argc, char* argv[]) {
   canvas.Print((label + ".png").c_str());
   canvas.Print((label + ".pdf").c_str());
 
-  tree.Write();
+  for(int i=0; i<=15; i++) {tree[i]->Write();}
   canvas.Write();
 
   } // end loop over arguments/files
