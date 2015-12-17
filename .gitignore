@@ -6,3 +6,4 @@ sis3316_root_gui
 *.pdf
 *.png
 *.root
+.DS_Store
