@@ -67,7 +67,27 @@ if is_6th_LXe:
     channel_map[5] = "X2" # ortec preamp added 04 Dec for 6th LXe
 channel_map[8] = "PMT"
 
+#MC Channels index starts at 0 so X26 = 25
+#Y  Channles are offset by 30
+#MC only has charge no PMT channel
+#All MC channels are there but only use the 5 for sum energies
+MCchannels = range(60)
+MCn_channels = len(MCchannels)
 
+MCcharge_channels_to_use = [0]*60
+MCcharge_channels_to_use[25] = 1
+MCcharge_channels_to_use[26] = 1 
+MCcharge_channels_to_use[28] = 1
+MCcharge_channels_to_use[52] = 1
+MCcharge_channels_to_use[53] = 1
+n_MCchargechannels = sum(MCcharge_channels_to_use)
+
+
+#Wvalue for Xenon
+#From EXODimensions.hh
+#const double W_VALUE_IONIZATION = 15.6*CLHEP::eV;
+#const double W_VALUE_LXE_EV_PER_ELECTRON = 18.7*CLHEP::eV;
+Wvalue = 18.7 #eV needed to make 1e-
 
 # values from Peihao, 31 Oct 2015:
 decay_time_values = {}
