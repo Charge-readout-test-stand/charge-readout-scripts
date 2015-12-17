@@ -27,6 +27,7 @@ is_6th_LXe = True
 
 
 sampling_freq_Hz = 25.0e6 # digitizer sampling frequency, Hz
+#FIXME--will be saved in trees so no longer needed
 
 charge_channels_to_use = [0]*16
 
@@ -110,6 +111,8 @@ if is_6th_LXe:
 # tier3_LXe_Run1_1700VC_5chargechannels_238PM2_10thresh.root
 
 # convert energies to keV by multiplying by these factors:
+# NOTE: for 2V input, need to divide by 2.5
+
 calibration_values = {}
 calibration_values[0] = 5.827591
 calibration_values[1] = 5.146835
@@ -151,7 +154,7 @@ def get_colors():
 
 
 
-def is_2Vinput(baseline_mean_file):
+def is_2Vinput(baseline_mean_file): #FIXME--will be included in the tree so no longer needed
     """
     If using 2V input (instead of 5V), divide calibration by 2.5
     Argument: average baseline mean from a file, for a given charge channel
