@@ -124,6 +124,14 @@ def process_file(filename, verbose=True, do_overwrite=True):
     # open the root file 
     root_file = TFile(filename, "READ")
 
+    # getting tier1 run_tree
+    run_tree_tier1 = root_file.Get("run_tree")
+    run_tree_tier1.GetEntry(0)
+
+    if not run_tree_tier1.is_external: # skipping internally triggered files
+        print "skipping internally triggered files"
+        return 0
+
     # open output file and tree
     out_filename = create_outfile_name(filename)
     if not do_overwrite:
@@ -132,14 +140,6 @@ def process_file(filename, verbose=True, do_overwrite=True):
             return 0
     out_file = TFile(out_filename, "RECREATE")
 
-    # getting tier1 run_tree
-    run_tree_tier1 = out_file.Get("run_tree")
-    run_tree_tier1.GetEntry(0)
-
-    if not run_tree_tier1.is_external: # skipping internally triggered files
-        print "skipping internally triggered files"
-        return 0
-    
     # initialize the trees; only saving nonempty trees
     tree = []
     n_entries = []

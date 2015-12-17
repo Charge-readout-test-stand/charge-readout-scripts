@@ -124,6 +124,14 @@ def process_file(filename, verbose=True, do_overwrite=True):
     # open the root file 
     root_file = TFile(filename, "READ")
 
+    # getting tier1 run_tree
+    run_tree_tier1 = root_file.Get("run_tree")
+    run_tree_tier1.GetEntry(0)
+
+    if run_tree_tier1.is_external: # skipping externally triggered files
+        print "skipping externally triggered files"
+        return 0
+
     # open output file and tree
     out_filename = create_outfile_name(filename)
     if not do_overwrite:
@@ -131,17 +139,8 @@ def process_file(filename, verbose=True, do_overwrite=True):
             print "file exists!"
             return 0
     out_file = TFile(out_filename, "RECREATE")
-
-    # getting tier1 run_tree
-    run_tree_tier1 = out_file.Get("run_tree")
-    run_tree_tier1.GetEntry(0)
-
-    if run_tree_tier1.is_external: # skipping externally triggered files
-        print "skipping externally triggered files"
-        return 0
-    
-    # create a run tree to save active channels and n_entries
-    run_tree = TTree("run_tree", "internal trigger run tree")
+   
+    # save active channels and n_entries
     channels = []
     n_entries = []
 
@@ -155,11 +154,11 @@ def process_file(filename, verbose=True, do_overwrite=True):
             print "problem accessing tree%i -- skipping this file" % i
             return 0
 
-        out_tree = TTree("tree%i", "%s processed wfm tree" % basename)
+        out_tree = TTree("tree%i" % i, "%s processed wfm tree" % basename)
 
         if tree.GetEntries() > 0: # if tree is not empty, append to active channel list
             channels.append(i)
-            n_entries.append(i)
+            n_entries.append(tree.GetEntries())
         else: # if tree is empty, write empty out_tree and go to next channel
             out_tree.Write()
             continue
@@ -307,13 +306,12 @@ def process_file(filename, verbose=True, do_overwrite=True):
         energy1_pz = array('d', [0]) # double
         out_tree.Branch('energy1_pz', energy1_pz, 'energy1_pz/D')
         energy_rms1_pz = array('d', [0]) # double
-        out_tree.Branch('energy_rms1_pz', energy_rms1_pz, 'energy_rms1_pz[%i]/D')
+        out_tree.Branch('energy_rms1_pz', energy_rms1_pz, 'energy_rms1_pz/D')
      
           
         # file name branch
         fname = TObjString(os.path.abspath(filename))
         out_tree.Branch("filename",fname)
-        run_tree.Branch("filename",fname)
 
         last_timestamp = 0.0 # used to save timestamp of last event
 
@@ -324,7 +322,7 @@ def process_file(filename, verbose=True, do_overwrite=True):
             if i_entry % reporting_period == 0:
                 now = time.clock()
                 print "----> entry %i of %i (%.2f percent in %.1f seconds, %.1f seconds total)" % (
-                    i_entry, min(n_entries), 100.0*i_entry/min(n_entries), now - last_time, now -
+                    i_entry, n_entries_array[0], 100.0*i_entry/n_entries_array[0], now - last_time, now -
                     start_time)
                 last_time = now
 
@@ -344,7 +342,7 @@ def process_file(filename, verbose=True, do_overwrite=True):
             (baseline_mean[0], baseline_rms[0], energy[0], energy_rms[0], energy1[0], energy_rms1[0],
                 energy_pz[0], energy_rms_pz[0], energy1_pz[0], energy_rms1_pz[0],
                 calibrated_wfm) = wfmProcessing.get_wfmparams(exo_wfm, wfm_length[0], sampling_freq_Hz[0],
-                                    n_baseline_samples[0], calibration[0], decay_time[0], channel==pmt_channel)
+                                    n_baseline_samples[0], calibration[0], decay_time[0], i==pmt_channel)
             
             (smoothed_max[0], rise_time_stop10[0], rise_time_stop20[0], rise_time_stop30[0],
                 rise_time_stop40[0], rise_time_stop50[0], rise_time_stop60[0], rise_time_stop70[0],
@@ -355,9 +353,12 @@ def process_file(filename, verbose=True, do_overwrite=True):
             out_tree.Fill()
         #end event loop
 
+        out_tree.Write()
     # end channel loop
 
     # save run_tree parameters
+    run_tree = TTree("run_tree", "internal trigger run tree")
+
     n_channels = array('B', [0]) # unsigned char
     run_tree.Branch('n_channels', n_channels, 'n_channels/b')
     n_channels[0] = len(channels)
@@ -367,13 +368,14 @@ def process_file(filename, verbose=True, do_overwrite=True):
 
     n_entries = array('I', n_entries) # unsigned integer
     run_tree.Branch('n_entries', n_entries, 'n_entries[%i]/i' % len(n_entries))
+    
+    run_tree.Branch("filename", fname)
 
     run_tree.Fill()
     run_tree.Write()
 
     print "done processing"
     print "writing", out_filename
-    out_tree.Write()
 
 
 if __name__ == "__main__":
