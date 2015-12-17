@@ -184,7 +184,7 @@ int main(int argc, char* argv[]) {
     //FIXME--right now the global parameters are set; should be read from configuration file in the future
     //global parameters
         Bool_t is_external = true;
-        Float_t sampling_freq = 25e6; // in Hz
+        Float_t sampling_freq_Hz = 25e6; // in Hz
         UShort_t wfm_delay = 200;
         UShort_t maw_delay = 10;
         Bool_t is_pospolarity[16];
@@ -217,7 +217,7 @@ int main(int argc, char* argv[]) {
 
         // global parameters
         tree[i]->Branch("is_external", &is_external, "is_external/O");
-        tree[i]->Branch("sampling_freq", &sampling_freq, "sampling_freq/F");
+        tree[i]->Branch("sampling_freq_Hz", &sampling_freq_Hz, "sampling_freq_Hz/F");
         tree[i]->Branch("wfm_delay", &wfm_delay, "wfm_delay/s");
         tree[i]->Branch("wfm_length", &wfm_length, "wfm_length/i");
         tree[i]->Branch("maw_delay", &maw_delay, "maw_delay/s");
@@ -553,6 +553,21 @@ int main(int argc, char* argv[]) {
 
   for(int i=0; i<=15; i++) {tree[i]->Write();}
   canvas.Write();
+
+// create a run_tree with event parameters
+  TTree *run_tree = new TTree("run_tree", "run tree");
+  run_tree->Branch("is_external", &is_external, "is_external/O");
+  run_tree->Branch("sampling_freq_Hz", &sampling_freq_Hz, "sampling_freq_Hz/F");
+  run_tree->Branch("wfm_delay", &wfm_delay, "wfm_delay/s");
+  run_tree->Branch("wfm_length", &wfm_length, "wfm_length/i");
+  run_tree->Branch("maw_delay", &maw_delay, "maw_delay/s");
+  run_tree->Branch("maw_length", &maw_length, "maw_length/i");
+  run_tree->Branch("maw_gap", &maw_gap, "maw_gap/s");
+  run_tree->Branch("maw_peaking", &maw_peaking, "maw_peaking/s");
+  run_tree->Branch("maw_thres", &maw_thres, "maw_thres/s");
+
+  run_tree->Fill();
+  run_tree->Write();
 
   } // end loop over arguments/files
 
