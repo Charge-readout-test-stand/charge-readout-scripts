@@ -24,6 +24,11 @@ Use on tier 1 or tier2 files:
 Submit batch jobs:
 python /afs/slac.stanford.edu/u/xo/alexis4/alexis-exo/testScripts/submitPythonJobsSLAC.py generateTier3Files.py ../tier2/tier2_LXe_Run1_1700VC*NotShaped_Amplified*DT*.root
 
+For MC:
+    python generateTier3Files.py --MC -D [output_directory] [MCFile_name]  
+Testing:
+    python generateTier3Files.py --MC -D /nfs/slac/g/exo_data4/users/mjewell/nEXO_MC/digitization/Bi207/Tier3/ /nfs/slac/g/exo_data4/users/mjewell/nEXO_MC/digitization/Bi207/Digi/Test_Bi207_Ralph_Full_X27.root
+
 Can combine files later:
 hadd -O good_tier3.root tier3_LXe_Run1_1700VC*.root
 hadd -O all_tier3.root tier3*.root
@@ -39,11 +44,13 @@ import os
 import sys
 import time
 import datetime
+import numpy as np
 from optparse import OptionParser
 
 
 from ROOT import gROOT
 # run in batch mode:
+#gROOT.SetBatch(False)
 gROOT.SetBatch(True)
 from ROOT import TFile
 from ROOT import TTree
@@ -70,21 +77,27 @@ from array import array
 import struck_analysis_parameters
 
 def create_basename(filename):
-
-    # construct a basename to use as output file name
-    basename = os.path.basename(filename)
+    # construct a basename to use as outpt file name
+    basename = os.path.basename(filename) 
     basename = os.path.splitext(basename)[0]
-    basename = "_".join(basename.split("_")[1:])
+    basename = "_".join(basename.split("_")[1:]) 
     return basename
 
 def create_outfile_name(filename):
-
     basename = create_basename(filename)
     out_filename = "tier3_%s.root" % basename
     return out_filename
 
+def do_ristime_calc(rise_time_calculator, threshold_percent, wfm, max_val, period):
+    rise_time_calculator.SetFinalThresholdPercentage(threshold_percent)
+    rise_time_calculator.SetInitialScanToPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.01) # must be < smallest final threshold crossing
+    rise_time_calculator.SetInitialThresholdPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.02)
+    if max_val > 0.0: # throws an alert if max_val is 0
+        rise_time_calculator.Transform(wfm, wfm)
+    return rise_time_calculator.GetFinalThresholdCrossing()*period/CLHEP.microsecond
 
-def process_file(filename, verbose=True, do_overwrite=True):
+
+def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=False):
 
     #---------------------------------------------------------------
     # options
@@ -104,12 +117,21 @@ def process_file(filename, verbose=True, do_overwrite=True):
     n_baseline_samples_to_use = 50
 
     sampling_freq_Hz = struck_analysis_parameters.sampling_freq_Hz
-
+   
     channels = struck_analysis_parameters.channels
     n_chargechannels = struck_analysis_parameters.n_chargechannels
     pmt_channel = struck_analysis_parameters.pmt_channel
     n_channels = struck_analysis_parameters.n_channels
+    charge_channels_to_use = struck_analysis_parameters.charge_channels_to_use
 
+    if isMC:
+        #MC has different structure so use MC channels
+        channels = struck_analysis_parameters.MCchannels
+        n_chargechannels = struck_analysis_parameters.n_MCchargechannels
+        pmt_channel = None #No PMT in MC
+        n_channels = struck_analysis_parameters.MCn_channels
+        charge_channels_to_use = struck_analysis_parameters.MCcharge_channels_to_use
+    
     # this is the number of channels per event (1 if we are processing tier1
     # data, len(channels) if we are processing tier2 data
     n_channels_in_event = n_channels
@@ -122,8 +144,6 @@ def process_file(filename, verbose=True, do_overwrite=True):
     start_time = time.clock()
     last_time = start_time
     prev_time_stamp = 0.0
-
-    # make a basename for names of output file, plots, etc:
     basename = create_basename(filename)
 
 
@@ -147,7 +167,12 @@ def process_file(filename, verbose=True, do_overwrite=True):
 
     # open the root file and grab the tree
     root_file = TFile(filename)
-    tree = root_file.Get("tree")
+    tree = None
+    if isMC:
+        tree = root_file.Get("evtTree")
+    else:
+        tree = root_file.Get("tree")
+    
     try:
         n_entries = tree.GetEntries()
     except AttributeError:
@@ -164,9 +189,14 @@ def process_file(filename, verbose=True, do_overwrite=True):
         print "this is a tier1 file"
         n_channels_in_event = 1
         is_tier1 = True
+    
+    if isMC:
+        n_channels_in_event = n_channels
+        is_tier1 = False
 
     # open output file and tree
     out_filename = create_outfile_name(filename)
+    out_filename = dir_name + "/" + out_filename
     if not do_overwrite:
         if os.path.isfile(out_filename):
             print "file exists!"
@@ -247,6 +277,9 @@ def process_file(filename, verbose=True, do_overwrite=True):
     if is_tier1:
         run_time[0] = (tree.GetMaximum("timestampDouble") -
             tree.GetMinimum("timestampDouble"))/sampling_freq_Hz
+    elif isMC:
+        #MC so this doesn't exist
+        run_time[0] = 0
     else:
         run_time[0] = (tree.GetMaximum("time_stampDouble") -
             tree.GetMinimum("time_stampDouble"))/sampling_freq_Hz
@@ -260,25 +293,29 @@ def process_file(filename, verbose=True, do_overwrite=True):
     run_tree.Branch('trigger_time', trigger_time, 'trigger_time/D')
 
     # estimate trigger time, in microseconds
-    trigger_hist = TH1D("trigger_hist","",5000,0,5000)
-    selection = "channel==%i && wfm_max - wfm%i[0] > 20" % (pmt_channel, pmt_channel)
-    if is_tier1:
-        selection = "channel==%i && wfm_max - wfm[0] > 20" % pmt_channel
-        
-    n_trigger_entries = tree.Draw(
-        "wfm_max_time >> trigger_hist",
-        selection,
-        "goff"
-    )
-    if n_trigger_entries > 0:
-        trigger_time[0] = (trigger_hist.GetMaximumBin() - 22)/sampling_freq_Hz*1e6
-        print "trigger time is approximately %.3f microseconds" % trigger_time[0]
-    else:
-        print "--> Not enough PMT entries to determine trigger time"
-
-    if trigger_time[0] < 10:
-        "--> forcing trigger time to 200 samples = 8 microseconds (ok for 5th LXe)"
+    if isMC:
+        #MC is always triggered at sample 200 this is hardcoded into nEXO_Analysis
         trigger_time[0] = 200/sampling_freq_Hz*1e6
+    else:
+        trigger_hist = TH1D("trigger_hist","",5000,0,5000)
+        selection = "channel==%i && wfm_max - wfm%i[0] > 20" % (pmt_channel, pmt_channel)
+        if is_tier1:
+            selection = "channel==%i && wfm_max - wfm[0] > 20" % pmt_channel
+
+        n_trigger_entries = tree.Draw(
+            "wfm_max_time >> trigger_hist",
+            selection,
+            "goff"
+        )
+        if n_trigger_entries > 0:
+            trigger_time[0] = (trigger_hist.GetMaximumBin() - 22)/sampling_freq_Hz*1e6
+            print "trigger time is approximately %.3f microseconds" % trigger_time[0]
+        else:
+            print "--> Not enough PMT entries to determine trigger time"
+
+        if trigger_time[0] < 0.4:
+            "--> forcing trigger time to 200 samples = 8 microseconds (ok for 5th LXe)"
+            trigger_time[0] = 200/sampling_freq_Hz*1e6
 
     # store some processing parameters:
     n_baseline_samples = array('I', [0]) # double
@@ -290,6 +327,11 @@ def process_file(filename, verbose=True, do_overwrite=True):
 
     decay_time_values = struck_analysis_parameters.decay_time_values
     decay_time_values[pmt_channel] = 1e9*CLHEP.microsecond
+    
+    if isMC:
+        #No decay in MC so set to infinite
+        decay_time_values = [1e9*CLHEP.microsecond]*n_channels
+
 
     # energy calibration, keV:
     calibration = array('d', [0.0]*n_channels_in_event) # double
@@ -398,6 +440,11 @@ def process_file(filename, verbose=True, do_overwrite=True):
     energy_sum = array('d', [0.0])
     out_tree.Branch('energy_sum', energy_sum, 'energy_sum/D')
 
+    #Store the total energy on all MC channels even ones that 
+    #Are missing in real life
+    #MCenergy_sum = array('d', [0.0])
+    #out_tree.Branch('MCenergy_sum', MCenergy_sum, 'MCenergy_sum/D')
+
     energy_rms_sum = array('d', [0.0])
     out_tree.Branch('energy_rms_sum', energy_rms_sum, 'energy_rms_sum/D')
 
@@ -415,6 +462,11 @@ def process_file(filename, verbose=True, do_overwrite=True):
         draw_command = "wfm >> hist"
         if not is_tier1:
             draw_command = "wfm%i >> hist" % i_channel
+        if isMC:
+            #Command that worked
+            #evtTree->Draw("ChannelWaveform[12]:Iteration$","Entry$==10 && Iteration$<300")
+            draw_command = "ChannelWaveform[%i]:Iteration$" % (i_channel)
+            selection = "Entry$==0 && Iteration$<%i" % (n_baseline_samples[0])
         tree.Draw(
             draw_command,
             selection,
@@ -431,6 +483,10 @@ def process_file(filename, verbose=True, do_overwrite=True):
         draw_command = "wfm-wfm[0] >> hist"
         if not is_tier1:
             draw_command = "wfm%i-wfm%i[0] >> hist" % (i_channel, i_channel)
+        if isMC:
+            #evtTree->Draw("(ChannelWaveform[12] - ChannelWaveform[12][300]):Iteration$",
+            #                "Entry$==10 && Iteration$<300")
+            draw_command = "(ChannelWaveform[%i] - ChannelWaveform[%i][0]):Iteration$" % (i_channel, i_channel)
         tree.Draw(
             draw_command,
             selection,
@@ -447,6 +503,11 @@ def process_file(filename, verbose=True, do_overwrite=True):
     # this -- we should also figure out if any channels are shaped...
 
     calibration_values = struck_analysis_parameters.calibration_values
+    if isMC:
+        for n in np.arange(n_channels):
+            #MC is given in number of e- so need to multiply by Wvalue to get eV
+            #Need factor of 1e-3 to get keV
+            calibration_values[int(n)] = struck_analysis_parameters.Wvalue*1e-3
 
     print "choosing calibration values..."
     for (i, i_channel) in enumerate(channels):
@@ -459,7 +520,9 @@ def process_file(filename, verbose=True, do_overwrite=True):
             continue
 
         is_2Vinput[i] = struck_analysis_parameters.is_2Vinput(baseline_mean_file[i])
-        if is_2Vinput[i]:
+        if isMC:
+            is_2Vinput[i] = False
+        elif is_2Vinput[i]:
             print "\t channel %i used 2V input range" % i_channel
             print "\t dividing calibration by 2.5"
             calibration_values[i_channel] /= 2.5
@@ -469,7 +532,7 @@ def process_file(filename, verbose=True, do_overwrite=True):
         #    baseline_mean_file[i], baseline_rms_file[i])
 
 
-        if is_amplified[i] == 0:
+        if is_amplified[i] == 0 and not isMC:
             if i_channel != pmt_channel:
                 calibration_values[i_channel] *= 4.0
                 print "\t multiplying calibration by 4"
@@ -482,13 +545,17 @@ def process_file(filename, verbose=True, do_overwrite=True):
     run_tree.Branch('pmt_threshold', pmt_threshold, 'pmt_threshold/D')
 
     # calculate PMT threshold...
-    draw_command = "wfm_max-wfm[0] >> hist"
-    if not is_tier1:
-        draw_command = "wfm_max-wfm%i[0] >> hist" % pmt_channel
+    #PMT doesn't exist in MC so skip if MC
+    if isMC:
+        pmt_threshold[0] = 0.0
+    else:
+        draw_command = "wfm_max-wfm[0] >> hist"
+        if not is_tier1:
+            draw_command = "wfm_max-wfm%i[0] >> hist" % pmt_channel
 
-    tree.Draw(draw_command,"channel==%i" % pmt_channel,"goff")
-    pmt_threshold[0] = hist.GetBinLowEdge(hist.FindFirstBinAbove(0))*calibration_values[pmt_channel]
-    print "pmt_threshold:", pmt_threshold[0]
+        tree.Draw(draw_command,"channel==%i" % pmt_channel,"goff")
+        pmt_threshold[0] = hist.GetBinLowEdge(hist.FindFirstBinAbove(0))*calibration_values[pmt_channel]
+        print "pmt_threshold:", pmt_threshold[0]
 
     # energy & rms before any processing
     energy = array('d', [0]*n_channels_in_event) # double
@@ -498,6 +565,10 @@ def process_file(filename, verbose=True, do_overwrite=True):
 
     chargeEnergy = array('d', [0.0]) # double
     out_tree.Branch('chargeEnergy', chargeEnergy, 'chargeEnergy/D')
+ 
+    #Total Energy in MC for all channels including not active channels
+    MCchargeEnergy = array('d', [0.0])
+    out_tree.Branch('MCchargeEnergy', MCchargeEnergy, 'MCchargeEnergy/D')
 
     lightEnergy = array('d', [0.0]) # double
     out_tree.Branch('lightEnergy', lightEnergy, 'lightEnergy/D')
@@ -555,12 +626,19 @@ def process_file(filename, verbose=True, do_overwrite=True):
 
 
         # set event-level output tree variables
-        event[0] = tree.event
+        if isMC:
+            #Event number
+            event[0] = i_entry
+        else:
+            event[0] = tree.event
 
         if is_tier1:
             time_stamp[0] = tree.timestamp
             time_stampDouble[0] = tree.timestampDouble
-            
+        elif isMC:
+            #No timestamp in MC 
+            time_stamp[0] = 0
+            time_stampDouble[0] = 0
         else:
             time_stamp[0] = tree.time_stamp
             time_stampDouble[0] = tree.time_stampDouble
@@ -571,18 +649,25 @@ def process_file(filename, verbose=True, do_overwrite=True):
         else:
             time_since_last[0] = -1.0
         prev_time_stamp = time_stampDouble[0]
+        if isMC: prev_time_stamp = 0
 
         # initialize these two to zero
         chargeEnergy[0] = 0.0
+        MCchargeEnergy[0] = 0.0
         lightEnergy[0] = 0.0
 
+        sum_wfm = None
         for i in xrange(n_channels_in_event):
 
             if is_tier1:
                 wfm = tree.wfm
                 channel[i] = tree.channel
                 wfm_max_time[i] = tree.wfm_max_time
-
+            elif isMC:
+                #START HERE MJJJ
+                wfm = [wfmp for wfmp in tree.ChannelWaveform[i]]
+                channel[i] = i
+                wfm_max_time[i] = np.argmax(wfm)
             else:
                 channel[i] = tree.channel[i]
                 if i == 0: 
@@ -621,7 +706,6 @@ def process_file(filename, verbose=True, do_overwrite=True):
             baseline_remover.Transform(exo_wfm)
             baseline_mean[i] = baseline_remover.GetBaselineMean()
             baseline_rms[i] = baseline_remover.GetBaselineRMS()
-
             if do_debug:
                 print "channel %i" % channel[i]
                 print wfm_length[i]
@@ -652,6 +736,7 @@ def process_file(filename, verbose=True, do_overwrite=True):
                 val = raw_input("sum wfm")
 
 
+            #if do_debug:
             if do_debug:
                 if do_draw_extra:
                     print "energy measurement with %i samples: %.2f" % (
@@ -744,10 +829,11 @@ def process_file(filename, verbose=True, do_overwrite=True):
             pole_zero.Transform(exo_wfm, energy_wfm)
             #print pole_zero.GetDecayConstant()
 
+            #Sum the Waveforms of the active channels
             calibrated_wfm = EXODoubleWaveform(energy_wfm)
             calibrated_wfm *= calibration[i]
-            if struck_analysis_parameters.charge_channels_to_use[channel[i]]:
-                if i == 0:
+            if charge_channels_to_use[channel[i]]:
+                if i == 0 or sum_wfm is None:
                     sum_wfm = EXODoubleWaveform(calibrated_wfm)
                 else:
                     sum_wfm += calibrated_wfm
@@ -769,8 +855,10 @@ def process_file(filename, verbose=True, do_overwrite=True):
             else:
                 hist.Fill(energy1_pz[i])
 
-            if struck_analysis_parameters.charge_channels_to_use[channel[i]]:
+            if charge_channels_to_use[channel[i]]:
                 chargeEnergy[0] += energy1_pz[i]
+            if isMC:
+                MCchargeEnergy[0] += energy1_pz[i]
 
             if do_debug:
                 print "energy measurement after PZ with %i samples: %.2f" % (
@@ -805,89 +893,17 @@ def process_file(filename, verbose=True, do_overwrite=True):
 
             # rise time calculator thresholds are called precentage, but they
             # are really fractions...
-            rise_time_calculator.SetFinalThresholdPercentage(0.1)
-            rise_time_calculator.SetInitialScanToPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.01) # must be < smallest final threshold crossing
-            rise_time_calculator.SetInitialThresholdPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.02)
-            if max_val > 0.0: # throws an alert if max_val is 0
-                rise_time_calculator.Transform(exo_wfm, exo_wfm)
-            rise_time_stop10[i] = rise_time_calculator.GetFinalThresholdCrossing()*period/CLHEP.microsecond
-
-            rise_time_calculator.SetFinalThresholdPercentage(0.2)
-            rise_time_calculator.SetInitialScanToPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.01) # must be < smallest final threshold crossing
-            rise_time_calculator.SetInitialThresholdPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.02)
-            if max_val > 0.0: # throws an alert if max_val is 0
-                rise_time_calculator.Transform(exo_wfm, exo_wfm)
-            rise_time_stop20[i] = rise_time_calculator.GetFinalThresholdCrossing()*period/CLHEP.microsecond
-
-            rise_time_calculator.SetFinalThresholdPercentage(0.3)
-            rise_time_calculator.SetInitialScanToPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.01) # must be < smallest final threshold crossing
-            rise_time_calculator.SetInitialThresholdPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.02)
-            if max_val > 0.0: # throws an alert if max_val is 0
-                rise_time_calculator.Transform(exo_wfm, exo_wfm)
-            rise_time_stop30[i] = rise_time_calculator.GetFinalThresholdCrossing()*period/CLHEP.microsecond
-
-            rise_time_calculator.SetFinalThresholdPercentage(0.4)
-            rise_time_calculator.SetInitialScanToPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.01) # must be < smallest final threshold crossing
-            rise_time_calculator.SetInitialThresholdPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.02)
-            if max_val > 0.0: # throws an alert if max_val is 0
-                rise_time_calculator.Transform(exo_wfm, exo_wfm)
-            rise_time_stop40[i] = rise_time_calculator.GetFinalThresholdCrossing()*period/CLHEP.microsecond
-
-            rise_time_calculator.SetFinalThresholdPercentage(0.5)
-            rise_time_calculator.SetInitialScanToPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.01) # must be < smallest final threshold crossing
-            rise_time_calculator.SetInitialThresholdPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.02)
-            if max_val > 0.0: # throws an alert if max_val is 0
-                rise_time_calculator.Transform(exo_wfm, exo_wfm)
-            rise_time_stop50[i] = rise_time_calculator.GetFinalThresholdCrossing()*period/CLHEP.microsecond
-
-            rise_time_calculator.SetFinalThresholdPercentage(0.6)
-            rise_time_calculator.SetInitialScanToPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.01) # must be < smallest final threshold crossing
-            rise_time_calculator.SetInitialThresholdPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.02)
-            if max_val > 0.0: # throws an alert if max_val is 0
-                rise_time_calculator.Transform(exo_wfm, exo_wfm)
-            rise_time_stop60[i] = rise_time_calculator.GetFinalThresholdCrossing()*period/CLHEP.microsecond
-
-            rise_time_calculator.SetFinalThresholdPercentage(0.7)
-            rise_time_calculator.SetInitialScanToPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.01) # must be < smallest final threshold crossing
-            rise_time_calculator.SetInitialThresholdPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.02)
-            if max_val > 0.0: # throws an alert if max_val is 0
-                rise_time_calculator.Transform(exo_wfm, exo_wfm)
-            rise_time_stop70[i] = rise_time_calculator.GetFinalThresholdCrossing()*period/CLHEP.microsecond
-
-            rise_time_calculator.SetFinalThresholdPercentage(0.8)
-            rise_time_calculator.SetInitialScanToPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.01) # must be < smallest final threshold crossing
-            rise_time_calculator.SetInitialThresholdPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.02)
-            if max_val > 0.0: # throws an alert if max_val is 0
-                rise_time_calculator.Transform(exo_wfm, exo_wfm)
-            rise_time_stop80[i] = rise_time_calculator.GetFinalThresholdCrossing()*period/CLHEP.microsecond
-
-            rise_time_calculator.SetFinalThresholdPercentage(0.90)
-            rise_time_calculator.SetInitialScanToPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.01) # must be < smallest final threshold crossing
-            rise_time_calculator.SetInitialThresholdPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.02)
-            if max_val > 0.0: # throws an alert if max_val is 0
-                rise_time_calculator.Transform(exo_wfm, exo_wfm)
-                #print rise_time_calculator.GetInitialThresholdCrossing()
-                #print rise_time_calculator.GetFinalThresholdCrossing()
-            rise_time_stop90[i] = rise_time_calculator.GetFinalThresholdCrossing()*period/CLHEP.microsecond
-            #rise_time[i] = rise_time_calculator.GetRiseTime()/CLHEP.microsecond
-
-            rise_time_calculator.SetFinalThresholdPercentage(0.95)
-            rise_time_calculator.SetInitialScanToPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.01) # must be < smallest final threshold crossing
-            rise_time_calculator.SetInitialThresholdPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.02)
-            if max_val > 0.0: # throws an alert if max_val is 0
-                rise_time_calculator.Transform(exo_wfm, exo_wfm)
-                #print rise_time_calculator.GetInitialThresholdCrossing()
-                #print rise_time_calculator.GetFinalThresholdCrossing()
-            rise_time_stop95[i] = rise_time_calculator.GetFinalThresholdCrossing()*period/CLHEP.microsecond
-
-            rise_time_calculator.SetFinalThresholdPercentage(0.99)
-            rise_time_calculator.SetInitialScanToPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.01) # must be < smallest final threshold crossing
-            rise_time_calculator.SetInitialThresholdPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.02)
-            if max_val > 0.0: # throws an alert if max_val is 0
-                rise_time_calculator.Transform(exo_wfm, exo_wfm)
-                #print rise_time_calculator.GetInitialThresholdCrossing()
-                #print rise_time_calculator.GetFinalThresholdCrossing()
-            rise_time_stop99[i] = rise_time_calculator.GetFinalThresholdCrossing()*period/CLHEP.microsecond
+            rise_time_stop10[i] = do_ristime_calc(rise_time_calculator, 0.10, exo_wfm, max_val, period)
+            rise_time_stop20[i] = do_ristime_calc(rise_time_calculator, 0.20, exo_wfm, max_val, period)
+            rise_time_stop30[i] = do_ristime_calc(rise_time_calculator, 0.30, exo_wfm, max_val, period)
+            rise_time_stop40[i] = do_ristime_calc(rise_time_calculator, 0.40, exo_wfm, max_val, period)
+            rise_time_stop50[i] = do_ristime_calc(rise_time_calculator, 0.50, exo_wfm, max_val, period)
+            rise_time_stop60[i] = do_ristime_calc(rise_time_calculator, 0.60, exo_wfm, max_val, period)
+            rise_time_stop70[i] = do_ristime_calc(rise_time_calculator, 0.70, exo_wfm, max_val, period)
+            rise_time_stop80[i] = do_ristime_calc(rise_time_calculator, 0.80, exo_wfm, max_val, period)
+            rise_time_stop90[i] = do_ristime_calc(rise_time_calculator, 0.90, exo_wfm, max_val, period)
+            rise_time_stop95[i] = do_ristime_calc(rise_time_calculator, 0.95, exo_wfm, max_val, period)
+            rise_time_stop99[i] = do_ristime_calc(rise_time_calculator, 0.99, exo_wfm, max_val, period)
 
 
             """
@@ -967,89 +983,17 @@ def process_file(filename, verbose=True, do_overwrite=True):
 
         # rise time calculator thresholds are called precentage, but they
         # are really fractions...
-        rise_time_calculator.SetFinalThresholdPercentage(0.1)
-        rise_time_calculator.SetInitialScanToPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.01) # must be < smallest final threshold crossing
-        rise_time_calculator.SetInitialThresholdPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.02)
-        if max_val > 0.0: # throws an alert if max_val is 0
-            rise_time_calculator.Transform(sum_wfm, sum_wfm)
-        rise_time_stop10_sum[0] = rise_time_calculator.GetFinalThresholdCrossing()*period/CLHEP.microsecond
-
-        rise_time_calculator.SetFinalThresholdPercentage(0.2)
-        rise_time_calculator.SetInitialScanToPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.01) # must be < smallest final threshold crossing
-        rise_time_calculator.SetInitialThresholdPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.02)
-        if max_val > 0.0: # throws an alert if max_val is 0
-            rise_time_calculator.Transform(sum_wfm, sum_wfm)
-        rise_time_stop20_sum[0] = rise_time_calculator.GetFinalThresholdCrossing()*period/CLHEP.microsecond
-
-        rise_time_calculator.SetFinalThresholdPercentage(0.3)
-        rise_time_calculator.SetInitialScanToPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.01) # must be < smallest final threshold crossing
-        rise_time_calculator.SetInitialThresholdPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.02)
-        if max_val > 0.0: # throws an alert if max_val is 0
-            rise_time_calculator.Transform(sum_wfm, sum_wfm)
-        rise_time_stop30_sum[0] = rise_time_calculator.GetFinalThresholdCrossing()*period/CLHEP.microsecond
-
-        rise_time_calculator.SetFinalThresholdPercentage(0.4)
-        rise_time_calculator.SetInitialScanToPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.01) # must be < smallest final threshold crossing
-        rise_time_calculator.SetInitialThresholdPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.02)
-        if max_val > 0.0: # throws an alert if max_val is 0
-            rise_time_calculator.Transform(sum_wfm, sum_wfm)
-        rise_time_stop40_sum[0] = rise_time_calculator.GetFinalThresholdCrossing()*period/CLHEP.microsecond
-
-        rise_time_calculator.SetFinalThresholdPercentage(0.5)
-        rise_time_calculator.SetInitialScanToPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.01) # must be < smallest final threshold crossing
-        rise_time_calculator.SetInitialThresholdPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.02)
-        if max_val > 0.0: # throws an alert if max_val is 0
-            rise_time_calculator.Transform(sum_wfm, sum_wfm)
-        rise_time_stop50_sum[0] = rise_time_calculator.GetFinalThresholdCrossing()*period/CLHEP.microsecond
-
-        rise_time_calculator.SetFinalThresholdPercentage(0.6)
-        rise_time_calculator.SetInitialScanToPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.01) # must be < smallest final threshold crossing
-        rise_time_calculator.SetInitialThresholdPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.02)
-        if max_val > 0.0: # throws an alert if max_val is 0
-            rise_time_calculator.Transform(sum_wfm, sum_wfm)
-        rise_time_stop60_sum[0] = rise_time_calculator.GetFinalThresholdCrossing()*period/CLHEP.microsecond
-
-        rise_time_calculator.SetFinalThresholdPercentage(0.7)
-        rise_time_calculator.SetInitialScanToPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.01) # must be < smallest final threshold crossing
-        rise_time_calculator.SetInitialThresholdPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.02)
-        if max_val > 0.0: # throws an alert if max_val is 0
-            rise_time_calculator.Transform(sum_wfm, sum_wfm)
-        rise_time_stop70_sum[0] = rise_time_calculator.GetFinalThresholdCrossing()*period/CLHEP.microsecond
-
-        rise_time_calculator.SetFinalThresholdPercentage(0.8)
-        rise_time_calculator.SetInitialScanToPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.01) # must be < smallest final threshold crossing
-        rise_time_calculator.SetInitialThresholdPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.02)
-        if max_val > 0.0: # throws an alert if max_val is 0
-            rise_time_calculator.Transform(sum_wfm, sum_wfm)
-        rise_time_stop80_sum[0] = rise_time_calculator.GetFinalThresholdCrossing()*period/CLHEP.microsecond
-
-        rise_time_calculator.SetFinalThresholdPercentage(0.90)
-        rise_time_calculator.SetInitialScanToPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.01) # must be < smallest final threshold crossing
-        rise_time_calculator.SetInitialThresholdPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.02)
-        if max_val > 0.0: # throws an alert if max_val is 0
-            rise_time_calculator.Transform(sum_wfm, sum_wfm)
-            #print rise_time_calculator.GetInitialThresholdCrossing()
-            #print rise_time_calculator.GetFinalThresholdCrossing()
-        rise_time_stop90_sum[0] = rise_time_calculator.GetFinalThresholdCrossing()*period/CLHEP.microsecond
-        #rise_time[i] = rise_time_calculator.GetRiseTime()/CLHEP.microsecond
-
-        rise_time_calculator.SetFinalThresholdPercentage(0.95)
-        rise_time_calculator.SetInitialScanToPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.01) # must be < smallest final threshold crossing
-        rise_time_calculator.SetInitialThresholdPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.02)
-        if max_val > 0.0: # throws an alert if max_val is 0
-            rise_time_calculator.Transform(sum_wfm, sum_wfm)
-            #print rise_time_calculator.GetInitialThresholdCrossing()
-            #print rise_time_calculator.GetFinalThresholdCrossing()
-        rise_time_stop95_sum[0] = rise_time_calculator.GetFinalThresholdCrossing()*period/CLHEP.microsecond
-
-        rise_time_calculator.SetFinalThresholdPercentage(0.99)
-        rise_time_calculator.SetInitialScanToPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.01) # must be < smallest final threshold crossing
-        rise_time_calculator.SetInitialThresholdPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.02)
-        if max_val > 0.0: # throws an alert if max_val is 0
-            rise_time_calculator.Transform(sum_wfm, sum_wfm)
-            #print rise_time_calculator.GetInitialThresholdCrossing()
-            #print rise_time_calculator.GetFinalThresholdCrossing()
-        rise_time_stop99_sum[0] = rise_time_calculator.GetFinalThresholdCrossing()*period/CLHEP.microsecond
+        rise_time_stop10_sum[0] = do_ristime_calc(rise_time_calculator, 0.10, sum_wfm, max_val, period)
+        rise_time_stop20_sum[0] = do_ristime_calc(rise_time_calculator, 0.20, sum_wfm, max_val, period)
+        rise_time_stop30_sum[0] = do_ristime_calc(rise_time_calculator, 0.30, sum_wfm, max_val, period)
+        rise_time_stop40_sum[0] = do_ristime_calc(rise_time_calculator, 0.40, sum_wfm, max_val, period)
+        rise_time_stop50_sum[0] = do_ristime_calc(rise_time_calculator, 0.50, sum_wfm, max_val, period)
+        rise_time_stop60_sum[0] = do_ristime_calc(rise_time_calculator, 0.60, sum_wfm, max_val, period)
+        rise_time_stop70_sum[0] = do_ristime_calc(rise_time_calculator, 0.70, sum_wfm, max_val, period)
+        rise_time_stop80_sum[0] = do_ristime_calc(rise_time_calculator, 0.80, sum_wfm, max_val, period)
+        rise_time_stop90_sum[0] = do_ristime_calc(rise_time_calculator, 0.90, sum_wfm, max_val, period)
+        rise_time_stop95_sum[0] = do_ristime_calc(rise_time_calculator, 0.95, sum_wfm, max_val, period)
+        rise_time_stop99_sum[0] = do_ristime_calc(rise_time_calculator, 0.99, sum_wfm, max_val, period)
         
         baseline_remover = EXOBaselineRemover()
         baseline_remover.SetBaselineSamples(2*n_baseline_samples[0])
@@ -1086,17 +1030,21 @@ if __name__ == "__main__":
     parser.add_option("-q", "--quiet",
                       action="store_false", dest="verbose", default=True,
                       help="don't print status messages to stdout")
+    parser.add_option("--MC", dest="isMC", default=False,
+                      action="store_true", help="is this MC or Data")
+    parser.add_option("-D", "--directory", dest="dir_name", default = "",
+                        help="set output directory", metavar="Directory")
 
     (options, filenames) = parser.parse_args()
 
     if len(filenames) < 1:
-        print "arguments: [sis root files]"
+        print "arguments: [sis or MC root files]"
         sys.exit(1)
 
     print "%i files to process" % len(filenames)
 
     for filename in filenames:
-        process_file(filename, verbose=options.verbose, do_overwrite=options.do_overwrite)
+        process_file(filename, dir_name=options.dir_name, verbose=options.verbose, do_overwrite=options.do_overwrite, isMC=options.isMC)
 
 
 
