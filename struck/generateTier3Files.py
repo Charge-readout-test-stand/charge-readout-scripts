@@ -49,7 +49,7 @@ from optparse import OptionParser
 
 
 from ROOT import gROOT
-# run in batch mode:
+# run in batch mode -- set to False for debugging:
 #gROOT.SetBatch(False)
 gROOT.SetBatch(True)
 from ROOT import TFile
@@ -196,7 +196,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
     # open output file and tree
     out_filename = create_outfile_name(filename)
-    out_filename = dir_name + "/" + out_filename
+    out_filename = dir_name + out_filename
     if not do_overwrite:
         if os.path.isfile(out_filename):
             print "file exists!"
