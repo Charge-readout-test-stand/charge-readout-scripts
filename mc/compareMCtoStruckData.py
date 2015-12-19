@@ -22,7 +22,7 @@ import sys
 import glob
 
 from ROOT import gROOT
-#gROOT.SetBatch(True)
+gROOT.SetBatch(True)
 from ROOT import TH1D
 from ROOT import TFile
 from ROOT import TCanvas
@@ -39,12 +39,12 @@ gStyle.SetTitleStyle(0)
 gStyle.SetTitleBorderSize(0)       
 
 
-def process_file(filename, struck_filename):
+def process_file(mc_filename, struck_filename):
 
-    print "processing file: ", filename
+    print "processing file: ", mc_filename
 
     # options:
-    source_activity_Bq = 500.0 # activity of 207-Bi source installed on cathode on Aug 7 2015
+    source_activity_Bq = 400.0 # activity of 207-Bi source installed on cathode on Aug 7 2015
     run_duration_minutes = 10.0 # estimate of run length
 
 
@@ -60,16 +60,18 @@ def process_file(filename, struck_filename):
     # from the Conti paper at 1.0 kV/cm, ~5% @ 570 keV:
     sigma_keV =  5.0/100.0*570 # charge-signal sigma, in keV, for energy smearing
 
+    sigma_keV = 51.3 # from 6th LXe
+
     print "sigma_keV", sigma_keV
 
     # construct a basename from the input filename
-    basename = os.path.basename(filename)
-    basename = os.path.splitext(basename)[0]
+    basename = os.path.basename(mc_filename) # get rid of file path
+    basename = os.path.splitext(basename)[0] # get rid of file suffix
 
 
     # open the root file and grab the tree
-    root_file = TFile(filename)
-    nEXOevents = root_file.Get("nEXOevents")
+    mc_file = TFile(mc_filename)
+    nEXOevents = mc_file.Get("nEXOevents")
     print "%.2e events in tree" % nEXOevents.GetEntries()
 
     # make a histogram to hold energies
@@ -90,7 +92,7 @@ def process_file(filename, struck_filename):
     struck_tree = struck_file.Get("tree")
     hist_struck.GetDirectory().cd()
     struck_entries = struck_tree.Draw(
-        "energy >> %s" % hist_struck.GetName(),
+        "chargeEnergy >> %s" % hist_struck.GetName(),
         "energy>0 && channel==1",
         "goff"
     )
@@ -174,7 +176,7 @@ def process_file(filename, struck_filename):
     legend.SetNColumns(2)
     #legend.AddEntry(nEXOevents, "MC", "l")
     legend.AddEntry(hist, "MC, #sigma=%i keV" % sigma_keV, "fl")
-    legend.AddEntry(hist_struck, "Struck data", "fl")
+    legend.AddEntry(hist_struck, "Struck data, X27", "fl")
 
     hist_struck.Draw()
     hist.Draw("same") 
