@@ -21,7 +21,8 @@ import sys
 import glob
 
 from ROOT import gROOT
-#gROOT.SetBatch(True) # comment out to run interactively
+# it seems like if this is commented out the legend has red background
+gROOT.SetBatch(True) # comment out to run interactively
 from ROOT import TH1D
 from ROOT import TFile
 from ROOT import TCanvas
@@ -127,8 +128,12 @@ def process_file(mc_filename, struck_filename):
         
         if (mc_tree.chargeEnergy > 0.0):
 
+            # multiplying energy by 115% for now -- 18 Dec 2015
             mc_energy_keV = mc_tree.chargeEnergy*1.15
+
             smearing_keV = generator.Gaus()*sigma_keV
+
+            # print some debugging info:
             #print "mc_energy_keV: %.2f | smearing_keV: %.2f | sum: %.2f" % (
             #    mc_energy_keV,
             #    smearing_keV,
@@ -178,7 +183,6 @@ def process_file(mc_filename, struck_filename):
     # set up a legend
     legend = TLegend(0.1, 0.91, 0.9, 0.99)
     legend.SetNColumns(2)
-    #legend.AddEntry(mc_tree, "MC", "l")
     legend.AddEntry(hist, "MC, #sigma_{addl}=%i keV" % sigma_keV, "fl")
     legend.AddEntry(hist_struck, "Struck data", "fl")
 
@@ -187,12 +191,6 @@ def process_file(mc_filename, struck_filename):
     #hist_struck.Draw("same")
     print "%i struck entries" % hist_struck.GetEntries()
     print "%i mc entries" % hist.GetEntries()
-
-    # also draw the true energy spectrum, scaled appropriately:
-    #mc_tree.Draw("TotalEventEnergy*1e3","(TotalEventEnergy>0)*%s" % scale_factor,"same")
-    #hist.Draw("same") # draw again, on top of the tree
-
-
 
     legend.Draw()
     canvas.Update()
