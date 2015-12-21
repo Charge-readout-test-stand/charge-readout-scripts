@@ -183,10 +183,10 @@ int main(int argc, char* argv[]) {
     //values for branches
     //FIXME--right now the global parameters are set; should be read from configuration file in the future
     //global parameters
-        Bool_t is_external = true;
+        Bool_t is_external = false;
         Float_t sampling_freq_Hz = 25e6; // in Hz
-        UShort_t wfm_delay = 200;
-        UShort_t maw_delay = 10;
+        UShort_t wfm_delay = 300;
+        UShort_t maw_delay = 600;
         Bool_t is_pospolarity[16];
         Bool_t is_50ohm[16];
         Bool_t is_2Vinput[16];
@@ -622,3 +622,83 @@ int nof_read ;
 }
 
 
+// This function reads the parameters from the config file.
+// It reads line by line, and records the parameter if the keyword is matched
+int ReadConfigFile(char* config_file_name, is_external, sampling_freq, wfm_delay, maw_delay, is_pospolarity, is_50ohm, is_2Vinput, maw_gap, maw_peaking, maw_thres)
+{
+    string line;
+    ifstream config_file(config_file_name);
+    bool flag = false; //this flag records whether is_external has been set, to avoid settings
+                       //where both or neither of external and interal trigger are set
+    if(config_file.is_open()) {
+        while(!config_file.eof()) {
+            getline(config_file, line);
+            istringstream line_stream(line);
+            string keyword;
+
+            if(line_stream >> keyword) { //first read the keyword
+                if(keyword.compare("PARAMETER_PRE_TRIGGER_DELAY") == 0) // wfm_delay
+                    {line_stream >> *wfm_delay; continue;}
+
+                else if(keyword.compare("PARAMETER_MAW_TEST_BUFFER_DELAY") == 0) // maw_delay
+                    {line_stream >> *maw_delay; continue;}
+
+                else if(keyword.compare("PARAMETER_TRIGGER_COND_ADC_EXTERNAL") == 0) { // is_external
+                    int n;
+                    line_stream >> n;
+                    if(flag && *is_external != bool(n)) { //if is_external has been set and is in conflict with current value
+                        cout << "Error in external/internal trigger settings! ... skipping the file" << endl;
+                        exit(0);    
+                    }
+                    else {
+                        *is_external = bool(n);
+                        flag = true;
+                    }
+
+                 else if(keyword.compare("PARAMETER_TRIGGER_COND_ADC_INTERNAL") == 0) { // is_external
+                    int n;
+                    line_stream >> n;
+                    if(flag && *is_external == bool(n)) { //if is_external has been set and is in conflict with current value
+                        cout << "Error in external/internal trigger settings! ... skipping the file" << endl;
+                        exit(0);    
+                    }
+                    else {
+                        *is_external = !(bool(n));
+                        flag = true;
+                    }
+
+                else if(keyword.compare("PARAMETER_CHANNEL_POLARITY_INVERT") == 0) { // is_pospolarity
+                    for(int i = 0; i <= 15; i++) {
+                        int n;
+                        line_stream >> n;
+                        is_pospolarity[i] = !(bool(n));
+                }
+
+                else if(keyword.compare("PARAMETER_CHANNEL_RANGE_2V") == 0) { // is_2Vinput
+                    for(int i = 0; i <= 15; i++) {
+                        int n;
+                        line_stream >> n;
+                        is_2Vinput[i] = bool(n);
+                }
+                
+                else if(keyword.compare("PARAMETER_CHANNEL_50OHM_TERMINATION_DISABLE") == 0) { // is_50ohm
+                    for(int i = 0; i <= 15; i++) {
+                        int n;
+                        line_stream >> n;
+                        is_50ohm[i] = !(bool(n));
+                }
+
+                else if(keyword.compare("PARAMETER_CHANNEL_TRIGGER_GENERATION_GAP") == 0) // maw_gap
+                    {line_stream >> *maw_gap; continue;}
+
+                else if(keyword.compare("PARAMETER_CHANNEL_TRIGGER_GENERATION_PEAKING") == 0) // maw_peaking
+                    {line_stream >> *maw_peaking; continue;}
+
+                else if(keyword.compare("PARAMETER_CHANNEL_TRIGGER_GENERATION_THRESHOLD") == 0) // maw_thres
+                    {line_stream >> *maw_thres; continue;}
+
+                else if(keyword.compare("PARAMETER_INTERNAL_SAMPLE_CLOCK_IDX") == 0) 
+            }
+        }
+    }
+}
