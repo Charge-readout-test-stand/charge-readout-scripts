@@ -28,6 +28,8 @@ For MC:
     python generateTier3Files.py --MC -D [output_directory] [MCFile_name]  
 Testing:
     python generateTier3Files.py --MC -D /nfs/slac/g/exo_data4/users/mjewell/nEXO_MC/digitization/Bi207/Tier3/ /nfs/slac/g/exo_data4/users/mjewell/nEXO_MC/digitization/Bi207/Digi/Test_Bi207_Ralph_Full_X27.root
+    python submitPythonJobsSLAC.py "generateTier3Files.py --MC -D /nfs/slac/g/exo_data4/users/mjewell/nEXO_MC/digitization/electron/Tier3/ " /nfs/slac/g/exo_data4/users/mjewell/nEXO_MC/digitization/electron/Digi/digi*.root
+
 
 Can combine files later:
 hadd -O good_tier3.root tier3_LXe_Run1_1700VC*.root
@@ -80,7 +82,8 @@ def create_basename(filename):
     # construct a basename to use as outpt file name
     basename = os.path.basename(filename) 
     basename = os.path.splitext(basename)[0]
-    basename = "_".join(basename.split("_")[1:]) 
+    if "tier" in basename:
+        basename = "_".join(basename.split("_")[1:]) 
     return basename
 
 def create_outfile_name(filename):
