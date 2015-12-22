@@ -98,14 +98,6 @@ def process_file(filename, verbose=True, do_overwrite=True):
 
     charge_channels_to_use = struck_analysis_parameters.charge_channels_to_use
     pmt_channel = struck_analysis_parameters.pmt_channel
-    #n_channels = struck_analysis_parameters.n_channels
-
-    # this is the number of channels per event (1 if we are processing tier1
-    # data, len(channels) if we are processing tier2 data
-    #n_channels_in_event = n_channels
-
-    #---------------------------------------------------------------
-
     print "processing file: ", filename
 
     # keep track of how long it takes to process file:
@@ -132,6 +124,14 @@ def process_file(filename, verbose=True, do_overwrite=True):
     # open the root file 
     root_file = TFile(filename, "READ")
 
+    # getting tier1 run_tree
+    run_tree_tier1 = root_file.Get("run_tree")
+    run_tree_tier1.GetEntry(0)
+
+    if not run_tree_tier1.is_external: # skipping internally triggered files
+        print "skipping internally triggered files"
+        return 0
+
     # open output file and tree
     out_filename = create_outfile_name(filename)
     if not do_overwrite:
@@ -139,7 +139,7 @@ def process_file(filename, verbose=True, do_overwrite=True):
             print "file exists!"
             return 0
     out_file = TFile(out_filename, "RECREATE")
-    
+
     # initialize the trees; only saving nonempty trees
     tree = []
     n_entries = []
@@ -196,13 +196,10 @@ def process_file(filename, verbose=True, do_overwrite=True):
         is_2Vinput[i] = tree[i].is_2Vinput
         is_50ohm[i] = tree[i].is_50ohm
         is_pospolarity[i] = tree[i].is_pospolarity
-    is_external[0] = tree[0].is_external
-    if not is_external[0]: # FIXME--now skipping internally triggered files
-        print "skipping internally triggered files"
-        return 0
-    sampling_freq_Hz[0] = tree[0].sampling_freq
-    trigger_time[0] = tree[0].wfm_delay / sampling_freq_Hz[0] * 1e6  ## in microseconds
-    wfm_length[0] = tree[0].wfm_length
+    is_external[0] = run_tree_tier1.is_external
+    sampling_freq_Hz[0] = run_tree_tier1.sampling_freq_Hz
+    trigger_time[0] = run_tree_tier1.wfm_delay / run_tree_tier1.sampling_freq_Hz * 1e6  ## in microseconds
+    wfm_length[0] = run_tree_tier1.wfm_length
 
     #store some processing parameters:
     n_baseline_samples = array('I', [0]) # double
@@ -390,11 +387,7 @@ def process_file(filename, verbose=True, do_overwrite=True):
     out_tree.Branch("filename",fname)
     run_tree.Branch("filename",fname)
 
-    if do_debug:
-        reporting_period = 1
-
     print "%i entries" % min(n_entries)
-
 
     run_tree.Fill() # this tree only has one entry with run-level entries 
 

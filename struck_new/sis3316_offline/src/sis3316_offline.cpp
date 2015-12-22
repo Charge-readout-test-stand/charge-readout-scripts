@@ -35,6 +35,7 @@ changes to original code:
 #include <iostream>
 #include <sstream>
 #include <climits>
+#include <fstream>
 using namespace std;
 
 #define CERN_ROOT_PLOT
@@ -63,6 +64,7 @@ FILE *gl_FILE_DataEvenFilePointer           ;
 
 int ReadBufferHeaderCounterNofChannelToDataFile (UInt_t* indentifier, UInt_t* bank_loop_no, UInt_t* channel_no, UInt_t* nof_events, UInt_t* event_length, UInt_t * maw_length, UInt_t* reserved);
 int ReadEventsFromDataFile (UInt_t* memory_data_array, UInt_t nof_write_length_lwords);
+int ReadConfigFile(string config_filename_str, Bool_t* is_external, Float_t* sampling_freq_Hz, UShort_t* wfm_delay, UShort_t* maw_delay, Bool_t* is_pospolarity, Bool_t* is_50ohm, Bool_t* is_2Vinput, UShort_t* maw_gap, UShort_t* maw_peaking, UShort_t* maw_thres);
 
 
 /* ***************************************************************************************************************** */
@@ -171,22 +173,22 @@ int main(int argc, char* argv[]) {
     cout << "filename: " << filename << endl;
     size_t dot = filename_str.find_last_of(".");
     size_t slash = filename_str.find_last_of("/");
-    string label = "tier1_" + filename_str.substr(slash+1, dot-slash-1);
-    cout << "Setting file label " << label << endl;
+    string basename_str = "tier1_" + filename_str.substr(slash+1, dot-slash-1);
+    string config_filename_str = filename_str.substr(0, dot) + ".ini";
+    cout << "Setting file label " << basename_str << endl;
 
     // open a root file
-    TFile root_file((label + ".root").c_str(), "recreate");
+    TFile root_file((basename_str + ".root").c_str(), "recreate");
 
     // make trees
     TTree *tree[16];
 
     //values for branches
-    //FIXME--right now the global parameters are set; should be read from configuration file in the future
     //global parameters
-        Bool_t is_external = true;
+        Bool_t is_external = false;
         Float_t sampling_freq_Hz = 25e6; // in Hz
-        UShort_t wfm_delay = 200;
-        UShort_t maw_delay = 10;
+        UShort_t wfm_delay = 300;
+        UShort_t maw_delay = 600;
         Bool_t is_pospolarity[16];
         Bool_t is_50ohm[16];
         Bool_t is_2Vinput[16];
@@ -194,7 +196,9 @@ int main(int argc, char* argv[]) {
         UShort_t maw_peaking = 50;
         UShort_t maw_thres = 60;
         for(int i=0; i<=15; i++) {is_pospolarity[i] = is_50ohm[i] = is_2Vinput[i] = true;}
-        is_2Vinput[8] = false;
+
+     //read from config file
+        ReadConfigFile(config_filename_str, &is_external, &sampling_freq_Hz, &wfm_delay, &maw_delay, is_pospolarity, is_50ohm, is_2Vinput, &maw_gap, &maw_peaking, &maw_thres);
 
      //other parameters
         Int_t wfm_max = 0; 
@@ -208,7 +212,9 @@ int main(int argc, char* argv[]) {
         //ULong64_t timestampLo = 0;
         //ULong64_t timestampHi = 0;
         UShort_t * wfm = new UShort_t[2048*4]; 
-        Int_t * maw = new Int_t[2048*4]; 
+        Int_t * maw = new Int_t[2048*4];
+
+    //read configuration file
 
     for(int i=0; i<=15; i++) { // looping over the 16 trees
         ostringstream treename;
@@ -398,7 +404,7 @@ int main(int argc, char* argv[]) {
                 if (val == (int) 'p') { 
 
                     ostringstream plotName; 
-                    plotName << label  << i_event;
+                    plotName << basename_str  << i_event;
                     gl_graph_raw->c1->Print((plotName.str() + ".png").c_str());
                     gl_graph_raw->c1->Print((plotName.str() + ".pdf").c_str());
                 }
@@ -548,8 +554,8 @@ int main(int argc, char* argv[]) {
 
   legend.Draw();
   canvas.Update();
-  canvas.Print((label + ".png").c_str());
-  canvas.Print((label + ".pdf").c_str());
+  canvas.Print((basename_str + ".png").c_str());
+  canvas.Print((basename_str + ".pdf").c_str());
 
   for(int i=0; i<=15; i++) {tree[i]->Write();}
   canvas.Write();
@@ -622,3 +628,114 @@ int nof_read ;
 }
 
 
+// This function reads the parameters from the config file.
+// It reads line by line, and records the parameter if the keyword is matched
+int ReadConfigFile(string config_filename_str, Bool_t* is_external, Float_t* sampling_freq_Hz, UShort_t* wfm_delay, UShort_t* maw_delay, Bool_t* is_pospolarity, Bool_t* is_50ohm, Bool_t* is_2Vinput, UShort_t* maw_gap, UShort_t* maw_peaking, UShort_t* maw_thres)
+{
+    string line;
+    ifstream config_file(config_filename_str.c_str(), ifstream::in);
+    bool flag = false; //this flag records whether is_external has been set, to avoid settings
+                       //where both or neither of external and interal trigger are set
+    if(config_file.is_open()) {
+        while(!config_file.eof()) {
+            getline(config_file, line);
+            istringstream line_stream(line);
+            string keyword;
+            int n;
+
+            if(line_stream >> keyword) { //first read the keyword
+                //cout << keyword << endl;
+                if(keyword.compare("PARAMETER_PRE_TRIGGER_DELAY") == 0) // wfm_delay
+                    {line_stream >> n; *wfm_delay = n; continue;}
+
+                else if(keyword.compare("PARAMETER_MAW_TEST_BUFFER_DELAY") == 0) // maw_delay
+                    {line_stream >> n; *maw_delay = n; continue;}
+
+                else if(keyword.compare("PARAMETER_TRIGGER_COND_ADC_EXTERNAL") == 0) { // is_external
+                    line_stream >> n;
+                    if(flag && *is_external != bool(n)) { //if is_external has been set and is in conflict with current value
+                        cout << "Error in external/internal trigger settings! ... skipping the file" << endl;
+                        exit(0);    
+                    }
+                    else {
+                        *is_external = bool(n);
+                        flag = true;
+                    }
+                }
+
+                else if(keyword.compare("PARAMETER_TRIGGER_COND_ADC_INTERNAL") == 0) { // is_external
+                    line_stream >> n;
+                    if(flag && *is_external == bool(n)) { //if is_external has been set and is in conflict with current value
+                        cout << "Error in external/internal trigger settings! ... skipping the file" << endl;
+                        exit(0);    
+                    }
+                    else {
+                        *is_external = !(bool(n));
+                        flag = true;
+                    }
+                }
+
+                else if(keyword.compare("PARAMETER_CHANNEL_POLARITY_INVERT") == 0) { // is_pospolarity
+                    //NOTE: values in .ini file goes from channel 15 to channel 0
+                    for(int i = 15; i >= 0; i--) {
+                        line_stream >> n;
+                        is_pospolarity[i] = !(bool(n));
+                    }
+                }
+
+                else if(keyword.compare("PARAMETER_CHANNEL_RANGE_2V") == 0) { // is_2Vinput
+                    for(int i = 15; i >= 0; i--) {
+                        line_stream >> n;
+                        is_2Vinput[i] = bool(n);
+                    }
+                }
+                
+                else if(keyword.compare("PARAMETER_CHANNEL_50OHM_TERMINATION_DISABLE") == 0) { // is_50ohm
+                    for(int i = 15; i >= 0; i--) {
+                        line_stream >> n;
+                        is_50ohm[i] = !(bool(n));
+                    }
+                }
+
+                else if(keyword.compare("PARAMETER_CHANNEL_TRIGGER_GENERATION_GAP") == 0) // maw_gap
+                    {line_stream >> n; *maw_gap = n; continue;}
+
+                else if(keyword.compare("PARAMETER_CHANNEL_TRIGGER_GENERATION_PEAKING") == 0) // maw_peaking
+                    {line_stream >> n; *maw_peaking = n; continue;}
+
+                else if(keyword.compare("PARAMETER_CHANNEL_TRIGGER_GENERATION_THRESHOLD") == 0) // maw_thres
+                    {line_stream >> n; *maw_thres = n; continue;}
+
+                else if(keyword.compare("PARAMETER_INTERNAL_SAMPLE_CLOCK_IDX") == 0) { // samping_freq
+                    line_stream >> n;
+                    switch(n) {
+                        case 0: *sampling_freq_Hz = 250.000e6; break;
+                        case 1: *sampling_freq_Hz = 227.273e6; break;
+                        case 2: *sampling_freq_Hz = 208.333e6; break;
+                        case 3: *sampling_freq_Hz = 178.571e6; break;
+                        case 4: *sampling_freq_Hz = 166.667e6; break;
+                        case 5: *sampling_freq_Hz = 138.889e6; break;
+                        case 6: *sampling_freq_Hz = 125.000e6; break;
+                        case 7: *sampling_freq_Hz = 119.048e6; break;
+                        case 8: *sampling_freq_Hz = 113.636e6; break;
+                        case 9: *sampling_freq_Hz = 104.167e6; break;
+                        case 10: *sampling_freq_Hz = 100.000e6; break;
+                        case 11: *sampling_freq_Hz = 83.333e6; break;
+                        case 12: *sampling_freq_Hz = 71.429e6; break;
+                        case 13: *sampling_freq_Hz = 62.500e6; break;
+                        case 14: *sampling_freq_Hz = 50.000e6; break;
+                        case 15: *sampling_freq_Hz = 25.000e6; break;
+                        default: cout << "Wrong sampling clock configuration! skipping file..." << endl;
+                                 exit(0);
+                    }
+                }
+            }
+        }
+    }
+
+    else { // fail to open config file
+        cout << ".ini file does not exist! Using default parameters..." << endl;
+        return 0;
+    }
+    return 1;
+}
