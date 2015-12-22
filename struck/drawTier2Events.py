@@ -378,7 +378,7 @@ def process_file(filename, n_plots=0):
 
         else:
             # if we run in batch mode, print a multi-page canvas
-            plot_name = "EventsWithChargeAbove%ikeV.pdf" % threshold
+            plot_name = "EventsWithChargeAbove%ikeV_6thLXe.pdf" % threshold
             if n_plots == 1:
                 plot_name = plot_name + "("
             if n_plots >= n_plots_total:
