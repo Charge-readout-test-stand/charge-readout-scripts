@@ -1,7 +1,7 @@
 #!/bin/env python
 
 """
-This script generates tier1, tier2, and tier3 files. 
+This script generates tier1 and tier3 files. 
 """
 
 import os
@@ -21,9 +21,9 @@ import generateTier3Files_external
 #directory = "/nfs/slac/g/exo_data4/users/alexis4/test-stand/2015_12_03_testing"
 directory = os.getcwd()
 
-do_tier1 = False
-do_tier3_internal = True 
-do_tier3_external = False
+do_tier1 = False 
+do_tier3_internal = True
+do_tier3_external = True
 
 
 
