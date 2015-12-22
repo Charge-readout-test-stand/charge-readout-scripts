@@ -3,6 +3,15 @@
 """
 This script draws events from tier2 root file(s). 
 
+
+for 6th LXe:
+* uncomment gROOT.SetBatch(True)
+* set threshold to 570
+* run this command:
+
+python drawTier2Events.py
+/nfs/slac/g/exo_data4/users/alexis4/test-stand/2015_12_07_6thLXe/tier2/tier2_xenon8300g_1300VPMT_1700Vcathode_amplified_shaped_2*.root
+
 arguments [sis tier 2 root files of events]
 """
 
