@@ -1,0 +1,1 @@
+/nfs/slac/g/exo_data4/users/peihaos/charge-readout-scripts/struck/spectrum1.py
