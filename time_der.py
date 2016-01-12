@@ -32,11 +32,14 @@ legend.SetNColumns(3)
 ev_count=0
 diff_hist={}
 hist_or={}
+sm_factor=10
+der_sampling=5
 tree = tf.Get('tree')
 n_entries = tree.GetEntries()
 print "%i entries" % n_entries
 channel_map = struck_analysis_parameters.channel_map
 calibration_values = struck_analysis_parameters.calibration_values
+sampling_freq_Hz = struck_analysis_parameters.sampling_freq_Hz
 pave_text2 = ROOT.TPaveText(0.11, 0.5, 0.3, 0.59, "NDC")
 pave_text2.SetTextAlign(11)
 pave_text2.GetTextFont()
@@ -74,13 +77,12 @@ while ev_count<n_entries:
    wfm = tree.wfm5
   wfm_length = len(wfm)
   wfm_name='wfm_%i' %i
-  sampling_freq_Hz = struck_analysis_parameters.sampling_freq_Hz
 #  zer = ROOT.TF1('zero','0',0,wfm_length/sampling_freq_Hz*CLHEP.millisecond)
   energy_wfm = EXODoubleWaveform(array('d',wfm), wfm_length)
   energy_wfm.SetSamplingFreq(sampling_freq_Hz/CLHEP.second)
   sm_energy_wfm = EXODoubleWaveform(array('d',wfm), wfm_length)
   smoother = EXOSmoother()
-  smoother.SetSmoothSize(10)
+  smoother.SetSmoothSize(sm_factor)
 #region = EXOWaveformRegion(15,750)    # not fundamental
 #smoother.SetSmoothRegion(region)      # not fundamental
   smoother.Transform(energy_wfm,sm_energy_wfm)
@@ -90,10 +92,10 @@ while ev_count<n_entries:
   b=hist_or.GetMinimum()
   diff_hist[i] = ROOT.TH1D(ev_tr+wfm_name,ev_tr+wfm_name,wfm_length,0.04,wfm_length/sampling_freq_Hz*CLHEP.millisecond) #CLHEP starts defines 1 as 1ns
   for j in range(0,wfm_length):
-   if j<10 or j>790:
+   if j<der_sampling or j>(wfm_length-der_sampling):
     diff_hist[i].Fill(j/sampling_freq_Hz*CLHEP.millisecond,b)
    else:
-    diff_hist[i].Fill(j/sampling_freq_Hz*CLHEP.millisecond,(hist.GetBinContent(j+1)-hist.GetBinContent(j))/10*(a-b)+b)
+    diff_hist[i].Fill(j/sampling_freq_Hz*CLHEP.millisecond,(hist.GetBinContent(j+der_sampling)-hist.GetBinContent(j))/10*(a-b)+b)
   diff_hist[i].Smooth()
   diff_hist[i].GetXaxis().SetRange(10,790)
   maxval.append(diff_hist[i].GetMaximum())
@@ -120,13 +122,17 @@ while ev_count<n_entries:
   for i_sample in range(0,100):
    energy[k].append(wfm[wfm_length - i_sample - 1]- wfm[i_sample])
   energy_wfm = EXODoubleWaveform(array('d',wfm), wfm_length)
-  sampling_freq_Hz = struck_analysis_parameters.sampling_freq_Hz
   energy_wfm.SetSamplingFreq(sampling_freq_Hz/CLHEP.second)
+  sm_energy_wfm = EXODoubleWaveform(array('d',wfm), wfm_length)
+  smoother = EXOSmoother()
+  smoother.SetSmoothSize(sm_factor)
+  smoother.Transform(energy_wfm,sm_energy_wfm)
+  hist = sm_energy_wfm.GimmeHist('hist_sm'+wfm_name)
   hist_or = energy_wfm.GimmeHist('hist_or'+wfm_name)  
   hist_or.SetLineColor(struck_analysis_parameters.get_colors()[k])
   diff_hist[k].SetLineColor(struck_analysis_parameters.get_colors()[k])
   diff_hist[k].SetLineStyle(7)
-#  hist.SetLineWidth(2)
+  hist.SetLineWidth(2)
   energy_cl.append(float(np.mean(energy[k]))*calibration_values[k])
   hist_or.SetTitle('event %i'%ev_count)
   hist_or.SetMaximum(max(maxval)+10)
@@ -134,6 +140,7 @@ while ev_count<n_entries:
   legend.AddEntry(hist_or,'%s E=%.2f keV'%(channel_map[k],energy_cl[k]),'l')
   hist_or.Draw('same')
   diff_hist[k].Draw('same')
+  hist.Draw('same')
  pave_text2.AddText("#SigmaE_{C} = %.2f keV" %sum(energy_cl))
  pave_text2.Draw()
  legend.Draw()
