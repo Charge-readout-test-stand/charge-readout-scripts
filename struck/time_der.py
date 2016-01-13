@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+#this script
+
+
 import sys
 import ROOT
 import numpy as np
@@ -31,15 +34,16 @@ legend = ROOT.TLegend(0.2, 0.91, 0.9, 1)
 legend.SetNColumns(3)
 ev_count=0
 diff_hist={}
-hist_or={}
+line={}
 sm_factor=10
-der_sampling=5
+der_sampling=2
 tree = tf.Get('tree')
 n_entries = tree.GetEntries()
 print "%i entries" % n_entries
 channel_map = struck_analysis_parameters.channel_map
 calibration_values = struck_analysis_parameters.calibration_values
 sampling_freq_Hz = struck_analysis_parameters.sampling_freq_Hz
+sampling_time=1/sampling_freq_Hz*CLHEP.millisecond # the time is in us
 pave_text2 = ROOT.TPaveText(0.11, 0.5, 0.3, 0.59, "NDC")
 pave_text2.SetTextAlign(11)
 pave_text2.GetTextFont()
@@ -77,7 +81,6 @@ while ev_count<n_entries:
    wfm = tree.wfm5
   wfm_length = len(wfm)
   wfm_name='wfm_%i' %i
-#  zer = ROOT.TF1('zero','0',0,wfm_length/sampling_freq_Hz*CLHEP.millisecond)
   energy_wfm = EXODoubleWaveform(array('d',wfm), wfm_length)
   energy_wfm.SetSamplingFreq(sampling_freq_Hz/CLHEP.second)
   sm_energy_wfm = EXODoubleWaveform(array('d',wfm), wfm_length)
@@ -89,15 +92,16 @@ while ev_count<n_entries:
   hist = sm_energy_wfm.GimmeHist('hist_sm'+wfm_name)
   hist_or = energy_wfm.GimmeHist('hist_or'+wfm_name)
   a=hist_or.GetMaximum()
-  b=hist_or.GetMinimum()
-  diff_hist[i] = ROOT.TH1D(ev_tr+wfm_name,ev_tr+wfm_name,wfm_length,0.04,wfm_length/sampling_freq_Hz*CLHEP.millisecond) #CLHEP starts defines 1 as 1ns
+  b=hist_or.GetMinimum()*0.99
+  diff_hist[i] = ROOT.TH1D(ev_tr+wfm_name,ev_tr+wfm_name,wfm_length,0.04,wfm_length*sampling_time)
   for j in range(0,wfm_length):
    if j<der_sampling or j>(wfm_length-der_sampling):
-    diff_hist[i].Fill(j/sampling_freq_Hz*CLHEP.millisecond,b)
+    diff_hist[i].Fill(j*sampling_time,b)
    else:
-    diff_hist[i].Fill(j/sampling_freq_Hz*CLHEP.millisecond,(hist.GetBinContent(j+der_sampling)-hist.GetBinContent(j))/10*(a-b)+b)
+    diff_hist[i].Fill(j*sampling_time,(hist.GetBinContent(j+der_sampling)-hist.GetBinContent(j))/10*(a-b)+b)
   diff_hist[i].Smooth()
   diff_hist[i].GetXaxis().SetRange(10,790)
+  line[i] = ROOT.TLine(0,b,wfm_length*sampling_time,b)
   maxval.append(diff_hist[i].GetMaximum())
   minval.append(diff_hist[i].GetMinimum(20))
   maxval.append(hist_or.GetMaximum())
@@ -138,9 +142,11 @@ while ev_count<n_entries:
   hist_or.SetMaximum(max(maxval)+10)
   hist_or.SetMinimum(min(minval)-10)
   legend.AddEntry(hist_or,'%s E=%.2f keV'%(channel_map[k],energy_cl[k]),'l')
+  line[k].SetLineStyle(7)
   hist_or.Draw('same')
   diff_hist[k].Draw('same')
   hist.Draw('same')
+  line[k].Draw('same')
  pave_text2.AddText("#SigmaE_{C} = %.2f keV" %sum(energy_cl))
  pave_text2.Draw()
  legend.Draw()
@@ -160,4 +166,4 @@ while ev_count<n_entries:
   tree.GetEntry(int(num_val))
   ev_count = int(num_val)
  if val == 'p': c1.Print('waveform_entry_%i.png' % (ev_count))
-# c1.Clear()
+
