@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
-#this script
-
+# this script shows the current flowing in the different channels, superimposed to the charge waveform (orginal and smoothed). The two paramenters are arbitrary: sm_factor (the smoothness of the charge waveform) and the der_sampling (number of bin used as increment for the derivative)
 
 import sys
 import ROOT
@@ -26,24 +25,22 @@ ROOT.gSystem.Load("$EXOLIB/lib/libEXOUtilities")
 
 tf = ROOT.TFile('/nfs/slac/g/exo_data4/users/alexis4/test-stand/2015_12_07_6thLXe/tier2/tier2_xenon8300g_1300VPMT_1700Vcathode_amplified_shaped_2015-12-07_21-28-20.root')
 
-
-
 c1 = ROOT.TCanvas('c1','' )
 c1.SetGrid(1,1)
 legend = ROOT.TLegend(0.2, 0.91, 0.9, 1)
 legend.SetNColumns(3)
-ev_count=0
-diff_hist={}
-line={}
-sm_factor=10
-der_sampling=2
+ev_count = 0
+diff_hist = {}
+line = {}
+sm_factor = 10
+der_sampling = 2
 tree = tf.Get('tree')
 n_entries = tree.GetEntries()
 print "%i entries" % n_entries
 channel_map = struck_analysis_parameters.channel_map
 calibration_values = struck_analysis_parameters.calibration_values
 sampling_freq_Hz = struck_analysis_parameters.sampling_freq_Hz
-sampling_time=1/sampling_freq_Hz*CLHEP.millisecond # the time is in us
+sampling_time = 1/sampling_freq_Hz*CLHEP.millisecond # the time is in us
 pave_text2 = ROOT.TPaveText(0.11, 0.5, 0.3, 0.59, "NDC")
 pave_text2.SetTextAlign(11)
 pave_text2.GetTextFont()
@@ -63,7 +60,7 @@ while ev_count<n_entries:
  minval = []
  energy_cl = []
  energy = defaultdict(list)
- ev_tr='ev%i'%ev_count
+ ev_tr = 'ev%i'%ev_count
  legend.Clear()
  pave_text2.Clear()
  for i in range(0,5):
@@ -91,8 +88,8 @@ while ev_count<n_entries:
   smoother.Transform(energy_wfm,sm_energy_wfm)
   hist = sm_energy_wfm.GimmeHist('hist_sm'+wfm_name)
   hist_or = energy_wfm.GimmeHist('hist_or'+wfm_name)
-  a=hist_or.GetMaximum()
-  b=hist_or.GetMinimum()*0.99
+  a = hist_or.GetMaximum()
+  b = hist_or.GetMinimum()*0.99
   diff_hist[i] = ROOT.TH1D(ev_tr+wfm_name,ev_tr+wfm_name,wfm_length,0.04,wfm_length*sampling_time)
   for j in range(0,wfm_length):
    if j<der_sampling or j>(wfm_length-der_sampling):
@@ -107,7 +104,7 @@ while ev_count<n_entries:
   maxval.append(hist_or.GetMaximum())
   minval.append(hist_or.GetMaximum())
 
-
+# plotting the waveforms
  for k in range(0,5):
   if k == 0:
    wfm = tree.wfm0
