@@ -142,7 +142,7 @@ Double_t TwoPCDsOneZ(Double_t *var, Double_t *par) {
   //    5: y for PCD 1
   //    6: q for PCD 1
 
-  Double_t amplitude = OnePCDWithOptions(var, par, 0, false, true) + OnePCDWithOptions(var, par, 1, true, true); 
+  Double_t amplitude = OnePCDWithOptions(var, par, 0, false) + OnePCDWithOptions(var, par, 1, true); 
   return amplitude; 
 
 }
@@ -173,8 +173,7 @@ Double_t myfunc() {
     test->SetParameter(3, q0); // q
     test->Draw(); 
     test->SetLineColor(kRed);
-    test->SetFillColor(kRed);
-    legend.AddEntry(test, "PCD 0", "lf"); 
+    legend.AddEntry(test, "PCD 0", "l"); 
     
     // PCD 1
     TF1* test1 = new TF1("test", OnePCD, 6, 20, 4);
@@ -182,9 +181,8 @@ Double_t myfunc() {
     test1->SetParameter(1, y1); // y
     test1->SetParameter(2, z); // z0
     test1->SetParameter(3, q1); // q
-    test1->SetLineColor(kGreen+1); 
-    test1->SetFillColor(kGreen+1); 
-    legend.AddEntry(test1, "PCD 1", "lf"); 
+    test1->SetLineColor(kGreen+2); 
+    legend.AddEntry(test1, "PCD 1", "l"); 
     test1->Draw(); 
 
     // two PCDs: PCD 0 + PCD1
@@ -197,11 +195,11 @@ Double_t myfunc() {
     test2->SetParameter(5, y1); // y for PCD 1
     test2->SetParameter(6, q1); // q for PCD 1
     test2->SetLineColor(kBlue);
-    test2->SetFillColor(kBlue);
     test2->Draw(); 
-    legend.AddEntry(test2, "PCD 0 + 1", "lf"); 
+    legend.AddEntry(test2, "PCD 0 + 1", "l"); 
 
     TH1D* frameHist = (TH1D*) test2->GetHistogram(); 
+    frameHist->SetTitle("");
     frameHist->SetXTitle("time [#mus]");
     frameHist->SetYTitle("charge [arb]");
     test2->Draw("l");
