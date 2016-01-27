@@ -5,6 +5,8 @@ Fit one charge signal wfm
 import os
 import sys
 import math
+import time
+from array import array
 
 from ROOT import gROOT
 #gROOT.SetBatch(True)
@@ -32,6 +34,7 @@ from ROOT import MyFunction
 gSystem.Load("$EXOLIB/lib/libEXOROOT")
 from ROOT import CLHEP
 from ROOT import EXODoubleWaveform
+from ROOT import EXOBaselineRemover
 
 # definition of calibration constants, decay times, channels
 import struck_analysis_parameters
@@ -110,39 +113,89 @@ def draw():
     graph2.Draw("l")
 
 
-    test = TF1("test",MyFunction, 6, 20, 4)
-    test.SetParameter(0, 0) # x
-    test.SetParameter(1, 0) # y
-    test.SetParameter(2, 17.0) # z0
-    test.SetParameter(3, 1.0) # q
-    test.Draw() 
-    hist = test.GetHistogram()
-    hist.SetXTitle("time [#mus]");
-    hist.SetYTitle("charge [arb]");
+def do_fit():
 
-    canvas.Update()
-    canvas.Print("test.png")
-    raw_input("wait...")
-
-    # one test, in a location on alexis' computer":
-    tfile = TFile("~/bucket/slac/test-stand/2015_12_07_6th_LXe/tier2_xenon8300g_1300VPMT_1700Vcathode_amplified_shaped_2015-12-07_21-28-20.root")
-    tree = tfile.Get("tree")
-    tree.GetEntry(59)
-    wfm = tree.wfm3
-    wfm_length = len(wfm)
+    canvas = TCanvas("canvas","")
+    canvas.SetGrid(1,1)
 
     sampling_freq_Hz = struck_analysis_parameters.sampling_freq_Hz
-    exo_wfm = EXODoubleWaveform(array('d',wfm), wfm_length[i])
-    exo_wfm.SetSamplingFreq(sampling_freq_Hz/CLHEP.second)
-    wfm_hist = exo_wfm.GimmeHist()
-    wfm_hist.Draw()
+
+    # one test:
+    file_name = "/nfs/slac/g/exo_data4/users/alexis4/test-stand/2015_12_07_6thLXe/tier2/tier2_xenon8300g_1300VPMT_1700Vcathode_amplified_shaped_2015-12-07_21-28-20.root"
+    tfile = TFile(file_name)
+    tree = tfile.Get("tree")
+    for i_entry in xrange(tree.GetEntries()):
+
+        tree.GetEntry(i_entry)
+        #if struck_analysis_parameters.charge_channels_to_use[tree.channel]:
+        #    print channel
+        calibration = struck_analysis_parameters.calibration_values[tree.channel[3]]
+        calibration/=2.5
+        #print calibration
+
+        # only ch 3 for now:
+        wfm = tree.wfm3
+        energy = (tree.wfm_max[3] - wfm[0])*calibration
+        print i_entry, energy
+        if energy < 200: continue
+
+        # setup the fit function
+        test = TF1("test",MyFunction, 5, 22, 4)
+        test.SetParName(0, "x")
+        test.SetParName(1, "y")
+        test.SetParName(2, "z0")
+        test.SetParName(3, "q")
+        test.SetParameter(0, 0) # x
+        test.SetParameter(1, 0) # y
+        test.SetParameter(2, 20.0) # z0
+        test.SetParameter(3, energy) # q
+        test.Draw() 
+        hist = test.GetHistogram()
+        hist.SetXTitle("time [#mus]");
+        hist.SetYTitle("charge [arb]");
 
 
-    canvas.Update()
-    raw_input("wait...")
+
+        exo_wfm = EXODoubleWaveform(array('d',wfm), len(wfm))
+        exo_wfm*=calibration
+        exo_wfm.SetSamplingFreq(sampling_freq_Hz/CLHEP.second)
+
+
+        # remove the baseline
+        baseline_remover = EXOBaselineRemover()
+        baseline_remover.SetBaselineSamples(100)
+        baseline_remover.Transform(exo_wfm)
+        rms = baseline_remover.GetBaselineRMS()
+        print "rms", rms
+
+        wfm_hist = exo_wfm.GimmeHist()
+        for i_bin in xrange(wfm_hist.GetNbinsX()):
+            wfm_hist.SetBinError(i_bin,20.0) # approx. rms
+        wfm_hist.SetLineColor(TColor.kRed)
+        wfm_hist.SetLineWidth(2)
+        wfm_hist.Draw()
+        test.Draw("same")
+
+        canvas.Update()
+        #raw_input("enter to continue")
+
+        print "doing fit..."
+        fit_start = time.clock()
+        fit_result = wfm_hist.Fit(test, "SR")
+        fit_stop = time.clock()
+        wfm_hist.Draw()
+        print "chi2", fit_result.Chi2()
+        print "prob", fit_result.Prob()
+        print "n dof", fit_result.Ndf()
+        print "status", fit_result.Status()
+        print "%.1f seconds" % (fit_stop - fit_start)
+
+        canvas.Update()
+        raw_input("enter to continue")
 
 
 if __name__ == "__main__":
-    draw()
+    #draw()
+    do_fit()
 
 
