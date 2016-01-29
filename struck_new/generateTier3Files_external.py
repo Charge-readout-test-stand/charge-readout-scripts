@@ -69,21 +69,6 @@ from array import array
 import struck_analysis_parameters
 import wfmProcessing
 
-def create_basename(filename):
-
-    # construct a basename to use as output file name
-    basename = os.path.basename(filename)
-    basename = os.path.splitext(basename)[0]
-    basename = "_".join(basename.split("_")[1:])
-    return basename
-
-def create_outfile_name(filename):
-
-    basename = create_basename(filename)
-    out_filename = "tier3_%s.root" % basename
-    return out_filename
-
-
 def process_file(filename, verbose=True, do_overwrite=True):
 
     #---------------------------------------------------------------
@@ -106,7 +91,7 @@ def process_file(filename, verbose=True, do_overwrite=True):
     prev_time_stamp = 0.0
 
     # make a basename for names of output file, plots, etc:
-    basename = create_basename(filename)
+    basename = wfmProcessing.create_basename(filename)
 
     # calculate file start time, in POSIX time, from filename suffix
     # date and time are the last two parts of filename separated with "_":
@@ -133,7 +118,7 @@ def process_file(filename, verbose=True, do_overwrite=True):
         return 0
 
     # open output file and tree
-    out_filename = create_outfile_name(filename)
+    out_filename = wfmProcessing.create_outfile_name(filename)
     if not do_overwrite:
         if os.path.isfile(out_filename):
             print "file exists!"
@@ -515,10 +500,27 @@ def process_file(filename, verbose=True, do_overwrite=True):
             wfm = tree[i].wfm
             exo_wfm = EXODoubleWaveform(array('d', wfm), wfm_length[0])
 
-            (baseline_mean[i], baseline_rms[i], energy[i], energy_rms[i], energy1[i], energy_rms1[i],
-                energy_pz[i], energy_rms_pz[i], energy1_pz[i], energy_rms1_pz[i],
-                calibrated_wfm) = wfmProcessing.get_wfmparams(exo_wfm, wfm_length[0], sampling_freq_Hz[0],
-                                    n_baseline_samples[0], calibration[i], decay_time[i], channel==pmt_channel)
+            (
+                baseline_mean[i], 
+                baseline_rms[i], 
+                energy[i], 
+                energy_rms[i], 
+                energy1[i], 
+                energy_rms1[i],
+                energy_pz[i], 
+                energy_rms_pz[i], 
+                energy1_pz[i], 
+                energy_rms1_pz[i],
+                calibrated_wfm,
+            ) = wfmProcessing.get_wfmparams(
+                exo_wfm, 
+                wfm_length[0], 
+                sampling_freq_Hz[0],
+                n_baseline_samples[0], 
+                calibration[i], 
+                decay_time[i], 
+                channel==pmt_channel
+            )
             
             if channel == pmt_channel:
                 lightEnergy[0] = energy[i]
@@ -530,18 +532,46 @@ def process_file(filename, verbose=True, do_overwrite=True):
             elif charge_channels_to_use[channel]:
                 sum_wfm += calibrated_wfm
             
-            (smoothed_max[i], rise_time_stop10[i], rise_time_stop20[i], rise_time_stop30[i],
-                rise_time_stop40[i], rise_time_stop50[i], rise_time_stop60[i], rise_time_stop70[i],
-                rise_time_stop80[i], rise_time_stop90[i], rise_time_stop95[i],
-                rise_time_stop99[i]) = wfmProcessing.get_risetimes(exo_wfm, wfm_length[0], sampling_freq_Hz[0])
+            (
+                smoothed_max[i], 
+                rise_time_stop10[i], 
+                rise_time_stop20[i], 
+                rise_time_stop30[i],
+                rise_time_stop40[i], 
+                rise_time_stop50[i], 
+                rise_time_stop60[i], 
+                rise_time_stop70[i],
+                rise_time_stop80[i], 
+                rise_time_stop90[i], 
+                rise_time_stop95[i],
+                rise_time_stop99[i]
+            ) = wfmProcessing.get_risetimes(
+                exo_wfm, 
+                wfm_length[0], 
+                sampling_freq_Hz[0]
+            )
 
             # end loop over channels
 
         ##### processing sum waveform
-        (smoothed_max_sum[0], rise_time_stop10_sum[0], rise_time_stop20_sum[0], rise_time_stop30_sum[0],
-            rise_time_stop40_sum[0], rise_time_stop50_sum[0], rise_time_stop60_sum[0], rise_time_stop70_sum[0],
-            rise_time_stop80_sum[0], rise_time_stop90_sum[0], rise_time_stop95_sum[0],
-            rise_time_stop99_sum[0]) = wfmProcessing.get_risetimes(sum_wfm, wfm_length[0], sampling_freq_Hz[0])
+        (
+            smoothed_max_sum[0], 
+            rise_time_stop10_sum[0], 
+            rise_time_stop20_sum[0], 
+            rise_time_stop30_sum[0],
+            rise_time_stop40_sum[0], 
+            rise_time_stop50_sum[0], 
+            rise_time_stop60_sum[0], 
+            rise_time_stop70_sum[0],
+            rise_time_stop80_sum[0], 
+            rise_time_stop90_sum[0], 
+            rise_time_stop95_sum[0],
+            rise_time_stop99_sum[0]
+        ) = wfmProcessing.get_risetimes(
+            sum_wfm, 
+            wfm_length[0], 
+            sampling_freq_Hz[0]
+        )
 
         baseline_remover = EXOBaselineRemover()
         baseline_remover.SetBaselineSamples(2*n_baseline_samples[0])
