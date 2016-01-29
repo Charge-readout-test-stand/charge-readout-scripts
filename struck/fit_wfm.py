@@ -294,7 +294,6 @@ def do_fit(exo_wfm, canvas, i_entry, rms, channel, doTwoPCDs=False):
         residHist.Draw("hist p")
 
         canvas.Update()
-        canvas.Print("output.pdf")
 
         if False:
             # repeat with M option
@@ -308,6 +307,9 @@ def do_fit(exo_wfm, canvas, i_entry, rms, channel, doTwoPCDs=False):
         if status > 0:
             print "BAD FIT, repeating..."
         # end loop over fitting
+
+    canvas.Update()
+    canvas.Print("output.pdf")
 
 
     # wait for user input after drawing. don't do this in batch mode
@@ -327,6 +329,7 @@ def do_fit(exo_wfm, canvas, i_entry, rms, channel, doTwoPCDs=False):
 
 def process_file(file_name):
 
+    print "processing", file_name
     canvas = TCanvas("canvas","", 800, 1100)
     canvas.Divide(1,2)
 
@@ -407,7 +410,7 @@ def process_file(file_name):
         # end loop over tree entries
 
     # finish multi-page pdf
-    canvas.Print("output.pdf)")
+    canvas.Print("output.pdf]")
 
 
 if __name__ == "__main__":
