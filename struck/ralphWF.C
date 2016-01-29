@@ -2,7 +2,7 @@
 // charge signal. 
 
 // from https://root.cern.ch/root/html534/TF1.html#F3
-// test from the command line with: root myfunc.C
+// test from the command line with: root ralphWF.C
 
 #include "TF1.h"
 #include "TMath.h"
@@ -30,7 +30,6 @@ Double_t OnePadRotated(Double_t x, Double_t y, Double_t z) {
   Double_t x_n = (x - y)/TMath::Sqrt(2);
   Double_t y_n = (x + y)/TMath::Sqrt(2);
 
-
   Double_t x1 = x_n - side_length/2.0;
   Double_t x2 = x_n + side_length/2.0;
   Double_t y1 = y_n - side_length/2.0;
@@ -53,13 +52,23 @@ Double_t OnePadRotated(Double_t x, Double_t y, Double_t z) {
 
 Double_t OneStrip(Double_t x, Double_t y, Double_t z) {
   // return amplitude (between 0 and 1) from one strip:
+  // x is along the strip's length (along diagonals of pads)
+  // y is in the plane of the strip, perpendicular to x
+  // z is distance from the strip into the drift dimension
+  // (0, 0, 0) is at the intersection of the corners of two pads
+
   Double_t diagonal = 3.0; // mm
   Double_t amplitude = 0.0;
 
   // sum over all 30 pads
-  for ( int i_pad = 0; i_pad <= 30; i_pad++ ){
-      amplitude += OnePadRotated(x + i_pad*diagonal - diagonal*14.5, y, z);
-      //cout << i_pad << ": " << amplitude << endl;
+  //for ( int i_pad = 0; i_pad < 1; i_pad++ ){ // FIXME only 1 pad for debugging
+  for ( int i_pad = 0; i_pad < 30; i_pad++ ){
+      Double_t padX = x + i_pad*diagonal - diagonal*14.5; 
+
+      Double_t onePad = OnePadRotated(x + i_pad*diagonal - diagonal*14.5, y, z);
+      //Double_t onePad = OnePadRotated(x, y, z); // FIXME -- only one pad
+      //cout << "\t\t pad: "<< i_pad << " | pad x: " << padX << " | amplitude: " << onePad << endl;
+      amplitude += onePad;
   }
   return amplitude;
 }
@@ -68,11 +77,12 @@ Double_t OnePCDWithOptions(
   Double_t *var, 
   Double_t *par, 
   Int_t iPCD=0, 
-  Bool_t useFixedZ = false,
+  Bool_t useSameZ = false,
   Bool_t doDebug=false
 ) {
   // reponse of the strip (30 pads in x direction) to one ionization of
   // magnitude q, starting from location x,y,z
+  // including ion signal and cathode effect
   // 1 variable: t=time in microseconds
   // 4 parameters:
   //    0: x
@@ -86,7 +96,7 @@ Double_t OnePCDWithOptions(
 
   Double_t t = var[0];
 
-  if (doDebug){ cout << "PCD: " << iPCD << " useFixedZ: " << useFixedZ << endl; }
+  if (doDebug){ cout << "PCD: " << iPCD << " useSameZ: " << useSameZ << endl; }
 
   size_t xIndex = 0 + iPCD*4;
   Double_t x = par[xIndex];
@@ -97,11 +107,11 @@ Double_t OnePCDWithOptions(
   if (doDebug){ cout << "\tyIndex: " << yIndex << " y: " << y << endl; }
 
   size_t zIndex = 2 + iPCD*4;
-  if (useFixedZ){ zIndex=2; }
+  if (useSameZ){ zIndex=2; }
   Double_t z0 = par[zIndex];
   if (doDebug){ cout << "\tzIndex: " << zIndex << " z0: " << z0 << endl; }
 
-  size_t qIndex = 3 + iPCD*3 + (!useFixedZ)*iPCD;
+  size_t qIndex = 3 + iPCD*3 + (!useSameZ)*iPCD;
   Double_t q = par[qIndex]; 
   if (doDebug){ cout << "\tqIndex: " << qIndex << " q: " << q << endl; }
 
@@ -112,12 +122,17 @@ Double_t OnePCDWithOptions(
   // wfm is 0 for times before drift starts:
   if (t < triggerTime) { return 0.0; }
 
-  Double_t ionAmplitude = OneStrip(x,y,z0)*(1.0-z0/driftDistance);
+  Double_t ionAmplitude = OneStrip(x,y,z0);
   Double_t electronAmplitude = OneStrip(x,y,z);
+  if (doDebug) { cout << "\tion: " << ionAmplitude << endl; }
+  ionAmplitude*=(1.0-z0/driftDistance);
+  if (doDebug) { cout << "\telectron: " << electronAmplitude << endl; }
   if (z > 0) { 
     electronAmplitude*=(1.0-z/driftDistance); 
     if (doDebug){ cout << "\tz: " << z << endl; }
   }
+  if (doDebug) { cout << "\tion after cathode: " << ionAmplitude << endl; }
+  if (doDebug) { cout << "\telectron after cathode: " << electronAmplitude << endl; }
   Double_t amplitude = electronAmplitude - ionAmplitude; 
   if (doDebug) { cout << "\tamplitude: " << amplitude << endl; }
   return q*amplitude; 
@@ -148,16 +163,19 @@ Double_t TwoPCDsOneZ(Double_t *var, Double_t *par) {
 }
 
 
-Double_t myfunc() {
+Double_t ralphWF() {
     // a test -- just draw a sample wfm to see if things are working. 
 
     // options
-    Double_t x = 0.0;
+    Double_t x = 1.5;
     Double_t y0 = 0.0;
-    Double_t y1 = 0.2;
-    Double_t z = 17.0;
+    Double_t y1 = 2.0;
+    Double_t z = 14.65;
     Double_t q0 = 100.0;
     Double_t q1 = 300.0;
+
+    Double_t minTime = 14.0;
+    Double_t maxTime = 17.0;
     
     TCanvas canvas("canvas","");
     canvas.SetGrid(1,1); 
@@ -166,7 +184,7 @@ Double_t myfunc() {
     legend.SetNColumns(3);
 
     // PCD 0
-    TF1* test = new TF1("test", OnePCD, 6, 20, 4);
+    TF1* test = new TF1("test", OnePCD, minTime, maxTime, 4);
     test->SetParameter(0, x); // x
     test->SetParameter(1, y0); // y
     test->SetParameter(2, z); // z0
@@ -176,7 +194,7 @@ Double_t myfunc() {
     legend.AddEntry(test, "PCD 0", "l"); 
     
     // PCD 1
-    TF1* test1 = new TF1("test", OnePCD, 6, 20, 4);
+    TF1* test1 = new TF1("test", OnePCD, minTime, maxTime, 4);
     test1->SetParameter(0, x); // x
     test1->SetParameter(1, y1); // y
     test1->SetParameter(2, z); // z0
@@ -186,7 +204,7 @@ Double_t myfunc() {
     test1->Draw(); 
 
     // two PCDs: PCD 0 + PCD1
-    TF1* test2 = new TF1("test2", TwoPCDsOneZ, 6, 20, 7);
+    TF1* test2 = new TF1("test2", TwoPCDsOneZ, minTime, maxTime, 7);
     test2->SetParameter(0, x); // x for PCD 0
     test2->SetParameter(1, y0); // y for PCD 0
     test2->SetParameter(2, z); // z for PCDs 0, 1
@@ -198,12 +216,15 @@ Double_t myfunc() {
     test2->Draw(); 
     legend.AddEntry(test2, "PCD 0 + 1", "l"); 
 
-    TH1D* frameHist = (TH1D*) test2->GetHistogram(); 
+    //TH1D* frameHist = (TH1D*) test2->GetHistogram(); 
+    TH1D* frameHist = (TH1D*) test->GetHistogram(); 
     frameHist->SetTitle("");
     frameHist->SetXTitle("time [#mus]");
     frameHist->SetYTitle("charge [arb]");
+    frameHist->SetMinimum(0); 
+    //test->Draw("l"); 
     test2->Draw("l");
-    test->Draw("l same"); 
+    test->Draw("lp same"); 
     test1->Draw("l same"); 
 
     legend.Draw(); 
