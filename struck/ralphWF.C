@@ -91,7 +91,7 @@ Double_t OnePCDWithOptions(
   //    3: q
 
   Double_t triggerTime = 8.0; // microseconds
-  Double_t driftVelocity = 1.72; // mm/microsecond
+  Double_t driftVelocity = 1.71; // mm/microsecond
   Double_t driftDistance = 17.0; // mm
 
   Double_t t = var[0];
@@ -174,8 +174,8 @@ Double_t ralphWF() {
     Double_t q0 = 100.0;
     Double_t q1 = 300.0;
 
-    Double_t minTime = 14.0;
-    Double_t maxTime = 17.0;
+    Double_t minTime = 0.0;
+    Double_t maxTime = 32.0;
     
     TCanvas canvas("canvas","");
     canvas.SetGrid(1,1); 
