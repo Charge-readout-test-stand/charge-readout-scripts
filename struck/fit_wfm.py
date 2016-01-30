@@ -1,4 +1,11 @@
 """
+to do:
+    * plot MC true Z
+    * save a tree
+    * add noise to MC
+
+29 Jan 2016 -- changed drift velocity from 17.2 to 17.1 mm / microsecond
+
 Fit one charge signal wfm with Ralph's analytical function. 
 
 The fit function is tricky... when the charge drifts to the anode, the function
@@ -19,6 +26,7 @@ import sys
 import math
 import time
 from array import array
+import numpy as np
 
 from ROOT import gROOT
 gROOT.SetBatch(True) #comment out to run interactively
@@ -32,6 +40,7 @@ from ROOT import gStyle
 from ROOT import gSystem
 from ROOT import TLine
 from ROOT import TPaveText
+from ROOT import TRandom3
 
 
 gROOT.SetStyle("Plain")     
@@ -70,7 +79,7 @@ def print_fit_info(fit_result, fit_duration):
 
 
 
-def do_fit(exo_wfm, canvas, i_entry, rms, channel, doTwoPCDs=False):
+def do_fit(exo_wfm, canvas, i_entry, rms, channel, doTwoPCDs=False, isMC=False):
 
     print "-----------------------------------------------------"
     print "starting fit"
@@ -88,7 +97,10 @@ def do_fit(exo_wfm, canvas, i_entry, rms, channel, doTwoPCDs=False):
     #-------------------------------------------------------------------------------
 
     print "rms: %.2f" %  rms
-    channel_name = struck_analysis_parameters.channel_map[channel]
+    if isMC:
+        channel_name = struck_analysis_parameters.mc_channel_map[channel]
+    else:
+        channel_name = struck_analysis_parameters.channel_map[channel]
 
     # setup the fit function
     if doTwoPCDs:
@@ -173,7 +185,9 @@ def do_fit(exo_wfm, canvas, i_entry, rms, channel, doTwoPCDs=False):
     # set bin errors:
     for i_bin in xrange(wfm_hist.GetNbinsX()+1):
         wfm_hist.SetBinError(i_bin, rms) # approx. rms
-    color = struck_analysis_parameters.get_colors()[channel]
+    colors = struck_analysis_parameters.get_colors()
+    color = colors[channel % len(colors)]
+    color = 2
     wfm_hist.SetLineColor(color)
     wfm_hist.SetLineWidth(2)
     title = "Entry %i %s before fit with %i PCDs" % (i_entry, channel_name, 1+doTwoPCDs)
@@ -329,7 +343,7 @@ def do_fit(exo_wfm, canvas, i_entry, rms, channel, doTwoPCDs=False):
 
 def process_file(file_name):
 
-    print "processing", file_name
+    print "---> processing", file_name
     canvas = TCanvas("canvas","", 800, 1100)
     canvas.Divide(1,2)
 
@@ -342,6 +356,19 @@ def process_file(file_name):
 
     tfile = TFile(file_name)
     tree = tfile.Get("tree")
+    isMC = False
+    try:
+        n_entries = tree.GetEntries()
+    except AttributeError:
+        tree = tfile.Get("evtTree")
+        n_entries = tree.GetEntries()
+        print "--> this file is MC"
+        isMC = True
+    except:
+        print "==> Problem with file."
+        sys.exit(1)
+    print "%i entries in tree" % n_entries
+
     n_fits = 0
 
     canvas.Print("output.pdf[")
@@ -360,21 +387,34 @@ def process_file(file_name):
         tree.GetEntry(i_entry)
         #if struck_analysis_parameters.charge_channels_to_use[tree.channel]:
         #    print channel
-        calibration = struck_analysis_parameters.calibration_values[tree.channel[3]]
-        calibration/=2.5 # correction for ADC input range
+        
+        if isMC:
+            calibration = struck_analysis_parameters.Wvalue*1e-3
+        else:
+            calibration = struck_analysis_parameters.calibration_values[tree.channel[3]]
+
+        calibration/=2.5 # correction for ADC input range FIXME for different files...
         #print calibration
 
-        # only ch 3 for now:
-        channel = 3
-        wfm = tree.wfm3
-        energy = (tree.wfm_max[channel] - wfm[0])*calibration
+        # only ch Y23 for now -- FIXME
+        
+        if isMC:
+            channel = 52
+            wfm = [wfmp for wfmp in tree.ChannelWaveform[channel]]
+            wfm_max = np.amax(wfm)
+        else:
+            channel = 3
+            wfm = tree.wfm3
+            wfm_max = tree.wfm_max[channel]
+
+        energy = (wfm_max - wfm[0])*calibration
         print "entry %i | energy: %.2f" % (i_entry, energy)
         if energy < 100: continue
 
         print "--> %i fits so far..." % n_fits
 
         # debugging... limit n_fits
-        if n_fits >= 300:
+        if n_fits >= 50:
             canvas.Print("output.pdf]")
             sys.exit()
 
@@ -382,6 +422,19 @@ def process_file(file_name):
 
         # convert wfm to EXODoubleWaveform
         waveform_length = len(wfm)
+
+        # add noise to MC
+        if isMC:
+            sigma = 18.0/calibration
+            print "adding %.1f ADC units ( %.1f keV) noise to MC" % (
+                sigma,
+                sigma*calibration,
+            )
+            generator = TRandom3(0)
+            for i_point in xrange(len(wfm)):
+                noise = generator.Gaus()*sigma
+                wfm[i_point]+=noise
+
         exo_wfm = EXODoubleWaveform(array('d',wfm), waveform_length)
         exo_wfm*=calibration # convert wfm from ADC units to keV
         exo_wfm.SetSamplingFreq(sampling_freq_Hz/CLHEP.second)
@@ -394,18 +447,20 @@ def process_file(file_name):
         baseline_remover.SetBaselineSamples(125)
         baseline_remover.Transform(exo_wfm)
         rms = baseline_remover.GetBaselineRMS()
+        if isMC: 
+            if rms == 0: 
+                print "setting MC RMS to 1.0"
+                rms = 1.0
 
-        output = do_fit(exo_wfm=exo_wfm, canvas=canvas, i_entry=i_entry, rms=rms, channel=channel, doTwoPCDs=False)
+        output = do_fit(exo_wfm=exo_wfm, canvas=canvas, i_entry=i_entry, rms=rms, channel=channel, doTwoPCDs=False, isMC=isMC)
         status = output[0]
         chi2_per_ndf = output[1]
-
-
 
         #if status != 0 or chi2_per_ndf > 2.0:
         if chi2_per_ndf > 2.0:
             print "===> repeating fit with 2 PCDs... "
             (status, chi2_per_ndf) = do_fit(exo_wfm=exo_wfm, canvas=canvas,
-            i_entry=i_entry, rms=rms, channel=channel, doTwoPCDs=True)
+            i_entry=i_entry, rms=rms, channel=channel, doTwoPCDs=True, isMC=isMC)
 
         # end loop over tree entries
 
@@ -421,6 +476,12 @@ if __name__ == "__main__":
     file_name = "/nfs/slac/g/exo_data4/users/alexis4/test-stand/2015_12_07_6thLXe/tier2/tier2_xenon8300g_1300VPMT_1700Vcathode_amplified_shaped_2015-12-07_21-28-20.root"
     # alexis' virtual ubuntu:
     file_name = "/home/alexis/myBucket/testStand/tier2_xenon8300g_1300VPMT_1700Vcathode_amplified_shaped_2015-12-07_21-28-20.root"
+
+    # MJJ MC file, 207-Bi:
+    file_name = "~/testStandMC/digitization/Bi207_Full_Ralph/Digi/digi1_Bi207_Full_Ralph_dcoef0.root"
+
+    # MC file, 1-MeV electron:
+    file_name = "/nfs/slac/g/exo_data4/users/mjewell/nEXO_MC/digitization/electron_1MeV_Ralph/Digi/digi1_electron_1MeV_Ralph_dcoef0.root"
 
     process_file(file_name)
 
