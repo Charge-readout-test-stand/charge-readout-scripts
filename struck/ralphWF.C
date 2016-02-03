@@ -73,6 +73,29 @@ Double_t OneStrip(Double_t x, Double_t y, Double_t z) {
   return amplitude;
 }
 
+Double_t OneStripWithIonAndCathode(Double_t x, Double_t y, Double_t z, Double_t z0, Bool_t doDebug=false) {
+  // return instantaneous amplitude due to unit charge at x, y, z, where z0 is
+  // ion location
+
+  // options
+  Double_t driftDistance = 17.0; // mm
+
+  Double_t ionAmplitude = OneStrip(x,y,z0);
+  Double_t electronAmplitude = OneStrip(x,y,z);
+  if (doDebug) { cout << "\tion: " << ionAmplitude << endl; }
+  ionAmplitude*=(1.0-z0/driftDistance);
+  if (doDebug) { cout << "\tion after cathode: " << ionAmplitude << endl; }
+  if (doDebug) { cout << "\telectron: " << electronAmplitude << endl; }
+  if (z > 0) { 
+    electronAmplitude*=(1.0-z/driftDistance); 
+    if (doDebug){ cout << "\tz: " << z << endl; }
+  }
+  if (doDebug) { cout << "\telectron after cathode: " << electronAmplitude << endl; }
+  Double_t amplitude = electronAmplitude - ionAmplitude; 
+  if (doDebug) { cout << "\tamplitude: " << amplitude << endl; }
+  return amplitude; 
+}
+
 Double_t OnePCDWithOptions(
   Double_t *var, 
   Double_t *par, 
@@ -92,7 +115,6 @@ Double_t OnePCDWithOptions(
 
   Double_t triggerTime = 8.0; // microseconds
   Double_t driftVelocity = 1.71; // mm/microsecond
-  Double_t driftDistance = 17.0; // mm
 
   Double_t t = var[0];
 
@@ -119,22 +141,8 @@ Double_t OnePCDWithOptions(
 
   if (doDebug){ cout << "\tt: " << t << endl; }
 
-  // wfm is 0 for times before drift starts:
-  if (t < triggerTime) { return 0.0; }
-
-  Double_t ionAmplitude = OneStrip(x,y,z0);
-  Double_t electronAmplitude = OneStrip(x,y,z);
-  if (doDebug) { cout << "\tion: " << ionAmplitude << endl; }
-  ionAmplitude*=(1.0-z0/driftDistance);
-  if (doDebug) { cout << "\telectron: " << electronAmplitude << endl; }
-  if (z > 0) { 
-    electronAmplitude*=(1.0-z/driftDistance); 
-    if (doDebug){ cout << "\tz: " << z << endl; }
-  }
-  if (doDebug) { cout << "\tion after cathode: " << ionAmplitude << endl; }
-  if (doDebug) { cout << "\telectron after cathode: " << electronAmplitude << endl; }
-  Double_t amplitude = electronAmplitude - ionAmplitude; 
-  if (doDebug) { cout << "\tamplitude: " << amplitude << endl; }
+  if (t < triggerTime) { return 0.0; } // wfm is 0 for times before drift starts
+  Double_t amplitude = OneStripWithIonAndCathode(x, y, z, z0, doDebug);
   return q*amplitude; 
 }
 
@@ -181,6 +189,7 @@ Double_t ralphWF() {
     canvas.SetGrid(1,1); 
 
     TLegend legend(0.1, 0.9, 0.9, 0.99);
+    legend.SetFillColor(0);
     legend.SetNColumns(3);
 
     // PCD 0
@@ -226,6 +235,10 @@ Double_t ralphWF() {
     test2->Draw("l");
     test->Draw("lp same"); 
     test1->Draw("l same"); 
+
+    //double t[1] = {25.0};
+    //double par[4] = {x, y0, z, q0};
+    //cout << "final value: " << OnePCDWithOptions(t, par, 0, false, true) << endl;
 
     legend.Draw(); 
     canvas.Update();
