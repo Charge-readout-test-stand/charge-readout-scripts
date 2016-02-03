@@ -1,8 +1,7 @@
 """
 to do:
-    * plot MC true Z
+    * plot MC true Z, nPCDS?
     * save a tree
-    * add noise to MC
 
 29 Jan 2016 -- changed drift velocity from 17.2 to 17.1 mm / microsecond
 
@@ -29,7 +28,7 @@ from array import array
 import numpy as np
 
 from ROOT import gROOT
-gROOT.SetBatch(True) #comment out to run interactively
+#gROOT.SetBatch(True) #comment out to run interactively
 from ROOT import TH1D
 from ROOT import TFile
 from ROOT import TGraph
@@ -53,6 +52,7 @@ gStyle.SetTitleBorderSize(0)
 gROOT.ProcessLine('.L ralphWF.C+')
 from ROOT import OnePCD
 from ROOT import TwoPCDsOneZ
+from ROOT import OneStripWithIonAndCathode
 
 gSystem.Load("$EXOLIB/lib/libEXOROOT")
 from ROOT import CLHEP
@@ -79,7 +79,7 @@ def print_fit_info(fit_result, fit_duration):
 
 
 
-def do_fit(exo_wfm, canvas, i_entry, rms, channel, doTwoPCDs=False, isMC=False):
+def do_fit(exo_wfm, canvas, i_entry, rms, channel, doTwoPCDs=False, isMC=False, MCz = None):
 
     print "-----------------------------------------------------"
     print "starting fit"
@@ -92,7 +92,8 @@ def do_fit(exo_wfm, canvas, i_entry, rms, channel, doTwoPCDs=False, isMC=False):
     # fit range:
     fit_min = 7.5
     fit_max = 22
-    drift_velocity = 1.7
+    trigger_time = 8.0 # microseconds
+    drift_velocity = struck_analysis_parameters.drift_velocity
 
     #-------------------------------------------------------------------------------
 
@@ -236,13 +237,24 @@ def do_fit(exo_wfm, canvas, i_entry, rms, channel, doTwoPCDs=False, isMC=False):
         test.Draw("same")
 
         # calculate drift stop time and draw a line to represent
-        drift_stop = 8.0 + test.GetParameter(2)/drift_velocity
+        drift_stop = trigger_time + test.GetParameter(2)/drift_velocity
         print "drift_stop [microseconds]: %.2f" % drift_stop
         line = TLine(drift_stop, wfm_hist.GetMinimum(), drift_stop, wfm_hist.GetMaximum())
         line.SetLineStyle(2)
         line.SetLineWidth(2)
         line.SetLineColor(TColor.kBlue)
         line.Draw()
+
+        # draw z from MC
+        if isMC:
+            MCt = trigger_time + MCz/drift_velocity
+            print "MC z=%.1f, t=%.1f" % (MCz, MCt)
+            line2 = TLine(MCt, wfm_hist.GetMinimum(), MCt, wfm_hist.GetMaximum())
+            line2.SetLineStyle(2)
+            line2.SetLineWidth(2)
+            line2.SetLineColor(TColor.kRed)
+            line2.Draw()
+
 
         # fit results
         chi2 = fit_result.Chi2()
@@ -343,6 +355,9 @@ def do_fit(exo_wfm, canvas, i_entry, rms, channel, doTwoPCDs=False, isMC=False):
 
 def process_file(file_name):
 
+    # options:
+    drift_length = struck_analysis_parameters.drift_length
+
     print "---> processing", file_name
     canvas = TCanvas("canvas","", 800, 1100)
     canvas.Divide(1,2)
@@ -355,9 +370,11 @@ def process_file(file_name):
     sampling_freq_Hz = struck_analysis_parameters.sampling_freq_Hz
 
     tfile = TFile(file_name)
-    tree = tfile.Get("tree")
+
+    # figure out if this is MC
     isMC = False
     try:
+        tree = tfile.Get("tree")
         n_entries = tree.GetEntries()
     except AttributeError:
         tree = tfile.Get("evtTree")
@@ -402,6 +419,7 @@ def process_file(file_name):
             channel = 52
             wfm = [wfmp for wfmp in tree.ChannelWaveform[channel]]
             wfm_max = np.amax(wfm)
+
         else:
             channel = 3
             wfm = tree.wfm3
@@ -435,6 +453,48 @@ def process_file(file_name):
                 noise = generator.Gaus()*sigma
                 wfm[i_point]+=noise
 
+        # print some info about PCDs
+        MCz = None
+        if isMC:
+            nPCDs = tree.NumPCDs
+            print "energy", tree.Energy
+            print tree.NumPCDs
+
+            # form an energy-weighted z-coord for PCDs that hit this channel
+            z_sum = 0.0
+            e_sum = 0.0
+            for iPCD in xrange(nPCDs):
+                x = tree.PCDx[iPCD]
+                y = tree.PCDy[iPCD]
+                z = tree.PCDz[iPCD]
+                e = tree.PCDq[iPCD]*calibration
+
+                # translate MC coords to frame of ralphWF.C
+                if channel >= 30: # this is a y channel
+                    x_ch = -1.5
+                    y_ch = (channel - 30)*3.0 - 43.5
+                    print "y_ch", y_ch
+                    x = x - x_ch
+                    y = y - y_ch
+                    print "new y", y
+                    z = drift_length-z
+                hit_e =  OneStripWithIonAndCathode(x, y, 0, z)*e
+                print "energy hitting this channel: %.1f" % hit_e
+                e_sum += hit_e
+                z_sum += hit_e*z
+                print "PCD %i: E=%.1f, x=%.2f, y=%.2f, z=%.2f" % (
+                    iPCD, 
+                    e, 
+                    x,
+                    y, 
+                    z,
+                )
+                # end loop over PCDs
+
+            # calculate drift stop time from MC:
+            MCz = z_sum/e_sum
+        print "energy-weighted z: %.2f" % z
+
         exo_wfm = EXODoubleWaveform(array('d',wfm), waveform_length)
         exo_wfm*=calibration # convert wfm from ADC units to keV
         exo_wfm.SetSamplingFreq(sampling_freq_Hz/CLHEP.second)
@@ -452,7 +512,7 @@ def process_file(file_name):
                 print "setting MC RMS to 1.0"
                 rms = 1.0
 
-        output = do_fit(exo_wfm=exo_wfm, canvas=canvas, i_entry=i_entry, rms=rms, channel=channel, doTwoPCDs=False, isMC=isMC)
+        output = do_fit(exo_wfm=exo_wfm, canvas=canvas, i_entry=i_entry, rms=rms, channel=channel, doTwoPCDs=False, isMC=isMC, MCz=MCz)
         status = output[0]
         chi2_per_ndf = output[1]
 
@@ -460,7 +520,8 @@ def process_file(file_name):
         if chi2_per_ndf > 2.0:
             print "===> repeating fit with 2 PCDs... "
             (status, chi2_per_ndf) = do_fit(exo_wfm=exo_wfm, canvas=canvas,
-            i_entry=i_entry, rms=rms, channel=channel, doTwoPCDs=True, isMC=isMC)
+            i_entry=i_entry, rms=rms, channel=channel, doTwoPCDs=True,
+            isMC=isMC, MCz = MCz)
 
         # end loop over tree entries
 
