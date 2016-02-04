@@ -1,7 +1,6 @@
 """
 to do:
-    * plot MC true Z, nPCDS?
-    * save a tree
+    * process all channels, not just Y23
 
 29 Jan 2016 -- changed drift velocity from 17.2 to 17.1 mm / microsecond
 
@@ -28,9 +27,10 @@ from array import array
 import numpy as np
 
 from ROOT import gROOT
-#gROOT.SetBatch(True) #comment out to run interactively
+gROOT.SetBatch(True) #comment out to run interactively
 from ROOT import TH1D
 from ROOT import TFile
+from ROOT import TTree
 from ROOT import TGraph
 from ROOT import TF1
 from ROOT import TCanvas
@@ -40,6 +40,8 @@ from ROOT import gSystem
 from ROOT import TLine
 from ROOT import TPaveText
 from ROOT import TRandom3
+
+import wfmProcessing
 
 
 gROOT.SetStyle("Plain")     
@@ -77,6 +79,13 @@ def print_fit_info(fit_result, fit_duration):
     print "\t%.1f seconds" % fit_duration
 
 
+def get_drift_stop_time_from_z(z):
+    # options
+    trigger_time = 8.0 # microseconds
+    drift_velocity = struck_analysis_parameters.drift_velocity
+    t = trigger_time + z/drift_velocity
+    return t
+
 
 
 def do_fit(exo_wfm, canvas, i_entry, rms, channel, doTwoPCDs=False, isMC=False, MCz = None):
@@ -92,8 +101,6 @@ def do_fit(exo_wfm, canvas, i_entry, rms, channel, doTwoPCDs=False, isMC=False, 
     # fit range:
     fit_min = 7.5
     fit_max = 22
-    trigger_time = 8.0 # microseconds
-    drift_velocity = struck_analysis_parameters.drift_velocity
 
     #-------------------------------------------------------------------------------
 
@@ -141,7 +148,7 @@ def do_fit(exo_wfm, canvas, i_entry, rms, channel, doTwoPCDs=False, isMC=False, 
     waveform_length = exo_wfm.size()
     energy_estimate = 0.0
     for i in xrange(nSamples):  
-        energy_estimate += exo_wfm[waveform_length-i]
+        energy_estimate += exo_wfm.At(waveform_length-i-1)
     energy_estimate /= nSamples
     print "energy_estimate: %.1f (%.1f sigma)" % (energy_estimate, energy_estimate/rms)
     amplitude_estimate = energy_estimate
@@ -216,10 +223,10 @@ def do_fit(exo_wfm, canvas, i_entry, rms, channel, doTwoPCDs=False, isMC=False, 
     status = 1
     print "doing fit..."
     fit_options = "SNR"
+    fit_start = time.clock() # keep track of fit start time
     while status > 0:
         print "FIT ATTEMPT", n_tries
         wfm_hist.SetTitle("%s, attempt %i" % (title, n_tries))
-        fit_start = time.clock() # keep track of fit start
         # fit options:
         # S -- save output to fit_result
         # N -- don't store the fit function graphics with the histogram
@@ -237,7 +244,7 @@ def do_fit(exo_wfm, canvas, i_entry, rms, channel, doTwoPCDs=False, isMC=False, 
         test.Draw("same")
 
         # calculate drift stop time and draw a line to represent
-        drift_stop = trigger_time + test.GetParameter(2)/drift_velocity
+        drift_stop = get_drift_stop_time_from_z(test.GetParameter(2))
         print "drift_stop [microseconds]: %.2f" % drift_stop
         line = TLine(drift_stop, wfm_hist.GetMinimum(), drift_stop, wfm_hist.GetMaximum())
         line.SetLineStyle(2)
@@ -247,12 +254,12 @@ def do_fit(exo_wfm, canvas, i_entry, rms, channel, doTwoPCDs=False, isMC=False, 
 
         # draw z from MC
         if isMC:
-            MCt = trigger_time + MCz/drift_velocity
+            MCt = get_drift_stop_time_from_z(MCz)
             print "MC z=%.1f, t=%.1f" % (MCz, MCt)
             line2 = TLine(MCt, wfm_hist.GetMinimum(), MCt, wfm_hist.GetMaximum())
-            line2.SetLineStyle(2)
-            line2.SetLineWidth(2)
-            line2.SetLineColor(TColor.kRed)
+            #line2.SetLineStyle(2)
+            #line2.SetLineWidth(2)
+            line2.SetLineColor(TColor.kGreen+2)
             line2.Draw()
 
 
@@ -350,7 +357,7 @@ def do_fit(exo_wfm, canvas, i_entry, rms, channel, doTwoPCDs=False, isMC=False, 
             sys.exit()
 
     print "-----------------------------------------------------"
-    return (status, chi2/ndf)
+    return (status, chi2/ndf, ndf, test.GetParameter(2), fit_duration)
 
 
 def process_file(file_name):
@@ -376,18 +383,60 @@ def process_file(file_name):
     try:
         tree = tfile.Get("tree")
         n_entries = tree.GetEntries()
+        pmt_channel = struck_analysis_parameters.pmt_channel
+        n_channels = struck_analysis_parameters.n_channels
+        charge_channels_to_use = struck_analysis_parameters.charge_channels_to_use
     except AttributeError:
         tree = tfile.Get("evtTree")
         n_entries = tree.GetEntries()
         print "--> this file is MC"
         isMC = True
+        pmt_channel = None #No PMT in MC
+        n_channels = struck_analysis_parameters.MCn_channels
+        charge_channels_to_use = struck_analysis_parameters.MCcharge_channels_to_use
     except:
         print "==> Problem with file."
         sys.exit(1)
     print "%i entries in tree" % n_entries
 
-    n_fits = 0
+    # open output file and tree
+    out_filename = "fits_" + wfmProcessing.create_outfile_name(file_name)
+    out_file = TFile(out_filename, "recreate")
+    out_tree = TTree("tree", "fits to wfms")
 
+    ichannel = array('I', [0]*n_channels) # unsigned int
+    out_tree.Branch('channel', ichannel, 'channel[%i]/i' % n_channels)
+
+    # fitter status (if bad, != 0)
+    fit_status = array('I', [0]*n_channels) # unsigned int
+    out_tree.Branch('fit_status', fit_status, 'fit_status[%i]/i' % n_channels)
+
+    # fit chi^2
+    chi2 = array('d', [0.0]*n_channels) # double
+    out_tree.Branch('chi2', chi2, 'chi2[%i]/D' % n_channels)
+
+    # fit duration
+    fit_duration = array('d', [0.0]*n_channels) # double
+    out_tree.Branch('fit_duration', fit_duration, 'fit_duration[%i]/D' % n_channels)
+
+    # fitter number of degrees of freedom
+    dof = array('I', [0]*n_channels) # unsigned int
+    out_tree.Branch('dof', dof, 'dof[%i]/i' % n_channels)
+
+    # drift time, from fit result
+    fit_drift_time = array('d', [0.0]*n_channels) # double
+    out_tree.Branch('fit_drift_time', fit_drift_time, 'fit_drift_time[%i]/D' % n_channels)
+
+    # rise_time95
+    rise_time95 = array('d', [0.0]*n_channels) # double
+    out_tree.Branch('rise_time95', rise_time95, 'rise_time95[%i]/D' % n_channels)
+
+    if isMC:
+        # drift time, from MC
+        drift_time_MC = array('d', [0.0]*n_channels) # double
+        out_tree.Branch('drift_time_MC', drift_time_MC, 'drift_time_MC[%i]/D' % n_channels)
+
+    n_fits = 0
     canvas.Print("output.pdf[")
 
     for i_entry in xrange(tree.GetEntries()):
@@ -430,11 +479,6 @@ def process_file(file_name):
         if energy < 100: continue
 
         print "--> %i fits so far..." % n_fits
-
-        # debugging... limit n_fits
-        if n_fits >= 50:
-            canvas.Print("output.pdf]")
-            sys.exit()
 
         n_fits += 1
 
@@ -513,20 +557,38 @@ def process_file(file_name):
                 rms = 1.0
 
         output = do_fit(exo_wfm=exo_wfm, canvas=canvas, i_entry=i_entry, rms=rms, channel=channel, doTwoPCDs=False, isMC=isMC, MCz=MCz)
-        status = output[0]
         chi2_per_ndf = output[1]
 
-        #if status != 0 or chi2_per_ndf > 2.0:
+        #if chi2_per_ndf > 2.0:
         if chi2_per_ndf > 2.0:
             print "===> repeating fit with 2 PCDs... "
-            (status, chi2_per_ndf) = do_fit(exo_wfm=exo_wfm, canvas=canvas,
+            output = do_fit(exo_wfm=exo_wfm, canvas=canvas,
             i_entry=i_entry, rms=rms, channel=channel, doTwoPCDs=True,
             isMC=isMC, MCz = MCz)
 
+            chi2_per_ndf = output[1]
+
+        risetimes = wfmProcessing.get_risetimes(exo_wfm, waveform_length, sampling_freq_Hz)
+        rise_time95[0] = risetimes[10]
+
+        # fill tree entries
+        fit_status[0] = output[0]
+        chi2[0] = output[1]*output[2]
+        dof[0] = output[2]
+        fit_drift_time[0] = get_drift_stop_time_from_z(output[3])
+        drift_time_MC[0] = get_drift_stop_time_from_z(MCz)
+        fit_duration[0] = output[4]
+        ichannel[0] = channel
+        out_tree.Fill()
+
         # end loop over tree entries
+        if out_tree.GetEntries() >= 300: 
+            print "-------------------> debugging!!"
+            break # debugging
 
     # finish multi-page pdf
     canvas.Print("output.pdf]")
+    out_tree.Write()
 
 
 if __name__ == "__main__":
