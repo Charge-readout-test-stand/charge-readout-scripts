@@ -178,6 +178,13 @@ def get_colors():
     ]
     return colors
 
+# from tier2to3_overnight.root, baseline_rms
+rms_keV = {}
+rms_keV[0] = 18.137
+rms_keV[1] = 17.557
+rms_keV[2] = 17.805
+rms_keV[3] = 17.137
+rms_keV[4] = 18.182
 
 
 
