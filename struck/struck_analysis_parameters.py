@@ -25,6 +25,9 @@ except ImportError:
 
 is_6th_LXe = True
 
+drift_length = 17.0 # mm
+drift_velocity = 1.7 # mm / microsecond  
+
 
 sampling_freq_Hz = 25.0e6 # digitizer sampling frequency, Hz
 #FIXME--will be saved in trees so no longer needed
