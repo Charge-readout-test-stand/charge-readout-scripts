@@ -86,9 +86,17 @@ def get_drift_stop_time_from_z(z):
     t = trigger_time + z/drift_velocity
     return t
 
+def get_energy(exo_wfm, nSamples=100):
+    waveform_length = exo_wfm.size()
+    energy_estimate = 0.0
+    for i in xrange(nSamples):  
+        energy_estimate += exo_wfm.At(waveform_length-i-1)
+    energy_estimate /= nSamples
+    return energy_estimate
+    
 
-
-def do_fit(exo_wfm, canvas, i_entry, rms, channel, doTwoPCDs=False, isMC=False, MCz = None):
+def do_fit(exo_wfm, canvas, i_entry, rms, channel, doTwoPCDs=False, isMC=False,
+MCz = None, rise_time=None):
 
     print "-----------------------------------------------------"
     print "starting fit"
@@ -97,6 +105,7 @@ def do_fit(exo_wfm, canvas, i_entry, rms, channel, doTwoPCDs=False, isMC=False, 
     #-------------------------------------------------------------------------------
     # options:
     #-------------------------------------------------------------------------------
+    nSamples = 100
 
     # fit range:
     fit_min = 7.5
@@ -144,12 +153,7 @@ def do_fit(exo_wfm, canvas, i_entry, rms, channel, doTwoPCDs=False, isMC=False, 
     print "wfm max: %.1f (%.1f sigma)" % (wfm_max, wfm_max/rms)
 
     # estimate the collected energy; this works best for collection or collection + induction
-    nSamples = 100
-    waveform_length = exo_wfm.size()
-    energy_estimate = 0.0
-    for i in xrange(nSamples):  
-        energy_estimate += exo_wfm.At(waveform_length-i-1)
-    energy_estimate /= nSamples
+    energy_estimate = get_energy(exo_wfm, nSamples)
     print "energy_estimate: %.1f (%.1f sigma)" % (energy_estimate, energy_estimate/rms)
     amplitude_estimate = energy_estimate
 
@@ -204,7 +208,7 @@ def do_fit(exo_wfm, canvas, i_entry, rms, channel, doTwoPCDs=False, isMC=False, 
     wfm_hist.SetYTitle("Energy [keV]")
 
     # draw before fit
-    if True:
+    if False:
         print "--> before fit"
         wfm_hist.Draw("hist")
         test.Draw("same")
@@ -252,6 +256,14 @@ def do_fit(exo_wfm, canvas, i_entry, rms, channel, doTwoPCDs=False, isMC=False, 
         line.SetLineColor(TColor.kBlue)
         line.Draw()
 
+        line1 = TLine(rise_time, wfm_hist.GetMinimum(), rise_time, wfm_hist.GetMaximum())
+        #line1.SetLineStyle(2)
+        line1.SetLineWidth(2)
+        line1.SetLineColor(TColor.kViolet)
+        line1.Draw()
+
+
+
         # draw z from MC
         if isMC:
             MCt = get_drift_stop_time_from_z(MCz)
@@ -270,7 +282,7 @@ def do_fit(exo_wfm, canvas, i_entry, rms, channel, doTwoPCDs=False, isMC=False, 
         status = fit_result.Status()
 
         # text block to draw results
-        pave_text = TPaveText(0.12, 0.6, 0.5, 0.88, "NDC")
+        pave_text = TPaveText(0.12, 0.75, 0.5, 0.9, "NDC")
         pave_text.SetTextAlign(12) # left horizontal, vertical center
         pave_text.GetTextFont()
         pave_text.SetTextFont(42)
@@ -393,6 +405,7 @@ def process_file(file_name):
         isMC = True
         pmt_channel = None #No PMT in MC
         n_channels = struck_analysis_parameters.MCn_channels
+        n_channels = 1 # debugging FIXME
         charge_channels_to_use = struck_analysis_parameters.MCcharge_channels_to_use
     except:
         print "==> Problem with file."
@@ -404,8 +417,23 @@ def process_file(file_name):
     out_file = TFile(out_filename, "recreate")
     out_tree = TTree("tree", "fits to wfms")
 
+    event = array('I', [0]) # unsigned int
+    out_tree.Branch('event', event, 'event/i')
+
     ichannel = array('I', [0]*n_channels) # unsigned int
     out_tree.Branch('channel', ichannel, 'channel[%i]/i' % n_channels)
+
+    energy = array('d', [0.0]*n_channels) # double
+    out_tree.Branch('energy', energy, 'energy[%i]/D' % n_channels)
+
+    if isMC:
+        # energy collected onto each pad
+        mc_energy = array('d', [0.0]*n_channels) # double
+        out_tree.Branch('mc_energy', mc_energy, 'mc_energy[%i]/D' % n_channels)
+
+        # energy collected in active LXe
+        mc_energy_sum = array('d', [0.0]*n_channels) # double
+        out_tree.Branch('mc_energy_sum', mc_energy_sum, 'mc_energy_sum[%i]/D' % n_channels)
 
     # fitter status (if bad, != 0)
     fit_status = array('I', [0]*n_channels) # unsigned int
@@ -474,9 +502,9 @@ def process_file(file_name):
             wfm = tree.wfm3
             wfm_max = tree.wfm_max[channel]
 
-        energy = (wfm_max - wfm[0])*calibration
-        print "entry %i | energy: %.2f" % (i_entry, energy)
-        if energy < 100: continue
+        energy_est = (wfm_max - wfm[0])*calibration
+        print "entry %i | energy: %.2f" % (i_entry, energy_est)
+        if energy_est < 100: continue
 
         print "--> %i fits so far..." % n_fits
 
@@ -556,7 +584,12 @@ def process_file(file_name):
                 print "setting MC RMS to 1.0"
                 rms = 1.0
 
-        output = do_fit(exo_wfm=exo_wfm, canvas=canvas, i_entry=i_entry, rms=rms, channel=channel, doTwoPCDs=False, isMC=isMC, MCz=MCz)
+        risetimes = wfmProcessing.get_risetimes(exo_wfm, waveform_length, sampling_freq_Hz)
+        rise_time95[0] = risetimes[10]
+
+        output = do_fit(exo_wfm=exo_wfm, canvas=canvas, i_entry=i_entry,
+        rms=rms, channel=channel, doTwoPCDs=False, isMC=isMC, MCz=MCz,
+        rise_time=rise_time95[0])
         chi2_per_ndf = output[1]
 
         #if chi2_per_ndf > 2.0:
@@ -564,14 +597,16 @@ def process_file(file_name):
             print "===> repeating fit with 2 PCDs... "
             output = do_fit(exo_wfm=exo_wfm, canvas=canvas,
             i_entry=i_entry, rms=rms, channel=channel, doTwoPCDs=True,
-            isMC=isMC, MCz = MCz)
+            isMC=isMC, MCz=MCz, rise_time=rise_time95[0])
 
             chi2_per_ndf = output[1]
 
-        risetimes = wfmProcessing.get_risetimes(exo_wfm, waveform_length, sampling_freq_Hz)
-        rise_time95[0] = risetimes[10]
 
         # fill tree entries
+        event[0] = i_entry
+        energy[0] = get_energy(exo_wfm)
+        if isMC: mc_energy[0] = tree.ChannelWaveform[channel][waveform_length-1]*calibration
+        if isMC: mc_energy_sum[0] = tree.Energy*1e3
         fit_status[0] = output[0]
         chi2[0] = output[1]*output[2]
         dof[0] = output[2]
@@ -582,7 +617,7 @@ def process_file(file_name):
         out_tree.Fill()
 
         # end loop over tree entries
-        if out_tree.GetEntries() >= 300: 
+        if out_tree.GetEntries() >= 500: 
             print "-------------------> debugging!!"
             break # debugging
 
@@ -605,6 +640,9 @@ if __name__ == "__main__":
 
     # MC file, 1-MeV electron:
     file_name = "/nfs/slac/g/exo_data4/users/mjewell/nEXO_MC/digitization/electron_1MeV_Ralph/Digi/digi1_electron_1MeV_Ralph_dcoef0.root"
+
+    # MC file, 1-MeV gamma:
+    file_name = "/nfs/slac/g/exo_data4/users/mjewell/nEXO_MC/digitization/gamma_1MeV_Ralph/Digi/digi1_gamma_1MeV_Ralph_dcoef0.root"
 
     process_file(file_name)
 
