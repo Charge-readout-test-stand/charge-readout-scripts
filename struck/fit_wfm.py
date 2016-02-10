@@ -517,7 +517,7 @@ def process_file(file_name):
 
         # add noise to MC
         if isMC:
-            sigma = rms_keV[1]
+            sigma = rms_keV[1]/calibration
             print "%.1f keV noise to MC" % sigma
             for i_point in xrange(len(wfm)):
                 noise = generator.Gaus()*sigma
@@ -528,7 +528,7 @@ def process_file(file_name):
         if isMC:
             nPCDs = tree.NumPCDs
             print "energy", tree.Energy
-            print tree.NumPCDs
+            print "n pcds:", tree.NumPCDs
 
             # form an energy-weighted z-coord for PCDs that hit this channel
             z_sum = 0.0
@@ -543,16 +543,16 @@ def process_file(file_name):
                 if channel >= 30: # this is a y channel
                     x_ch = -1.5
                     y_ch = (channel - 30)*3.0 - 43.5
-                    print "y_ch", y_ch
+                    print "\ty coord of this channel [mm]:", y_ch
                     x = x - x_ch
                     y = y - y_ch
-                    print "new y", y
+                    print "\tnew y", y
                     z = drift_length-z
                 hit_e =  OneStripWithIonAndCathode(x, y, 0, z)*e
-                print "energy hitting this channel: %.1f" % hit_e
+                print "\tenergy hitting this channel: %.1f" % hit_e
                 e_sum += hit_e
                 z_sum += hit_e*z
-                print "PCD %i: E=%.1f, x=%.2f, y=%.2f, z=%.2f" % (
+                print "\tPCD %i: E=%.1f, x=%.2f, y=%.2f, z=%.2f" % (
                     iPCD, 
                     e, 
                     x,
@@ -640,7 +640,7 @@ if __name__ == "__main__":
     file_name = "/nfs/slac/g/exo_data4/users/mjewell/nEXO_MC/digitization/electron_1MeV_Ralph/Digi/digi1_electron_1MeV_Ralph_dcoef0.root"
 
     # MC file, 1-MeV gamma:
-    file_name = "/nfs/slac/g/exo_data4/users/mjewell/nEXO_MC/digitization/gamma_1MeV_Ralph/Digi/digi1_gamma_1MeV_Ralph_dcoef0.root"
+    #file_name = "/nfs/slac/g/exo_data4/users/mjewell/nEXO_MC/digitization/gamma_1MeV_Ralph/Digi/digi1_gamma_1MeV_Ralph_dcoef0.root"
 
     process_file(file_name)
 
