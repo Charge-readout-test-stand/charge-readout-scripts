@@ -407,6 +407,8 @@ def process_file(file_name):
         n_channels = struck_analysis_parameters.MCn_channels
         n_channels = 1 # debugging FIXME
         charge_channels_to_use = struck_analysis_parameters.MCcharge_channels_to_use
+        rms_keV = struck_analysis_parameters.rms_keV
+        generator = TRandom3(0) # random number generator, initialized with TUUID object
     except:
         print "==> Problem with file."
         sys.exit(1)
@@ -515,12 +517,8 @@ def process_file(file_name):
 
         # add noise to MC
         if isMC:
-            sigma = 18.0/calibration
-            print "adding %.1f ADC units ( %.1f keV) noise to MC" % (
-                sigma,
-                sigma*calibration,
-            )
-            generator = TRandom3(0)
+            sigma = rms_keV[1]
+            print "%.1f keV noise to MC" % sigma
             for i_point in xrange(len(wfm)):
                 noise = generator.Gaus()*sigma
                 wfm[i_point]+=noise
