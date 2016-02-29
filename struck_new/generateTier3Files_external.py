@@ -111,6 +111,16 @@ def process_file(filename, verbose=True, do_overwrite=True):
 
     # getting tier1 run_tree
     run_tree_tier1 = root_file.Get("run_tree")
+    try:
+        n_entries = run_tree_tier1.GetEntries()
+    except AttributeError:
+        print "TTree run_tree doesn't exist!"
+        sys.exit(1)
+    
+    print "%i entries in tree" % n_entries
+
+    if n_entries == 0: sys.exit()
+        
     run_tree_tier1.GetEntry(0)
 
     if not run_tree_tier1.is_external: # skipping internally triggered files
@@ -175,6 +185,16 @@ def process_file(filename, verbose=True, do_overwrite=True):
 
     wfm_length = array('I', [0]) # unsigned int
     out_tree.Branch('wfm_length', wfm_length, 'wfm_length/i')
+
+    wfm_max = array('d', [0]*n_channels) # double
+    out_tree.Branch('wfm_max', wfm_max, 'wfm_max[%i]/D' % n_channels)
+
+    wfm_max_time = array('d', [0]*n_channels) # double
+    out_tree.Branch('wfm_max_time', wfm_max_time, 'wfm_max_time[%i]/D' % n_channels)
+
+    wfm_min = array('d', [0]*n_channels) # double
+    out_tree.Branch('wfm_min', wfm_min, 'wfm_min[%i]/D' % n_channels)
+
 
     for i in xrange(n_channels): ## set the global parameter values
         tree[i].GetEntry(0)
@@ -512,6 +532,8 @@ def process_file(filename, verbose=True, do_overwrite=True):
                 energy1_pz[i], 
                 energy_rms1_pz[i],
                 calibrated_wfm,
+                wfm_max[i],
+                wfm_min[i],
             ) = wfmProcessing.get_wfmparams(
                 exo_wfm, 
                 wfm_length[0], 
