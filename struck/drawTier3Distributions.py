@@ -1,18 +1,21 @@
 #!/usr/bin/env python
 
 """
-This script draws a spectrum from a root tree. The following branches are
-assumed to exist:
-* totalEnergy
-* energy
-* nHits
+This script draws a spectrum from a root tree. 
 
-arguments [sis tier 2 root files of events]
+The following things should be edited to draw different distributions:
+* options (many variables in this section)
+* selections
+* extra_selections
+* frame_hist -- the draw commmand to fill this and the y axis titles need to be
+  edited by hand, if do_draw_sum is True
+
+arguments [sis tier 3 root files of events]
 """
 
 import os
 import sys
-import glob
+import math
 
 from ROOT import gROOT
 #gROOT.SetBatch(True)
@@ -28,6 +31,7 @@ from ROOT import gStyle
 from ROOT import TH1D
 from ROOT import TH2D
 
+import struck_analysis_parameters
 
 gROOT.SetStyle("Plain")     
 gStyle.SetOptStat(0)        
@@ -36,27 +40,50 @@ gStyle.SetTitleStyle(0)
 gStyle.SetTitleBorderSize(0)       
 
 
+
+def setup_hist(hist, color):
+    """
+    Set color, line and marker style of hist
+    """
+
+    hist.SetLineColor(color)
+    hist.SetMarkerStyle(8)
+    hist.SetMarkerSize(1.5)
+    hist.SetMarkerColor(color)
+    hist.SetLineWidth(2)
+    #hist.SetFillColor(color)
+
+
 def process_file(filename):
 
     print "processing file: ", filename
 
-    sampling_freq_Hz = 25.0e6
+    #-------------------------------------------------------------------------------
+    # options
 
-    min_bin = 0
-    max_bin = 2000
+    #do_draw_sum = False # sum energy
+    do_draw_sum = True # sum energy
+    #draw_command = "energy1_pz"
+    #draw_command = "wfm-baseline_mean"
+    min_bin = -200
+    max_bin = 200
+    bin_width = 5
+    draw_command = "rise_time_stop95 - trigger_time"
+    min_bin = -10.02
+    max_bin = 30.02
+    bin_width = 0.04
+    n_bins = int(math.floor((max_bin - min_bin)*1.0 / bin_width))
 
-    channels = [
-      0,1,2,3,4,
-      #8, 
-    ]
+    xtitle = "Energy [keV]"
 
-    channel_map = {}
-    channel_map[0] = "X26"
-    channel_map[1] = "X27"
-    channel_map[2] = "X29"
-    channel_map[3] = "Y23"
-    channel_map[4] = "Y24"
-    channel_map[8] = "PMT"
+    #-------------------------------------------------------------------------------
+
+    sampling_freq_Hz = struck_analysis_parameters.sampling_freq_Hz
+    channels = struck_analysis_parameters.channels
+    channel_map = struck_analysis_parameters.channel_map
+    charge_channels_to_use = struck_analysis_parameters.charge_channels_to_use
+    pmt_channel = struck_analysis_parameters.pmt_channel
+    colors = struck_analysis_parameters.get_colors() 
 
     # open the root file and grab the tree
     root_file = TFile(filename)
@@ -93,78 +120,81 @@ def process_file(filename):
     legend.SetNColumns(len(channels))
 
 
-    colors = [
-        TColor.kBlue, 
-        TColor.kGreen+2, 
-        TColor.kViolet+1,
-        TColor.kRed, 
-        TColor.kOrange+1,
+
+    # set up some hists to hold TTree::Draw results
+    hists = []
+    
+    selections = [
+        #"lightEnergy>700", # keep the light threshold high (some runs had low thresholds)
+        #"adc_max_time[5]*40.0/1000<10", # light signal is within 10 microseconds of trigger
+        #"is_amplified",
+        "energy>100",
+        #"energy[5]>15",
+        #"rise_time_stop-trigger_time <15",
+        #"rise_time_stop-trigger_time >5"
+        #"Iteration$<=50", # baseline average
+        "channel!=%i" % pmt_channel,
+        "channel!=5", # ortec channel
     ]
 
+    frame_hist = TH1D("frame_hist","",n_bins,min_bin,max_bin)
+    frame_hist.SetLineWidth(2)
+    frame_hist.SetXTitle(xtitle)
+    #frame_hist.SetYTitle("Counts / %.1f keV" % frame_hist.GetBinWidth(1))
+    frame_hist.SetYTitle("Counts / %.2f #mus" % frame_hist.GetBinWidth(1))
+    frame_hist.SetMinimum(0.5)
+    tree.Draw("")
+    selection = " && ".join(selections)
+
+    if do_draw_sum:
+        #print "%i entries in sum hist" % tree.Draw("chargeEnergy >> frame_hist", selection)
+        print "%i entries in sum hist" % tree.Draw("%s >> frame_hist" % draw_command, selection)
+        setup_hist(frame_hist, TColor.kBlack)
+        legend.AddEntry(frame_hist, "sum","lp")
 
 
-    # set up some placeholder hists for the legend
-    hists = []
-    for (i, channel) in enumerate(channels):
-        
-        #print i, channel, channel_map[channel]
-        hist = TH1D("hist%i" % channel,"",500,0,2000)
+    y_max = 0
+    for (channel, value) in enumerate(charge_channels_to_use):
+
+        if not value:
+            continue
+ 
+        hist = TH1D("hist%i" % channel,"",n_bins,min_bin,max_bin)
         try:
             color = colors[channel]
         except IndexError:
             color = TColor.kBlack
-
-        hist.SetLineColor(color)
-        hist.SetFillColor(color)
+        
+        setup_hist(hist, color)
         hists.append(hist)
-        legend.AddEntry(hist, channel_map[channel],"f")
+        legend.AddEntry(hist, channel_map[channel],"pl")
 
+        print "channel %i | %s " % (channel, channel_map[channel])
 
-    #tree.Draw("energy[4]","lightEnergy>700 && adc_max_time[5]*40.0/1000<10 &&
-    #energy[4]>200")
+        
+        #draw_command = "wfm%i-baseline_mean" % channel
+        draw_cmd = "%s >> %s" % (draw_command, hist.GetName())
 
-    selections = [
-        #"lightEnergy>700", # keep the light threshold high (some runs had low thresholds)
-        #"adc_max_time[5]*40.0/1000<10", # light signal is within 10 microseconds of trigger
-        "is_amplified",
-    ]
-
-    #min_val = tree.GetMinimum("energy")
-    #max_val = tree.GetMaximum("energy")
-    #print min_val, max_val
-
-    #frame_hist = TH1D("frame_hist","",100,-5,10.0) # unamplified
-    #frame_hist = TH1D("frame_hist","",200,-30,40) # amplified
-    #frame_hist = TH1D("frame_hist","",100,-2,2) # pulser
-    #tree.Draw("energy >> frame_hist","channel!=8")
-    frame_hist = TH1D("frame_hist","",n_bins,min_bin,max_bin)
-    frame_hist.SetXTitle("Energy")
-    frame_hist.SetYTitle("Counts / %.1f" % frame_hist.GetBinWidth(1))
-    frame_hist.SetMaximum(n_entries)
-    frame_hist.SetMinimum(0.1)
-    frame_hist.Draw()
-
-    for (i, channel) in enumerate(channels):
-
-        index = channel
-        if channel == 8: index = 5
-        print "%i | channel %i | %s " % (i, channel, channel_map[channel])
-        draw_command = "energy"
-        #draw_command = "(adc_max_time[%i] - adc_max_time[5])*40.0/1000" % index
-        print "\t draw command: %s" % draw_command
+        print "\t draw command: %s" % draw_cmd
 
         extra_selections = [
             "channel == %i" % channel,
-            #"energy[%i] > 0" % index,
-            #"(rise_time_stop[%i] - rise_time_start[5]) >6" % index,
-            #"(adc_max_time[%i] - adc_max_time[5])*40.0/1000 < 15" % i
+            #"energy > 0",
+            #"(rise_time_stop95 - trigger_time) >6",
+            #"(adc_max_time - adc_max_time[5])*40.0/1000 < 15"
         ]
         selection = " && ".join(selections + extra_selections)
         print "\t selection: %s" % selection
 
         options = "same"
-        #if i  == 0: options = ""
+        if not do_draw_sum and channel == 0:
+            options = ""
         print "\t options: %s" % options
+
+        hist_mean = hist.GetMean()
+        hist_rms = hist.GetRMS()
+
+        print "sigma: %.2f" % hist.GetRMS()
 
 
         try:
@@ -173,18 +203,21 @@ def process_file(filename):
             color = TColor.kBlack
         tree.SetLineColor(color)
 
-        n_entries = tree.Draw(draw_command, selection, options)
+        n_entries = tree.Draw(draw_cmd, selection, options)
+        if y_max < hist.GetMaximum(): y_max = hist.GetMaximum()
         print "\t %i entries" % n_entries
 
     legend.Draw()
+    #frame_hist.SetMaximum(y_max)
     canvas.Update()
 
-    val = raw_input("--> enter to continue (q to quit, p to print) ")
+    canvas.Update()
+    canvas.Print("%s_test.png" % (basename))
+    canvas.Print("%s_test.pdf" % (basename))
 
-    if val == 'q': return
-    if val == 'p':
-        canvas.Update()
-        canvas.Print("%s_test.png" % (basename))
+    val = raw_input("--> enter to continue (q to quit) ")
+    if val == 'q': 
+        sys.exit()
 
 
 

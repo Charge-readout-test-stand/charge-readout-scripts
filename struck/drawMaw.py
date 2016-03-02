@@ -68,15 +68,23 @@ def process_file(filename):
         #    print i_entry, i, tree.wfm[i], tree.maw[i]
         #    maw_graph.SetPoint(i, tree.maw[i])
         #graph.Draw("al")
+        if tree.channel != 8:
+            i_entry+=1
+            continue
 
         tree.SetLineColor(TColor.kBlue+1)
 
         pad = canvas.cd(1)
         pad.SetGrid(1,1)
 
+        tree.SetMarkerStyle(8)
+        tree.SetMarkerSize(0.8)
+
         legend = TLegend(0.7, 0.92, 0.9, 0.99)
         legend.AddEntry(tree, "channel %i" % tree.channel, "pl")
-        tree.Draw("wfm:Iteration$","Entry$==%i" % i_entry, "l")
+        selection = "Entry$==%i" % i_entry
+        selection += " && Iteration$>180 && Iteration$<250"
+        tree.Draw("wfm:Iteration$",selection, "lp")
         legend.Draw()
 
         pad = canvas.cd(2)

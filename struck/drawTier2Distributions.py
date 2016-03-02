@@ -28,6 +28,7 @@ from ROOT import gStyle
 from ROOT import TH1D
 from ROOT import TH2D
 
+import struck_analysis_parameters
 
 gROOT.SetStyle("Plain")     
 gStyle.SetOptStat(0)        
@@ -42,18 +43,8 @@ def process_file(filename):
 
     sampling_freq_Hz = 25.0e6
 
-    channels = [
-      0,1,2,3,4,
-      8, 
-    ]
-
-    channel_map = {}
-    channel_map[0] = "X26"
-    channel_map[1] = "X27"
-    channel_map[2] = "X29"
-    channel_map[3] = "Y23"
-    channel_map[4] = "Y24"
-    channel_map[8] = "PMT"
+    channels = struck_analysis_parameters.channels
+    channel_map = struck_analysis_parameters.channel_map
 
     basename = os.path.basename(filename)
     basename = os.path.splitext(basename)[0]
@@ -63,6 +54,14 @@ def process_file(filename):
     tree = root_file.Get("tree")
     n_entries = tree.GetEntries()
     print "%i entries" % n_entries
+
+    # is this was created from tier1, branches like energy are just elements
+    created_from_tier1 = False
+    try:
+        tree.GetEntry(0)
+        tree.energy[1]
+    except TypeError:
+        created_from_tier1 = True
 
     # set up a canvas
     canvas = TCanvas("canvas","")
@@ -86,6 +85,7 @@ def process_file(filename):
         TColor.kViolet+1,
         TColor.kRed, 
         TColor.kOrange+1,
+        TColor.kMagenta,
     ]
 
 
@@ -122,22 +122,22 @@ def process_file(filename):
     #energy[4]>200")
 
     selections = [
-        "lightEnergy>700", # keep the light threshold high (some runs had low thresholds)
+        #"lightEnergy>700", # keep the light threshold high (some runs had low thresholds)
         #"adc_max_time[5]*40.0/1000<10", # light signal is within 10 microseconds of trigger
     ]
 
     for (i, channel) in enumerate(channels):
 
-        index = channel
-        if channel == 8: index = 5
+        if channel == 8: index = 6
         print "%i | channel %i | %s " % (i, channel, channel_map[channel])
-        draw_command = "energy[%i]" % index
-        draw_command = "(adc_max_time[%i] - adc_max_time[5])*40.0/1000" % index
+        draw_command = "energy"
+        #draw_command = "(adc_max_time - trigger_time)*40.0/1000"
         print "\t draw command: %s" % draw_command
 
         extra_selections = [
-            "energy[%i] > 300" % index,
-            #"(adc_max_time[%i] - adc_max_time[5])*40.0/1000 < 15" % i
+            "channel==%i" % channel,
+            #"energy > 300" % index,
+            #"(adc_max_time - adc_max_time[5])*40.0/1000 < 15"
         ]
         selection = " && ".join(selections + extra_selections)
         print "\t selection: %s" % selection

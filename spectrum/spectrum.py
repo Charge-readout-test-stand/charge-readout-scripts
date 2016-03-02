@@ -1,12 +1,9 @@
 #!/usr/bin/env python
 
 """
-This script draws histograms of total energies for different event categories
-See "Event categories" in the script for further information
+This script creates an eventlist from a tree. The criteria is specified in the script (subject to modification).
 
-The script saves the histograms into file "ChargeSpectrum.root" (Warning: will replace the old file!)
-
-The script also saves the event lists for categories into file "ChargeSpectrum_eventlist.txt", using json
+The eventlist will be saved to a root file. The script "ViewEventsUsingEventlist.py" can be run afterwards to view the events.
 
 To run:
 python /path/to/this/script /path/to/tier3_root_file
@@ -15,6 +12,7 @@ python /path/to/this/script /path/to/tier3_root_file
 import os
 import sys
 import glob
+import time
 
 from ROOT import gROOT
 #gROOT.SetBatch(True)
@@ -27,11 +25,12 @@ from ROOT import TPad
 from ROOT import TLegend
 from ROOT import TPaveText
 from ROOT import gSystem
+from ROOT import gDirectory
 from ROOT import gStyle
 from ROOT import TGraph
 from ROOT import TMath
 from ROOT import TTree
-
+from ROOT import TEventList
 
 gROOT.SetStyle("Plain")     
 gStyle.SetOptStat(0)        
@@ -39,156 +38,162 @@ gStyle.SetPalette(1)
 gStyle.SetTitleStyle(0)     
 gStyle.SetTitleBorderSize(0)
 
+import struck_analysis_parameters
+n_chargechannels = struck_analysis_parameters.n_chargechannels
+
 gSystem.Load("$EXOLIB/lib/libEXOUtilities")
 from ROOT import CLHEP
 
 def process_file(filename):
 
     print "processing file: ", filename
+    start_time = time.clock()
 
     basename = os.path.basename(filename)
     basename = os.path.splitext(basename)[0]
 
     root_file = TFile(filename, "READ")
     tree = root_file.Get("tree")
+    tree.Draw(">>elist_all", "")  ## save eventlist_all
+    elist_all = gDirectory.Get("elist_all")
     tree.SetLineWidth(2)
 
-    fout = TFile("ChargeSpectrum.root", "RECREATE") ## file to save histograms
-
     canvas = TCanvas("canvas","", 1700, 900)
-
-    ## Event categories
-    hist_charge0 = TH1D("spectrum_charge0", "Spectrum: no energy cut", 250, 100., 2100.) # all events   
-    hist_charge1 = TH1D("spectrum_charge1", "Spectrum: no energy cut", 250, 100., 2100.)
-    # all kept events: at least one channel has energy > 300 and drift time between 8.5 and 10.0 us, and not meeting any criteria below
-    eventlist1 = []
-    hist_charge2 = TH1D("spectrum_charge2", "Spectrum: no energy cut", 250, 100., 2100.)
-    # events with negative energy < -50 keV
-    eventlist2 = []
-    hist_charge3 = TH1D("spectrum_charge3", "Spectrum: no energy cut", 250, 100., 2100.)
-    # events where at least one channel has drift time < 5 us and energy > 100 keV
-    eventlist3 = []
-    hist_charge4 = TH1D("spectrum_charge4", "Spectrum: no energy cut", 250, 100., 2100.)
-    # events where more than two channels have energy > 200 keV
-    eventlist4 = []
-    hist_charge5 = TH1D("spectrum_charge5", "Spectrum: no energy cut", 250, 100., 2100.)
-    # all other events
-    eventlist5 = []
-
-    tree.GetEntry(0)
-    trigger_time_0 = tree.trigger_time
-
-    events = 0
-    
-    for i_entry in xrange(tree.GetEntries()):
-        tree.GetEntry(i_entry)
-
-        energy = 0
-        for i in xrange(5):
-            energy = energy + tree.energy1_pz[i]
-        hist_charge0.Fill(energy)  ## Calculate total energy and fill in histogram for all drift times
-
-        if tree.trigger_time == 0:
-            trigger_time = trigger_time_0
-        else:
-            trigger_time = tree.trigger_time  ## for trigger_time == 0, set trigger_time to the trigger time in the first entry (for 5th run ONLY)
-
-        ## the following scripts categorizes each event and fill in the histograms and eventlists
-        flag = 0
-        counts = 0
-        for i in xrange(5):
-            if tree.energy1_pz[i] < -50:
-                flag = 1
-                hist_charge2.Fill(energy)
-                eventlist2.append(i_entry)
-                break
-            elif tree.energy1_pz[i] > 200:
-                counts = counts + 1
-            
-            drift_time = tree.rise_time_stop95[i] - trigger_time
-            if drift_time < 5.0 and tree.energy1_pz[i] > 100:
-                flag = 1
-                hist_charge3.Fill(energy)
-                eventlist3.append(i_entry)
-                break
-            
-            if tree.energy1_pz[i] > 300 and 8.5 < drift_time and drift_time < 10.0:
-                flag = 2
-
-        if counts > 2:
-            eventlist4.append(i_entry)
-            hist_charge4.Fill(energy)        
-        elif flag == 2:
-            hist_charge1.Fill(energy)
-            eventlist1.append(i_entry)
-            events = events + 1
-        else:
-            hist_charge5.Fill(energy)
-            eventlist5.append(i_entry)
-
-
-    print "Number of events: ", events
-
-    ## draw histograms and legends
-    canvas.Clear()
     pad = canvas.cd(1)
     pad.SetGrid(1,1)
-    pad.SetLogy()
-    legend = TLegend(0.7, 0.8, 0.9, 0.9)
 
-    hist_charge0.SetLineWidth(2)
-    hist_charge0.SetLineColor(1)
-    hist_charge0.GetXaxis().SetTitle("Combined Energy (keV)")
-    hist_charge0.GetYaxis().SetTitle("Counts per 8keV bin")
-    legend.AddEntry(hist_charge0, "All events")
-    hist_charge0.Draw()
+    ## selection1: at least one channel has negative energy < -50keV
+    selection1 = "energy1_pz[0]<-50"
+    for i in range(1, n_chargechannels):
+        selection1 += "||energy1_pz[%i]<-50" % (i)
 
-    hist_charge2.SetLineWidth(2)
-    hist_charge2.SetLineColor(4)
-    legend.AddEntry(hist_charge2, "Negative energy < -50 keV")
-    hist_charge2.Draw("same")    
+    ## selection2: at least one channel has drift time < 5us and energy > 100keV
+    selection2 = "(energy1_pz[0]>100&&rise_time_stop95[0]-trigger_time<5)"
+    for i in range(1, n_chargechannels):
+        selection2 +="||(energy1_pz[%i]>100&&rise_time_stop95[%i]-trigger_time<5)" % (i,i)
 
-    hist_charge3.SetLineWidth(2)
-    hist_charge3.SetLineColor(6)
-    legend.AddEntry(hist_charge3, "Drift time < 5 us")
-    hist_charge3.Draw("same")   
+    ## selection3: at least one channel has energy > energy_threshold and 
+    ## drift time according to drifttime_table, and not meeting any criteria above
+    
+    ## settings
+    energy_threshold = 100
+    #drifttime_table = [7.0, 7.5, 8.0, 8.5, 9.0, 9.5, 10.0]
+    drifttime_table = [8.5, 9.5]
+    with_chargeenergyselection = False
+    energylow = 1000 
+    energyhigh = 1200
+    with_lightenergyselection = False 
+    lightenergylow = 450
+    lightenergyhigh = 800
+    with_channelselection = False 
+    channelselection = [0,1,0,0,0] ## 1-selected, 0-unselected
+    with_allevents = False 
 
-    hist_charge4.SetLineWidth(2)
-    hist_charge4.SetLineColor(7)
-    legend.AddEntry(hist_charge4, "More than 2 channels have > 200 keV")
-    hist_charge4.Draw("same") 
+    for i_drifttime in xrange(len(drifttime_table)-1):
+        selection3 = ""
+        drifttime_low = drifttime_table[i_drifttime]
+        drifttime_high = drifttime_table[i_drifttime + 1]
+        append = "_drifttime_%.2fto%.2f" % (drifttime_low, drifttime_high)
 
-    hist_charge5.SetLineWidth(2)
-    hist_charge5.SetLineColor(8)
-    legend.AddEntry(hist_charge5, "Other")
-    hist_charge5.Draw("same") 
+        ## start making selection string
+        if with_channelselection:
+            for i in xrange(len(channelselection)):
+                if channelselection[i] == 1:
+                    if selection3 == "":
+                        selection3 = "(energy1_pz[%i]>%.2f&&rise_time_stop95[%i]-trigger_time>%.2f&&rise_time_stop95[%i]-trigger_time<%.2f)" % (i, energy_threshold, i, drifttime_low, i, drifttime_high) 
+                        append += "_channel%i" % i
+                    else:
+                        selection3 += "||(energy1_pz[%i]>%.2f&&rise_time_stop95[%i]-trigger_time>%.2f&&rise_time_stop95[%i]-trigger_time<%.2f)" % (i, energy_threshold, i, drifttime_low, i, drifttime_high)
+                        append +="_%i" % i
+            if selection3 == "": ## if no channel is selected
+                print "no channel selected!"
+                sys.exit(1)
+        else:
+            append += "_allchannels"
+            selection3 = "(energy1_pz[0]>%.2f&&rise_time_stop95[0]-trigger_time>%.2f&&rise_time_stop95[0]-trigger_time<%.2f)" % (energy_threshold, drifttime_low, drifttime_high)
+            for i in range(1, n_chargechannels):
+                selection3 += "||(energy1_pz[%i]>%.2f&&rise_time_stop95[%i]-trigger_time>%.2f&&rise_time_stop95[%i]-trigger_time<%.2f)" % (i, energy_threshold, i, drifttime_low, i, drifttime_high)
+        selection3 = "(%s)" % selection3  ## wrap the conditions
 
-    hist_charge1.SetLineWidth(2)
-    hist_charge1.SetLineColor(2)
-    legend.AddEntry(hist_charge1, "Kept events w/ drift time 8.5 to 10.0 us")
-    hist_charge1.Draw("same")
+        if with_chargeenergyselection:
+            append += "_energy_%ito%i" % (energylow, energyhigh)
+            selection3 = "(chargeEnergy>%i&&chargeEnergy<%i&&(%s))" % (
+                                        energylow, energyhigh, selection3)
 
-    legend.Draw()
-    canvas.Update()
-    raw_input("Press Enter to continue...")
-    canvas.Print("ChargeSpectrum.png")
+        if with_lightenergyselection:
+            append += "_lightenergy_%ito%i" % (lightenergylow, lightenergyhigh)
+            selection3 = "(lightEnergy>%i&&lightEnergy<%i&&(%s))" % (
+                                        lightenergylow, lightenergyhigh, selection3)
+        
+        selection3 = "(%s)&&(!(%s))&&(!(%s))" % (selection3, selection1, selection2)
 
-    ## write histograms to file
-    hist_charge0.Write()
-    hist_charge1.Write()
-    hist_charge2.Write()
-    hist_charge3.Write()
-    hist_charge4.Write()
-    hist_charge5.Write()
+        ## create event list
+        if with_allevents:
+            append = "_allevents"
+            selection3 = ""
+        tree.SetEventList(elist_all)
+        tree.Draw(">>elist", selection3)
+        elist = gDirectory.Get("elist")
+        elist.Print()
+
+        ## drawing histograms
+        tree.SetEventList(elist)
+
+        canvas.Clear()
+        pad.SetLogy()
+        tree.Draw("chargeEnergy >> h2(250,0.,2000.)")
+        h2 = gDirectory.Get("h2")
+        h2.SetXTitle("Sum of charge channel energy (keV)")
+        h2.SetYTitle("Counts per 8keV bin")
+        canvas.Update()
+        canvas.Print("charge%s.pdf" % append)
+        canvas.Print("charge%s.png" % append)
+        
+        canvas.Clear()
+        tree.Draw("lightEnergy >> h3(500,0.,4000.)")
+        h3 = gDirectory.Get("h3")
+        h3.SetXTitle("PMT energy (keV)")
+        h3.SetYTitle("Counts per 8keV bin")
+        canvas.Update()
+        canvas.Print("light%s.pdf" % append)
+        canvas.Print("light%s.png" % append)
+        
+        canvas.Clear()
+        pad.SetLogy(False)
+        pad.SetLogz()
+        tree.Draw("lightEnergy:chargeEnergy >> h4(100,0.,2000.,100,0.,2000.)","","colz")
+        h4 = gDirectory.Get("h4")
+        h4.SetXTitle("Sum of charge channel energy (keV)")
+        h4.SetYTitle("PMT energy (keV)")
+        canvas.Update()
+        canvas.Print("lightvscharge%s.pdf" % append)
+        canvas.Print("lightvscharge%s.png" % append)
+
+        pad.SetLogy(True)
+        pad.SetLogz(False)
+        for i in xrange(n_chargechannels):
+            canvas.Clear()
+            tree.Draw("energy1_pz[%i] >> h(250,0.,2000.)" % i)
+            h = gDirectory.Get("h")
+            h.SetXTitle("Channel %i energy (keV)" % i)
+            h.SetYTitle("Counts per 8keV bin")
+            canvas.Update()
+            canvas.Print("charge%i%s.pdf" % (i, append))
+            canvas.Print("charge%i%s.png" % (i, append))
+
+        # write selected events to file
+        fout = TFile("event%s.root" % append, "RECREATE") 
+        #tree_selected = tree.CopyTree("")
+        #tree_selected.Write()
+        elist.Write()
+        elist.Clear()
+        fout.Close()
+
+    end_time = time.clock()
+    print "processing time = ", end_time, " s" 
 
     root_file.Close()
-    fout.Close()
 
-    ## write eventlists to file
-    import json
-    eventlists = {'list1': eventlist1, 'list2': eventlist2, 'list3': eventlist3, 'list4': eventlist4, 'list5': eventlist5}
-    with open("ChargeSpectrum_eventlist.txt", "w") as fout:
-        json.dump(eventlists, fout)
 
 
 if __name__ == "__main__":

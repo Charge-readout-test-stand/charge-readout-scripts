@@ -6,42 +6,36 @@ with hadd. Use like this:
 
 ./combineGoodFiles.py *NotShaped_Amplified*DT*.root > & combine.log
 
+or
+
+( time ./combineGoodFiles.py tier2_*NotShaped_Amplified*DT*.root ) > & combine.log
+
 arguments [sis tier 2 root files of events]
 """
 
-import os
 import sys
-import glob
 import commands
 
 from ROOT import gROOT
 gROOT.SetBatch(True)
-from ROOT import TH1D
 from ROOT import TFile
-from ROOT import TCanvas
-from ROOT import TColor
-from ROOT import TPad
-from ROOT import TLegend
-from ROOT import TPaveText
-from ROOT import gSystem
-from ROOT import gStyle
-from ROOT import TH1D
-from ROOT import TH2D
-
-
-gROOT.SetStyle("Plain")     
-gStyle.SetOptStat(0)        
-gStyle.SetPalette(1)        
-gStyle.SetTitleStyle(0)     
-gStyle.SetTitleBorderSize(0)       
 
 
 def process_file(filename):
 
     print "--> processing file: ", filename
 
+    if filename == "tier2_LXe_Run1_1700VC_1200VPMT_0134AM_NotShaped_Amplified_403mVDT_1.root":
+        print "chose to skip this file", filename
+        return 0
+
     # open the root file and grab the tree
     root_file = TFile(filename)
+    
+    if root_file.IsZombie():
+        print "\t BAD FILE (zombie)!!"
+        return False
+
     tree = root_file.Get("tree")
     try:
         n_entries = tree.GetEntries()
@@ -61,7 +55,7 @@ def process_file(filename):
     print "\t minimum light Energy %i" % tree.GetMinimum("lightEnergy")
     print "\t maximum light Energy %i" % tree.GetMaximum("lightEnergy")
 
-    return 1
+    return n_entries
 
 
 
@@ -73,9 +67,15 @@ if __name__ == "__main__":
 
     good_names = []
 
+    total_entries = 0
+
     for filename in sys.argv[1:]:
-        if process_file(filename):
+        entries =  process_file(filename)
+        if entries > 0:
             good_names.append(filename)
+            total_entries += entries
+
+    print "total entries: ", total_entries
 
     print "%i good files:" % len(good_names)
     #print "\n".join(good_names)

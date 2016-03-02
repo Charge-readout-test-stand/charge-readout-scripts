@@ -1,1 +1,10 @@
 *.pyc
+*.d
+*.o
+*.lib
+*.so
+sis3316_root_gui
+*.pdf
+*.png
+*.root
+.DS_Store

@@ -253,6 +253,10 @@ def main(
     filename,   # *.dat file to process
     start_time=None, # start time, in hours, other than first time in file
     stop_time=None,   # stop time, in hours, other than last time in file
+    recovery_start=None, # recovery start time, in hours
+    recovery_stop=None, # revovery stop time, in hours
+    fill_start=None, # fill start time, in hours
+    fill_stop=None, # fill stop time, in hours
 ):
     
     # options
@@ -264,6 +268,14 @@ def main(
         print "\t using start time of %.2f hours" % start_time
     if stop_time != None:
         print "\t using stop time of %.2f hours" % stop_time
+    if recovery_start:
+        print "\t recovery_start: %.2f hours" % recovery_start
+    if recovery_stop:
+        print "\t recovery_stop: %.2f hours" % recovery_stop
+    if fill_start:
+        print "\t fill_start: %.2f hours" % fill_start
+    if fill_stop:
+        print "\t fill_stop: %.2f hours" % fill_stop
 
     # choose an output directory for these files
 
@@ -293,8 +305,8 @@ def main(
     # we compensate for this)
     # compensation from test_20150609_173311.dat
     #mass_flow_rate_offset = 326.33/897.16 
-    #mass_flow_rate_offset = 0.0 
-    mass_flow_rate_offset = 30.0/60.0 + 12.0/16.0/60.0 
+    mass_flow_rate_offset = 0.0 
+    #mass_flow_rate_offset = 30.0/60.0 + 12.0/16.0/60.0 
     print "mass_flow_rate_offset: [grams/minute]", mass_flow_rate_offset
 
     
@@ -395,6 +407,9 @@ def main(
 
         time_stamps.append(time_stamp)
 
+        if i_line == 0:
+            print "first time stamp:", time_stamp
+
         # handling for changes to LabView...
 
         # 10 Nov 2014  -- LN F/T and xenon bottle TCs were added to LabView
@@ -420,6 +435,18 @@ def main(
             #print "tstamp:  ", time_stamp
             do_warning = False     
 
+        full_mass_integral = 8760.0
+
+        full_capacitance = 38.7
+        empty_capacitance = 25
+
+        full_bottle_mass = 94.83
+        empty_bottle_mass = 86.0 # not really empty, but when the cell is full
+        if time_stamp > 3532111093: # 6th LXe
+            full_mass_integral = 8300
+            empty_bottle_mass = full_bottle_mass - full_mass_integral/1e3
+            full_capacitance = 38.2
+            empty_capacitance = 24.5
 
         TC0.append(float(split_line[1]))
         TC1.append(float(split_line[2]))
@@ -555,13 +582,13 @@ def main(
         if start_time != None and first_index == 0:
             if time_hours[-1] >= start_time: 
                 first_index = i
-                #print "\t found first index: %i at time %.2f hours" % (i, time_hours[-1])
+                print "\t found first index: %i at time %.2f hours" % (i, time_hours[-1])
             
         # find last_index, if stop_time is specified
         if stop_time != None and last_index == len(time_stamps)-1:
             if time_hours[-1] >= stop_time: 
                 last_index = i
-                #print "\t found last index: %i at time %.2f hours" % (i, time_hours[-1])
+                print "\t found last index: %i at time %.2f hours" % (i, time_hours[-1])
 
     print "...done looping over time stamps"
             
@@ -610,7 +637,8 @@ def main(
           if i_time > 0:
               delta_time_minutes = minute_time - time_minutes[i_time-1]
 
-          mass += mass_flow_rate[i_time]*delta_time_minutes 
+          if i_time >= first_index:
+              mass += mass_flow_rate[i_time]*delta_time_minutes 
           Vol.append(mass)
 
           #if i_time % 100 == 0: # debugging
@@ -682,10 +710,17 @@ def main(
       plt.setp(uline1, color = 'b', linewidth = linewidth)
 
       # add indicator line without changing plot y axes:
-      full_mass_integral = 8760.0
       ymin, ymax = plt.gca().get_ylim()
       plt.axhline(y=full_mass_integral, color='black', linestyle="--")
       plt.gca().set_ylim([ymin,ymax]) # reset axes to original
+
+      # draw LXe fill box:
+      if fill_start and fill_stop:
+          plt.axvspan(fill_start, fill_stop, color='blue', alpha=0.3)
+
+      # draw recovery box:
+      if recovery_start and recovery_stop:
+          plt.axvspan(recovery_start, recovery_stop, color='red', alpha=0.3)
 
       plt.xlabel('Time [hours] %s' % time_string)
       plt.ylabel('Mass Flow [g of xenon]')
@@ -736,11 +771,20 @@ def main(
     plt.axhspan(ymin=760*2, ymax=ymax, color='red', alpha=0.5)
     plt.gca().set_ylim([ymin,ymax])
 
+    # draw LXe fill box:
+    if fill_start and fill_stop:
+        plt.axvspan(fill_start, fill_stop, color='blue', alpha=0.3)
+
+    # draw recovery box:
+    if recovery_start and recovery_stop:
+        plt.axvspan(recovery_start, recovery_stop, color='red', alpha=0.3)
+
     plt.xlabel('Time [hours] %s' % time_string)
     plt.ylabel('Pressure [Torr]')
     plt.savefig(ppath)
     print "printed %s" % ppath
     plt.clf()
+
 
     if len(Pressure2) > 0:
       plt.figure(6)
@@ -894,8 +938,6 @@ def main(
     if len(bottle_mass) > 0:
         plt.figure(13)
         plt.grid(b=True)
-        full_bottle_mass = 94.83
-        empty_bottle_mass = 86.0 # not really empty, but when the cell is full
         plt.title("Xenon bottle mass [kg]: %.2f  (%.1fkg  in cell)" % (
         bottle_mass[last_index], full_bottle_mass - bottle_mass[last_index]))
         mfline1 = plt.plot(time_hours[first_index:last_index], bottle_mass[first_index:last_index])
@@ -906,6 +948,14 @@ def main(
         plt.axhline(y=full_bottle_mass, color='black', linestyle="--")
         plt.axhline(y=empty_bottle_mass, color='black', linestyle="--")
         plt.gca().set_ylim([ymin,ymax]) # reset axes to original
+
+        # draw LXe fill box:
+        if fill_start and fill_stop:
+            plt.axvspan(fill_start, fill_stop, color='blue', alpha=0.3)
+
+        # draw recovery box:
+        if recovery_start and recovery_stop:
+            plt.axvspan(recovery_start, recovery_stop, color='red', alpha=0.3)
 
         plt.xlabel('Time [hours] %s' % time_string)
         plt.ylabel('Mass [kg]')
@@ -926,15 +976,19 @@ def main(
         mfline1 = plt.plot(time_hours[first_index:last_index],
             capacitance[first_index:last_index])
 
-        full_capacitance = 38.7
-        empty_capacitance = 25
-
         # add indicator line without changing plot y axes:
-        full_mass_integral = 8760.0
         ymin, ymax = plt.gca().get_ylim()
         plt.axhline(y=full_capacitance, color='black', linestyle="--")
         plt.axhline(y=empty_capacitance, color='black', linestyle="--")
         plt.gca().set_ylim([ymin,ymax]) # reset axes to original
+
+        # draw LXe fill box:
+        if fill_start and fill_stop:
+            plt.axvspan(fill_start, fill_stop, color='blue', alpha=0.3)
+
+        # draw recovery box:
+        if recovery_start and recovery_stop:
+            plt.axvspan(recovery_start, recovery_stop, color='red', alpha=0.3)
 
         plt.setp(mfline1, color = 'b', linewidth = linewidth)
         plt.xlabel('Time [hours] %s' % time_string)
@@ -1085,6 +1139,14 @@ if __name__ == '__main__':
         help="specify start time, in hours, for plots (use first time in .dat file by default)")
     parser.add_option("--stop",dest="stop",type="float",default=None,
         help="specify stop time, in hours, for plots (use last time in .dat file by default)")
+    parser.add_option("--recovery-start",dest="recovery_start",type="float",default=None,
+        help="recovery start time, in hours, for plots (None by default)")
+    parser.add_option("--recovery-stop",dest="recovery_stop",type="float",default=None,
+        help="recovery stop time, in hours, for plots (None by default)")
+    parser.add_option("--fill-start",dest="fill_start",type="float",default=None,
+        help="fill start time, in hours, for plots (None by default)")
+    parser.add_option("--fill-stop",dest="fill_stop",type="float",default=None,
+        help="fill stop time, in hours, for plots (None by default)")
     options,args = parser.parse_args()
 
     if len(args) < 1:
@@ -1092,7 +1154,15 @@ if __name__ == '__main__':
         parser.error("==> Wrong number of arguments!")
 
     for filename in args:
-        main(filename, options.start, options.stop)
+        main(
+            filename=filename, 
+            start_time=options.start, 
+            stop_time=options.stop, 
+            recovery_start=options.recovery_start,
+            recovery_stop=options.recovery_stop,
+            fill_start=options.fill_start,
+            fill_stop=options.fill_stop,
+        )
         
 
 
