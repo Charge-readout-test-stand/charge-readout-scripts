@@ -1,0 +1,18 @@
+﻿Build started 2/28/2016 8:53:38 PM.
+     1>Project "C:\Users\xenon\Documents\GitHub\charge-readout-scripts\rootGUI\sis3316_root_gui.vcxproj" on node 2 (build target(s)).
+     1>InitializeBuildStatus:
+         Touching "Debug\sis3316_root_gui.unsuccessfulbuild".
+       ClCompile:
+         C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\CL.exe /c /ZI /nologo /W3 /WX- /Od /Oy- /D WIN32 /D _DEBUG /D _CONSOLE /D _UNICODE /D UNICODE /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Debug\\" /Fd"Debug\vc100.pdb" /Gd /TP /analyze- /errorReport:prompt ..\..\..\..\libraries_and_includes\sis3316_class_library\sis3316_class.cpp ..\..\..\..\libraries_and_includes\sis_vme_master_class_lib\sis3153ETH_vme_class.cpp ..\..\..\..\libraries_and_includes\sis_vme_master_class_lib\sis3316_ethernet_access_class.cpp
+         sis3316_ethernet_access_class.cpp
+     1>c1xx : fatal error C1083: Cannot open source file: '..\..\..\..\libraries_and_includes\sis_vme_master_class_lib\sis3316_ethernet_access_class.cpp': No such file or directory
+         sis3153ETH_vme_class.cpp
+     1>c1xx : fatal error C1083: Cannot open source file: '..\..\..\..\libraries_and_includes\sis_vme_master_class_lib\sis3153ETH_vme_class.cpp': No such file or directory
+         sis3316_class.cpp
+     1>c1xx : fatal error C1083: Cannot open source file: '..\..\..\..\libraries_and_includes\sis3316_class_library\sis3316_class.cpp': No such file or directory
+         Generating Code...
+     1>Done Building Project "C:\Users\xenon\Documents\GitHub\charge-readout-scripts\rootGUI\sis3316_root_gui.vcxproj" (build target(s)) -- FAILED.
+
+Build FAILED.
+
+Time Elapsed 00:00:00.15

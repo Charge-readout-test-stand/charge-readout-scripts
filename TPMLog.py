@@ -427,7 +427,19 @@ def main(
         TC3.append(float(split_line[4]))
         TC4.append(float(split_line[5]))
         T_ambient.append(float(split_line[6]))
-        T_omega.append(float(split_line[14]))
+
+        # when we access the omega controller over the internet, it sometimes
+        # reads 0V to the NI readout device, which is ~ 120K. Check for this:
+        omega_temp = float(split_line[14])
+        # if we have a weird data point, try substituting the previous data
+        # point:
+        if omega_temp  < 150:
+            try:
+                omega_temp = T_omega[-1]
+            except:
+                pass
+                
+        T_omega.append(omega_temp)
 
         # LN TCs added to LabView output 06 Nov 2014
         # LabView modified again 11 Nov 2014

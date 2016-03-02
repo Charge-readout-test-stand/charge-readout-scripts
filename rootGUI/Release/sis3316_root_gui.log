@@ -1,9 +1,15 @@
-﻿Build started 11/22/2015 11:44:20 PM.
-     1>Project "C:\Users\xenon\Desktop\sis3316_12-08-2015_win\software\win7_v200A_a000A\VC++10-2010\applications\sis3316_root_gui\sis3316_root_gui\sis3316_root_gui.vcxproj" on node 2 (build target(s)).
+﻿Build started 2/28/2016 8:54:06 PM.
+     1>Project "C:\Users\xenon\Documents\GitHub\charge-readout-scripts\rootGUI\sis3316_root_gui.vcxproj" on node 2 (build target(s)).
      1>InitializeBuildStatus:
          Touching "Release\sis3316_root_gui.unsuccessfulbuild".
        ClCompile:
-         C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\CL.exe /c /Zi /nologo /W3 /WX- /O2 /Oi /Oy- /GL /D WIN32 /D NDEBUG /D _CONSOLE /D _UNICODE /D UNICODE /Gm- /EHsc /MD /GS /Gy /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Release\\" /Fd"Release\vc100.pdb" /Gd /TP /analyze- /errorReport:prompt sis3316_root_gui_test1.cpp
+         C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\CL.exe /c /Zi /nologo /W3 /WX- /O2 /Oi /Oy- /GL /D WIN32 /D NDEBUG /D _CONSOLE /D _UNICODE /D UNICODE /Gm- /EHsc /MD /GS /Gy /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Release\\" /Fd"Release\vc100.pdb" /Gd /TP /analyze- /errorReport:prompt ..\..\..\..\libraries_and_includes\sis3316_class_library\sis3316_class.cpp ..\..\..\..\libraries_and_includes\sis_vme_master_class_lib\sis3153ETH_vme_class.cpp ..\..\..\..\libraries_and_includes\sis_vme_master_class_lib\sis3316_ethernet_access_class.cpp sis3316_root_gui_test1.cpp
+         sis3316_class.cpp
+     1>c1xx : fatal error C1083: Cannot open source file: '..\..\..\..\libraries_and_includes\sis3316_class_library\sis3316_class.cpp': No such file or directory
+         sis3153ETH_vme_class.cpp
+     1>c1xx : fatal error C1083: Cannot open source file: '..\..\..\..\libraries_and_includes\sis_vme_master_class_lib\sis3153ETH_vme_class.cpp': No such file or directory
+         sis3316_ethernet_access_class.cpp
+     1>c1xx : fatal error C1083: Cannot open source file: '..\..\..\..\libraries_and_includes\sis_vme_master_class_lib\sis3316_ethernet_access_class.cpp': No such file or directory
          sis3316_root_gui_test1.cpp
      1>c:\root\include\TString.h(503): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
                  C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\include\stdio.h(371) : see declaration of 'sprintf'
@@ -66,26 +72,8 @@
                  C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\include\string.h(105) : see declaration of 'strcpy'
      1>sis3316_root_gui_test1.cpp(5615): warning C4018: '<' : signed/unsigned mismatch
      1>sis3316_root_gui_test1.cpp(5616): warning C4018: '<' : signed/unsigned mismatch
-       Link:
-         C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"C:\Users\xenon\Desktop\sis3316_12-08-2015_win\software\win7_v200A_a000A\VC++10-2010\applications\sis3316_root_gui\Release\sis3316_root_gui.exe" /INCREMENTAL:NO /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /ManifestFile:"Release\sis3316_root_gui.exe.intermediate.manifest" /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /DEBUG /PDB:"C:\Users\xenon\Desktop\sis3316_12-08-2015_win\software\win7_v200A_a000A\VC++10-2010\applications\sis3316_root_gui\Release\sis3316_root_gui.pdb" /SUBSYSTEM:CONSOLE /OPT:REF /OPT:ICF /LTCG /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"C:\Users\xenon\Desktop\sis3316_12-08-2015_win\software\win7_v200A_a000A\VC++10-2010\applications\sis3316_root_gui\Release\sis3316_root_gui.lib" /MACHINE:X86 Release\sis3316_class.obj
-         Release\sis3153ETH_vme_class.obj
-         Release\sis3316_ethernet_access_class.obj
-         Release\get_configuration_parameters.obj
-         Release\sis3316_root_gui_flash.obj
-         Release\sis3316_root_gui_main.obj
-         Release\sis3316_root_gui_test1.obj
-         Release\stdafx.obj
-         "libfftw3-3.lib"
-         Generating code
-         Finished generating code
-         sis3316_root_gui.vcxproj -> C:\Users\xenon\Desktop\sis3316_12-08-2015_win\software\win7_v200A_a000A\VC++10-2010\applications\sis3316_root_gui\Release\sis3316_root_gui.exe
-       Manifest:
-         C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0A\bin\mt.exe /nologo /verbose /outputresource:"C:\Users\xenon\Desktop\sis3316_12-08-2015_win\software\win7_v200A_a000A\VC++10-2010\applications\sis3316_root_gui\Release\sis3316_root_gui.exe;#1" /manifest Release\sis3316_root_gui.exe.intermediate.manifest
-       FinalizeBuildStatus:
-         Deleting file "Release\sis3316_root_gui.unsuccessfulbuild".
-         Touching "Release\sis3316_root_gui.lastbuildstate".
-     1>Done Building Project "C:\Users\xenon\Desktop\sis3316_12-08-2015_win\software\win7_v200A_a000A\VC++10-2010\applications\sis3316_root_gui\sis3316_root_gui\sis3316_root_gui.vcxproj" (build target(s)).
+     1>Done Building Project "C:\Users\xenon\Documents\GitHub\charge-readout-scripts\rootGUI\sis3316_root_gui.vcxproj" (build target(s)) -- FAILED.
 
-Build succeeded.
+Build FAILED.
 
-Time Elapsed 00:00:30.37
+Time Elapsed 00:00:01.79
