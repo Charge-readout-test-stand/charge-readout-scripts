@@ -23,7 +23,7 @@ tree = tf.Get('tree')
 rand = ROOT.TRandom3(0)
 ev_n = 0
 wfm_samp =800
-t_sample =0.048
+t_sample =0.04
 t = np.linspace(0.0, wfm_samp*t_sample, wfm_samp)
 w_t = np.linspace(0.0, 1/(2.0*t_sample), wfm_samp/2.0 )
 plt.ion()
@@ -40,17 +40,16 @@ while ev_n < tree.GetEntries:
  FFT2 = fft(pywfm2)
  plt.figure(1)
  plt.plot(t,pywfm2,'r-')
- plt.plot(t,pywfm,'k-')
+ plt.plot(t,pywfm,'b--')
  plt.xlabel('Time [$\mu$s]')
  plt.figure(2)
- plt.loglog(w_t[2:],np.abs(FFT[2:wfm_samp/2]),'k-',label='rand')
+ plt.loglog(w_t[2:],np.abs(FFT[2:wfm_samp/2]),'b--',label='simulated noise')
  plt.loglog(w_t[2:],np.abs(FFT2[2:wfm_samp/2]),'r-',label='data')
  plt.xlim([0.03,20])
  plt.xlabel('Frequency [MHz]')
- plt.legend()
- print ev_n
+ plt.legend(loc='lower left')
+ raw_input(ev_n)
  ev_n+=1
- raw_input()
  plt.clf()
  plt.figure(1)
  plt.clf()
