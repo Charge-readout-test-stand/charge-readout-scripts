@@ -80,6 +80,10 @@ def get_wfmparams(
     exo_wfm.SetSamplingFreq(sampling_freq_Hz/CLHEP.second)
     energy_wfm = EXODoubleWaveform(exo_wfm)
 
+    # calculate wfm max and min:
+    wfm_max = exo_wfm.GetMaxValue()
+    wfm_min = exo_wfm.GetMinValue()
+
     # remove the baseline
     baseline_remover = EXOBaselineRemover()
     baseline_remover.SetBaselineSamples(n_baseline_samples)
@@ -147,6 +151,8 @@ def get_wfmparams(
         energy1_pz, 
         energy_rms1_pz,
         calibrated_wfm,
+        wfm_max,
+        wfm_min,
     )
 
 def do_risetime_calc(rise_time_calculator, threshold_percent, wfm, max_val, period):
