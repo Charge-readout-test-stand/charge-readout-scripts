@@ -1,1 +1,1 @@
-../struck/submitNewTier1Jobs.py
+../struck/submitNewTier1And3Jobs.py
