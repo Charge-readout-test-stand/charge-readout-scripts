@@ -55,8 +55,12 @@ def compare_spectra(directory, filename_prefixes):
         files = glob.glob("%s/%s*.root" % (directory, filename_prefix))
         print "\t%i files" % len(files)
 
-        cathode_bias = filename_prefix.split("_")[3]
-        cathode_bias = int(cathode_bias.split("V")[0])
+        try:
+            cathode_bias = filename_prefix.split("_")[3]
+            cathode_bias = int(cathode_bias.split("V")[0])
+        except:
+            cathode_bias = 1700
+
         print "\t %i V bias" % cathode_bias
 
         hist = TH1D(
@@ -68,7 +72,7 @@ def compare_spectra(directory, filename_prefixes):
         )
         hist.SetLineWidth(2)
         hist.SetLineColor(colors[len(hists)])
-        hist.SetXTitle("Energy [arbitrary units]")
+        hist.SetXTitle("Energy [keV]")
         hist.SetYTitle("Counts / %i keV / second" % bin_width)
 
         run_duration = 0.0
@@ -79,8 +83,12 @@ def compare_spectra(directory, filename_prefixes):
             tfile = TFile(i_file)
             hist.GetDirectory().cd()
             tree = tfile.Get("tree")
+            run_tree = tfile.Get("run_tree")
             tree.GetEntry(0)
-            run_duration += tree.run_time
+
+            for entry in xrange(run_tree.GetEntries()):
+                run_tree.GetEntry(entry)
+                run_duration += run_tree.run_time
 
             if tree.baseline_mean_file[6] < 8000:
                 multiplier /= 2.5
@@ -137,6 +145,7 @@ if __name__ == "__main__":
 
     directory = "/u/xo/alexis4/test-stand/2015_12_07_6thLXe/tier3_from_tier2"
 
+    # data from 6th LXe at +1200V PMT bias
     filename_prefixes = [
         #"tier3_xenon8300g_1200VPMT_0Vcathode_amplified_PMT_shaper_",
         "tier3_xenon8300g_1200VPMT_100Vcathode_amplified_shaped_",
@@ -148,5 +157,10 @@ if __name__ == "__main__":
     ]
 
 
+    # data from 6th LXe at +1300V PMT bias
+    filename_prefixes = [
+        "tier3_xenon8300g_1300VPMT_0Vcathode_amplified_PMT_shaper_2",
+        "tier2to3_overnight",
+    ]
 
     compare_spectra(directory, filename_prefixes)

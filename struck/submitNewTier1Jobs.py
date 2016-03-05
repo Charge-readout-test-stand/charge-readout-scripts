@@ -39,7 +39,8 @@ def process_file(filename, verbose=True):
 
     #return 1 # debugging
 
-    script = "/u/xo/alexis4/software/collaborators_alexis/sis3316_offline/Release/sis3316_offline"
+    #script = "/u/xo/alexis4/software/collaborators_alexis/sis3316_offline/Release/sis3316_offline"
+    script = "/nfs/slac/g/exo_data4/users/peihaos/charge-readout-scripts/struck_new/sis3316_offline/Release/sis3316_offline"
 
     cmd =  '(time %s -b %s ) >& %s.out' % (
         script,

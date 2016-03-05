@@ -22,7 +22,7 @@ import math
 
 from ROOT import gROOT
 # run in batch mode:
-#gROOT.SetBatch(True)
+gROOT.SetBatch(True)
 from ROOT import TFile
 from ROOT import TTree
 from ROOT import TCanvas
@@ -47,7 +47,7 @@ def fit_channel(tree, channel, basename):
     do_debug = False
 
     min_bin = 200
-    max_bin = 1400
+    max_bin = 1000
     n_bins = int((max_bin-min_bin)/5)
     line_energy = 570
     sigma_guess = 40
@@ -64,11 +64,10 @@ def fit_channel(tree, channel, basename):
     canvas = TCanvas("canvas","", 700, 800)
     canvas.Divide(1,2)
     pad1 = canvas.cd(1)
-    pad1.SetLogy(1)
     #canvas.SetLeftMargin(0.12)
     if channel != None:
         channel_name = struck_analysis_parameters.channel_map[channel]
-        hist_title = "channel %i: %s" % (channel, channel_name)
+        hist_title = "ch %i: %s" % (channel, channel_name)
     else:
         channel_name = "all"
         hist_title = "all channels"
@@ -97,10 +96,13 @@ def fit_channel(tree, channel, basename):
         #"%s > 100" % energy_var,
     ]
     if channel != None:
+        selection.append( "rise_time_stop95-trigger_time>8.5")
         selection.append( "channel==%i" % channel)
     #print "\n".join(selection)
 
     selection = " && ".join(selection)
+    hist_title += " " + selection
+    hist.SetTitle(hist_title)
     print "selection:", selection
     entries = tree.Draw(draw_cmd, selection, "goff")
     print "tree entries: %i" % entries
@@ -206,7 +208,7 @@ def fit_channel(tree, channel, basename):
     n_peak_counts = testfit.GetParameter(0)/bin_width
 
 
-    leg = TLegend(0.45, 0.7, 0.95, 0.90)
+    leg = TLegend(0.49, 0.7, 0.99, 0.9)
     leg.AddEntry(hist, "Data")
     leg.AddEntry(testfit, "Total Fit: #chi^{2}/DOF = %.1f/%i, P-val = %.1E" % (chi2, ndf, prob),"l")
     leg.AddEntry(bestfit_gaus, "Gaus Peak Fit: #sigma = %.1f #pm %.1f keV, %.1E cts" % (sigma, testfit.GetParError(2), n_peak_counts), "l")
@@ -229,11 +231,13 @@ def fit_channel(tree, channel, basename):
         plot_name = "fit_all_%s" % basename
 
     # log scale
-    canvas.Update()
-    canvas.Print("%s_log.pdf" % plot_name)
+    #pad1.SetLogy(1)
+    #canvas.Update()
+    #canvas.Print("%s_log.pdf" % plot_name)
 
     # lin scale
     pad1.SetLogy(0)
+    hist.SetMinimum(0)
     canvas.Update()
     canvas.Print("%s_lin.pdf" % plot_name)
 
@@ -256,9 +260,12 @@ def fit_channel(tree, channel, basename):
     result["chi2"] = "%.3f" % chi2
     result["ndf"] = "%i" % ndf
     result["prob"] = "%.3e" % prob
+    result["selection"] = selection
+    result["draw_cmd"] = draw_cmd
 
+    print "saved results:"
     for (key, value) in result.items():
-        print "%s : %s" % (key, value)
+        print "\t%s : %s" % (key, value)
 
 
     if not gROOT.IsBatch():

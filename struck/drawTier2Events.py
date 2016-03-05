@@ -1,11 +1,16 @@
 #!/usr/bin/env python
 
 """
-This script draws a spectrum from a root tree. The following branches are
-assumed to exist:
-* totalEnergy
-* energy
-* nHits
+This script draws events from tier2 root file(s). 
+
+
+for 6th LXe:
+* uncomment gROOT.SetBatch(True)
+* set threshold to 570
+* run this command:
+
+python drawTier2Events.py
+/nfs/slac/g/exo_data4/users/alexis4/test-stand/2015_12_07_6thLXe/tier2/tier2_xenon8300g_1300VPMT_1700Vcathode_amplified_shaped_2*.root
 
 arguments [sis tier 2 root files of events]
 """
@@ -15,7 +20,7 @@ import sys
 import glob
 
 from ROOT import gROOT
-#gROOT.SetBatch(True) # use batch mode to draw multi-page PDF
+#gROOT.SetBatch(True) # uncomment to draw multi-page PDF
 from ROOT import TH1D
 from ROOT import TFile
 from ROOT import TCanvas
@@ -51,29 +56,35 @@ canvas.SetBottomMargin(0.12)
 
 
 def print_tier2_info(tree, energies, sampling_freq_Hz=25.0e6):
-    n_channels = struck_analysis_parameters.n_channels
 
+    charge_channels_to_use = struck_analysis_parameters.charge_channels_to_use
     chargeEnergy = 0.0
-    for energy in energies[:-1]:
+    for energy in energies[len(charge_channels_to_use):]:
         chargeEnergy += energy
     print "\t event: %i" % tree.event
     print "\t time stamp: %.2f" % (tree.time_stamp/sampling_freq_Hz)
     print "\t charge energy: %i" % chargeEnergy
     print "\t light energy: %i" % energies[-1]
 
-    for i in xrange(n_channels):
-        print "\t ch %i | energy %i | maw max %i | max time [us]: %.2f" % (
-            tree.channel[i],
-            #tree.energy[i],
-            energies[i],
-            tree.maw_max[i],
-            tree.wfm_max_time[i]/sampling_freq_Hz*1e6,
-        )
+    i = 0
+    for (channel, value) in enumerate(charge_channels_to_use):
+
+        if value == 1:
+
+            print "\t ch %i | energy %i | maw max %i | max time [us]: %.2f" % (
+                tree.channel[i],
+                #tree.energy[i],
+                energies[i],
+                tree.maw_max[i],
+                tree.wfm_max_time[i]/sampling_freq_Hz*1e6,
+            )
+            i+=1
 
 def process_file(filename, n_plots=0):
 
     # options ------------------------------------------
-    threshold = 570 # keV
+    threshold = 0 # keV
+    #threshold = 570 # keV, for generating multi-page PDF
     #threshold = 50 # ok for unshaped, unamplified data
 
     # y axis limits:
@@ -86,16 +97,21 @@ def process_file(filename, n_plots=0):
 
     samples_to_avg = 100 # n baseline samples to use for energy 
 
-    do_divide = False # whether to divide the canvas into 6
-
     n_plots_total = 200 # for drawing multi-page PDF, in batch mode
 
     #------------------------------------------------------
 
     calibration_values = struck_analysis_parameters.calibration_values
     channel_map = struck_analysis_parameters.channel_map
-    channels = struck_analysis_parameters.channels
-    n_channels = struck_analysis_parameters.n_channels
+    pmt_channel = struck_analysis_parameters.pmt_channel
+
+    charge_channels_to_use = struck_analysis_parameters.charge_channels_to_use
+    channels = []
+    for (channel, value) in enumerate(charge_channels_to_use):
+        if value: channels.append(channel)
+    channels.append(pmt_channel)
+    n_channels = len(channels)
+    colors = struck_analysis_parameters.get_colors()
 
     sampling_freq_Hz = 25.0e6
 
@@ -133,20 +149,11 @@ def process_file(filename, n_plots=0):
             print "\t channel %i used 2V input range" % i_channel
             print "\t dividing calibration by 2.5"
             calibration_values[i_channel] /= 2.5
+        print "\t calibration value:", calibration_values[i_channel]
 
 
     print "trigger time: [microseconds]", trigger_time
 
-
-    if do_divide:
-        title_size = gStyle.GetTitleSize()
-        gStyle.SetTitleSize(title_size*10.0)
-        label_size = gStyle.GetLabelSize("Y")
-        gStyle.SetLabelSize(label_size*4.0,"Y")
-
-        canvas.Divide(1,n_channels)
-
-    channels = struck_analysis_parameters.channels
     channel_map = struck_analysis_parameters.channel_map
 
     tree.GetEntry(0)
@@ -170,22 +177,12 @@ def process_file(filename, n_plots=0):
     pave_text2.GetTextFont()
     pave_text2.SetTextFont(42)
 
-    if do_divide:
-        pave_text = TPaveText(0.9, 0.0, 1.0, 0.6, "NDC")
     pave_text.SetFillColor(0)
     pave_text.SetFillStyle(0)
     pave_text.SetBorderSize(0)
     pave_text2.SetFillColor(0)
     pave_text2.SetFillStyle(0)
     pave_text2.SetBorderSize(0)
-
-    colors = [
-        TColor.kBlue, 
-        TColor.kGreen+2, 
-        TColor.kViolet+1,
-        TColor.kRed, 
-        TColor.kOrange+1,
-    ]
 
     legend = TLegend(0.1, 0.86, 0.9, 0.99)
     legend.SetNColumns(3)
@@ -217,9 +214,11 @@ def process_file(filename, n_plots=0):
         #print "pre-test..."
         # test whether any charge channel is above threshold
         if True:
-            if tree.lightEnergy < 15: 
-                i_entry += 1
-                continue
+            # check that there is some light energy -- only relevant for some
+            # runs in 5th LXe:
+            #if tree.lightEnergy < 15: 
+            #    i_entry += 1
+            #    continue
 
             n_above_threshold = 0
             for i in xrange(n_channels-1): 
@@ -241,8 +240,9 @@ def process_file(filename, n_plots=0):
         wfm3_e = 0.0
         wfm4_e = 0.0
         wfm5_e = 0.0
-        wfm8_e = 0.0
         wfm_length = tree.wfm_length
+
+        # average over samples_to_avg samples:
         for i_sample in xrange(samples_to_avg):
             #print "i_sample:", i_sample
             wfm0_e += tree.wfm0[wfm_length - i_sample - 1]- tree.wfm0[i_sample]
@@ -251,40 +251,37 @@ def process_file(filename, n_plots=0):
             wfm3_e += tree.wfm3[wfm_length - i_sample - 1]- tree.wfm3[i_sample]
             wfm4_e += tree.wfm4[wfm_length - i_sample - 1]- tree.wfm4[i_sample]
             wfm5_e += tree.wfm5[wfm_length - i_sample - 1]- tree.wfm5[i_sample]
-            wfm8_e += tree.wfm8[wfm_length - i_sample - 1]- tree.wfm8[i_sample]
-        energies = [wfm0_e, wfm1_e, wfm2_e, wfm3_e, wfm4_e, wfm5_e, wfm8_e]
+
+        energies = [wfm0_e, wfm1_e, wfm2_e, wfm3_e, wfm4_e, wfm5_e]
         for i in xrange(len(energies)): energies[i] = energies[i]/samples_to_avg
 
-        #print "threshold test..."
         n_above_threshold = 0
         for (i, channel) in enumerate(channels):
             energies[i] *= calibration_values[channel]
             if channel == 8:
-                energies[i] = tree.lightEnergy*calibration_values[channel]
-            if energies[i] > threshold and channel != 8:
-                #print "ch %i | E: %.2f" % (channel, energies[i])
-                n_above_threshold += 1
+                energies[i] = (tree.wfm_max[6]-tree.wfm8[0])*calibration_values[channel]
+
+
+
+        #print "threshold test..."
+        chargeEnergy = 0.0
+        for (i, channel) in enumerate(channels):
+            if channel != pmt_channel:
+                chargeEnergy += energies[i]
         #print "done w threshold test"
 
-
-        if n_above_threshold == 0:
+        if chargeEnergy < threshold:
             i_entry += 1
             continue
 
-
-        # use total charge energy:
-        #if tree.chargeEnergy<100: 
-        #    i_entry+= 1
-        #    continue
-
-        if not do_divide:
-            frame_hist.Draw()
+        frame_hist.Draw()
 
 
         print "==> entry %i of %i | charge energy: %i" % (
             i_entry, 
             n_entries,
-            tree.chargeEnergy,
+            #tree.chargeEnergy,
+            chargeEnergy,
         )
 
 
@@ -304,15 +301,14 @@ def process_file(filename, n_plots=0):
                 "%s E = %.1f keV" % (channel_map[channel], energies[i]),
                 "f"
             )
+            print "ch %i | E: %.2f" % (channel, energies[i])
 
         # loop over all channels in the event:
         for (i, channel) in enumerate(channels):
 
             #print "\t %i | channel %i" % (i, channel)
 
-            options = "l"
-            if not do_divide:
-                options = "l same"
+            options = "l same"
 
             try:
                 color = colors[channel]
@@ -321,19 +317,12 @@ def process_file(filename, n_plots=0):
 
             tree.SetLineColor(color)
 
-            if do_divide:
-                pad = canvas.cd(i+1)
-                pad.SetGrid(1,1)
-                pad.SetBottomMargin(0.01)
-                pad.SetTopMargin(0.01)
-                pad.SetLeftMargin(0.05)
-                pad.SetRightMargin(0.001)
-
-            multiplier = calibration_values[tree.channel[i]]
+            multiplier = calibration_values[channel]
+            print "channel: %i, multiplier: %.2f" % (channel, multiplier)
 
             # add an offset so the channels are draw at different levels
             offset = 1000 - i*250
-            if channel == 8:
+            if channel == pmt_channel:
                 offset = 2000
 
             if energies[i]+offset > y_max:
@@ -355,22 +344,17 @@ def process_file(filename, n_plots=0):
 
             pave_text.Clear()
             pave_text2.Clear()
-            if do_divide:
-                pave_text.AddText("%s" % channel_map[tree.channel[i]])
-                pave_text.AddText("E=%i" % tree.energy[i])
-            else:
-                chargeEnergy = 0.0
-                for energy in energies[:-1]:
-                    chargeEnergy += energy
-
-                pave_text.AddText("page %i, event %i" % (n_plots+1, i_entry))
-                pave_text.AddText("%s" % basename)
-                pave_text2.AddText("#SigmaE_{C} = %i" % chargeEnergy)
-                pave_text2.AddText("t=%.4fs" % (tree.time_stampDouble/sampling_freq_Hz))
-                pave_text2.Draw()
-            pave_text.Draw()
-                
             # end loop over channels
+
+
+        pave_text.AddText("page %i, event %i" % (n_plots+1, i_entry))
+        pave_text.AddText("%s" % basename)
+        pave_text2.AddText("#SigmaE_{C} = %i" % chargeEnergy)
+        pave_text2.AddText("t=%.4fs" % (tree.time_stampDouble/sampling_freq_Hz))
+        pave_text2.Draw()
+
+        pave_text.Draw()
+            
 
 
         frame_hist.SetMinimum(y_min)
@@ -397,12 +381,13 @@ def process_file(filename, n_plots=0):
                 canvas.Print("%s_entry_%i.pdf" % (basename, i_entry))
             try:
                 i_entry = int(val)
+                continue
             except: 
                 pass
 
         else:
             # if we run in batch mode, print a multi-page canvas
-            plot_name = "EventsWithChargeAbove%ikeV.pdf" % threshold
+            plot_name = "EventsWithChargeAbove%ikeV_6thLXe.pdf" % threshold
             if n_plots == 1:
                 plot_name = plot_name + "("
             if n_plots >= n_plots_total:
