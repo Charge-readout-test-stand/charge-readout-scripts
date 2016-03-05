@@ -677,6 +677,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 energy1_pz[i], 
                 energy_rms1_pz[i],
                 calibrated_wfm,
+                wfm_max[i],
+                wfm_min[i],
             ) = wfmProcessing.get_wfmparams(
                 exo_wfm=exo_wfm, 
                 wfm_length=wfm_length[0], 
@@ -696,9 +698,6 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 MCchargeEnergy[0] += energy1_pz[i]
 
  
-            wfm_max[i] = exo_wfm.GetMaxValue()
-            wfm_min[i] = exo_wfm.GetMinValue()
-
             exo_wfm.SetSamplingFreq(sampling_freq_Hz/CLHEP.second)
 
             #Sum the Waveforms of the active channels
@@ -737,7 +736,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
                 print "--> entry %i | channel %i" % (i_entry, channel[i])
                 print "\t n samples: %i" % wfm_length[i]
-                print "\t max %.2f" % wfm_max[i]
+                print "\t max %.2f"wfm_max[i]
                 print "\t min %.2f" % wfm_min[i]
                 print "\t smoothed max %.2f" % smoothed_max[i]
                 #print "\t rise time [microsecond]: %.3f" % (rise_time[i])
