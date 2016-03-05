@@ -427,6 +427,11 @@ def process_file(filename, verbose=True, do_overwrite=True):
             else:
                 if timestamp[0] != tree[i].timestamp: ## if the timestamps does not agree
                     print "==> timestamps do not agree; stop processing ..."
+                    print timestamp[0]
+                    print tree[i].timestamp
+                    print i_entry
+                    run_tree.Write()
+                    out_tree.Write()
                     return 0
 
        ## make a hist for calculating some averages
