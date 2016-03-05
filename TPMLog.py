@@ -261,6 +261,7 @@ def main(
     
     # options
     recent_time_span = 3600.0 # seconds to use for "recent" plots
+    do_rms = False # whether to make RMS noise plot
 
     # print some status info 
     print "--> processing", filename
@@ -304,10 +305,9 @@ def main(
     # offset, in grams/minute, for the mass flow meter (we can never exactly zero  the mass flow meter, so
     # we compensate for this)
     # compensation from test_20150609_173311.dat
-    #mass_flow_rate_offset = 326.33/897.16 
     mass_flow_rate_offset = 0.0 
     #mass_flow_rate_offset = 30.0/60.0 + 12.0/16.0/60.0 
-    print "mass_flow_rate_offset: [grams/minute]", mass_flow_rate_offset
+    #mass_flow_rate_offset = 326.33/897.16 
 
     
     # construct file names of plots
@@ -389,12 +389,6 @@ def main(
     correction_factor = 1.0
     argon_factor = argon_density / xenon_density / xenon_gas_correction_factor * argon_gas_correction_factor
 
-    #if is_argon:
-    #    print "This is ARGON!!!"
-    #    xenon_density_ratio = xenon_density_ratio*correction_factor
-    #    mass_flow_rate_offset *= argon_factor
-
-
     # read values from input file:
     for (i_line, line) in enumerate(testfile):
         split_line = line.split()
@@ -409,6 +403,10 @@ def main(
 
         if i_line == 0:
             print "first time stamp:", time_stamp
+
+            if time_stamp >= 3539732526:
+                mass_flow_rate_offset = 100.0/15.0/60.0 # 100 grams in 15 hours
+            print "mass_flow_rate_offset: [grams/minute]", mass_flow_rate_offset
 
         # handling for changes to LabView...
 
@@ -544,7 +542,8 @@ def main(
         ln_mass.append(float(split_line[15+column_offset]) + tare_mass)    
 
         try:
-            rms_noise.append(float(split_line[22+column_offset]))
+            if do_rms:
+                rms_noise.append(float(split_line[22+column_offset]))
         except:
             pass
 
@@ -1053,7 +1052,7 @@ def main(
             print "--> skipping HFE pressure plot"
 
 
-    if len(rms_noise) > 0:
+    if len(rms_noise) > 0 : 
         if len(rms_noise) == len(time_hours):
             plt.figure(16)
             plt.grid(b=True)
@@ -1079,7 +1078,7 @@ def main(
             print "rms_noise list and time_hours list are different lengths"
             print "--> skipping rms noise plot"
     else:
-        "skipping RMS noise plot"
+        print "skipping RMS noise plot"
  
 
     compare_isochoric(os.path.dirname(os.path.realpath(sys.argv[0])), directory, basename, TC1[first_index:last_index], TC2[first_index:last_index], TC3[first_index:last_index], Pressure[first_index:last_index], time_hours[first_index:last_index])

@@ -79,7 +79,7 @@ if __name__ == "__main__":
 
         # after angle valve swap:
         if filename == "test_20151124_105350.root":
-            entry = "befpre Ar, after valve swap"
+            entry = "before Ar, after valve swap"
         if filename == "test_20151130_164223.root":
             entry = "after Ar, after valve swap"
 
@@ -128,6 +128,7 @@ legend.Draw()
 canvas.Update()
 canvas.Print("pump_down_comparison.png")
 canvas.Print("pump_down_comparison.pdf")
+canvas.Print("pump_down_comparison.jpg")
 
 val = raw_input("press any key to continue\n")
 
