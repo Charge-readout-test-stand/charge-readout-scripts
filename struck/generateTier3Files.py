@@ -98,6 +98,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     do_draw_extra = not gROOT.IsBatch()
 
     reporting_period = 1000
+    if isMC:
+        reporting_period = 100
 
     # samples at wfm start and end to use for energy calc:
     n_baseline_samples_to_use = 50
@@ -705,9 +707,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             )
             
             
-            if channel[0] == pmt_channel:
+            if channel[i] == pmt_channel:
                 lightEnergy[0] = energy[i]
-            elif charge_channels_to_use[channel[0]]:
+            elif charge_channels_to_use[channel[i]]:
                 chargeEnergy[0] += energy1_pz[i]
             if isMC:
                 MCchargeEnergy[0] += energy1_pz[i]
