@@ -64,6 +64,7 @@ from ROOT import TColor
 from ROOT import TLegend
 from ROOT import TH1D
 from ROOT import gSystem
+from ROOT import TRandom3
 
 
 gSystem.Load("$EXOLIB/lib/libEXOROOT")
@@ -116,6 +117,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         pmt_channel = None #No PMT in MC
         n_channels = struck_analysis_parameters.MCn_channels
         charge_channels_to_use = struck_analysis_parameters.MCcharge_channels_to_use
+        generator = TRandom3(0) # random number generator, initialized with TUUID object
+        rms_keV = struck_analysis_parameters.rms_keV
     
     # this is the number of channels per event (1 if we are processing tier1
     # data, len(channels) if we are processing tier2 data
@@ -425,6 +428,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     hist = TH1D("hist","",100, 0, pow(2,14))
     print "calculating mean baseline & baseline RMS for each channel in this file..."
     for (i, i_channel) in enumerate(channels):
+        if isMC: continue
         print "%i: ch %i" % (i, i_channel)
         selection = "Iteration$<%i && channel==%i" % (n_baseline_samples[0], i_channel)
 
@@ -658,6 +662,17 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 wfm_max_time[i] = tree.wfm_max_time[i]
 
             wfm_length[i] = len(wfm)
+
+            # add noise to MC
+            if isMC:
+                # FIXME -- using const noise for all channels!!
+                sigma = rms_keV[1]/calibration[i] 
+                #print "%.1f keV (%.1f ADC units) noise to MC" % (rms_keV[1], sigma)
+                for i_point in xrange(len(wfm)):
+                    noise = generator.Gaus()*sigma
+                    wfm[i_point]+=noise
+
+
             exo_wfm = EXODoubleWaveform(array('d',wfm), wfm_length[i])
 
             if do_debug:
@@ -736,7 +751,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
                 print "--> entry %i | channel %i" % (i_entry, channel[i])
                 print "\t n samples: %i" % wfm_length[i]
-                print "\t max %.2f"wfm_max[i]
+                print "\t max %.2f" % wfm_max[i]
                 print "\t min %.2f" % wfm_min[i]
                 print "\t smoothed max %.2f" % smoothed_max[i]
                 #print "\t rise time [microsecond]: %.3f" % (rise_time[i])
