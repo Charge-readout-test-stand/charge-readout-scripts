@@ -84,10 +84,10 @@ def SignalViewer(tData, eventN):
         if WF[nch][-1] > 0:
             print "Hit Ch = ", nch, " Qvalue = ", WF[nch][-1]
         plt.plot(t, WF[nch], label='Sim Ch='+str(nch))
-    save = raw_input("Save figure? (y or n)")
     plt.title("Channel Signals")
     plt.xlabel("time[$\mu$s]")
     plt.ylabel("Q[#e-]")
+    save = raw_input("Save figure? (y or n)")
     if save == 'y':
         plt.savefig("./plots/signal_event"+str(eventN)+".png")
     plt.clf()
