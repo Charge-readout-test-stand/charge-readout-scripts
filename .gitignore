@@ -2,6 +2,7 @@
 *.d
 *.o
 *.lib
+*.so
 sis3316_root_gui
 *.pdf
 *.png

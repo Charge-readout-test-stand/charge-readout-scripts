@@ -11,19 +11,22 @@ import inspect
 import commands
 import datetime
 
-import submitNewTier1Jobs
+import submitNewTier1And3Jobs
 import submitPythonJobsSLAC
 import generateTier3Files_internal
 import generateTier3Files_external
+import wfmProcessing
 
 
 # options:
 #directory = "/nfs/slac/g/exo_data4/users/alexis4/test-stand/2015_12_03_testing"
 directory = os.getcwd()
 
-do_tier1 = False 
-do_tier3_internal = True
-do_tier3_external = True
+do_tier1 = True
+
+# testing new all-in-one...
+do_tier3_internal = False
+do_tier3_external = False
 
 
 
@@ -35,13 +38,13 @@ def submitTier1():
     #print os.getcwd()
     filenames = glob.glob("%s/tier0/*.dat" % directory)
     print "\t %i tier0 files" % len(filenames)
-    n_files = submitNewTier1Jobs.main(filenames, verbose=False)
+    n_files = submitNewTier1And3Jobs.main(filenames, verbose=False)
     print "\t %i jobs submitted" % n_files
 
 
 
 def submitTier3_external():
-    print "tier3 (from tier2)  generation jobs..."
+    print "tier3 (from tier1 external)  generation jobs..."
     input_dir = "%s/tier1" % directory
     output_dir = "%s/tier3_external" % directory
     
@@ -55,7 +58,7 @@ def submitTier3_external():
 
     for filename in filenames:
         #print filename
-        outfile_name = generateTier3Files_external.create_outfile_name(filename)
+        outfile_name = wfmProcessing.create_outfile_name(filename)
         outfile_name = "%s/%s" % (os.getcwd(), outfile_name)
         #print outfile_name
         # don't overwrite existing files:
@@ -72,7 +75,7 @@ def submitTier3_external():
    
 
 def submitTier3_internal():
-    print "tier3 (from tier1)  generation jobs..."
+    print "tier3 (from tier1 internal)  generation jobs..."
     input_dir = "%s/tier1" % directory
     output_dir = "%s/tier3_internal" % directory
     
@@ -86,7 +89,7 @@ def submitTier3_internal():
 
     for filename in filenames:
         #print filename
-        outfile_name = generateTier3Files_internal.create_outfile_name(filename)
+        outfile_name = wfmProcessing.create_outfile_name(filename)
         outfile_name = "%s/%s" % (os.getcwd(), outfile_name)
         #print outfile_name
         # don't overwrite existing files:

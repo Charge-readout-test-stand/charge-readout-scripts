@@ -53,7 +53,7 @@ def main(python_script, filenames, options="", verbose=True):
       -q %(queue)s \\
       -W %(hours)02i:%(minutes)02i \\
       -o out_%(base)s.out \\
-      -J %(base)s_py \\
+      -J %(base)s \\
        'printenv; python %(python_script)s %(options)s %(filename)s'
     """ % {
           "queue": queue,

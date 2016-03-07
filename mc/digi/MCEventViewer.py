@@ -14,6 +14,7 @@ options,args = parser.parse_args()
 num_channels = 60
 len_WF = 800
 t = np.arange(len_WF)*(40/1000.0)
+rand = ROOT.TRandom(3)
 
 plt.ion()
 
@@ -79,7 +80,7 @@ def SignalViewer(tData, eventN):
     for nch in np.arange(num_channels):
         if tData.NumPCDs == 0: continue
         for i in np.arange(len_WF):
-            WF[nch][i] = tData.ChannelWaveform[int(nch)][int(i)]
+            WF[nch][i] = tData.ChannelWaveform[int(nch)][int(i)]+47.5*rand.Gaus(0,17.805) #value from RMS in ch2 converted in num electrons
         if WF[nch][-1] > 0:
             print "Hit Ch = ", nch, " Qvalue = ", WF[nch][-1]
         plt.plot(t, WF[nch], label='Sim Ch='+str(nch))

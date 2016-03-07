@@ -25,6 +25,9 @@ except ImportError:
 
 is_6th_LXe = True
 
+drift_length = 17.0 # mm
+drift_velocity = 1.7 # mm / microsecond  
+
 
 sampling_freq_Hz = 25.0e6 # digitizer sampling frequency, Hz
 #FIXME--will be saved in trees so no longer needed
@@ -82,6 +85,30 @@ MCcharge_channels_to_use[28] = 1
 MCcharge_channels_to_use[52] = 1
 MCcharge_channels_to_use[53] = 1
 n_MCchargechannels = sum(MCcharge_channels_to_use)
+mc_channel_map = {}
+mc_channel_map[25] = "X26"
+mc_channel_map[26] = "X27"
+mc_channel_map[28] = "X29"
+mc_channel_map[52] = "Y23"
+mc_channel_map[53] = "Y24"
+
+def is_tree_MC(tree):
+    """ test whether tree is of MC results or not"""
+    try:
+        n_entries = tree.GetEntries()
+    except:
+        print "is_tree_MC(): couldn't call TTree:GetEntries()"
+        return False
+    if n_entries < 0:
+        print "tree has 0 entries!"
+        return False
+    tree.GetEntry(0)
+    try:
+        tree.MCchargeEnergy
+        return True
+    except:
+        return False
+
 
 
 #Wvalue for Xenon
@@ -151,6 +178,13 @@ def get_colors():
     ]
     return colors
 
+# from tier2to3_overnight.root, baseline_rms
+rms_keV = {}
+rms_keV[0] = 18.137
+rms_keV[1] = 17.557
+rms_keV[2] = 17.805
+rms_keV[3] = 17.137
+rms_keV[4] = 18.182
 
 
 

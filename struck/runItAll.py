@@ -23,10 +23,8 @@ directory = os.getcwd()
 
 do_tier1 = False
 do_tier2 = False 
-do_tier3_from_tier1 = True 
+do_tier3_from_tier1 = False 
 do_tier3_from_tier2 = True
-
-
 
 
 def submitTier1():
