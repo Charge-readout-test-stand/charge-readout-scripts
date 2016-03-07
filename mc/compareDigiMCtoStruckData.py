@@ -22,7 +22,7 @@ import glob
 
 from ROOT import gROOT
 # it seems like if this is commented out the legend has red background
-gROOT.SetBatch(True) # comment out to run interactively
+#gROOT.SetBatch(True) # comment out to run interactively
 from ROOT import TH1D
 from ROOT import TFile
 from ROOT import TCanvas
@@ -64,7 +64,7 @@ def process_file(mc_filename, struck_filename):
     sigma_keV =  5.0/100.0*570 # charge-signal sigma, in keV, for energy smearing
 
     #sigma_keV = 51.3 # from 6th LXe
-    sigma_keV = 20 # from 6th LXe
+    sigma_keV = 0 # from 6th LXe
 
 
     print "\tsigma_keV", sigma_keV
@@ -109,47 +109,73 @@ def process_file(mc_filename, struck_filename):
     #mc_tree.SetFillStyle(3005)
     mc_tree.SetLineWidth(2)
 
-    # make a histogram to hold smearing info
-    resolution_hist = TH1D("resolution_hist","sigma = %.2f keV" % sigma_keV, 200, -1000, 1000)
-    resolution_hist.SetLineColor(TColor.kRed)
-    resolution_hist.SetFillColor(TColor.kRed)
-    resolution_hist.SetFillStyle(3004)
-    resolution_hist.SetLineWidth(2)
-    resolution_hist.SetXTitle("energy [keV]")
+    if sigma_keV == 0: # we don't add sigma anymore, since it's added in tier3
+        hist.GetDirectory().cd()
+        mc_entries = mc_tree.Draw(
+            "chargeEnergy*1.15 >> %s" % hist.GetName(),
+            "chargeEnergy>0",
+            "goff"
+        )
+        print "\t%.1e MC entries" % mc_entries
 
-    # random number generator
-    generator = TRandom3(0)
 
-    # fill the hist in a loop so we can smear the energy resolution
-    print "filling hist..."
-    for i_entry in xrange(mc_tree.GetEntries()):
+    else: # for non-zero sigma
 
-        mc_tree.GetEntry(i_entry)
+        # random number generator
+        generator = TRandom3(0)
+
+        # make a histogram to hold smearing info
+        resolution_hist = TH1D("resolution_hist","sigma = %.2f keV" % sigma_keV, 200, -1000, 1000)
+        resolution_hist.SetLineColor(TColor.kRed)
+        resolution_hist.SetFillColor(TColor.kRed)
+        resolution_hist.SetFillStyle(3004)
+        resolution_hist.SetLineWidth(2)
+        resolution_hist.SetXTitle("energy [keV]")
+
+
+
+        # fill the hist in a loop so we can smear the energy resolution
+        print "filling hist..."
+        for i_entry in xrange(mc_tree.GetEntries()):
+
+            mc_tree.GetEntry(i_entry)
+            
+            #if (mc_tree.chargeEnergy > 0.0):
+            if True:
+
+                # multiplying energy by 115% for now -- 18 Dec 2015
+                mc_energy_keV = mc_tree.chargeEnergy*1.15
+
+                smearing_keV = generator.Gaus()*sigma_keV
+
+                # print some debugging info:
+                #print "mc_energy_keV: %.2f | smearing_keV: %.2f | sum: %.2f" % (
+                #    mc_energy_keV,
+                #    smearing_keV,
+                #    mc_energy_keV+smearing_keV,
+                #)
+
+                hist.Fill(mc_energy_keV + smearing_keV)
+                resolution_hist.Fill(smearing_keV)
+
+            #if i_entry > 1e4: 
+            #    print "stopping early for debugging..."
         
-        if (mc_tree.chargeEnergy > 0.0):
+        # use i_entry instead of mc_tree.GetEntries() so we can debug with less
+        # than the full statistics in the mc_tree tree
+        print "%.2e of %.2e events (%.2f percent) had non-zero energy deposits" % (
+            hist.GetEntries(),
+            i_entry+1,
+            hist.GetEntries()/(i_entry+1)*100.0,
+        )
 
-            # multiplying energy by 115% for now -- 18 Dec 2015
-            mc_energy_keV = mc_tree.chargeEnergy*1.15
-
-            smearing_keV = generator.Gaus()*sigma_keV
-
-            # print some debugging info:
-            #print "mc_energy_keV: %.2f | smearing_keV: %.2f | sum: %.2f" % (
-            #    mc_energy_keV,
-            #    smearing_keV,
-            #    mc_energy_keV+smearing_keV,
-            #)
-
-            hist.Fill(mc_energy_keV + smearing_keV)
-            resolution_hist.Fill(smearing_keV)
-
-        #if i_entry > 1e4: 
-        #    print "stopping early for debugging..."
         #    break # debugging
 
-    print "done filling hist with %.2f percent of tree entries" % (
-        i_entry*100.0/mc_tree.GetEntries(),
-    )
+        print "done filling hist with %.2f percent of tree entries" % (
+            i_entry*100.0/mc_tree.GetEntries(),
+        )
+
+        # end handling of smearing 
 
 
     # set up a canvas
@@ -157,22 +183,14 @@ def process_file(mc_filename, struck_filename):
     canvas.SetLogy(1)
     canvas.SetGrid(1,1)
 
-    # use i_entry instead of mc_tree.GetEntries() so we can debug with less
-    # than the full statistics in the mc_tree tree
-    print "%.2e of %.2e events (%.2f percent) had non-zero energy deposits" % (
-        hist.GetEntries(),
-        i_entry+1,
-        hist.GetEntries()/(i_entry+1)*100.0,
-    )
-
     # scale the hist to show expected counts in a run of run_duration_minutes,
     # given the estimated activity of the source
     seconds_per_minute = 60.0
-    scale_factor = source_activity_Bq*seconds_per_minute*run_duration_minutes/(i_entry+1)
-    print "scale_factor", scale_factor
+    #scale_factor = source_activity_Bq*seconds_per_minute*run_duration_minutes/(i_entry+1)
     struck_height = hist_struck.GetBinContent(hist_struck.FindBin(570))
     mc_height = hist.GetBinContent(hist.FindBin(570))
-    scale_factor = struck_height/mc_height
+    scale_factor = 0.5*struck_height/mc_height
+    print "scale_factor", scale_factor
     hist.Scale(scale_factor)
 
     hist_struck.SetXTitle("Energy [keV]")
@@ -182,8 +200,12 @@ def process_file(mc_filename, struck_filename):
 
     # set up a legend
     legend = TLegend(0.1, 0.91, 0.9, 0.99)
+    legend.SetFillColor(0)
     legend.SetNColumns(2)
-    legend.AddEntry(hist, "MC, #sigma_{addl}=%i keV" % sigma_keV, "fl")
+    if sigma_keV == 0:
+        legend.AddEntry(hist, "MC", "fl")
+    else:
+        legend.AddEntry(hist, "MC, #sigma_{addl}=%i keV" % sigma_keV, "fl")
     legend.AddEntry(hist_struck, "Struck data", "fl")
 
     hist_struck.Draw()
@@ -192,37 +214,47 @@ def process_file(mc_filename, struck_filename):
     print "%i struck entries" % hist_struck.GetEntries()
     print "%i mc entries" % hist.GetEntries()
 
+    # print log scale
     legend.Draw()
     canvas.Update()
-
-    if not gROOT.IsBatch():
-        raw_input("pause...")
     canvas.Print("%s_spectrum_sigma_%i_keV.pdf" % (basename, sigma_keV))
 
     # print a linear scale version
     canvas.SetLogy(0)
+    canvas.Update()
     canvas.Print("%s_spectrum_sigma_%i_keV_lin.pdf" % (basename, sigma_keV))
 
-    
-    canvas.SetLogy(0)
-    resolution_hist.Draw()
-    canvas.Update()
-    canvas.Print("%s_smearing_sigma_%i_keV.pdf" % (basename, sigma_keV))
-    print "sigma of resolution_hist: %.2f, specified sigma: %.2f" % (
-        resolution_hist.GetRMS(),
-        sigma_keV,
-    )
+    if not gROOT.IsBatch():
+        canvas.SetLogy(1)
+        canvas.Update()
+        raw_input("pause...")
+
+    if sigma_keV > 0:
+        canvas.SetLogy(0)
+        resolution_hist.Draw()
+        canvas.Update()
+        canvas.Print("%s_smearing_sigma_%i_keV.pdf" % (basename, sigma_keV))
+        print "sigma of resolution_hist: %.2f, specified sigma: %.2f" % (
+            resolution_hist.GetRMS(),
+            sigma_keV,
+        )
 
 
 if __name__ == "__main__":
 
-    if len(sys.argv) < 2:
-        print "arguments: [sis root files]"
-        sys.exit(1)
-
+    #if len(sys.argv) < 2:
+    #    print "arguments: [sis root files]"
+    #    sys.exit(1)
 
     # loop over all provided arguments
-    process_file(sys.argv[1], sys.argv[2])
+    #process_file(sys.argv[1], sys.argv[2])
+
+
+    #mc_file = "/nfs/slac/g/exo_data4/users/mjewell/nEXO_MC/digitization/Bi207_Full_Ralph/Tier3/all_tier3_Bi207_Full_Ralph.root"
+    mc_file = "207biMc.root"
+    data_file = "/nfs/slac/g/exo_data4/users/alexis4/test-stand/2015_12_07_6thLXe/tier3_from_tier2/tier2to3_overnight.root"
+
+    process_file(mc_file, data_file)
 
 
 
