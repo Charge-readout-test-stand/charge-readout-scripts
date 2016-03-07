@@ -1,10 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import ROOT
-
+import MakeTile
 
 posion  = True #Use Positive Ion
-cathsupress = True #Use Cathode Supression
+cathsupress = False #Use Cathode Supression
 
 def f(xi, yi, h):
     inside = (xi*yi)/(h*np.sqrt(xi*xi + yi*yi + h*h))
@@ -106,26 +106,67 @@ def make_WF(xpcd, ypcd, zpcd, Epcd, chID):
 
 if __name__ == "__main__":
     
+    sample_times = np.arange(800)*40*1e-3
+ 
+    pcdx= 1.5
+    pcdy = 0.0
+    pcdz = 0.0
+
+    plt.figure(0)
+    MakeTile.make_tile()
+    plt.scatter([pcdx], [pcdy], c='r', s=100.0)
+    plt.xlim(-6, 6)
+    plt.ylim(-6, 6)
+    plt.savefig("./plots/charge_location_arbitrary.png")
+    plt.show()
+    raw_input()
+
     plt.figure(1)
     #Collection signal on channel X16
-    WF = make_WF(1.5, 0.0, 0.0, 1, 15)
-    plt.plot(WF)
-    plt.ylim([-0.1,1.1])
-
+    plt.title("Collection siganl X16")
+    plt.xlabel("Time[$\mu$s]")
+    plt.ylabel("Q/Qtotal")
+    WF = make_WF(pcdx, pcdy, pcdz, 1, 15)
+    plt.plot(sample_times, WF)
+    plt.ylim([-np.max(WF)*0.1, np.max(WF)*1.1])
+    plt.savefig("./plots/collect_X16.png")
 
     plt.figure(2)
     #Induction signal X15
-    WF = make_WF(1.5, 0.0, 0.0, 1, 14)
-    plt.plot(WF)
-    plt.ylim([-0.1,1.1])
-    
+    plt.title("Induciton siganl X15")
+    plt.xlabel("Time[$\mu$s]")
+    plt.ylabel("Q/Qtotal")
+    WF = make_WF(pcdx, pcdy, pcdz, 1, 14)
+    plt.plot(sample_times, WF)
+    plt.ylim([-np.max(WF)*0.1,np.max(WF)*1.1])
+    plt.savefig("./plots/induct_X15.png")
     
     plt.figure(3)
     #Induction signal Y16
-    WF = make_WF(1.5, 0.0, 0.0, 1, 45)
-    plt.plot(WF)
-    plt.ylim([-0.1,1.1])
+    plt.title("Induction siganl Y16")
+    plt.xlabel("Time[$\mu$s]")
+    plt.ylabel("Q/Qtotal")
+    WF = make_WF(pcdx, pcdy, pcdz, 1, 45)
+    plt.plot(sample_times, WF)
+    plt.ylim([-np.max(WF)*0.1,np.max(WF)*1.1])
+    plt.savefig("./plots/induct_Y16.png")
+    
+    pcdx= 1.5
+    pcdy = 0.0
+    pcdz = 15.0
+    
+    plt.figure(4)
+    #Induction signal Y16
+    plt.title("Induction siganl Y16 (zstart = 2mm from anode)")
+    plt.xlabel("Time[$\mu$s]")
+    plt.ylabel("Q/Qtotal")
+    WF = make_WF(pcdx, pcdy, pcdz, 1, 45)
+    plt.plot(sample_times, WF)
+    plt.ylim([np.min(WF)*1.1,np.max(WF)*1.1])
+    plt.savefig("./plots/induct_Y16_neg.png")
+
     plt.show()
+    raw_input()
 
    
 

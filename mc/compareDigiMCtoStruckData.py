@@ -216,8 +216,8 @@ def process_file(mc_filename, struck_filename):
 
 if __name__ == "__main__":
 
-    if len(sys.argv) < 2:
-        print "arguments: [sis root files]"
+    if len(sys.argv) < 3:
+        print "arguments: [MC root file, sis root file]"
         sys.exit(1)
 
 
