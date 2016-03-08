@@ -12,6 +12,10 @@ notes:
 * ortec preamp added 04 Dec for 6th LXe 
 """
 
+# options
+is_6th_LXe = False
+is_7th_LXe = True
+
 
 try:
     from ROOT import gROOT
@@ -22,8 +26,6 @@ try:
 except ImportError:
     print "couldn't import CLHEP/ROOT"
     microsecond = 1.0e3
-
-is_6th_LXe = True
 
 drift_length = 17.0 # mm
 drift_velocity = 1.7 # mm / microsecond  
@@ -36,6 +38,8 @@ charge_channels_to_use = [0]*16
 
 # in software, struck channels start from 0, not 1
 pmt_channel = 8
+if is_7th_LXe:
+    pmt_channel = 9
 if is_6th_LXe:
     # channels for 6th LXe
     channels = [0,1,2,3,4,5,8]
@@ -44,6 +48,19 @@ if is_6th_LXe:
     charge_channels_to_use[2] = 1
     charge_channels_to_use[3] = 1
     charge_channels_to_use[4] = 1
+
+elif is_7th_LXe:
+    # channels for 6th LXe
+    channels = [0,1,2,3,4,5,6,7,9]
+    charge_channels_to_use[0] = 1
+    charge_channels_to_use[1] = 1
+    charge_channels_to_use[2] = 1
+    charge_channels_to_use[3] = 1
+    charge_channels_to_use[4] = 1
+    charge_channels_to_use[5] = 1
+    charge_channels_to_use[6] = 1
+    charge_channels_to_use[7] = 1
+
 
 else:
     # channels for 5th LXe
@@ -70,6 +87,19 @@ channel_map[4] = "Y24"
 if is_6th_LXe:
     channel_map[5] = "X2" # ortec preamp added 04 Dec for 6th LXe
 channel_map[8] = "PMT"
+if is_7th_LXe:
+    channel_map = {}
+    # x channels
+    channel_map[0] = "X16"
+    channel_map[1] = "X17"
+    channel_map[2] = "X18"
+    channel_map[3] = "X19"
+    # y channels
+    channel_map[4] = "Y16"
+    channel_map[5] = "Y17"
+    channel_map[6] = "Y18"
+    channel_map[7] = "Y19"
+
 
 #MC Channels index starts at 0 so X26 = 25
 #Y  Channles are offset by 30
@@ -129,6 +159,11 @@ if is_6th_LXe:
     # Ortec 142-IH manual says 200 to 300 microseconds... we should measure this.
     decay_time_values[5] = 300.0*microsecond
 
+if is_7th_LXe:
+    decay_time_values[5] = 450.0*microsecond
+    decay_time_values[6] = 450.0*microsecond
+    decay_time_values[7] = 450.0*microsecond
+
 
 # charge calbration from these files for 5th LXe:
 # tier3_LXe_Run1_1700VC_2chargechannels_609PM_60thresh_NotShaped_Amplified_GapTime20_2_0.root
@@ -146,6 +181,14 @@ calibration_values[1] = 5.146835
 calibration_values[2] = 5.331666
 calibration_values[3] = 5.096831
 calibration_values[4] = 5.586442
+if is_7th_LXe:
+
+    # these are guesses
+    calibration_values[5] = 5.586442
+    calibration_values[6] = 5.586442
+    calibration_values[7] = 5.586442
+    calibration_values[9] = 2.12352
+
 
 # PMT calibration is from PMT-triggered data
 # EMI 9531QB, 1200V PMT bias, 1700V cathode bias
@@ -223,7 +266,7 @@ if __name__ == "__main__":
     print "\npmt channel:", pmt_channel
 
     print "\ncharge channels to use:"
-    print "n_chargechannels", n_chargechannels
+    print "n_chargechannels:", n_chargechannels
     for channel, value  in enumerate(charge_channels_to_use):
         if value:
             print "\t channel %i" % channel
