@@ -16,9 +16,10 @@ ROOT.gStyle.SetTitleBorderSize(0)
 c1 = ROOT.TCanvas()
 c1.SetGrid(1,1)
 
-energy_cut = 300.0
+energy_cut = 500.0
+n_plots_total = 200
 
-color_list = [ROOT.kRed, ROOT.kGreen, ROOT.kBlue, ROOT.kBlack, ROOT.kTeal, ROOT.kOrange, ROOT.kPink, ROOT.kMagenta, ROOT.kCyan]
+color_list = [ROOT.kRed, ROOT.kGreen, ROOT.kBlue, ROOT.kBlack, ROOT.kTeal, ROOT.kOrange, ROOT.kPink, ROOT.kMagenta, ROOT.kCyan+1]
 name_list = ["X16", "X17", "X18", "X19", "Y16", "Y17", "Y18", "Y19", "PMT"]
 
 
@@ -71,7 +72,10 @@ def GetTier3_Channel_Energy(tfile, entries, entry, channel):
             sys.exit(1)
         else:
             tier3_tree.GetEntry(entry)
-            return tier3_tree.energy1_pz[channel]
+            if channel < 8:
+                return tier3_tree.energy1_pz[channel]
+            else:
+                return tier3_tree.wfm_max[channel] - tier3_tree.baseline_mean[channel]
     else:
         print "No Tier3 file found??"
         sys.exit(1)
@@ -96,7 +100,7 @@ def DrawEvents(fname):
         hist.SetLineColor(color)
         hist.SetFillColor(color)
         hists.append(hist)
-    
+    n_plots = 0
     for eventi in range(0,entries,1):
         cE = GetTier3_Energy(fname, entries, eventi)
         if cE < energy_cut:
@@ -119,6 +123,8 @@ def DrawEvents(fname):
             calib = struck_analysis_parameters.calibration_values[channel_numbers[i]]
             if name_list[i] != "PMT":
                 calib = calib/2.5 #2V range not 5V
+            else:
+                calib = 1.0
             draw_cmd = "((wfm - wfm[0])*%f + %i):Iteration$*40/1e3" % (calib, i*offset)
             print i, eventi, draw_cmd, calib
             tree.SetLineColor(color_list[i])
@@ -135,9 +141,19 @@ def DrawEvents(fname):
         print "Update"
         c1.Update()
         print "Updated"
-        raw_input("Event HOLD UNTIL ENTER")
+        #raw_input("Event HOLD UNTIL ENTER")
+        n_plots += 1
+        plot_name = "EventsWithChargeAbove%ikeV_7thLXe.pdf" % int(energy_cut)
+        if n_plots == 1:
+            plot_name = plot_name + "("
+        if n_plots >= n_plots_total:
+            plot_name = plot_name + ")"
         
-
+        c1.Print(plot_name)
+        
+        if n_plots >= n_plots_total:
+            print "quitting..."
+            sys.exit()
 
 if __name__ == "__main__":
     
