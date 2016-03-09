@@ -20,7 +20,7 @@ c1.SetGrid(1,1)
 c1.SetLogy()
 color_list = [ROOT.kRed, ROOT.kGreen, ROOT.kBlue, ROOT.kBlack, ROOT.kTeal, ROOT.kOrange, ROOT.kPink, ROOT.kMagenta, ROOT.kCyan+1]
 name_list = ["X16", "X17", "X18", "X19", "Y16", "Y17", "Y18", "Y19"]
-
+scales = [0.8143, 0.95, 0.877, 0.9194, 0.877, 0.838, 0.814, 0.851]
 
 
 
@@ -30,7 +30,7 @@ def CompareChannels(fname):
     tree = tfile.Get("tree")
     numEvents = tree.GetEntries()
     
-    bins = 1000
+    bins = 700
     cE_h = 0.0
     cE_l = 10000.0
 
@@ -39,7 +39,7 @@ def CompareChannels(fname):
     legend = ROOT.TLegend(0.1, 0.86, 0.9, 0.99)
     legend.SetNColumns(3)
     for i in np.arange(num_charge_channels):
-        draw_cmd = "energy1_pz>>h(%i, %f, %f)" % (bins, cE_h, cE_l)
+        draw_cmd = "energy1_pz*%f>>h(%i, %f, %f)" % (scales[i], bins, cE_h, cE_l)
         cut = "channel==%i" % i
         tree.Draw(draw_cmd, cut, "goff")
         hist = ROOT.gDirectory.Get("h")
@@ -47,7 +47,9 @@ def CompareChannels(fname):
         hist.SetLineColor(color_list[i])
         hist_list.append(hist)
         maxes.append(hist.GetMaximum())
-    
+        print name_list[i], "2V calib = ",struck_analysis_parameters.calibration_values[i]*scales[i]/2.5,
+        print "5V calib = ",struck_analysis_parameters.calibration_values[i]*scales[i]
+
     for i, hist in enumerate(hist_list):
         legend.AddEntry(hist, name_list[i])
         if i==0: 
@@ -64,7 +66,10 @@ def CompareChannels(fname):
     hist_list[0].GetXaxis().SetRangeUser(0,3000)
     c1.Update()
     c1.Print("channel_Energy_compare.pdf)")
+    
     raw_input("Wait for Input")
+
+
 
     return
 if __name__ == "__main__":
