@@ -16,6 +16,7 @@ ROOT.gStyle.SetTitleBorderSize(0)
 c1 = ROOT.TCanvas()
 c1.SetGrid(1,1)
 
+energy_cut = 300.0
 
 color_list = [ROOT.kRed, ROOT.kGreen, ROOT.kBlue, ROOT.kBlack, ROOT.kTeal, ROOT.kOrange, ROOT.kPink, ROOT.kMagenta, ROOT.kCyan]
 name_list = ["X16", "X17", "X18", "X19", "Y16", "Y17", "Y18", "Y19", "PMT"]
@@ -98,7 +99,7 @@ def DrawEvents(fname):
     
     for eventi in range(0,entries,1):
         cE = GetTier3_Energy(fname, entries, eventi)
-        if cE < 100:
+        if cE < energy_cut:
             print "Skipping Event", eventi
             continue
         else:
