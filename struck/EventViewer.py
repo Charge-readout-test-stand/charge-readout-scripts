@@ -142,9 +142,11 @@ if __name__ == "__main__":
     
     if len(sys.argv) < 2:
         print "Need File Name"
-        sys.exit(1)
-
-    #filename = sys.argv[1]
+        print "WARNING BYPASSING ARG AND JUST LOOKING AT HARDCODED FILE"
+        raw_input()
+    else:
+        filename = sys.argv[1]
+    
     DrawEvents(filename)
     
 
