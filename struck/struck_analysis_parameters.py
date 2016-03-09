@@ -176,17 +176,17 @@ if is_7th_LXe:
 # NOTE: for 2V input, need to divide by 2.5
 
 calibration_values = {}
-calibration_values[0] = 5.827591
-calibration_values[1] = 5.146835
-calibration_values[2] = 5.331666
-calibration_values[3] = 5.096831
-calibration_values[4] = 5.586442
+calibration_values[0] = 4.7454073513
+calibration_values[1] = 4.88949325
+calibration_values[2] = 4.675871082
+calibration_values[3] = 4.6860264214
+calibration_values[4] = 4.899309634
 if is_7th_LXe:
 
-    # these are guesses
-    calibration_values[5] = 5.586442
-    calibration_values[6] = 5.586442
-    calibration_values[7] = 5.586442
+    # these are guesses (now better guesses 3/8/2016) 
+    calibration_values[5] = 4.681438396
+    calibration_values[6] = 4.547363788
+    calibration_values[7] = 4.754062142
     calibration_values[9] = 2.12352
 
 
