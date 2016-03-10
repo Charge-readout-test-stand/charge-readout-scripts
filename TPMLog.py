@@ -990,7 +990,9 @@ def main(
         ymin, ymax = plt.gca().get_ylim()
         plt.axhline(y=full_capacitance, color='black', linestyle="--")
         plt.axhline(y=empty_capacitance, color='black', linestyle="--")
-        plt.gca().set_ylim([24.0,ymax]) # reset axes to original max, a reasonable min
+        if capacitance[last_index] > 24.0:
+            ymin = 24.0
+        plt.gca().set_ylim([ymin,ymax]) # reset axes to original max, a reasonable min
 
         # draw LXe fill box:
         if fill_start and fill_stop:
