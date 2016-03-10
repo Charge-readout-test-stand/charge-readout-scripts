@@ -752,15 +752,16 @@ def main(
     try:
         length = len(duty_cycle[first_index:last_index])
         vline4 = plt.plot(time_hours[last_index-length:last_index], duty_cycle[first_index:last_index])
-        plt.setp(vline4, color = 'black', linewidth = 2.0, label = 'LN duty cycle')
+        plt.setp(vline4, color = 'black', linewidth = 2.0, label = 'LN duty cycle: %.1f' % duty_cycle[-1])
     except:
         print "--> issue with plotting LN duty cycle"
+
     # plot the fill areas:
     plt.fill_between(time_hours[first_index:last_index],PLN[first_index:last_index], color='b')
     plt.fill_between(time_hours[first_index:last_index],Heat[first_index:last_index], color='r')
-    plt.setp(vline1, color = 'b', linewidth = 2.0, label = 'LN valve',)
-    plt.setp(vline2, color = 'g', linewidth = 2.0, label = 'LN enabled')
-    plt.setp(vline3, color = 'r', linewidth = 2.0, label = 'Heaters',)
+    plt.setp(vline1, color = 'b', linewidth = 2.0, label = 'LN valve: %i' % PLN[last_index])
+    plt.setp(vline2, color = 'g', linewidth = 2.0, label = 'LN enabled: %i' % SLN[last_index])
+    plt.setp(vline3, color = 'r', linewidth = 2.0, label = 'Heaters: %i' % Heat[last_index])
     plt.xlabel('Time [hours] %s' % time_string)
     plt.legend(loc = 'best', shadow = False, ncol=2)
     plt.ylim(0.0, 1.2)
