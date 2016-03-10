@@ -404,8 +404,12 @@ def main(
         if i_line == 0:
             print "first time stamp:", time_stamp
 
+            if time_stamp >= 3530657409:
+                mass_flow_rate_offset = 493.0/16.0/60.0 # 500 grams in 16 hours
+
             if time_stamp >= 3539732526:
                 mass_flow_rate_offset = 100.0/15.0/60.0 # 100 grams in 15 hours
+
             print "mass_flow_rate_offset: [grams/minute]", mass_flow_rate_offset
 
         # handling for changes to LabView...
@@ -445,6 +449,12 @@ def main(
             empty_bottle_mass = full_bottle_mass - full_mass_integral/1e3
             full_capacitance = 38.2
             empty_capacitance = 24.5
+
+        if time_stamp > 3540210950: # 7th LXe
+            empty_capacitance = 24.46
+            full_capacitance = 34.9
+            empty_bottle_mass = 88.35 # not really empty, but when the cell is full
+            full_mass_integral = 6437.6 # when cell is "full"
 
         TC0.append(float(split_line[1]))
         TC1.append(float(split_line[2]))
@@ -697,11 +707,11 @@ def main(
     if len(Vol[first_index:last_index]) > 0:
 
       lxe_density = 2.978 # kg/L
-      xenon_volume = mass/lxe_density/1e3
+      xenon_volume = Vol[last_index]/lxe_density/1e3
       plt.figure(3)
       plt.grid(b=True)
       title = 'Integrated mass flow\nxenon: %.1f g = %.2f L LXe' % (Vol[last_index], xenon_volume)
-      title += '  (argon: %.1f g  = %.1f L gAr)' % (Vol[last_index]*argon_factor, mass/argon_density)
+      title += '  (argon: %.1f g  = %.1f L gAr)' % (Vol[last_index]*argon_factor, Vol[last_index]/argon_density)
           
       plt.title(title)
       uline1 = plt.plot(time_hours[first_index:last_index],
@@ -979,7 +989,7 @@ def main(
         ymin, ymax = plt.gca().get_ylim()
         plt.axhline(y=full_capacitance, color='black', linestyle="--")
         plt.axhline(y=empty_capacitance, color='black', linestyle="--")
-        plt.gca().set_ylim([ymin,ymax]) # reset axes to original
+        plt.gca().set_ylim([24.0,ymax]) # reset axes to original max, a reasonable min
 
         # draw LXe fill box:
         if fill_start and fill_stop:
