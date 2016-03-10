@@ -370,6 +370,9 @@ def main(
     column_offset = 0
     do_warning = True
 
+    # keep track of max capacitance, for plotting purposes
+    capacitance_max = 0.0
+
     # The mass_flow_rate value saved by LabView is the uncorrected (not scaled
     # by the dial) output of the mass flow meter, multiplied by 5.28. 
     # xenon correction factor: 1.32 [MKS 1479 manual page 50]
@@ -521,6 +524,8 @@ def main(
         bottle_mass.append(float(split_line[16+column_offset])) 
         try:   
             capacitance.append(float(split_line[17+column_offset]))
+            if capacitance[-1] > capacitance_max: capacitance_max = capacitance[-1]
+                
         except IndexError:
             pass
 
@@ -990,8 +995,7 @@ def main(
         ymin, ymax = plt.gca().get_ylim()
         plt.axhline(y=full_capacitance, color='black', linestyle="--")
         plt.axhline(y=empty_capacitance, color='black', linestyle="--")
-        if capacitance[last_index] > 24.0:
-            ymin = 24.0
+        if capacitance_max > 24.0: ymin = 24.0
         plt.gca().set_ylim([ymin,ymax]) # reset axes to original max, a reasonable min
 
         # draw LXe fill box:
