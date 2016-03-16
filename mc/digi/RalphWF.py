@@ -76,14 +76,14 @@ def make_WF(xpcd, ypcd, zpcd, Epcd, chID):
     WF = np.zeros(800)
 
     #Ralphs anode is at z = 0.0mm
-    zpcd = cathodeToAnodeDistance.0 - zpcd
+    zpcd = cathodeToAnodeDistance - zpcd
     
     ionQ = sum_channel(xpcd,ypcd,zpcd,chID,chx,chy)
     
     #Cathode Supression
     #Anode at z = 0 has no supression
     ionQ = ionQ
-    if cathsupress: ionQ = ionQ*(cathodeToAnodeDistance-zpcd)/cathodeToAnodeDistance.0
+    if cathsupress: ionQ = ionQ*(cathodeToAnodeDistance-zpcd)/cathodeToAnodeDistance
 
     #cathodeToAnodeDistance is top in Daves
     #0 is top in Ralphs??
@@ -94,13 +94,13 @@ def make_WF(xpcd, ypcd, zpcd, Epcd, chID):
         if(zpcd <= 0.0):
             Q = sum_channel(xpcd,ypcd,0.00001,chID,chx,chy) 
             if cathsupress: 
-                Q = Q*(cathodeToAnodeDistance-zpcd)/cathodeToAnodeDistance.0
+                Q = Q*(cathodeToAnodeDistance-zpcd)/cathodeToAnodeDistance
             if posion: Q -= ionQ
             WF[k:] = Q*Epcd
             break
         else:
             Q = sum_channel(xpcd,ypcd,zpcd,chID,chx,chy) 
-            if cathsupress: Q = Q*(cathodeToAnodeDistance-zpcd)/cathodeToAnodeDistance.0
+            if cathsupress: Q = Q*(cathodeToAnodeDistance-zpcd)/cathodeToAnodeDistance
             if posion: Q -= ionQ
             WF[k] = Q*Epcd
  
