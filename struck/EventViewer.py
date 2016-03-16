@@ -19,7 +19,7 @@ c1.SetGrid(1,1)
 energy_cut = 500.0
 n_plots_total = 200
 
-color_list = [ROOT.kRed, ROOT.kGreen, ROOT.kBlue, ROOT.kBlack, ROOT.kTeal, ROOT.kOrange, ROOT.kPink, ROOT.kMagenta, ROOT.kCyan+1]
+color_list = [ROOT.kRed, ROOT.kGreen+1, ROOT.kBlue, ROOT.kMagenta, ROOT.kBlack, ROOT.kTeal, ROOT.kOrange, ROOT.kCyan+1, ROOT.kGray+2]
 name_list = ["X16", "X17", "X18", "X19", "Y16", "Y17", "Y18", "Y19", "PMT"]
 
 
@@ -131,11 +131,19 @@ def DrawEvents(fname):
             tree.SetLineWidth(2)
             tree.Draw(draw_cmd,"Entry$=="+str(eventi), "l same")
             chanE = GetTier3_Channel_Energy(fname, entries, eventi, i)
-            legend.AddEntry(hists[i], name_list[i] + " E = %.2f" % chanE)
+            legend.AddEntry(hists[i], name_list[i] + " E = %.1f" % chanE)
         
         print "Final Thing"
         frame_hist.SetMinimum(-1000)
         frame_hist.SetMaximum(offset*(len(name_list)+1))
+        
+        trigger_time = 8.0 #us
+        max_drift_time = 9.1 #us
+        trig_line = ROOT.TLine(trigger_time,-1000, trigger_time, offset*(len(name_list)+1))
+        trig_line.Draw()
+        end_line = ROOT.TLine(trigger_time+max_drift_time,-1000, trigger_time+max_drift_time, offset*(len(name_list)+1))
+        end_line.Draw()
+
         print "Leg Draw"
         legend.Draw()
         print "Update"
@@ -143,7 +151,7 @@ def DrawEvents(fname):
         print "Updated"
         #raw_input("Event HOLD UNTIL ENTER")
         n_plots += 1
-        plot_name = "EventsWithChargeAbove%ikeV_7thLXe.pdf" % int(energy_cut)
+        plot_name = "EventsWithChargeAbove%ikeV_7thLXe_%ievents.pdf" % (int(energy_cut), n_plots_total)
         if n_plots == 1:
             plot_name = plot_name + "("
         if n_plots >= n_plots_total:
