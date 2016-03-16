@@ -5,7 +5,7 @@ import MakeTile
 
 posion  = True #Use Positive Ion
 cathsupress = False #Use Cathode Supression
-cathodeToAnodeDistance = 18.76 # mm
+cathodeToAnodeDistance = 18.16 # mm
 
 def f(xi, yi, h):
     inside = (xi*yi)/(h*np.sqrt(xi*xi + yi*yi + h*h))
@@ -69,7 +69,7 @@ def sum_channel(xpcd,ypcd,zpcd,chID,chx,chy):
 def make_WF(xpcd, ypcd, zpcd, Epcd, chID):
 
     xch_list, ych_list =  np.loadtxt("/nfs/slac/g/exo/mjewell/nEXO/nEXO_Analysis/utilities/scripts/localChannelsMap.txt", usecols = (1,2) ,unpack=True)
-    dZ = 0.04 * 0.171 * 10
+    dZ = 0.04 * 0.2 * 10
     
     chx = xch_list[chID]
     chy = ych_list[chID]
