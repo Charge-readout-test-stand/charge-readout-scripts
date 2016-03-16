@@ -50,8 +50,10 @@ if __name__ == "__main__":
         TColor.kRed,
         TColor.kGreen+2,
         TColor.kBlue,
-        TColor.kOrange+1,
-        TColor.kViolet,
+        TColor.kOrange+8,
+        TColor.kViolet+1,
+        TColor.kCyan+2,
+        TColor.kMagenta,
     ]
 
     for i, filename in enumerate(filenames):
@@ -61,18 +63,20 @@ if __name__ == "__main__":
         print "\t", filename
         print "\t %i entries" % n_entries
 
-        tree.SetLineColor(good_colors[i])
+        tree.SetLineColor(good_colors[i % len(good_colors) ])
 
         t_files.append(t_file)
         trees.append(tree)
 
         entry = ""
+        filename = os.path.basename(filename)
+        print "--> processing", filename
         
         # before angle valve swap:
         if filename == "test_20151117_181009.root":
             entry = "before Ar, before valve swap"
         if filename == "test_20151118_183455.root":
-            entry = "after Ar, before valve swap"
+            entry = "after 2,000L gAr, before valve swap"
 
         if filename == "test_20151123_184116.root":
             entry = "after valve swap, no LXe cell"
@@ -81,11 +85,21 @@ if __name__ == "__main__":
         if filename == "test_20151124_105350.root":
             entry = "before Ar, after valve swap"
         if filename == "test_20151130_164223.root":
-            entry = "after Ar, after valve swap"
+            entry = "after 10,000L gAr, after valve swap"
 
         # xenon purge
         if filename == "test_20151204_135813.root":
-            entry = "after Xe"
+            entry = "after 1,200L gXe"
+
+        # after installation of 2nd anode tile (this is 2nd pumpdown; we restarted
+        # after we forgot to open the getter the first time
+        if filename == "test_20160301_190206.root":
+            entry = "after 2nd tile installation"
+
+        if filename == "test_20160303_133530.root":
+            entry = "after 2,000 L gAr circulation"
+
+        print "\t", entry
 
         basename = os.path.splitext(filename)[0]
         basename = basename.split("_")[1:]
@@ -103,7 +117,7 @@ if __name__ == "__main__":
 
 
 frame_hist = TH1D("hist","",100,0,15)
-frame_hist.SetMaximum(1e-3)
+frame_hist.SetMaximum(1e-4)
 frame_hist.SetMinimum(1e-7)
 frame_hist.SetXTitle("time [hours]")
 frame_hist.SetYTitle("cold cathode gauge pressure [torr]")

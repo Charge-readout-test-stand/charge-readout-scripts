@@ -5,6 +5,7 @@ import MakeTile
 
 posion  = True #Use Positive Ion
 cathsupress = False #Use Cathode Supression
+cathodeToAnodeDistance = 18.16 # mm
 
 def f(xi, yi, h):
     inside = (xi*yi)/(h*np.sqrt(xi*xi + yi*yi + h*h))
@@ -47,7 +48,7 @@ def Q_rot(xpcd, ypcd, zpcd, chx, chy):
 
 def sum_channel(xpcd,ypcd,zpcd,chID,chx,chy):
     #xpcd,ypcd,zpcd --- x,y,z of intial pcd
-    #z = 0 is cathode 17 is anode
+    #z = 0 is cathode 18.76 is anode
     #chID is ID for channel < 30 is X Channel
     #chx, chy is x,y pos of channel
     
@@ -68,36 +69,38 @@ def sum_channel(xpcd,ypcd,zpcd,chID,chx,chy):
 def make_WF(xpcd, ypcd, zpcd, Epcd, chID):
 
     xch_list, ych_list =  np.loadtxt("/nfs/slac/g/exo/mjewell/nEXO/nEXO_Analysis/utilities/scripts/localChannelsMap.txt", usecols = (1,2) ,unpack=True)
-    dZ = 0.04 * 0.171 * 10
+    dZ = 0.04 * 0.2 * 10
     
     chx = xch_list[chID]
     chy = ych_list[chID]
     WF = np.zeros(800)
 
     #Ralphs anode is at z = 0.0mm
-    zpcd = 17.0 - zpcd
+    zpcd = cathodeToAnodeDistance - zpcd
     
     ionQ = sum_channel(xpcd,ypcd,zpcd,chID,chx,chy)
     
     #Cathode Supression
     #Anode at z = 0 has no supression
     ionQ = ionQ
-    if cathsupress: ionQ = ionQ*(17-zpcd)/17.0
+    if cathsupress: ionQ = ionQ*(cathodeToAnodeDistance-zpcd)/cathodeToAnodeDistance
 
-    #17 is top in Daves
+    #cathodeToAnodeDistance is top in Daves
     #0 is top in Ralphs??
     ki = 200
     for k in np.arange(ki,800,1):    
         zpcd -= dZ
+        if zpcd < 0: zpcd = 0.0
         if(zpcd <= 0.0):
             Q = sum_channel(xpcd,ypcd,0.00001,chID,chx,chy) 
-            if cathsupress: Q = Q*(17-zpcd)/17.0
+            if cathsupress: 
+                Q = Q*(cathodeToAnodeDistance-zpcd)/cathodeToAnodeDistance
             if posion: Q -= ionQ
             WF[k:] = Q*Epcd
             break
         else:
             Q = sum_channel(xpcd,ypcd,zpcd,chID,chx,chy) 
-            if cathsupress: Q = Q*(17-zpcd)/17.0
+            if cathsupress: Q = Q*(cathodeToAnodeDistance-zpcd)/cathodeToAnodeDistance
             if posion: Q -= ionQ
             WF[k] = Q*Epcd
  

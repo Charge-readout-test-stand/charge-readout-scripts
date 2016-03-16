@@ -370,6 +370,9 @@ def main(
     column_offset = 0
     do_warning = True
 
+    # keep track of max capacitance, for plotting purposes
+    capacitance_max = 0.0
+
     # The mass_flow_rate value saved by LabView is the uncorrected (not scaled
     # by the dial) output of the mass flow meter, multiplied by 5.28. 
     # xenon correction factor: 1.32 [MKS 1479 manual page 50]
@@ -404,8 +407,12 @@ def main(
         if i_line == 0:
             print "first time stamp:", time_stamp
 
+            if time_stamp >= 3530657409:
+                mass_flow_rate_offset = 493.0/16.0/60.0 # 500 grams in 16 hours
+
             if time_stamp >= 3539732526:
                 mass_flow_rate_offset = 100.0/15.0/60.0 # 100 grams in 15 hours
+
             print "mass_flow_rate_offset: [grams/minute]", mass_flow_rate_offset
 
         # handling for changes to LabView...
@@ -445,6 +452,12 @@ def main(
             empty_bottle_mass = full_bottle_mass - full_mass_integral/1e3
             full_capacitance = 38.2
             empty_capacitance = 24.5
+
+        if time_stamp > 3540210950: # 7th LXe
+            empty_capacitance = 24.46
+            full_capacitance = 34.9
+            empty_bottle_mass = 88.35 # not really empty, but when the cell is full
+            full_mass_integral = 6437.6 # when cell is "full"
 
         TC0.append(float(split_line[1]))
         TC1.append(float(split_line[2]))
@@ -511,6 +524,8 @@ def main(
         bottle_mass.append(float(split_line[16+column_offset])) 
         try:   
             capacitance.append(float(split_line[17+column_offset]))
+            if capacitance[-1] > capacitance_max: capacitance_max = capacitance[-1]
+                
         except IndexError:
             pass
 
@@ -697,11 +712,11 @@ def main(
     if len(Vol[first_index:last_index]) > 0:
 
       lxe_density = 2.978 # kg/L
-      xenon_volume = mass/lxe_density/1e3
+      xenon_volume = Vol[last_index]/lxe_density/1e3
       plt.figure(3)
       plt.grid(b=True)
       title = 'Integrated mass flow\nxenon: %.1f g = %.2f L LXe' % (Vol[last_index], xenon_volume)
-      title += '  (argon: %.1f g  = %.1f L gAr)' % (Vol[last_index]*argon_factor, mass/argon_density)
+      title += '  (argon: %.1f g  = %.1f L gAr)' % (Vol[last_index]*argon_factor, Vol[last_index]/argon_density)
           
       plt.title(title)
       uline1 = plt.plot(time_hours[first_index:last_index],
@@ -742,15 +757,16 @@ def main(
     try:
         length = len(duty_cycle[first_index:last_index])
         vline4 = plt.plot(time_hours[last_index-length:last_index], duty_cycle[first_index:last_index])
-        plt.setp(vline4, color = 'black', linewidth = 2.0, label = 'LN duty cycle')
+        plt.setp(vline4, color = 'black', linewidth = 2.0, label = 'LN duty cycle: %.1f' % duty_cycle[-1])
     except:
         print "--> issue with plotting LN duty cycle"
+
     # plot the fill areas:
     plt.fill_between(time_hours[first_index:last_index],PLN[first_index:last_index], color='b')
     plt.fill_between(time_hours[first_index:last_index],Heat[first_index:last_index], color='r')
-    plt.setp(vline1, color = 'b', linewidth = 2.0, label = 'LN valve',)
-    plt.setp(vline2, color = 'g', linewidth = 2.0, label = 'LN enabled')
-    plt.setp(vline3, color = 'r', linewidth = 2.0, label = 'Heaters',)
+    plt.setp(vline1, color = 'b', linewidth = 2.0, label = 'LN valve: %i' % PLN[last_index])
+    plt.setp(vline2, color = 'g', linewidth = 2.0, label = 'LN enabled: %i' % SLN[last_index])
+    plt.setp(vline3, color = 'r', linewidth = 2.0, label = 'Heaters: %i' % Heat[last_index])
     plt.xlabel('Time [hours] %s' % time_string)
     plt.legend(loc = 'best', shadow = False, ncol=2)
     plt.ylim(0.0, 1.2)
@@ -979,7 +995,8 @@ def main(
         ymin, ymax = plt.gca().get_ylim()
         plt.axhline(y=full_capacitance, color='black', linestyle="--")
         plt.axhline(y=empty_capacitance, color='black', linestyle="--")
-        plt.gca().set_ylim([ymin,ymax]) # reset axes to original
+        if capacitance_max > 24.0: ymin = 24.0
+        plt.gca().set_ylim([ymin,ymax]) # reset axes to original max, a reasonable min
 
         # draw LXe fill box:
         if fill_start and fill_stop:
