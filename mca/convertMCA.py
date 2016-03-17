@@ -82,6 +82,8 @@ if __name__ == "__main__":
         hist.SetLineColor(ROOT.TColor.kBlue+1)
         hist.SetFillColor(ROOT.TColor.kBlue+1)
         hist.SetFillStyle(3004)
+        hist.SetXTitle("ADC units")
+        hist.SetYTitle("Counts / ADC unit")
         hist.Write()
 
         tree.Fill()
