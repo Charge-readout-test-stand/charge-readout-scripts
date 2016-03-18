@@ -15,6 +15,7 @@ from ROOT import TCanvas
 from ROOT import TColor
 from ROOT import TLegend
 from ROOT import TH1D
+from ROOT import TLine
 from ROOT import gSystem
 
 
@@ -29,7 +30,8 @@ from ROOT import EXOPoleZeroCorrection
 import struck_analysis_parameters
 
 
-def do_draw(exo_wfm,title=""):
+
+def do_draw(exo_wfm,title="", extra_wfm=None, vline=None):
     
     if gROOT.IsBatch(): return
     # a canvas for drawing, if debugging:
@@ -41,6 +43,16 @@ def do_draw(exo_wfm,title=""):
     hist.SetLineWidth(2)
     #hist.SetAxisRange(4,6)
     hist.Draw()
+    if extra_wfm:
+        hist2 = extra_wfm.GimmeHist("hist2")
+        hist2.SetLineColor(TColor.kBlue)
+        hist2.Draw("same")
+    if vline:
+        line = TLine(vline, hist.GetMinimum(), vline, hist.GetMaximum())
+        line.SetLineStyle(2)
+        line.SetLineWidth(2)
+        line.Draw()
+
 
     canvas.Update()
     val = raw_input("enter to continue (q=quit, b=batch, p=print) ")
@@ -99,7 +111,7 @@ def get_wfmparams(
     energy_rms = baseline_remover.GetBaselineRMS()*calibration
     if is_pmtchannel: # for PMT channel, use GetMaxValue()
         energy = exo_wfm.GetMaxValue()*calibration
-    do_draw(energy_wfm, "after baseline_remover")
+    #do_draw(energy_wfm, "after baseline_remover")
 
     # measure energy before PZ correction, use 2x n_baseline_samples
     baseline_remover.SetBaselineSamples(2*n_baseline_samples)
@@ -114,7 +126,7 @@ def get_wfmparams(
     pole_zero = EXOPoleZeroCorrection()
     pole_zero.SetDecayConstant(decay_time)
     pole_zero.Transform(exo_wfm, energy_wfm)
-    do_draw(energy_wfm, "after PZ correction")
+    #do_draw(energy_wfm, "after PZ correction")
 
     # measure energy after PZ correction
     baseline_remover.SetBaselineSamples(n_baseline_samples)
@@ -197,6 +209,15 @@ def get_risetimes(exo_wfm, wfm_length, sampling_freq_Hz):
     rise_time_stop90 = do_risetime_calc(rise_time_calculator, 0.90, exo_wfm, max_val, period)
     rise_time_stop95 = do_risetime_calc(rise_time_calculator, 0.95, exo_wfm, max_val, period)
     rise_time_stop99 = do_risetime_calc(rise_time_calculator, 0.99, exo_wfm, max_val, period)
+
+    if not gROOT.IsBatch():
+        print "max_val:", max_val
+        print "rise_time_stop90:", rise_time_stop90
+        print "rise_time_stop90:", rise_time_stop90
+        print "rise_time_stop95:", rise_time_stop95
+        print "rise_time_stop99:", rise_time_stop99
+
+    do_draw(exo_wfm, "after smoothing", new_wfm, rise_time_stop90)
 
     return (smoothed_max, rise_time_stop10, rise_time_stop20, rise_time_stop30,
             rise_time_stop40, rise_time_stop50, rise_time_stop60, rise_time_stop70,
