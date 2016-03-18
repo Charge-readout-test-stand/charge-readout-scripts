@@ -86,7 +86,8 @@ def fit_channel(tree, channel, basename):
 
 
     if channel == None:
-        energy_var = "energy1_pz[0] + energy1_pz[1] + energy1_pz[2] + energy1_pz[3] + energy1_pz[4]"
+        #energy_var = "energy1_pz[0] + energy1_pz[1] + energy1_pz[2] + energy1_pz[3] + energy1_pz[4]"
+        energy_var = "chargeEnergy"
 
 
     draw_cmd = "%s >> fit_hist" % energy_var
