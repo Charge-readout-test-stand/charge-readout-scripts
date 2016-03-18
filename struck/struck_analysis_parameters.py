@@ -176,17 +176,25 @@ if is_7th_LXe:
 # NOTE: for 2V input, need to divide by 2.5
 
 calibration_values = {}
-calibration_values[0] = 4.7454073513
-calibration_values[1] = 4.88949325
-calibration_values[2] = 4.675871082
-calibration_values[3] = 4.6860264214
-calibration_values[4] = 4.899309634
+calibration_values[0] = 5.827591
+calibration_values[1] = 5.146835
+calibration_values[2] = 5.331666
+calibration_values[3] = 5.096831
+calibration_values[4] = 5.586442
+
 if is_7th_LXe:
 
     # these are guesses (now better guesses 3/8/2016) 
-    calibration_values[5] = 4.681438396
-    calibration_values[6] = 4.547363788
-    calibration_values[7] = 4.754062142
+    calibration_values[0] = 4.983489
+    calibration_values[1] = 5.291246
+    calibration_values[2] = 5.114710
+    calibration_values[3] = 5.062006
+    calibration_values[4] = 5.223209
+    calibration_values[5] = 5.138381
+    calibration_values[6] = 4.807294
+    calibration_values[7] = 5.034257 
+
+    # PMT
     calibration_values[9] = 2.12352
 
 
@@ -218,6 +226,18 @@ def get_colors():
         TColor.kRed, 
         TColor.kOrange+1,
         TColor.kMagenta,
+    ]
+
+    colors = [
+        TColor.kRed, 
+        TColor.kGreen+1, 
+        TColor.kBlue, 
+        TColor.kBlack, 
+        TColor.kTeal, 
+        TColor.kOrange+1, 
+        #TColor.kPink, 
+        TColor.kMagenta, 
+        TColor.kCyan+1,
     ]
     return colors
 
