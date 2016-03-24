@@ -27,8 +27,12 @@ except ImportError:
     print "couldn't import CLHEP/ROOT"
     microsecond = 1.0e3
 
-drift_length = 17.0 # mm
-drift_velocity = 1.7 # mm / microsecond  
+drift_length = 18.16 # mm, from solidworks for 7th LXe + 
+drift_velocity = 2.0 # mm / microsecond  
+
+# drift time threshold for 99% signal collection, determined from ion screening
+# and cathode effects:
+drift_time_threshold = (drift_length - 5.3)/drift_velocity # microsecond
 
 
 sampling_freq_Hz = 25.0e6 # digitizer sampling frequency, Hz
@@ -138,6 +142,113 @@ def is_tree_MC(tree):
         return True
     except:
         return False
+
+
+def get_negative_energy_cut(threshold=-20.0):
+    """
+    return a cut on events with too much negative energy on any one channel
+    """
+
+    selection = []
+    for channel, value  in enumerate(charge_channels_to_use): 
+        if value:
+            cut = "(energy1_pz[%i]<%s)" % (
+                channel, 
+                threshold,
+            )
+            #print cut
+            selection.append(cut)
+            
+    # join each channel requirement with or
+    selection = " || ".join(selection)
+
+    # enclose in parentheses and add not
+    selection = "!(%s)" % selection
+
+    return selection
+
+
+def get_short_drift_time_cut(
+    energy_threshold=200.0,
+    drift_time_cut=drift_time_threshold,
+):
+    """
+    Cut any events with energy above threshold and too short a drift time
+    """
+
+    selection = []
+    for channel, value  in enumerate(charge_channels_to_use): 
+        if value:
+            cut = "((energy1_pz[%i]>%s) && (rise_time_stop95[%i]-trigger_time<%s))" % (
+                channel,
+                energy_threshold,
+                channel,
+                drift_time_cut,
+            )
+            #print cut
+            selection.append(cut)
+
+    # join each channel requirement with or
+    selection = " || ".join(selection)
+
+    # enclose in parentheses and add not
+    selection = "!(%s)" % selection
+
+    return selection
+
+
+
+def get_long_drift_time_cut(
+    energy_threshold=200.0,
+    drift_time_cut=drift_time_threshold,
+):
+    """
+    Select events with energy above threshold and long enough drift time
+    """
+
+    selection = []
+    for channel, value  in enumerate(charge_channels_to_use): 
+        if value:
+            cut = "(energy1_pz[%i]>%s)&&(rise_time_stop95[%i]>%s)" % (
+                channel, 
+                energy_threshold,
+                channel,
+                drift_time_cut,
+            )
+            #print cut
+            selection.append(cut)
+            
+    # join each channel requirement with or
+    selection = " || ".join(selection)
+
+    # enclose in parentheses
+    selection = "(%s)" % selection
+
+    return selection
+
+
+def get_single_site_cmd(
+    energy_threshold=100.0,
+):
+    """
+    Only count energy from events above threshold
+    """
+
+    selection = []
+    for channel, value  in enumerate(charge_channels_to_use): 
+        if value:
+            cut = "(energy1_pz[%i]>%s)*energy1_pz[%i]" % (
+                channel, 
+                energy_threshold,
+                channel,
+            )
+            #print cut
+            selection.append(cut)
+            
+    # join each channel requirement with or
+    selection = " + ".join(selection)
+
+    return selection
 
 
 
@@ -279,6 +390,11 @@ def is_amplified(baseline_mean_file, baseline_rms_file):
 if __name__ == "__main__":
     gROOT.SetBatch(True)
 
+    print "\nsystem constants:"
+    print "\t drift_length:", drift_length
+    print "\t drift_velocity:", drift_velocity
+    print "\t drift_time_threshold:", drift_time_threshold
+
     print "\nchannels used:"
     for channel in channels:
         print "\t channel %i" % channel
@@ -297,17 +413,27 @@ if __name__ == "__main__":
 
     print "\nlinear calibration info:"
     for (channel, value) in calibration_values.items():
-        print "\t channel %i: %.6e" % (channel, value)
+        print "\t channel %i: %.6f" % (channel, value)
 
     print "\ndecay times:"
     for (channel, value) in decay_time_values.items():
         print "\t channel %i [microseconds]: %.1f" % (channel, value/microsecond)
 
 
-    colors = get_colors()
-    print "\ncolors:"
-    for (i, color) in enumerate(colors):
-        print "color %i:" % i, color
+    #colors = get_colors()
+    #print "\ncolors:"
+    #for (i, color) in enumerate(colors):
+    #    print "color %i:" % i, color
 
 
+    print "\nnegative energy cut:"
+    print "\t", get_negative_energy_cut()
 
+    print "\nshort drift time cut:"
+    print "\t", get_short_drift_time_cut()
+
+    print "\nlong drift time cut:"
+    print "\t", get_long_drift_time_cut()
+
+    print "\nget_single_site_cmd:"
+    print "\t", get_single_site_cmd()
