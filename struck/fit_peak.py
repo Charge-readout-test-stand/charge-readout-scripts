@@ -299,8 +299,8 @@ def fit_channel(tree, channel, basename, do_1064_fit=False):
     result = {}
     result["channel"] = channel
     result["calibration_value"] = "%.6e" % new_calibration_value
-    result["peak counts"] = "%.2f" % n_peak_counts
-    result["peak counts_err"] = "%.2f" % (testfit.GetParError(0)/bin_width)
+    result["peak_counts"] = "%.2f" % n_peak_counts
+    result["peak_counts_err"] = "%.2f" % (testfit.GetParError(0)/bin_width)
     result["centroid"] = "%.2f" % testfit.GetParameter(1)
     result["centroid_err"] = "%.2f" % testfit.GetParError(1)
     result["sigma"] = "%.2f" % sigma
@@ -313,9 +313,11 @@ def fit_channel(tree, channel, basename, do_1064_fit=False):
     result["fit_stop_energy"] = "%.2f" % fit_stop_energy
     result["chi2"] = "%.3f" % chi2
     result["ndf"] = "%i" % ndf
+    result["red_chi2"] = "%.3e" % chi2/ndf
     result["prob"] = "%.3e" % prob
     result["selection"] = selection
     result["draw_cmd"] = draw_cmd
+    result["cuts_label"] = struck_analysis_parameters.get_cuts_label(draw_cmd, selection) 
     if do_use_step:
         result["step_height"] = testfit.GetParameter(6)
         result["step_height_err"] = testfit.GetParError(6)
@@ -337,6 +339,7 @@ def fit_channel(tree, channel, basename, do_1064_fit=False):
 
 
     return result
+
 
 
 def process_file(filename, do_1064_fit=False):
