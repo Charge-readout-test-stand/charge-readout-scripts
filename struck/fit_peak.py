@@ -18,6 +18,7 @@ import os
 import sys
 import json
 import math
+import datetime
 
 
 from ROOT import gROOT
@@ -36,7 +37,7 @@ from ROOT import gSystem
 import struck_analysis_parameters
 
 
-def fit_channel(tree, channel, basename):
+def fit_channel(tree, channel, basename, do_1064_fit=False):
 
     #-------------------------------------------------------------------------------
     # options
@@ -45,19 +46,62 @@ def fit_channel(tree, channel, basename):
     energy_var = "energy1_pz"
 
     do_debug = False
+    do_use_step = False
+    do_individual_channels = False
 
+    # defaults for 570-keV
     min_bin = 200
     max_bin = 1000
-    n_bins = int((max_bin-min_bin)/5)
+    bin_width = 5
     line_energy = 570
     sigma_guess = 40
+    fit_half_width = 170
+    #fit_half_width = 250
 
-    fit_start_energy = 400
-    fit_stop_energy = 770
-
+    # gaus + exponential
     fit_formula = "gausn(0) + [3]*TMath::Exp(-[4]*x) + [5]"
 
+    if do_1064_fit: # 1064-keV peak fit
+        min_bin = 500
+        max_bin = 2000
+        line_energy = 1150
+        sigma_guess = 60
+        bin_width = 10
+        fit_half_width = 300
+        do_use_step = True
+        basename += "1064"
+
+    if do_use_step:
+        # http://radware.phy.ornl.gov/gf3/gf3.html#Fig.2.
+        fit_formula += " + [6]*TMath::Erfc((x-[1])/sqrt(2)/[2])"
+            
+
+    n_bins = int((max_bin-min_bin)/bin_width)
+
+    selection = []
+    if channel == None:
+        energy_var = "chargeEnergy"
+        #energy_var = struck_analysis_parameters.get_single_site_cmd()
+        #selection.append(struck_analysis_parameters.get_negative_energy_cut())
+        #selection.append(struck_analysis_parameters.get_short_drift_time_cut())
+        selection.append(struck_analysis_parameters.get_long_drift_time_cut())
+    else:
+        selection.append( "channel==%i" % channel)
+        #selection.append( "rise_time_stop95-trigger_time>5.0")
+        #selection.append( "rise_time_stop95-trigger_time>8.5")
+    #print "\n".join(selection)
+
+
+
+    fit_start_energy = line_energy - fit_half_width
+    fit_stop_energy = line_energy + fit_half_width
+
+
     #-------------------------------------------------------------------------------
+
+    if not do_individual_channels and channel != None:
+        print "==> skipping individual channel %i" % channel
+        return
 
     print "====> fitting channel:", channel
 
@@ -85,26 +129,15 @@ def fit_channel(tree, channel, basename):
     resid_hist.SetMarkerSize(0.8)
 
 
-    if channel == None:
-        #energy_var = "energy1_pz[0] + energy1_pz[1] + energy1_pz[2] + energy1_pz[3] + energy1_pz[4]"
-        energy_var = "chargeEnergy"
-
 
     draw_cmd = "%s >> fit_hist" % energy_var
     print "draw command:", draw_cmd
 
-    selection = [
-        #"%s > 100" % energy_var,
-    ]
-    if channel != None:
-        selection.append( "rise_time_stop95-trigger_time>8.5")
-        selection.append( "channel==%i" % channel)
-    #print "\n".join(selection)
-
     selection = " && ".join(selection)
+    print "selection:", selection
+
     hist_title += " " + selection
     hist.SetTitle(hist_title)
-    print "selection:", selection
     entries = tree.Draw(draw_cmd, selection, "goff")
     print "tree entries: %i" % entries
     print "hist entries: %i" % hist.GetEntries()
@@ -117,6 +150,7 @@ def fit_channel(tree, channel, basename):
     fit_start_height = hist.GetBinContent(hist.FindBin(fit_start_energy))
     fit_stop_height = hist.GetBinContent(hist.FindBin(fit_stop_energy))
     print fit_start_height, fit_stop_height
+    if fit_stop_height == 0.0: fit_stop_height = 1.0
     decay_const_guess = math.log(fit_stop_height/fit_start_height)/(fit_start_energy - fit_stop_energy)
     print "decay_const_guess:",  decay_const_guess
     #decay_const_guess = 0.0
@@ -132,6 +166,8 @@ def fit_channel(tree, channel, basename):
         0.0,
     )
 
+    if do_use_step:
+        testfit.SetParameter(6, gaus_integral_guess*0.01)
 
     fit_result = hist.Fit(testfit,"NIRLS")
     prob = fit_result.Prob()
@@ -155,7 +191,11 @@ def fit_channel(tree, channel, basename):
         fit_counts = testfit.Integral(x, x+bin_width)/bin_width
         diff = counts - fit_counts
 
-        residual = diff / error
+        if error == 0.0:
+            residual = 0.0
+            print "ZERO error at x=%.1f!" % x
+        else:
+            residual = diff / error
 
 
         if do_debug:
@@ -188,6 +228,10 @@ def fit_channel(tree, channel, basename):
     bestfit_gaus.SetParameters(testfit.GetParameter(0), testfit.GetParameter(1), testfit.GetParameter(2))
     bestfit_gaus.SetLineColor(TColor.kRed)
 
+    if do_use_step:
+        bestfit_step = TF1("bestfits", "[0]*TMath::Erfc((x-[1])/sqrt(2)/[2])", fit_start_energy, fit_stop_energy)
+        bestfit_step.SetParameters(testfit.GetParameter(6), testfit.GetParameter(1), testfit.GetParameter(2))
+        bestfit_step.SetLineColor(TColor.kGreen+2)
 
     calibration_ratio = line_energy/testfit.GetParameter(1)
     sigma = testfit.GetParameter(2) # *calibration_ratio
@@ -200,10 +244,15 @@ def fit_channel(tree, channel, basename):
     pad1 = canvas.cd(1)
     pad1.SetGrid(1,1)
     hist.SetMaximum(1.2*fit_start_height)
+    peak_height = hist.GetBinContent(hist.FindBin(testfit.GetParameter(1)))
+    if peak_height > fit_start_height:
+        hist.SetMaximum(1.2*peak_height)
+        print "peak height:", peak_height
     hist.Draw()
     testfit.Draw("same")
     bestfit_gaus.Draw("same")
     bestfit_exp.Draw("same")
+    if do_use_step: bestfit_step.Draw("same")
     hist.Draw("same")
 
     n_peak_counts = testfit.GetParameter(0)/bin_width
@@ -212,8 +261,12 @@ def fit_channel(tree, channel, basename):
     leg = TLegend(0.49, 0.7, 0.99, 0.9)
     leg.AddEntry(hist, "Data")
     leg.AddEntry(testfit, "Total Fit: #chi^{2}/DOF = %.1f/%i, P-val = %.1E" % (chi2, ndf, prob),"l")
-    leg.AddEntry(bestfit_gaus, "Gaus Peak Fit: #sigma = %.1f #pm %.1f keV, %.1E cts" % (sigma, testfit.GetParError(2), n_peak_counts), "l")
+    leg.AddEntry(bestfit_gaus, "Gaus Fit: #sigma = %.1f #pm %.1f keV, %.1E #pm %.1E cts" % ( 
+        sigma, testfit.GetParError(2), n_peak_counts, testfit.GetParError(0)), "l")
+    leg.AddEntry(bestfit_gaus, "centroid = %.1f #pm %.1f keV" % (testfit.GetParameter(1), testfit.GetParError(1)), "")
     leg.AddEntry(bestfit_exp,  "Exp + const background fit", "l")
+    if do_use_step: 
+        leg.AddEntry(bestfit_step, "Erfc step: height = %.1E #pm %.1E" % (testfit.GetParameter(6), testfit.GetParError(6)), "l")
     leg.SetFillColor(0)
     leg.Draw()
 
@@ -263,25 +316,36 @@ def fit_channel(tree, channel, basename):
     result["prob"] = "%.3e" % prob
     result["selection"] = selection
     result["draw_cmd"] = draw_cmd
+    if do_use_step:
+        result["step_height"] = testfit.GetParameter(6)
+        result["step_height_err"] = testfit.GetParError(6)
+
+    keys = result.keys()
+    keys.sort()
 
     print "saved results:"
-    for (key, value) in result.items():
-        print "\t%s : %s" % (key, value)
+    for key in keys:
+        print "\t%s : %s" % (key, result[key])
 
 
     if not gROOT.IsBatch():
-        value = raw_input("any key to continue (q to quit) ")
+        value = raw_input("any key to continue (b = batch, q to quit) ")
         if value == 'q':
             sys.exit()
+        if value == 'b':
+            gROOT.SetBatch(True)
 
 
     return result
 
 
-def process_file(filename):
+def process_file(filename, do_1064_fit=False):
 
     print "--> processing", filename
     basename = os.path.splitext(os.path.basename(filename))[0]
+
+    now = datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S_')
+    basename = now + basename
     print basename
 
     root_file = TFile(filename)
@@ -293,14 +357,14 @@ def process_file(filename):
         print "could not get entries from tree"
 
     all_results = {}
-    result = fit_channel(tree, None, basename)
+    result = fit_channel(tree, None, basename, do_1064_fit)
     all_results["all"] = result
-
 
     for channel in struck_analysis_parameters.channels:
         if struck_analysis_parameters.charge_channels_to_use[channel]:
-            result = fit_channel(tree, channel, basename)
-            all_results["channel %i" % channel] = result
+            result = fit_channel(tree, channel, basename, do_1064_fit)
+            if result:
+                all_results["channel %i" % channel] = result
 
     # write results to file
     result_file = file("fit_results_%s.txt" % basename, 'w')
@@ -308,10 +372,13 @@ def process_file(filename):
 
 
 if __name__ == "__main__":
+    
 
     
     if len(sys.argv) < 2:
         print "argument: [sis tier 3 root file]"
+        sys.exit(1)
 
-    process_file(sys.argv[1])
+    process_file(sys.argv[1], do_1064_fit=False)
+    process_file(sys.argv[1], do_1064_fit=True)
 
