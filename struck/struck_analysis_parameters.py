@@ -200,7 +200,8 @@ def get_short_drift_time_cut(
 
 def get_long_drift_time_cut(
     energy_threshold=200.0,
-    drift_time_cut=drift_time_threshold,
+    drift_time_low=drift_time_threshold,
+    drift_time_high=None,
 ):
     """
     Select events with energy above threshold and long enough drift time
@@ -209,12 +210,17 @@ def get_long_drift_time_cut(
     selection = []
     for channel, value  in enumerate(charge_channels_to_use): 
         if value:
-            cut = "(energy1_pz[%i]>%s)&&(rise_time_stop95[%i]>%s)" % (
+            cut = "(energy1_pz[%i]>%s)&&(rise_time_stop95[%i]-trigger_time>%s)" % (
                 channel, 
                 energy_threshold,
                 channel,
-                drift_time_cut,
+                drift_time_low,
             )
+            if drift_time_high != None:
+                cut += "&&(rise_time_stop95[%i]-trigger_time<%s)" % (
+                    channel,
+                    drift_time_high,
+                )
             #print cut
             selection.append(cut)
             
@@ -248,6 +254,36 @@ def get_single_site_cmd(
     # join each channel requirement with or
     selection = " + ".join(selection)
 
+    return selection
+
+
+def get_cuts_label(draw_cmd, selection):
+
+    label = []
+    if get_single_site_cmd() in draw_cmd:
+        label.append("FC")
+    if get_negative_energy_cut() in selection:
+        label.append("NC")
+    if get_short_drift_time_cut() in selection:
+        label.append("SC")
+    if get_long_drift_time_cut() in selection:
+        label.append("LC")
+    label = "+".join(label)
+    if label == "": label = "No_cuts"
+    return label
+
+def get_energy_weighted_drift_time():
+    selection = []
+
+    for channel, value  in enumerate(charge_channels_to_use): 
+        if value:
+            cut = "energy1_pz[%i]*(rise_time_stop95[%i]-trigger_time)" % (
+                channel, 
+                channel, 
+            )
+            selection.append(cut)
+    selection = " + ".join(selection)
+    selection = "(%s)/chargeEnergy" % selection
     return selection
 
 
@@ -437,3 +473,6 @@ if __name__ == "__main__":
 
     print "\nget_single_site_cmd:"
     print "\t", get_single_site_cmd()
+
+    print "\nget_energy_weighted_drift_time:"
+    print "\t", get_energy_weighted_drift_time()
