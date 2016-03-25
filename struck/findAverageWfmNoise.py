@@ -72,7 +72,7 @@ def process_file(file_name):
         hist.SetFillColor(color)
         hist.SetFillStyle(3004)
 
-        print tree.Draw(
+        tree.Draw(
             "baseline_rms*calibration >> %s" % hist.GetName(),
             "channel==%i" % channel,
             #"goff" # graphics off
@@ -82,11 +82,18 @@ def process_file(file_name):
 
         # find percentage difference between this value and the one in
         # struck_analysis_parameters:
-        diff = (rms - rms_keV[channel])/rms_keV[channel]*100.0
+        try:
+            rms_ref = rms_keV[channel]
+        except:
+            #print "no ref info available for channel %i" % channel
+            rms_ref = rms
+
+        diff = (rms - rms_ref)/rms_ref*100.0
 
         title = "%s: RMS = %.2f keV" % (channel_name, rms)
         hist.SetTitle(title)
-        print "channel %s | %i entries | rms=%.3f keV | diff=%.2f" % (channel_name, n_entries, rms, diff)
+        #print "channel %s | %i entries | rms=%.3f keV | diff=%.2f" % (channel_name, n_entries, rms, diff)
+        print "rms_keV[%i] = %.5f" % (channel, rms)
         canvas.Update()
         canvas.Print("rms_%s.pdf" % channel_name)
         if not gROOT.IsBatch(): 
