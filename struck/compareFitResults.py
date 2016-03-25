@@ -8,7 +8,7 @@ import datetime
 
 from ROOT import gROOT
 # run in batch mode:
-#gROOT.SetBatch(True)
+gROOT.SetBatch(True)
 from ROOT import TFile
 from ROOT import TTree
 from ROOT import TCanvas
@@ -27,12 +27,12 @@ def add_point_to_graph(results, graph):
     key = graph.GetTitle()
     i = graph.GetN()
     value = float(results[key])
-    if key == "chi2":
-        value /= float(results["ndf"])
     graph.SetPoint(i, i+1, value)
+    print key
     try:
         error = float(results["%s_err" % key])
     except KeyError:
+        print "%s_err not found" % key
         error = 0.0
     graph.SetPointError(i, 0.0, error)
     print "\t %s %i: %s +/- %s" % (
@@ -60,11 +60,14 @@ def main(filenames):
     graphs = []
     graphs.append(get_graph("centroid", TColor.kBlue))
     graphs.append(get_graph("sigma", TColor.kBlue))
-    graphs.append(get_graph("chi2", TColor.kBlue))
+    graphs.append(get_graph("sigma_over_E", TColor.kBlue))
+    graphs.append(get_graph("red_chi2", TColor.kBlue))
     graphs.append(get_graph("ndf", TColor.kBlue))
-    graphs.append(get_graph("peak counts", TColor.kBlue))
+    graphs.append(get_graph("peak_counts", TColor.kBlue))
     graphs.append(get_graph("fit_start_energy", TColor.kBlue))
     graphs.append(get_graph("fit_stop_energy", TColor.kBlue))
+    graphs.append(get_graph("fit_status", TColor.kBlue))
+    graphs.append(get_graph("integral_counts", TColor.kBlue))
 
     # remove bad files from list
     print "%i files" % len(filenames)
@@ -77,8 +80,13 @@ def main(filenames):
         print "--> processing", i, filename
         # check line_energy
         line_energy = float(results["line_energy"])
-        if line_energy != 570.0:
-            print "\t skipping -- line_energy:", line_energy
+        if i == 0:
+            line_energy_ref = line_energy
+        elif line_energy_ref != line_energy:
+            print "\t skipping -- line_energy: %.1f != %.1f" % (
+                line_energy,
+                line_energy_ref,
+            )
             bad_files.append(filename)
 
     for bad_file in bad_files:
@@ -124,16 +132,22 @@ def main(filenames):
             hist.GetXaxis().SetBinLabel(hist.FindBin(i+1), label)
             #print graph.GetHistogram().GetNbinsX()
 
-
-
     # draw the hists:
     canvas = TCanvas("canvas","")
+    canvas.SetBottomMargin(0.2)
+    canvas.SetLeftMargin(0.15)
     canvas.SetGrid(1,1)
     for graph in graphs:
         key = graph.GetTitle()
         graph.SetTitle("")
-        graph.GetHistogram().SetYTitle(key)
+        hist = graph.GetHistogram()
+        hist.SetYTitle(key)
+        hist.GetYaxis().SetTitleOffset(1.3)
+        #hist.SetNdivisions(-510, "X")
+        #hist.SetNdivisions(-510, "Y")
+        #hist.GetXaxis().SetNdivisions(16, 5, 16, False)
         graph.Draw("ap")
+        #canvas.SetGrid(1,1)
         canvas.Update()
         canvas.Print("comparison_%i_%s.pdf" % (line_energy, key) )
 
@@ -150,5 +164,8 @@ if __name__ == "__main__":
         print "argument: [sis tier 3 root file]"
         sys.exit(1)
 
-    main(sys.argv[1:])
+    filenames = sys.argv[1:]
+    print "%i files" % len(filenames)
+    filenames.sort()
+    main(filenames)
 
