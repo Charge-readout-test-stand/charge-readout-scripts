@@ -396,7 +396,15 @@ rms_keV[2] = 17.805
 rms_keV[3] = 17.137
 rms_keV[4] = 18.182
 
-
+if is_7th_LXe:
+    rms_keV[0] = 21.86031
+    rms_keV[1] = 22.51043
+    rms_keV[2] = 21.54204
+    rms_keV[3] = 20.75134
+    rms_keV[4] = 18.95259
+    rms_keV[5] = 18.65399
+    rms_keV[6] = 18.53005
+    rms_keV[7] = 19.02136
 
 def is_2Vinput(baseline_mean_file): #FIXME--will be included in the tree so no longer needed
     """
