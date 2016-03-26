@@ -23,13 +23,9 @@ from ROOT import TH1D
 from ROOT import TFile
 from ROOT import TCanvas
 from ROOT import TColor
-from ROOT import TPad
 from ROOT import TLegend
-from ROOT import TPaveText
-from ROOT import gSystem
 from ROOT import gStyle
-from ROOT import TH1D
-from ROOT import TH2D
+from ROOT import TLine
 
 import struck_analysis_parameters
 
@@ -41,16 +37,15 @@ gStyle.SetTitleBorderSize(0)
 
 
 
-def setup_hist(hist, color):
-    """
-    Set color, line and marker style of hist
-    """
-
+def setup_hist(hist, color, xtitle, xUnits):
+    """ Set color, line and marker style of hist """
     hist.SetLineColor(color)
     hist.SetMarkerStyle(8)
     hist.SetMarkerSize(1.5)
     hist.SetMarkerColor(color)
     hist.SetLineWidth(2)
+    hist.SetXTitle("%s [%s]" % (xtitle, xUnits))
+    hist.SetYTitle("Counts / %.1f %s" % (hist.GetBinWidth(1), xUnits,))
     #hist.SetFillColor(color)
 
 
@@ -60,21 +55,59 @@ def process_file(filename):
 
     #-------------------------------------------------------------------------------
     # options
+    do_draw_energy = 0
+    do_draw_drift_times = 0
+    do_draw_rms = True
 
     #do_draw_sum = False # sum energy
     do_draw_sum = True # sum energy
-    #draw_command = "energy1_pz"
-    #draw_command = "wfm-baseline_mean"
-    min_bin = -200
-    max_bin = 200
-    bin_width = 5
-    draw_command = "rise_time_stop95 - trigger_time"
-    min_bin = -10.02
-    max_bin = 30.02
-    bin_width = 0.04
-    n_bins = int(math.floor((max_bin - min_bin)*1.0 / bin_width))
 
-    xtitle = "Energy [keV]"
+    # default values:
+    xUnits = ""
+    prefix = "plots"
+    selections = []
+    #selections.append("Entry$<50") # debugging
+
+    if do_draw_energy:
+        print "---> drawing energies... "
+        draw_command = "energy1_pz"
+        min_bin = 0
+        max_bin = 2000
+        bin_width = 10
+        bin_width = 15
+
+        xUnits = "keV"
+        xtitle = "Energy"
+        prefix = "energy_"
+        
+
+    elif do_draw_drift_times:
+        print "---> drawing drift times"
+        draw_command = "rise_time_stop95 - trigger_time"
+        min_bin = -10.02
+        max_bin = 30.02
+        bin_width = 0.04
+        xUnits = "#mus"
+        xtitle = "Drift time"
+
+    elif do_draw_rms:
+        print "---> drawing RMS noise"
+        draw_command = "baseline_rms*calibration"
+        min_bin = 0
+        max_bin = 100
+        bin_width = 0.5
+        xUnits = "keV"
+        xtitle = "RMS noise"
+        do_draw_sum = False
+
+    else:
+        print "---> work in progress..."
+        draw_command = "wfm-baseline_mean"
+        min_bin = -200
+        max_bin = 200
+        bin_width = 5
+
+    n_bins = int(math.floor((max_bin - min_bin)*1.0 / bin_width))
 
     #-------------------------------------------------------------------------------
 
@@ -98,12 +131,14 @@ def process_file(filename):
         tree.wfm0
         print "this is a tier2 file"
     except AttributeError:
-        print "this is a tier1 file"
+        print "this is a tier1/tier3 file"
         n_channels = 1
         is_tier1 = True
 
     basename = os.path.basename(filename)
     basename = os.path.splitext(basename)[0]
+    basename = prefix + basename
+    basename += "_".join(xtitle.split())
 
     # set up a canvas
     canvas = TCanvas("canvas","")
@@ -124,32 +159,31 @@ def process_file(filename):
     # set up some hists to hold TTree::Draw results
     hists = []
     
-    selections = [
+    #selections = [
         #"lightEnergy>700", # keep the light threshold high (some runs had low thresholds)
         #"adc_max_time[5]*40.0/1000<10", # light signal is within 10 microseconds of trigger
         #"is_amplified",
-        "energy>100",
+        #"energy>100",
         #"energy[5]>15",
         #"rise_time_stop-trigger_time <15",
         #"rise_time_stop-trigger_time >5"
         #"Iteration$<=50", # baseline average
-        "channel!=%i" % pmt_channel,
-        "channel!=5", # ortec channel
-    ]
+        #"channel!=%i" % pmt_channel,
+        #"channel!=5", # ortec channel
+    #]
 
     frame_hist = TH1D("frame_hist","",n_bins,min_bin,max_bin)
     frame_hist.SetLineWidth(2)
-    frame_hist.SetXTitle(xtitle)
-    #frame_hist.SetYTitle("Counts / %.1f keV" % frame_hist.GetBinWidth(1))
-    frame_hist.SetYTitle("Counts / %.2f #mus" % frame_hist.GetBinWidth(1))
-    frame_hist.SetMinimum(0.5)
+    frame_hist.SetMinimum(1.0)
     tree.Draw("")
     selection = " && ".join(selections)
 
     if do_draw_sum:
-        #print "%i entries in sum hist" % tree.Draw("chargeEnergy >> frame_hist", selection)
-        print "%i entries in sum hist" % tree.Draw("%s >> frame_hist" % draw_command, selection)
-        setup_hist(frame_hist, TColor.kBlack)
+        if do_draw_energy:
+            print "%i entries in sum hist" % tree.Draw("chargeEnergy >> frame_hist", selection)
+        else:
+            print "%i entries in sum hist" % tree.Draw("%s >> frame_hist" % draw_command, selection)
+        setup_hist(frame_hist, TColor.kBlack, xtitle, xUnits)
         legend.AddEntry(frame_hist, "sum","lp")
 
 
@@ -165,7 +199,7 @@ def process_file(filename):
         except IndexError:
             color = TColor.kBlack
         
-        setup_hist(hist, color)
+        setup_hist(hist, color, xtitle, xUnits)
         hists.append(hist)
         legend.AddEntry(hist, channel_map[channel],"pl")
 
@@ -191,12 +225,6 @@ def process_file(filename):
             options = ""
         print "\t options: %s" % options
 
-        hist_mean = hist.GetMean()
-        hist_rms = hist.GetRMS()
-
-        print "sigma: %.2f" % hist.GetRMS()
-
-
         try:
             color = colors[channel]
         except IndexError:
@@ -204,20 +232,45 @@ def process_file(filename):
         tree.SetLineColor(color)
 
         n_entries = tree.Draw(draw_cmd, selection, options)
+
+        hist_mean = hist.GetMean()
+        hist_rms = hist.GetRMS()
+        print "\t hist mean: %.4f" % hist.GetMean()
+        print "\t hist sigma: %.4f" % hist.GetRMS()
+
         if y_max < hist.GetMaximum(): y_max = hist.GetMaximum()
         print "\t %i entries" % n_entries
 
     legend.Draw()
-    #frame_hist.SetMaximum(y_max)
+    if not do_draw_sum:
+        hists[0].SetMaximum(y_max)
     canvas.Update()
 
-    canvas.Update()
-    canvas.Print("%s_test.png" % (basename))
-    canvas.Print("%s_test.pdf" % (basename))
+    if do_draw_energy:
+        line_energy = 570
+        print "==> drawing line at %i %s" % (line_energy, xUnits)
+        line = TLine(line_energy, frame_hist.GetMinimum(), line_energy, frame_hist.GetMaximum())
+        line.SetLineStyle(2)
+        line.Draw()
 
-    val = raw_input("--> enter to continue (q to quit) ")
-    if val == 'q': 
-        sys.exit()
+    canvas.Update()
+    canvas.Print("%s_log.png" % (basename))
+    canvas.Print("%s_log.pdf" % (basename))
+    val = raw_input("--> enter to continue ")
+
+    canvas.SetLogy(0)
+    if do_draw_energy:
+        # set maximum to the bin content at XXX keV
+        frame_hist.SetMaximum(
+            frame_hist.GetBinContent(
+                frame_hist.FindBin(400)
+            )
+        )
+
+        frame_hist.SetMaximum(12000)
+    canvas.Print("%s_lin.png" % (basename))
+    canvas.Print("%s_lin.pdf" % (basename))
+    val = raw_input("--> enter to continue ")
 
 
 
