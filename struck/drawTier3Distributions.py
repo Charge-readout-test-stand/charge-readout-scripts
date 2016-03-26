@@ -18,7 +18,7 @@ import sys
 import math
 
 from ROOT import gROOT
-#gROOT.SetBatch(True)
+gROOT.SetBatch(True) # comment this out to run interactively
 from ROOT import TH1D
 from ROOT import TFile
 from ROOT import TCanvas
@@ -55,9 +55,9 @@ def process_file(filename):
 
     #-------------------------------------------------------------------------------
     # options
-    do_draw_energy = 0
+    do_draw_energy = 1
     do_draw_drift_times = 0
-    do_draw_rms = True
+    do_draw_rms = 0
 
     #do_draw_sum = False # sum energy
     do_draw_sum = True # sum energy
@@ -246,7 +246,7 @@ def process_file(filename):
         hists[0].SetMaximum(y_max)
     canvas.Update()
 
-    if do_draw_energy:
+    if do_draw_energy and False:
         line_energy = 570
         print "==> drawing line at %i %s" % (line_energy, xUnits)
         line = TLine(line_energy, frame_hist.GetMinimum(), line_energy, frame_hist.GetMaximum())
