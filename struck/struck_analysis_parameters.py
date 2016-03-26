@@ -243,6 +243,20 @@ def get_charge_energy_no_pz():
     draw_cmd = " + ".join(draw_cmd)
     return draw_cmd
 
+def get_multiplicity_cmd(energy_threshold=100.0):
+    """A draw command for multiplicity """
+    draw_cmd = []
+    for channel, value in enumerate(charge_channels_to_use): 
+        if value:
+            draw_cmd.append("(energy1_pz[%i]>%s)" % (channel,energy_threshold))
+    # join each part with "+"
+    draw_cmd = "+".join(draw_cmd)
+    return draw_cmd
+
+def get_single_strip_cut(energy_threhold=100.0):
+    """Select events with only one channel above threshold"""
+    selection = "(%s==1)" % get_multiplicity_cmd(energy_threhold)
+    return selection
 
 def get_few_channels_cmd(
     energy_threshold=100.0,
@@ -496,6 +510,7 @@ if __name__ == "__main__":
 
     print "\nlong drift time cut:"
     print "\t" + "\n\t ||".join(get_long_drift_time_cut().split("||"))
+    #print "\n"+ get_long_drift_time_cut(drift_time_low=6.0,drift_time_high=8.0)
 
     print "\nget_few_channels_cmd:"
     print "\t" + "\n\t +".join(get_few_channels_cmd().split("+"))
@@ -506,4 +521,9 @@ if __name__ == "__main__":
     print "\nget_energy_weighted_drift_time:"
     print "\t" + "\n\t +".join(get_energy_weighted_drift_time().split("+"))
 
+    print "\n get_multiplicity_cmd:"
+    print get_multiplicity_cmd()
+
+    print "\n get_single_strip_cut:"
+    print get_single_strip_cut()
 
