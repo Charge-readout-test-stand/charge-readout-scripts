@@ -143,6 +143,7 @@ def is_tree_MC(tree):
     except:
         return False
 
+    
 
 def get_negative_energy_cut(threshold=-20.0):
     """
@@ -232,36 +233,47 @@ def get_long_drift_time_cut(
 
     return selection
 
+def get_charge_energy_no_pz():
+    """A draw command for total energy before PZ correction """
+    draw_cmd = []
+    for channel, value in enumerate(charge_channels_to_use): 
+        if value:
+            draw_cmd.append("energy1[%i]" % channel)
+    # join each part with "+"
+    draw_cmd = " + ".join(draw_cmd)
+    return draw_cmd
 
-def get_single_site_cmd(
+
+def get_few_channels_cmd(
     energy_threshold=100.0,
 ):
-    """
-    Only count energy from events above threshold
-    """
-
-    selection = []
+    """ A draw command for total energy, only including  events above threshold """
+    draw_cmd = []
     for channel, value  in enumerate(charge_channels_to_use): 
         if value:
-            cut = "(energy1_pz[%i]>%s)*energy1_pz[%i]" % (
+            part = "(energy1_pz[%i]>%s)*energy1_pz[%i]" % (
                 channel, 
                 energy_threshold,
                 channel,
             )
-            #print cut
-            selection.append(cut)
-            
+            #print part
+            draw_cmd.append(part)
     # join each channel requirement with or
-    selection = " + ".join(selection)
-
-    return selection
+    draw_cmd = " + ".join(draw_cmd)
+    return draw_cmd
 
 
 def get_cuts_label(draw_cmd, selection):
 
     label = []
-    if get_single_site_cmd() in draw_cmd:
+
+    # check draw command
+    if get_few_channels_cmd() in draw_cmd:
         label.append("FC")
+    if get_charge_energy_no_pz() in draw_cmd:
+        label.append("NPZ")
+
+    # check selection
     if get_negative_energy_cut() in selection:
         label.append("NC")
     if get_short_drift_time_cut() in selection:
@@ -406,6 +418,8 @@ if is_7th_LXe:
     rms_keV[6] = 18.53005
     rms_keV[7] = 19.02136
 
+avg_rms_keV = sum(rms_keV.values())/len(rms_keV)
+
 def is_2Vinput(baseline_mean_file): #FIXME--will be included in the tree so no longer needed
     """
     If using 2V input (instead of 5V), divide calibration by 2.5
@@ -463,6 +477,10 @@ if __name__ == "__main__":
     for (channel, value) in decay_time_values.items():
         print "\t channel %i [microseconds]: %.1f" % (channel, value/microsecond)
 
+    print "\nRMS noise (keV):"
+    for (channel, value) in rms_keV.items():
+        print "\t channel %i: %.6f" % (channel, value)
+    print "average noise:", avg_rms_keV
 
     #colors = get_colors()
     #print "\ncolors:"
@@ -471,16 +489,21 @@ if __name__ == "__main__":
 
 
     print "\nnegative energy cut:"
-    print "\t", get_negative_energy_cut()
+    print "\t" + "\n\t ||".join(get_negative_energy_cut().split("||"))
 
     print "\nshort drift time cut:"
-    print "\t", get_short_drift_time_cut()
+    print "\t" + "\n\t ||".join(get_short_drift_time_cut().split("||"))
 
     print "\nlong drift time cut:"
-    print "\t", get_long_drift_time_cut()
+    print "\t" + "\n\t ||".join(get_long_drift_time_cut().split("||"))
 
-    print "\nget_single_site_cmd:"
-    print "\t", get_single_site_cmd()
+    print "\nget_few_channels_cmd:"
+    print "\t" + "\n\t +".join(get_few_channels_cmd().split("+"))
+
+    print "\nget_charge_energy_no_pz:"
+    print "\t", get_charge_energy_no_pz()
 
     print "\nget_energy_weighted_drift_time:"
-    print "\t", get_energy_weighted_drift_time()
+    print "\t" + "\n\t +".join(get_energy_weighted_drift_time().split("+"))
+
+
