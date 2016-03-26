@@ -194,8 +194,8 @@ Double_t ralphWF() {
 
     // PCD 0
     TF1* test = new TF1("test", OnePCD, minTime, maxTime, 4);
-    test->SetParameter(0, x); // x
-    test->SetParameter(1, y0); // y
+    test->SetParameter(0, 1.5); // x
+    test->SetParameter(1, 1.4); // y
     test->SetParameter(2, z); // z0
     test->SetParameter(3, q0); // q
     test->Draw(); 
@@ -203,9 +203,9 @@ Double_t ralphWF() {
     legend.AddEntry(test, "PCD 0", "l"); 
     
     // PCD 1
-    TF1* test1 = new TF1("test", OnePCD, minTime, maxTime, 4);
-    test1->SetParameter(0, x); // x
-    test1->SetParameter(1, y1); // y
+    TF1* test1 = new TF1("test1", OnePCD, minTime, maxTime, 4);
+    test1->SetParameter(0, 1.5); // x
+    test1->SetParameter(1, 1.6); // y
     test1->SetParameter(2, z); // z0
     test1->SetParameter(3, q1); // q
     test1->SetLineColor(kGreen+2); 
@@ -231,6 +231,7 @@ Double_t ralphWF() {
     frameHist->SetXTitle("time [#mus]");
     frameHist->SetYTitle("charge [arb]");
     frameHist->SetMinimum(0); 
+    frameHist->SetAxisRange(5, 22);
     //test->Draw("l"); 
     test2->Draw("l");
     test->Draw("lp same"); 
