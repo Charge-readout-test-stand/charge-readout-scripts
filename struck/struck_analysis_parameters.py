@@ -334,15 +334,15 @@ if is_6th_LXe:
 
 if is_7th_LXe:
     # updated with fits to 7th LXe overnight -- 29 Mar 2016
-    decay_time_values[0] = 374.22*microsecond 
-    decay_time_values[1] = 371.36*microsecond 
-    decay_time_values[2] = 367.63*microsecond 
-    decay_time_values[3] = 366.26*microsecond 
-    decay_time_values[4] = 462.74*microsecond 
-    decay_time_values[5] = 446.04*microsecond 
-    decay_time_values[6] = 433.24*microsecond 
-    decay_time_values[7] = 440.04*microsecond
-
+    # tier1_overnight_cell_full_cathode_bias_1700V_2Vinput_DT1750mV_disc_teed_preamp_extraamplified_trigger_200delay_2016-03-08_08-14-17.root
+    decay_time_values[0] = 374.22*microsecond # +/- 9.04 
+    decay_time_values[1] = 371.36*microsecond # +/- 5.07 
+    decay_time_values[2] = 367.63*microsecond # +/- 7.41 
+    decay_time_values[3] = 366.26*microsecond # +/- 10.09 
+    decay_time_values[4] = 462.74*microsecond # +/- 8.10 
+    decay_time_values[5] = 446.04*microsecond # +/- 4.19 
+    decay_time_values[6] = 433.24*microsecond # +/- 6.07 
+    decay_time_values[7] = 440.04*microsecond # +/- 10.26 
 
 
 # charge calbration from these files for 5th LXe:
