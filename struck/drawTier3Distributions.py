@@ -55,9 +55,10 @@ def process_file(filename):
 
     #-------------------------------------------------------------------------------
     # options
-    do_draw_energy = 1
+    do_draw_energy = 0
     do_draw_drift_times = 0
     do_draw_rms = 0
+    do_draw_ADC_units = 1
 
     #do_draw_sum = False # sum energy
     do_draw_sum = True # sum energy
@@ -80,7 +81,6 @@ def process_file(filename):
         xtitle = "Energy"
         prefix = "energy_"
         
-
     elif do_draw_drift_times:
         print "---> drawing drift times"
         draw_command = "rise_time_stop95 - trigger_time"
@@ -100,12 +100,21 @@ def process_file(filename):
         xtitle = "RMS noise"
         do_draw_sum = False
 
-    else:
-        print "---> work in progress..."
-        draw_command = "wfm-baseline_mean"
-        min_bin = -200
-        max_bin = 200
+    if do_draw_ADC_units:
+        print "---> drawing adc energies... "
+        draw_command = "energy1_pz/calibration"
+        min_bin = 0
+        max_bin = 1000
         bin_width = 5
+        do_draw_sum = False
+
+        xUnits = "ADC units"
+        xtitle = "Energy"
+        prefix = "adc_energy_"
+ 
+    else:
+        print "choose a plot to draw!"
+        sys.exit()
 
     n_bins = int(math.floor((max_bin - min_bin)*1.0 / bin_width))
 
@@ -256,7 +265,8 @@ def process_file(filename):
     canvas.Update()
     canvas.Print("%s_log.png" % (basename))
     canvas.Print("%s_log.pdf" % (basename))
-    val = raw_input("--> enter to continue ")
+    if not gROOT.IsBatch():
+        val = raw_input("--> enter to continue ")
 
     canvas.SetLogy(0)
     if do_draw_energy:
@@ -270,7 +280,8 @@ def process_file(filename):
         frame_hist.SetMaximum(12000)
     canvas.Print("%s_lin.png" % (basename))
     canvas.Print("%s_lin.pdf" % (basename))
-    val = raw_input("--> enter to continue ")
+    if not gROOT.IsBatch():
+        val = raw_input("--> enter to continue ")
 
 
 
