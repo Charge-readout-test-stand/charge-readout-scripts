@@ -333,9 +333,16 @@ if is_6th_LXe:
     decay_time_values[5] = 300.0*microsecond
 
 if is_7th_LXe:
-    decay_time_values[5] = 450.0*microsecond
-    decay_time_values[6] = 450.0*microsecond
-    decay_time_values[7] = 450.0*microsecond
+    # updated with fits to 7th LXe overnight -- 29 Mar 2016
+    decay_time_values[0] = 374.22*microsecond 
+    decay_time_values[1] = 371.36*microsecond 
+    decay_time_values[2] = 367.63*microsecond 
+    decay_time_values[3] = 366.26*microsecond 
+    decay_time_values[4] = 462.74*microsecond 
+    decay_time_values[5] = 446.04*microsecond 
+    decay_time_values[6] = 433.24*microsecond 
+    decay_time_values[7] = 440.04*microsecond
+
 
 
 # charge calbration from these files for 5th LXe:
