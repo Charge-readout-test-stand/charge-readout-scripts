@@ -372,6 +372,8 @@ def process_file(
     #now = datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S_')
     #basename = basename + now
 
+    #basename = "step" + basename
+
     # cuts label prefix:
     cuts_label = struck_analysis_parameters.get_cuts_label(all_energy_var, selection) 
     cuts_label = "_".join(cuts_label.split("+"))
@@ -440,13 +442,16 @@ if __name__ == "__main__":
         )
 
         # do 570-keV and 1064-keV fits, for chargeEnergy and for
-        # get_single_site_cmd:
+        # get_few_channels_cmd:
 
         all_energy_var = "chargeEnergy"
         process_file(sys.argv[1], False, all_energy_var, selection)
         process_file(sys.argv[1], True, all_energy_var, selection)
 
-        all_energy_var = struck_analysis_parameters.get_single_site_cmd()
+        # cuts need more work to be used with this "few channels" draw command 
+        #all_energy_var = struck_analysis_parameters.get_few_channels_cmd()
+
+        all_energy_var = struck_analysis_parameters.get_charge_energy_no_pz()
         process_file(sys.argv[1], False, all_energy_var, selection)
         process_file(sys.argv[1], True, all_energy_var, selection)
 
