@@ -1,25 +1,40 @@
 import ROOT
+#ROOT.gROOT.SetBatch(True)
 import sys
 import os
 import struck_analysis_parameters
+from array import array
 
 
 
 filename = "/nfs/slac/g/exo_data4/users/alexis4/test-stand/2016_03_07_7thLXe/tier1/tier1_overnight_cell_full_cathode_bias_1700V_2Vinput_DT1750mV_disc_teed_preamp_extraamplified_trigger_200delay_2016-03-08_10-08-33.root"
 
 num_channels = 16
-offset = 1000
+offset = 500
 ROOT.gROOT.SetStyle("Plain")
 ROOT.gStyle.SetOptStat(0)
 ROOT.gStyle.SetTitleStyle(0)
 ROOT.gStyle.SetTitleBorderSize(0)
+#c1 = ROOT.TCanvas("canvas","",800,1100)
 c1 = ROOT.TCanvas()
 c1.SetGrid(1,1)
+c1.SetTopMargin(0.15)
 
-energy_cut = 500.0
+energy_cut = 570.0
 n_plots_total = 200
 
-color_list = [ROOT.kRed, ROOT.kGreen+1, ROOT.kBlue, ROOT.kMagenta, ROOT.kBlack, ROOT.kTeal, ROOT.kOrange, ROOT.kCyan+1, ROOT.kGray+2]
+color_list = [
+    ROOT.kMagenta, 
+    ROOT.kMagenta+2, 
+    ROOT.kRed, 
+    ROOT.kOrange+1, 
+    ROOT.kGreen+2, 
+    ROOT.kCyan+1,
+    ROOT.kBlue, 
+    ROOT.kBlue+2, 
+    #ROOT.kTeal, 
+    ROOT.kGray+2, 
+]
 name_list = ["X16", "X17", "X18", "X19", "Y16", "Y17", "Y18", "Y19", "PMT"]
 
 
@@ -90,6 +105,7 @@ def DrawEvents(fname):
     GetTier3_Energy(fname, entries, 0)
 
     hists = []
+    print "making hists"
     for (i, tree) in enumerate(good_trees):
         hist = ROOT.TH1D("hist%i" % i,"",10,0,10)
         try:
@@ -117,33 +133,42 @@ def DrawEvents(fname):
         frame_hist.SetBinContent(1, pow(2,14))
         frame_hist.Draw()
         legend = ROOT.TLegend(0.1, 0.86, 0.9, 0.99)
-        legend.SetNColumns(3)
-        legend.AddEntry(frame_hist, "Total Event Energy = %.2f" % cE)
+        legend.SetFillColor(0)
+        legend.SetNColumns(4)
+        sum_wfm = [0.0]*800
+        sum_graph = ROOT.TGraph()
+        #sum_graph.SetLineWidth(2)
         for i, tree in enumerate(good_trees):
             calib = struck_analysis_parameters.calibration_values[channel_numbers[i]]
             if name_list[i] != "PMT":
                 calib = calib/2.5 #2V range not 5V
+
             else:
                 calib = 1.0
-            draw_cmd = "((wfm - wfm[0])*%f + %i):Iteration$*40/1e3" % (calib, i*offset)
+            draw_cmd = "((wfm - wfm[0])*%f + %i):Iteration$*40/1e3" % (calib, (i+2)*offset)
             print i, eventi, draw_cmd, calib
             tree.SetLineColor(color_list[i])
             tree.SetLineWidth(2)
             tree.Draw(draw_cmd,"Entry$=="+str(eventi), "l same")
             chanE = GetTier3_Channel_Energy(fname, entries, eventi, i)
-            legend.AddEntry(hists[i], name_list[i] + " E = %.1f" % chanE)
+            legend.AddEntry(hists[i], name_list[i] + " E = %.1f" % chanE, "f")
+            if name_list[i] != "PMT":
+                wfm = array('d',tree.wfm)
+                baseline = sum(wfm[:100])/100.0
+                #print "wfm",i, wfm[:20]
+                #print "baseline", baseline
+                sum_wfm = [sum_wfm[j] + (wfm[j] - baseline)*calib for j in xrange(len(wfm))]
+
+        print "sum_wfm",sum_wfm[-1]
+        for i,val in enumerate(sum_wfm):
+            sum_graph.SetPoint(sum_graph.GetN(),i*0.040,val)
+        #sum_graph.SetLineWidth(2)
         
         print "Final Thing"
-        frame_hist.SetMinimum(-1000)
-        frame_hist.SetMaximum(offset*(len(name_list)+1))
-        
-        trigger_time = 8.0 #us
-        max_drift_time = 9.1 #us
-        trig_line = ROOT.TLine(trigger_time,-1000, trigger_time, offset*(len(name_list)+1))
-        trig_line.Draw()
-        end_line = ROOT.TLine(trigger_time+max_drift_time,-1000, trigger_time+max_drift_time, offset*(len(name_list)+1))
-        end_line.Draw()
-
+        frame_hist.SetMinimum(-offset/2.0)
+        frame_hist.SetMaximum(offset*(len(name_list)+3))
+        legend.AddEntry(sum_graph, "Sum Charge E = %.1f" % cE,"l")
+        sum_graph.Draw("l")
         print "Leg Draw"
         legend.Draw()
         print "Update"
@@ -151,13 +176,15 @@ def DrawEvents(fname):
         print "Updated"
         #raw_input("Event HOLD UNTIL ENTER")
         n_plots += 1
-        plot_name = "EventsWithChargeAbove%ikeV_7thLXe_%ievents.pdf" % (int(energy_cut), n_plots_total)
+        plot_name = "EventsWithChargeAbove%ikeV_7thLXe.pdf" % int(energy_cut)
         if n_plots == 1:
             plot_name = plot_name + "("
         if n_plots >= n_plots_total:
             plot_name = plot_name + ")"
         
         c1.Print(plot_name)
+        if not ROOT.gROOT.IsBatch():
+            raw_input("--> press enter to continue")
         
         if n_plots >= n_plots_total:
             print "quitting..."
