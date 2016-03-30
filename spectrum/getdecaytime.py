@@ -6,6 +6,9 @@ This script does a fit on the waveform to determine the decay time
 Takes 43 minutes for this run:
 tier1_overnight_cell_full_cathode_bias_1700V_2Vinput_DT1750mV_disc_teed_preamp_extraamplified_trigger_200delay_2016-03-08_08-14-17.root
 
+Takes 6 hours, 9 minutes:
+2016_03_07_7thLXe/tier1/tier1_overnight_cell_full_cathode_bias_1700V_2Vinput_DT1750mV_disc_teed_preamp_extraamplified_trigger_200delay_2016-03-08_08*.root
+
 See the script for settings of flat time and gap time (for maw)
 
 The script will ask for a channel number and a threshold,
