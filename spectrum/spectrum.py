@@ -41,9 +41,6 @@ gStyle.SetTitleBorderSize(0)
 import struck_analysis_parameters
 n_chargechannels = struck_analysis_parameters.n_chargechannels
 
-gSystem.Load("$EXOLIB/lib/libEXOUtilities")
-from ROOT import CLHEP
-
 def process_file(filename):
 
     print "processing file: ", filename
