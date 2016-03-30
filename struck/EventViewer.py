@@ -21,20 +21,10 @@ c1.SetGrid(1,1)
 c1.SetTopMargin(0.15)
 
 energy_cut = 570.0
-n_plots_total = 200
+#n_plots_total = 200
+n_plots_total = 30
 
-color_list = [
-    ROOT.kMagenta, 
-    ROOT.kMagenta+2, 
-    ROOT.kRed, 
-    ROOT.kOrange+1, 
-    ROOT.kGreen+2, 
-    ROOT.kCyan+1,
-    ROOT.kBlue, 
-    ROOT.kBlue+2, 
-    #ROOT.kTeal, 
-    ROOT.kGray+2, 
-]
+color_list = struck_analysis_parameters.get_colors()
 name_list = ["X16", "X17", "X18", "X19", "Y16", "Y17", "Y18", "Y19", "PMT"]
 
 
@@ -136,7 +126,11 @@ def DrawEvents(fname):
         legend.SetFillColor(0)
         legend.SetNColumns(4)
         sum_wfm = [0.0]*800
+        x_wfm = [0.0]*800
+        y_wfm = [0.0]*800
         sum_graph = ROOT.TGraph()
+        x_graph = ROOT.TGraph()
+        y_graph = ROOT.TGraph()
         #sum_graph.SetLineWidth(2)
         for i, tree in enumerate(good_trees):
             calib = struck_analysis_parameters.calibration_values[channel_numbers[i]]
@@ -158,17 +152,26 @@ def DrawEvents(fname):
                 #print "wfm",i, wfm[:20]
                 #print "baseline", baseline
                 sum_wfm = [sum_wfm[j] + (wfm[j] - baseline)*calib for j in xrange(len(wfm))]
+                if i < 4:
+                    x_wfm = [x_wfm[j] + (wfm[j] - baseline)*calib for j in xrange(len(wfm))]
+                else:
+                    y_wfm = [y_wfm[j] + (wfm[j] - baseline)*calib for j in xrange(len(wfm))]
 
         print "sum_wfm",sum_wfm[-1]
-        for i,val in enumerate(sum_wfm):
-            sum_graph.SetPoint(sum_graph.GetN(),i*0.040,val)
-        #sum_graph.SetLineWidth(2)
+        for j,val in enumerate(sum_wfm):
+            sum_graph.SetPoint(sum_graph.GetN(),j*0.040,val)
+            x_graph.SetPoint(x_graph.GetN(),j*0.040,x_wfm[j]+offset)
+            y_graph.SetPoint(y_graph.GetN(),j*0.040,y_wfm[j]+offset*2)
         
         print "Final Thing"
         frame_hist.SetMinimum(-offset/1.5)
         frame_hist.SetMaximum(offset*(len(name_list)+3))
         legend.AddEntry(sum_graph, "Sum Charge E = %.1f" % cE,"l")
         sum_graph.Draw("l")
+        x_graph.SetLineColor(ROOT.TColor.kRed)
+        y_graph.SetLineColor(ROOT.TColor.kBlue)
+        #x_graph.Draw("l")
+        #y_graph.Draw("l")
         print "Leg Draw"
         legend.Draw()
         print "Update"
@@ -176,7 +179,10 @@ def DrawEvents(fname):
         print "Updated"
         #raw_input("Event HOLD UNTIL ENTER")
         n_plots += 1
-        plot_name = "EventsWithChargeAbove%ikeV_7thLXe.pdf" % int(energy_cut)
+        plot_name = "%iEventsWithChargeAbove%ikeV_7thLXe.pdf" % (
+            n_plots_total,
+            int(energy_cut),
+        )
         if n_plots == 1:
             plot_name = plot_name + "("
         if n_plots >= n_plots_total:
@@ -184,7 +190,7 @@ def DrawEvents(fname):
         
         c1.Print(plot_name)
         if not ROOT.gROOT.IsBatch():
-            raw_input("--> press enter to continue")
+            raw_input("--> press enter to continue ")
         
         if n_plots >= n_plots_total:
             print "quitting..."
