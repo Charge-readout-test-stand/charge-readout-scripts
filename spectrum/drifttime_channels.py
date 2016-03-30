@@ -33,7 +33,7 @@ gStyle.SetTitleStyle(0)
 gStyle.SetTitleBorderSize(0)
 
 import struck_analysis_parameters
-charge_channels_to_use = struck_analysis_parameters.charge_channels_to_use
+
 
 gSystem.Load("$EXOLIB/lib/libEXOUtilities")
 from ROOT import CLHEP
@@ -49,6 +49,9 @@ def process_file(filename):
     root_file = TFile(filename, "READ")
     tree = root_file.Get("tree")
     tree.SetLineWidth(3)
+    is_MC = is_tree_MC(tree)
+
+    charge_channels_to_use = struck_analysis_parameters.charge_channels_to_use
 
     canvas = TCanvas("canvas","", 1700, 900)
     pad = canvas.cd(1)
