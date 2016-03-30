@@ -16,7 +16,7 @@ notes:
 is_6th_LXe = False
 is_7th_LXe = True
 
-
+import math
 try:
     from ROOT import gROOT
     from ROOT import gSystem
@@ -29,6 +29,7 @@ except ImportError:
 
 drift_length = 18.16 # mm, from solidworks for 7th LXe + 
 drift_velocity = 2.0 # mm / microsecond  
+max_drift_time = drift_length/drift_velocity
 
 # drift time threshold for 99% signal collection, determined from ion screening
 # and cathode effects:
@@ -333,16 +334,17 @@ if is_6th_LXe:
     decay_time_values[5] = 300.0*microsecond
 
 if is_7th_LXe:
-    # updated with fits to 7th LXe overnight -- 29 Mar 2016
-    # tier1_overnight_cell_full_cathode_bias_1700V_2Vinput_DT1750mV_disc_teed_preamp_extraamplified_trigger_200delay_2016-03-08_08-14-17.root
-    decay_time_values[0] = 374.22*microsecond # +/- 9.04 
-    decay_time_values[1] = 371.36*microsecond # +/- 5.07 
-    decay_time_values[2] = 367.63*microsecond # +/- 7.41 
-    decay_time_values[3] = 366.26*microsecond # +/- 10.09 
-    decay_time_values[4] = 462.74*microsecond # +/- 8.10 
-    decay_time_values[5] = 446.04*microsecond # +/- 4.19 
-    decay_time_values[6] = 433.24*microsecond # +/- 6.07 
-    decay_time_values[7] = 440.04*microsecond # +/- 10.26 
+    # updated with fits to 7th LXe overnight -- 30 Mar 2016
+    # results_tier1_overnight_cell_full_cathode_bias_1700V_2Vinput_DT1750mV_disc_teed_preamp_extraamplified_trigger_200delay_2016-03-08_08-.txt
+
+    decay_time_values[0] = 381.34*microsecond # +/- 2.81 
+    decay_time_values[1] = 365.99*microsecond # +/- 1.49 
+    decay_time_values[2] = 385.23*microsecond # +/- 2.25 
+    decay_time_values[3] = 382.75*microsecond # +/- 3.16 
+    decay_time_values[4] = 479.48*microsecond # +/- 2.71 
+    decay_time_values[5] = 439.96*microsecond # +/- 1.24 
+    decay_time_values[6] = 417.95*microsecond # +/- 1.77 
+    decay_time_values[7] = 448.86*microsecond # +/- 2.91 
 
 
 # charge calbration from these files for 5th LXe:
@@ -409,15 +411,16 @@ def get_colors():
     ]
 
     colors = [
-        TColor.kRed, 
-        TColor.kGreen+1, 
-        TColor.kBlue, 
-        TColor.kBlack, 
-        TColor.kTeal, 
-        TColor.kOrange+1, 
-        #TColor.kPink, 
         TColor.kMagenta, 
+        TColor.kMagenta+2, 
+        TColor.kRed, 
+        TColor.kOrange+1, 
+        TColor.kGreen+2, 
         TColor.kCyan+1,
+        TColor.kBlue, 
+        TColor.kBlue+2, 
+        #TColor.kTeal, 
+        TColor.kGray+2, 
     ]
     return colors
 
@@ -440,6 +443,14 @@ if is_7th_LXe:
     rms_keV[7] = 19.02136
 
 avg_rms_keV = sum(rms_keV.values())/len(rms_keV)
+
+# rms contribution to chargeEnergy:
+charge_energy_rms_keV = 0.0
+for channel, value in enumerate(charge_channels_to_use):
+    if value:
+        rms = rms_keV[channel]*math.sqrt(2.0/100.0)
+        charge_energy_rms_keV += math.pow(rms,2.0)
+charge_energy_rms_keV = math.sqrt(charge_energy_rms_keV)
 
 def is_2Vinput(baseline_mean_file): #FIXME--will be included in the tree so no longer needed
     """
@@ -500,8 +511,12 @@ if __name__ == "__main__":
 
     print "\nRMS noise (keV):"
     for (channel, value) in rms_keV.items():
-        print "\t channel %i: %.6f" % (channel, value)
-    print "average noise:", avg_rms_keV
+        print "\t RMS channel %i: %.2f | contribution to energy1_pz: %.2f" % (channel, value, value*math.sqrt(2.0/100))
+    print "average RMS noise: %.2f" % avg_rms_keV
+    print "RMS contribution to chargeEnergy, charge_energy_rms_keV: %.2f" % charge_energy_rms_keV
+    print "charge_energy_rms_keV/570  [%]:","%.2f" % (charge_energy_rms_keV/570.0*100)
+    print "charge_energy_rms_keV/1064 [%]:","%.2f" % (charge_energy_rms_keV/1064.0*100)
+    print "charge_energy_rms_keV/1164 [%]:","%.2f" % (charge_energy_rms_keV/1164.0*100)
 
     #colors = get_colors()
     #print "\ncolors:"
