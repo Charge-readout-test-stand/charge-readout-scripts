@@ -118,10 +118,10 @@ def process_file(filename1, filename2):
 
     legend.Draw()
     canvas.Update()
-    #canvas.Print("comparison_channel%i.pdf" % (channel))
-    #canvas.Print("comparison_channel%i.png" % (channel))
-    canvas.Print("comparison.pdf")
-    canvas.Print("comparison.png")
+    canvas.Print("comparison_channel%i.pdf" % (channel))
+    canvas.Print("comparison_channel%i.png" % (channel))
+    #canvas.Print("comparison.pdf")
+    #canvas.Print("comparison.png")
     raw_input("Press Enter to continue...")
 
 
