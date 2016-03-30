@@ -165,7 +165,7 @@ def DrawEvents(fname):
         #sum_graph.SetLineWidth(2)
         
         print "Final Thing"
-        frame_hist.SetMinimum(-offset/2.0)
+        frame_hist.SetMinimum(-offset/1.5)
         frame_hist.SetMaximum(offset*(len(name_list)+3))
         legend.AddEntry(sum_graph, "Sum Charge E = %.1f" % cE,"l")
         sum_graph.Draw("l")
