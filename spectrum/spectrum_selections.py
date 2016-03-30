@@ -41,7 +41,8 @@ def process_file(filename):
 
     ## settings
     energy_threshold = 200
-    drifttime_low = 8.0
+    #drifttime_low = 8.0
+    drifttime_low = struck_analysis_parameters.drift_time_threshold
     drifttime_high = 10.0
     negative_energy_cut = -20
 
@@ -59,7 +60,8 @@ def process_file(filename):
     n_total_entries = n_entries
     print "%.1e entries in tree" % n_entries
 
-    canvas = TCanvas("canvas","", 1700, 900)
+    canvas = TCanvas("canvas","")
+    canvas.SetLeftMargin(0.15)
     legend = TLegend(0.5, 0.7, 0.9, 0.9)
     pad = canvas.cd(1)
     pad.SetGrid(1,1)
@@ -151,8 +153,10 @@ def process_file(filename):
     hist0 = gDirectory.Get("hist0")
     hist0.SetLineColor(TColor.kBlack)
     hist0.GetXaxis().SetTitle("Charge energy (keV)")
-    hist0.GetYaxis().SetTitle("Counts per 8keV bin")
-    hist0.SetTitle("Charge energy spectrum")
+    hist0.GetYaxis().SetTitle("Counts / %.1f keV" % hist0.GetBinWidth(1))
+    #hist0.SetTitle("Charge energy spectrum")
+    hist0.SetTitle("")
+    hist0.GetYaxis().SetTitleOffset(1.5)
     hist0.SetMaximum(3e4)
     legend.AddEntry(hist0, "All events", "l")
 
@@ -166,7 +170,8 @@ def process_file(filename):
     tree.Draw("chargeEnergy >> hist2(175, 0., 1400.)", "", "SAME")
     hist2 = gDirectory.Get("hist2")
     hist2.SetLineColor(TColor.kGreen + 3)
-    legend.AddEntry(hist2, "After cutting evts with any strip > %i & drift t < %.1f #mus or > %.1f #mus" % (energy_threshold, drifttime_low, drifttime_high), "l")
+    #legend.AddEntry(hist2, "After cutting evts with any strip > %i & drift t < %.1f #mus or > %.1f #mus" % (energy_threshold, drifttime_low, drifttime_high), "l")
+    legend.AddEntry(hist2, "After cutting evts with any strip > %i & drift t < %.1f #mus" % (energy_threshold, drifttime_low), "l")
 
     tree.SetEventList(elist3)
     tree.Draw("chargeEnergy >> hist3(175, 0., 1400.)", "", "SAME")
@@ -184,10 +189,13 @@ def process_file(filename):
 
     legend.Draw()
     canvas.Update()
+    # line to mark 570-keV peak
     line = TLine(570, 0.0, 570, hist0.GetMaximum())
-    line.Draw()
-    canvas.Print("chargeSpectrums.pdf")
-    canvas.Print("chargeSpectrums.png")
+    line.SetLineColor(TColor.kGray+2)
+    line.SetLineStyle(2)
+    #line.Draw()
+    canvas.Print("chargeSpectrum.pdf")
+    canvas.Print("chargeSpectrum.png")
     
 #    canvas.Clear()
 #    pad.SetLogy(False)
