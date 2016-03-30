@@ -117,7 +117,7 @@ def process_file(filename, verbose=True, do_overwrite=True):
         print "TTree run_tree doesn't exist!"
         sys.exit(1)
     
-    print "%i entries in tree" % n_entries
+    print "\t%i run entries in tree" % n_entries
 
     if n_entries == 0: sys.exit()
         
@@ -143,6 +143,7 @@ def process_file(filename, verbose=True, do_overwrite=True):
         tree.append(root_file.Get("tree%i" % i))
         try: # see if tree exists
             tree[-1].GetEntries() 
+            print "\t%i entries in tree%i" % (tree[-1].GetEntries(), i)
         except AttributeError:
             print "problem accessing tree%i -- skipping this file" % i
             return 0
@@ -234,20 +235,28 @@ def process_file(filename, verbose=True, do_overwrite=True):
             calibration[i] /= 2.5
 
     # file parameters
-    file_start_time = array('I', [0]) # unsigned int
+    file_start_time = array('I', [0]) # unsigned int, seconds
     file_start_time[0] = posix_start_time
     out_tree.Branch('file_start_time', file_start_time, 'file_start_time/i')
     run_tree.Branch('file_start_time', file_start_time, 'file_start_time/i')
+    file_start_timeDouble = array('d', [0]) # double, seconds
+    file_start_timeDouble[0] = posix_start_time
+    out_tree.Branch('file_start_timeDouble', file_start_timeDouble, 'file_start_timeDouble/D')
+    run_tree.Branch('file_start_timeDouble', file_start_timeDouble, 'file_start_timeDouble/D')
+
+    first_event_time = array('d', [0]) # double
+    out_tree.Branch('first_event_time', first_event_time, 'first_event_time/D')
 
     n_entries_array = array('I', [min(n_entries)]) # unsigned int
     out_tree.Branch('n_entries', n_entries_array, 'n_entries/i')
     run_tree.Branch('n_entries', n_entries_array, 'n_entries/i')
 
-   # run_time = array('d', [0]) # estimate run time by subtracting last time stamp from first time stamp
-   # out_tree.Branch('run_time', run_time, 'run_time/D')
-   # run_time[0] = (tree[0].GetMaximum("timestampDouble") -
-   #                tree[0].GetMinimum("timestampDouble"))/sampling_freq_Hz
-   # print "run time: %.2f seconds" % run_time[0]
+    run_duration = array('d', [0]) # estimate run time by subtracting last time stamp from first time stamp
+    run_tree.Branch('run_duration', run_duration, 'run_duration/D')
+    out_tree.Branch('run_duration', run_duration, 'run_duration/D')
+    run_duration[0] = (tree[0].GetMaximum("timestampDouble") -
+                   tree[0].GetMinimum("timestampDouble"))/sampling_freq_Hz[0]
+    print "run duration: %.2f minutes" % (run_duration[0]/60.0)
 
     ## event-specific parameters
     event = array('I', [0]) # unsigned int
@@ -392,7 +401,7 @@ def process_file(filename, verbose=True, do_overwrite=True):
     out_tree.Branch("filename",fname)
     run_tree.Branch("filename",fname)
 
-    print "%i entries" % min(n_entries)
+    print "%i min entries" % min(n_entries)
 
     run_tree.Fill() # this tree only has one entry with run-level entries 
 
@@ -424,6 +433,8 @@ def process_file(filename, verbose=True, do_overwrite=True):
                 timestampDouble[0] = tree[i].timestampDouble
                 time_since_last[0] = timestampDouble[0] - last_timestamp
                 last_timestamp = timestampDouble[0]
+                if i_entry == 0:
+                    first_event_time[0] = timestampDouble[0]/sampling_freq_Hz[0]
             else:
                 if timestamp[0] != tree[i].timestamp: ## if the timestamps does not agree
                     print "==> timestamps do not agree; stop processing ..."
