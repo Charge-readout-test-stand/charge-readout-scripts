@@ -36,36 +36,52 @@ def process_file(filename1, filename2):
     #basename = os.path.splitext(basename)[0]
     #basename = "_".join(basename.split("_")[1:])
     #print basename
+    
+    n_bins = 500
+    max_energy = 2000
+    max_energy = 4000
 
-    hist1 = TH1D("spectrum1", "Spectrum", 250, 0., 2000.)
-    hist2 = TH1D("spectrum2", "Spectrum", 250, 0., 2000.)
+    hist1 = TH1D("spectrum1", "Spectrum", n_bins, 0., max_energy)
+    hist2 = TH1D("spectrum2", "Spectrum", n_bins, 0., max_energy)
+
+    channel = input("Which channel: ")
 
     canvas = TCanvas("canvas","", 1700, 900)
+    pad = canvas.cd(1)
+    pad.SetGrid(1,1)
+    pad.SetLogy()
+    legend = TLegend(0.6, 0.75, 0.8, 0.85)
+ 
+    energy_var = "energy1_pz"
 
     # open file1 and grab the tree
     root_file = TFile(filename1,"READ")
     tree = root_file.Get("tree")
 
-    channel = input("Which channel: ")
+    if channel == 8:
+        energy_var = "energy"
+        #energy_var = "(wfm_max-wfm[0])"
 
-    for i_entry in xrange(tree.GetEntries()):
-        tree.GetEntry(i_entry)
-        if tree.channel == channel:
-            hist1.Fill(tree.energy1_pz)
+    selection = "channel==%i" % channel
+    selection += "&& %s >100" % energy_var
+
+    hist1.GetDirectory().cd()
+    print filename1
+    print energy_var
+    print selection
+    tree.Draw("%s >> %s" % (energy_var, hist1.GetName()), selection)
 
     # open file2 and grab the tree
     root_file = TFile(filename2,"READ")
     tree = root_file.Get("tree")
+    hist2.GetDirectory().cd()
+    #energy_var += "*2.5"
+    #energy_var = "(wfm[0]-wfm_min)*3"
+    print filename2
+    print energy_var
+    print selection
+    tree.Draw("%s >> %s" % (energy_var, hist2.GetName()), selection)
 
-    for i_entry in xrange(tree.GetEntries()):
-        tree.GetEntry(i_entry)
-        if tree.channel == channel:
-            hist2.Fill(tree.energy1_pz)
-
-    pad = canvas.cd(1)
-    pad.SetGrid(1,1)
-    pad.SetLogy()
-    legend = TLegend(0.6, 0.75, 0.8, 0.85)
     
     hist1.SetLineWidth(2)
     hist1.SetLineColor(1)
@@ -85,7 +101,9 @@ def process_file(filename1, filename2):
 # scale the second histogram
     rightmax = 1.874 * hist2.GetMaximum()
     #print "maximum counts", hist2.GetMaximum()
-    scale = math.pow(10,pad.GetUymax())/rightmax
+    #scale = math.pow(10,pad.GetUymax())/rightmax
+    #scale = 1.0
+    scale = hist1.Integral(hist1.GetXaxis().FindBin(300.),hist1.GetXaxis().FindBin(800.)) / hist2.Integral(hist2.GetXaxis().FindBin(300.),hist2.GetXaxis().FindBin(800.))
     hist2.SetLineWidth(2)
     hist2.SetLineColor(4)
     hist2.Scale(scale)
@@ -100,9 +118,11 @@ def process_file(filename1, filename2):
 
     legend.Draw()
     canvas.Update()
+    #canvas.Print("comparison_channel%i.pdf" % (channel))
+    #canvas.Print("comparison_channel%i.png" % (channel))
+    canvas.Print("comparison.pdf")
+    canvas.Print("comparison.png")
     raw_input("Press Enter to continue...")
-    
-
 
 
 if __name__ == "__main__":
