@@ -19,7 +19,6 @@ import wfmProcessing
 
 
 # options:
-#directory = "/nfs/slac/g/exo_data4/users/alexis4/test-stand/2015_12_03_testing"
 directory = os.getcwd()
 
 do_tier1 = True
