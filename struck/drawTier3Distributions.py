@@ -55,10 +55,12 @@ def process_file(filename):
 
     #-------------------------------------------------------------------------------
     # options
+
+    # choose one:
     do_draw_energy = 0
     do_draw_drift_times = 0
-    do_draw_rms = 0
-    do_draw_ADC_units = 1
+    do_draw_rms = 1
+    do_draw_ADC_units = 0
 
     #do_draw_sum = False # sum energy
     do_draw_sum = True # sum energy
@@ -100,7 +102,7 @@ def process_file(filename):
         xtitle = "RMS noise"
         do_draw_sum = False
 
-    if do_draw_ADC_units:
+    elif do_draw_ADC_units:
         print "---> drawing adc energies... "
         draw_command = "energy1_pz/calibration"
         min_bin = 0
