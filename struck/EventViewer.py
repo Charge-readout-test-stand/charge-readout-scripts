@@ -1,5 +1,5 @@
 import ROOT
-#ROOT.gROOT.SetBatch(True)
+ROOT.gROOT.SetBatch(True)
 import sys
 import os
 import struck_analysis_parameters
@@ -21,8 +21,9 @@ c1.SetGrid(1,1)
 c1.SetTopMargin(0.15)
 
 energy_cut = 570.0
-#n_plots_total = 200
 n_plots_total = 30
+#n_plots_total = 200
+trigger_time = 8.0
 
 color_list = struck_analysis_parameters.get_colors()
 name_list = ["X16", "X17", "X18", "X19", "Y16", "Y17", "Y18", "Y19", "PMT"]
@@ -149,15 +150,12 @@ def DrawEvents(fname):
             if name_list[i] != "PMT":
                 wfm = array('d',tree.wfm)
                 baseline = sum(wfm[:100])/100.0
-                #print "wfm",i, wfm[:20]
-                #print "baseline", baseline
                 sum_wfm = [sum_wfm[j] + (wfm[j] - baseline)*calib for j in xrange(len(wfm))]
                 if i < 4:
                     x_wfm = [x_wfm[j] + (wfm[j] - baseline)*calib for j in xrange(len(wfm))]
                 else:
                     y_wfm = [y_wfm[j] + (wfm[j] - baseline)*calib for j in xrange(len(wfm))]
 
-        print "sum_wfm",sum_wfm[-1]
         for j,val in enumerate(sum_wfm):
             sum_graph.SetPoint(sum_graph.GetN(),j*0.040,val)
             x_graph.SetPoint(x_graph.GetN(),j*0.040,x_wfm[j]+offset)
@@ -170,10 +168,23 @@ def DrawEvents(fname):
         sum_graph.Draw("l")
         x_graph.SetLineColor(ROOT.TColor.kRed)
         y_graph.SetLineColor(ROOT.TColor.kBlue)
-        #x_graph.Draw("l")
-        #y_graph.Draw("l")
+        #x_graph.Draw("l") # x channel sum
+        #y_graph.Draw("l") # y channel sum
         print "Leg Draw"
         legend.Draw()
+
+        # vertical line at trigger time
+        x_val = trigger_time
+        line = ROOT.TLine(x_val, frame_hist.GetMinimum(), x_val, frame_hist.GetMaximum())
+        line.SetLineStyle(2)
+        line.Draw()
+
+        # vertical line at trigger time
+        x_val = trigger_time + struck_analysis_parameters.max_drift_time
+        line2 = ROOT.TLine(x_val, frame_hist.GetMinimum(), x_val, frame_hist.GetMaximum())
+        line2.SetLineStyle(2)
+        line2.Draw()
+
         print "Update"
         c1.Update()
         print "Updated"
@@ -199,9 +210,8 @@ def DrawEvents(fname):
 if __name__ == "__main__":
     
     if len(sys.argv) < 2:
-        print "Need File Name"
         print "WARNING BYPASSING ARG AND JUST LOOKING AT HARDCODED FILE"
-        raw_input()
+        raw_input("enter to continue")
     else:
         filename = sys.argv[1]
     
