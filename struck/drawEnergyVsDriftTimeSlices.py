@@ -62,26 +62,32 @@ def process_file(filename, fit_results_filename):
     #print json.dumps(fit_results, sort_keys=True, indent=4)
     graph = TGraphErrors()
     graph.SetLineWidth(2)
-    for drift_time, values in fit_results.items():
+    keys = fit_results.keys()
+    keys.sort()
+    for i, drift_time in enumerate(keys):
+        values = fit_results[drift_time]
         drift_time = float(drift_time)
         centroid = float(values["centroid"])
+        centroid_err = float(values["centroid_err"])
         sigma = float(values["sigma"])
         fit_status = int(values["fit_status"])
         dt = float(values["dt"])
         dz = dt*drift_velocity
         z=drift_time*drift_velocity
-        print "drift_time: %.1f:" % drift_time
+        print "drift_time %i: %.1f:" % (i, drift_time)
         print "\t centroid", centroid
         print "\t sigma", sigma
         print "\t dt", dt
         print "\t dz", dz
+        print "\t z", z
         print "\t fit_status", fit_status
-        #if fit_status != 0:
-        #    print "skippping!"
+        if fit_status != 0:
+            print "BAD FIT!"
         #    continue
         i_point = graph.GetN()
         graph.SetPoint(i_point,z+dz/2.0, centroid)
-        graph.SetPointError(i_point,dz/2.0,sigma)
+        #graph.SetPointError(i_point,dz/2.0,sigma)
+        graph.SetPointError(i_point,dz/2.0,centroid_err)
 
     # 2D hist for time vs. energy
     hist = TH2D("hist","",275,0,11*drift_velocity,100,300,1300)
@@ -109,8 +115,10 @@ def process_file(filename, fit_results_filename):
     graph.Draw("p")
     canvas.Update()
     n_slices = len(fit_results.keys())
-    canvas.Print("%s_%islices.pdf" % (plot_name, n_slices))
-    canvas.Print("%s_%islices.png" % (plot_name, n_slices))
+    print "%i slices" % n_slices
+    plot_name = "%s_%islices" % (plot_name, n_slices)
+    canvas.Print("%s.pdf" % plot_name)
+    canvas.Print("%s.png" % plot_name)
     raw_input("enter... ")
 
 
@@ -119,11 +127,13 @@ if __name__ == "__main__":
     
     if len(sys.argv) < 2:
         print "using default files"
-        process_file(
-            "overnight7thLXe.root",
-            #"fit_results_z_slices_overnight7thLXe_6.txt"
-            "fit_results_z_slices_overnight7thLXe_10.txt"
-        )
+
+        #fit_results_file = "fit_results_z_slices_overnight7thLXe_6.txt"
+        #fit_results_file = "fit_results_z_slices_overnight7thLXe_10.txt"
+        #fit_results_file = "fit_results_z_slices_overnight7thLXe_21.txt"
+        fit_results_file = "fit_results_z_slices_overnight7thLXe_19.txt"
+
+        process_file( "overnight7thLXe.root", fit_results_file)
 
     elif len(sys.argv) < 3:
         process_file(sys.argv[1], sys.argv[2])
