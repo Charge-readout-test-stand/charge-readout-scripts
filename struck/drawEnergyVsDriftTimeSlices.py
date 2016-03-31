@@ -29,9 +29,11 @@ gStyle.SetTitleBorderSize(0)
 import struck_analysis_parameters
 
 def process_file(filename, fit_results_filename):
+    drift_velocity = struck_analysis_parameters.drift_velocity
 
     # options:
-    draw_cmd = "energy1_pz:(rise_time_stop95-trigger_time+0.020)"
+    #draw_cmd = "energy1_pz:(rise_time_stop99-trigger_time+0.020)"
+    draw_cmd = "energy1_pz:(rise_time_stop99-trigger_time+0.020)*%s" % drift_velocity
     single_strip_cut = struck_analysis_parameters.get_single_strip_cut(10.0)
     selection = []
     selection.append(single_strip_cut)
@@ -52,6 +54,7 @@ def process_file(filename, fit_results_filename):
     print "selection:",selection
     print "\n"
 
+
     # grab info from json fit results:
     print "--> processing fit results", fit_results_filename
     json_file = file(fit_results_filename,'r')
@@ -63,22 +66,31 @@ def process_file(filename, fit_results_filename):
         drift_time = float(drift_time)
         centroid = float(values["centroid"])
         sigma = float(values["sigma"])
+        fit_status = int(values["fit_status"])
         dt = float(values["dt"])
+        dz = dt*drift_velocity
+        z=drift_time*drift_velocity
         print "drift_time: %.1f:" % drift_time
         print "\t centroid", centroid
         print "\t sigma", sigma
         print "\t dt", dt
+        print "\t dz", dz
+        print "\t fit_status", fit_status
+        #if fit_status != 0:
+        #    print "skippping!"
+        #    continue
         i_point = graph.GetN()
-        graph.SetPoint(i_point,drift_time+dt/2.0, centroid)
-        graph.SetPointError(i_point,dt/2.0,sigma)
+        graph.SetPoint(i_point,z+dz/2.0, centroid)
+        graph.SetPointError(i_point,dz/2.0,sigma)
 
     # 2D hist for time vs. energy
-    hist = TH2D("hist","",275,0,11,100,300,1300)
-    hist.SetXTitle("drift time [#mus]")
+    hist = TH2D("hist","",275,0,11*drift_velocity,100,300,1300)
+    #hist.SetXTitle("drift time [#mus]")
+    hist.SetXTitle("distance from anode [mm]")
     hist.SetYTitle("Energy [keV]")
     hist.GetYaxis().SetTitleOffset(1.3)
 
-    # draw stuff
+    # draw 2D hist
     canvas = TCanvas("canvas","")
     canvas.SetGrid(1,1)
     canvas.SetLogz(1)
@@ -87,10 +99,18 @@ def process_file(filename, fit_results_filename):
         single_strip_cut,
         "colz"
     )
-    print "%i entries drawn" % n_entries
+    canvas.Update()
+    plot_name = "driftDistVsEnergy"
+    canvas.Print("%s.pdf" % plot_name)
+    canvas.Print("%s.png" % plot_name)
+    print "%i ihist entries drawn" % n_entries
+
+    # draw graph over hist
     graph.Draw("p")
     canvas.Update()
-    canvas.Print("driftTimeVsEnergy.pdf")
+    n_slices = len(fit_results.keys())
+    canvas.Print("%s_%islices.pdf" % (plot_name, n_slices))
+    canvas.Print("%s_%islices.png" % (plot_name, n_slices))
     raw_input("enter... ")
 
 
