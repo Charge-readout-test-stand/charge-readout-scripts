@@ -23,7 +23,7 @@ import datetime
 
 from ROOT import gROOT
 # run in batch mode:
-gROOT.SetBatch(True)
+#gROOT.SetBatch(True)
 from ROOT import TFile
 from ROOT import TTree
 from ROOT import TCanvas
@@ -45,6 +45,9 @@ def fit_channel(
     do_1064_fit,
     all_energy_var,
     selection,
+    do_use_step=False,
+    min_bin=200,
+    max_bin=1000,
 ):
 
     #-------------------------------------------------------------------------------
@@ -54,12 +57,9 @@ def fit_channel(
     energy_var = "energy1_pz"
 
     do_debug = False
-    do_use_step = False
     do_individual_channels = False
 
     # defaults for 570-keV
-    min_bin = 200
-    max_bin = 1000
     bin_width = 5
     line_energy = 570
     sigma_guess = 40
@@ -98,6 +98,8 @@ def fit_channel(
 
     fit_start_energy = line_energy - fit_half_width
     fit_stop_energy = line_energy + fit_half_width
+    print "fit_start_energy", fit_start_energy
+    print "fit_stop_energy", fit_stop_energy
 
 
     #-------------------------------------------------------------------------------
@@ -148,7 +150,8 @@ def fit_channel(
     gaus_integral_guess = hist.GetBinContent(hist.FindBin(line_energy))*math.sqrt(2*math.pi)*sigma_guess
     fit_start_height = hist.GetBinContent(hist.FindBin(fit_start_energy))
     fit_stop_height = hist.GetBinContent(hist.FindBin(fit_stop_energy))
-    #print fit_start_height, fit_stop_height
+    print "fit_stop_height", fit_stop_height
+    print "fit_start_height", fit_start_height
     if fit_stop_height == 0.0: fit_stop_height = 1.0
     decay_const_guess = math.log(fit_stop_height/fit_start_height)/(fit_start_energy - fit_stop_energy)
     print "decay_const_guess:",  decay_const_guess
