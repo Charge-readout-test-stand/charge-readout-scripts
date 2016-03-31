@@ -1,14 +1,15 @@
 #!/usr/bin/env python
 
 """
-This script draws a spectrum from a root tree. 
 
-The following things should be edited to draw different distributions:
-* options (many variables in this section)
-* selections
-* extra_selections
-* frame_hist -- the draw commmand to fill this and the y axis titles need to be
-  edited by hand, if do_draw_sum is True
+This script draws distributions of tier3 data. For a variable of interest, the
+sum spectrum (if chosen ) and individual channels are drawn. The variable of
+interest is chosen by editing the options. Possible variables:
+
+* energy in keV
+* RMS noise
+* energy in ADC units
+* drift times
 
 arguments [sis tier 3 root files of events]
 """
@@ -59,8 +60,9 @@ def process_file(filename):
     # choose one:
     do_draw_energy = 0
     do_draw_drift_times = 0
-    do_draw_rms = 1
+    do_draw_rms = 0
     do_draw_ADC_units = 0
+    do_draw_mV = 1
 
     #do_draw_sum = False # sum energy
     do_draw_sum = True # sum energy
@@ -113,6 +115,18 @@ def process_file(filename):
         xUnits = "ADC units"
         xtitle = "Energy"
         prefix = "adc_energy_"
+
+    elif do_draw_mV:
+        print "---> drawing mV..."
+        draw_command = "energy1_pz/calibration*2.5*1e3/16384"
+        min_bin = 0
+        max_bin = 160
+        bin_width = 1
+        do_draw_sum = False
+
+        xUnits = "mV"
+        xtitle = "Energy"
+        prefix = "energy_mV_"
  
     else:
         print "choose a plot to draw!"
