@@ -1,3 +1,6 @@
+"""
+19 slices takes 20 minutes
+"""
 
 import os
 import sys
@@ -18,7 +21,7 @@ def process_file(filename):
     # options 
     all_energy_var = "energy1_pz"
     max_drift_length = 19.0 # mm
-    n_slices = 10
+    n_slices = 19
     single_strip_cut = struck_analysis_parameters.get_single_strip_cut(10.0)
     n_bins = 160
     min_bin = 0
@@ -51,7 +54,7 @@ def process_file(filename):
         print "could not get entries from tree"
 
     legend = TLegend(0.1, 0.9, 0.9, 0.99)
-    legend.SetNColumns(3)
+    legend.SetNColumns(4)
 
     hists = []
 
@@ -84,7 +87,7 @@ def process_file(filename):
             all_energy_var=all_energy_var, 
             selection=selection,
             do_use_step=True,    
-            min_bin=300,
+            min_bin=200,
         )
         result["dt"] = dt
         all_results[t] = result
@@ -92,7 +95,7 @@ def process_file(filename):
         hist = TH1D("hist_%i_to_%i" % (t*1e3, (t+dt)*1e3), "",n_bins,min_bin,max_bin)
         hists.append(hist)
         tree.Draw("%s >> %s" % (all_energy_var, hist.GetName()),selection,"goff")
-        legend.AddEntry(hist,"%.1f to %.1f #mus" % (t*1e3, (t+dt)*1e3),"l")
+        legend.AddEntry(hist,"%.1f to %.1f #mus" % (t, t+dt),"l")
         print "%i entries in %s" % (hist.GetEntries(), hist.GetName())
         plot_name = "fit_all_%s_lin.pdf" % basename
         new_plot_name = "z_slice_fit_%i_to_%i.pdf" % (t*1e3, (t+dt)*1e3)
