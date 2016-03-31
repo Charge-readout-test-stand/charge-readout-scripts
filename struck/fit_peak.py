@@ -63,8 +63,8 @@ def fit_channel(
     bin_width = 5
     line_energy = 570
     sigma_guess = 40
-    fit_half_width = 170
-    #fit_half_width = 250
+    #fit_half_width = 170
+    fit_half_width = 250
 
     # gaus + exponential
     fit_formula = "gausn(0) + [3]*TMath::Exp(-[4]*x) + [5]"
@@ -267,10 +267,10 @@ def fit_channel(
     leg = TLegend(0.49, 0.7, 0.99, 0.9)
     leg.AddEntry(hist, "Data")
     leg.AddEntry(testfit, "Total Fit: #chi^{2}/DOF = %.1f/%i, P-val = %.1E" % (chi2, ndf, prob),"l")
-    leg.AddEntry(bestfit_gaus, "Gaus Fit: #sigma = %.1f #pm %.1f keV, %.1E #pm %.1E cts" % ( 
+    leg.AddEntry(bestfit_gaus, "Gaus Peak: #sigma = %.1f #pm %.1f keV, %.1E #pm %.1E cts" % ( 
         sigma, sigma_err, n_peak_counts, testfit.GetParError(0)), "l")
-    leg.AddEntry(bestfit_gaus, "centroid = %.1f #pm %.1f keV" % (centroid, centroid_err), "")
-    leg.AddEntry(bestfit_exp,  "Exp + const background fit", "l")
+    leg.AddEntry(bestfit_gaus, "centroid = %.1f #pm %.1f keV | status=%i" % (centroid, centroid_err, fit_status), "")
+    leg.AddEntry(bestfit_exp,  "Exp + const", "l")
     if do_use_step: 
         leg.AddEntry(bestfit_step, "Erfc step: height = %.1E #pm %.1E" % (testfit.GetParameter(6), testfit.GetParError(6)), "l")
     leg.SetFillColor(0)
