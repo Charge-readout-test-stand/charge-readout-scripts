@@ -78,9 +78,8 @@ else:
 
 n_channels = len(channels) # channels that are active
 
-n_chargechannels = 0
-for value in charge_channels_to_use:
-    n_chargechannels += value  ## number of useful charge channels
+## number of useful charge channels
+n_chargechannels = sum(charge_channels_to_use)
 
 # channel names for 6th LXe    
 channel_map = {}
@@ -234,7 +233,7 @@ def get_long_drift_time_cut(
 
     return selection
 
-def get_charge_energy_no_pz():
+def get_chargeEnergy_no_pz():
     """A draw command for total energy before PZ correction """
     draw_cmd = []
     for channel, value in enumerate(charge_channels_to_use): 
@@ -285,7 +284,7 @@ def get_cuts_label(draw_cmd, selection):
     # check draw command
     if get_few_channels_cmd() in draw_cmd:
         label.append("FC")
-    if get_charge_energy_no_pz() in draw_cmd:
+    if get_chargeEnergy_no_pz() in draw_cmd:
         label.append("NPZ")
 
     # check selection
@@ -444,13 +443,22 @@ if is_7th_LXe:
 
 avg_rms_keV = sum(rms_keV.values())/len(rms_keV)
 
-# rms contribution to chargeEnergy:
-charge_energy_rms_keV = 0.0
+# contributions to chargeEnergy, energy1_pz:
+chargeEnergy_rms_keV = 0.0
+energy1_pz_digitization_noise_keV = 0.0
 for channel, value in enumerate(charge_channels_to_use):
     if value:
         rms = rms_keV[channel]*math.sqrt(2.0/100.0)
-        charge_energy_rms_keV += math.pow(rms,2.0)
-charge_energy_rms_keV = math.sqrt(charge_energy_rms_keV)
+        chargeEnergy_rms_keV += math.pow(rms,2.0)
+        dig_rms = calibration_values[channel]*0.5 # 0.5 ADC units
+        energy1_pz_digitization_noise_keV += math.pow(dig_rms, 2.0)
+chargeEnergy_rms_keV = math.sqrt(chargeEnergy_rms_keV)
+energy1_pz_rms_keV = avg_rms_keV*math.sqrt(2.0/100.0)
+energy1_pz_digitization_noise_keV = math.sqrt(energy1_pz_digitization_noise_keV)/n_chargechannels
+
+# from NEST MC:
+# /nfs/slac/g/exo_data4/users/mjewell/nEXO_MC/digitization/electron_570keV_Ralph/MC/
+nest_resolution_570 = 1.46847e+03/2.71292e+04
 
 def is_2Vinput(baseline_mean_file): #FIXME--will be included in the tree so no longer needed
     """
@@ -513,10 +521,16 @@ if __name__ == "__main__":
     for (channel, value) in rms_keV.items():
         print "\t RMS channel %i: %.2f | contribution to energy1_pz: %.2f" % (channel, value, value*math.sqrt(2.0/100))
     print "average RMS noise: %.2f" % avg_rms_keV
-    print "RMS contribution to chargeEnergy, charge_energy_rms_keV: %.2f" % charge_energy_rms_keV
-    print "charge_energy_rms_keV/570  [%]:","%.2f" % (charge_energy_rms_keV/570.0*100)
-    print "charge_energy_rms_keV/1064 [%]:","%.2f" % (charge_energy_rms_keV/1064.0*100)
-    print "charge_energy_rms_keV/1164 [%]:","%.2f" % (charge_energy_rms_keV/1164.0*100)
+    print "RMS contribution to chargeEnergy, chargeEnergy_rms_keV: %.2f" % chargeEnergy_rms_keV
+    print "chargeEnergy_rms_keV/570  [%]:","%.2f" % (chargeEnergy_rms_keV/570.0*100)
+    print "chargeEnergy_rms_keV/1064 [%]:","%.2f" % (chargeEnergy_rms_keV/1064.0*100)
+    print "chargeEnergy_rms_keV/1164 [%]:","%.2f" % (chargeEnergy_rms_keV/1164.0*100)
+    print "RMS contribution to energy1_pz, energy1_pz_rms_keV: %.2f" % energy1_pz_rms_keV 
+    print "digitization noise contribution to energy1_pz, energy1_pz_digitization_noise_keV %.2f" % energy1_pz_digitization_noise_keV
+    print "intrinsic resolution of 570 keV, from NEST [%]:", "%.2f" % (nest_resolution_570*100.0)
+    expected_resolution_570 = math.sqrt( (nest_resolution_570*570.0)**2 + energy1_pz_digitization_noise_keV**2 + energy1_pz_rms_keV**2 )
+    print "expected resolution of energy1_pz @ 570 keV [keV]: %.2f" % expected_resolution_570
+    print "expected resolution of energy1_pz @ 570 keV [%]:","%.2f" % (expected_resolution_570/570.0*100.0)
 
     #colors = get_colors()
     #print "\ncolors:"
@@ -537,8 +551,8 @@ if __name__ == "__main__":
     print "\nget_few_channels_cmd:"
     print "\t" + "\n\t +".join(get_few_channels_cmd().split("+"))
 
-    print "\nget_charge_energy_no_pz:"
-    print "\t", get_charge_energy_no_pz()
+    print "\nget_chargeEnergy_no_pz:"
+    print "\t", get_chargeEnergy_no_pz()
 
     print "\nget_energy_weighted_drift_time:"
     print "\t" + "\n\t +".join(get_energy_weighted_drift_time().split("+"))
