@@ -18,7 +18,7 @@ def process_file(filename):
     # options 
     all_energy_var = "energy1_pz"
     max_drift_length = 19.0 # mm
-    n_slices = 6
+    n_slices = 10
     single_strip_cut = struck_analysis_parameters.get_single_strip_cut(10.0)
     n_bins = 160
     min_bin = 0
@@ -86,6 +86,7 @@ def process_file(filename):
             do_use_step=True,    
             min_bin=300,
         )
+        result["dt"] = dt
         all_results[t] = result
 
         hist = TH1D("hist_%i_to_%i" % (t*1e3, (t+dt)*1e3), "",n_bins,min_bin,max_bin)
@@ -120,7 +121,9 @@ def process_file(filename):
             hist.SetYTitle("Counts / %.1f keV" % hist.GetBinWidth(1))
             hist.SetLineColor(1)
         else:
-            hist.SetLineColor(struck_analysis_parameters.get_colors()[i-1])
+            colors = struck_analysis_parameters.get_colors()
+            i_color = colors[(i-1) % len(colors)]
+            hist.SetLineColor(i_color)
             hist.Draw("same")
 
     legend.Draw()
