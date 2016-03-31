@@ -181,7 +181,7 @@ def get_short_drift_time_cut(
     selection = []
     for channel, value  in enumerate(charge_channels_to_use): 
         if value:
-            cut = "((energy1_pz[%i]>%s) && (rise_time_stop95[%i]-trigger_time<%s))" % (
+            cut = "((energy1_pz[%i]>%s) && (rise_time_stop99[%i]-trigger_time<%s))" % (
                 channel,
                 energy_threshold,
                 channel,
@@ -212,14 +212,14 @@ def get_long_drift_time_cut(
     selection = []
     for channel, value  in enumerate(charge_channels_to_use): 
         if value:
-            cut = "(energy1_pz[%i]>%s)&&(rise_time_stop95[%i]-trigger_time>%s)" % (
+            cut = "(energy1_pz[%i]>%s)&&(rise_time_stop99[%i]-trigger_time>%s)" % (
                 channel, 
                 energy_threshold,
                 channel,
                 drift_time_low,
             )
             if drift_time_high != None:
-                cut += "&&(rise_time_stop95[%i]-trigger_time<%s)" % (
+                cut += "&&(rise_time_stop99[%i]-trigger_time<%s)" % (
                     channel,
                     drift_time_high,
                 )
@@ -304,7 +304,7 @@ def get_energy_weighted_drift_time():
 
     for channel, value  in enumerate(charge_channels_to_use): 
         if value:
-            cut = "energy1_pz[%i]*(rise_time_stop95[%i]-trigger_time)" % (
+            cut = "energy1_pz[%i]*(rise_time_stop99[%i]-trigger_time)" % (
                 channel, 
                 channel, 
             )
