@@ -88,6 +88,7 @@ def process_file(filename):
             selection=selection,
             do_use_step=True,    
             min_bin=200,
+            fit_half_width = 300,
         )
         result["dt"] = dt
         all_results[t] = result
