@@ -6,23 +6,27 @@ import RalphWF
 
 # for AGS root macro:
 from ROOT import gROOT
+gROOT.SetBatch(True)
 from ROOT import TF1
 from ROOT import TCanvas
 from ROOT import TGraph
 from ROOT import TLegend
 from ROOT import TLine
 from ROOT import TColor
+from ROOT import TFile
 
 
-def make_graph():
+def make_graph(
+    e_lifetime=None, # microseconds
+):
 
     # options
     x = 1.5 # mm
     y = 0.0 # mm
-    z = 0.0 # distance from cathode
+    z = 0.16 # distance from cathode
     q = 1.0 # arbitrary
-    dz = 0.1 # mm -- for nice plots
-    #dz = 2.0 # mm -- quick & dirty
+    dz = 0.25 # mm -- for nice plots -- takes ~1.5 minutes
+    #dz = 1.0 # mm -- quick & dirty
 
     print "--> making graph: %i, %i" % (RalphWF.posion, RalphWF.cathsupress)
 
@@ -41,6 +45,12 @@ def make_graph():
         graph.SetPoint(graph.GetN(), cathodeToAnodeDistance-z, val)
         z += dz
     graph.SetLineWidth(2)
+    graph.Draw("goff")
+    hist = graph.GetHistogram()
+    hist.SetXTitle("Interaction location (distance from anode) [mm]")
+    hist.SetYTitle("Fraction of ionization charge observed")
+    graph.SetMarkerStyle(8)
+    graph.SetMarkerSize(0.5)
     print "integral_distance:", integral_distance
     print "integral_efficiency", integral_efficiency
     print "integral_efficiency / integral_distance:", integral_efficiency/integral_distance
@@ -53,6 +63,7 @@ def main():
     legend = TLegend(0.1, 0.91, 0.9, 0.99)
     legend.SetFillColor(0)
     legend.SetNColumns(2)
+    outfile = TFile("ionAndCathodeEffect.root","recreate")
 
     print "no effects"
     RalphWF.posion = False
@@ -60,7 +71,7 @@ def main():
     graph = make_graph()
     graph.Draw("al")
     hist = graph.GetHistogram()
-    hist.SetXTitle("Distance from anode [mm]")
+    hist.SetXTitle("Interaction location (distance from anode) [mm]")
     hist.SetYTitle("Fraction of ionization charge observed")
     hist.SetMinimum(0.0)
     hist.SetMaximum(1.1)
@@ -93,6 +104,33 @@ def main():
     graph4.Draw("l")
     legend.AddEntry(graph4, "Ion screening + cathode effect", "l")
     
+    print "e- lifetime"
+    RalphWF.posion = False
+    RalphWF.cathsupress = False
+    RalphWF.e_lifetime = 50.0 # microseconds
+    graph5 = make_graph()
+    graph5.SetLineColor(TColor.kViolet+1)
+    graph5.Draw("l")
+    legend.AddEntry(graph5, "#tau_{e-}=%i#mus" % RalphWF.e_lifetime, "l")
+
+    if False:
+        print "e- lifetime + captured charge"
+        RalphWF.posion = False
+        RalphWF.cathsupress = False
+        RalphWF.consider_capturedQ = True
+        graph6 = make_graph()
+        graph6.SetLineColor(TColor.kMagenta)
+        graph6.Draw("l")
+        legend.AddEntry(graph6, "#tau_{e-}=%i#mus w captured Q" % RalphWF.e_lifetime, "l")
+
+    print "all"
+    RalphWF.posion = True
+    RalphWF.cathsupress = True
+    RalphWF.consider_capturedQ = False
+    graph7 = make_graph()
+    graph7.SetLineColor(TColor.kGreen+2)
+    graph7.Draw("l")
+    legend.AddEntry(graph7, "ion + cathode + #tau_{e-}=%i#mus" % RalphWF.e_lifetime, "l")
 
     cathodeToAnodeDistance = RalphWF.cathodeToAnodeDistance
     line = TLine(cathodeToAnodeDistance, hist.GetMinimum(), 
@@ -106,7 +144,12 @@ def main():
     canvas.Print("ionAndCathodeEffect.pdf")
     canvas.Print("ionAndCathodeEffect.png")
 
-    val = raw_input("press enter to continue") # pause
+    if not gROOT.IsBatch():
+        val = raw_input("press enter to continue") # pause
+
+    graph4.Write("graphIonAndCathode")
+    graph5.Write("graphIonAndCathode%iusTau" % RalphWF.e_lifetime)
+    outfile.Close()
 
 if __name__ == "__main__":
     main()
