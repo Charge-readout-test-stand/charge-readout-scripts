@@ -48,6 +48,7 @@ def fit_channel(
     do_use_step=False,
     min_bin=200,
     max_bin=1000,
+    fit_half_width=170,
 ):
 
     #-------------------------------------------------------------------------------
@@ -63,8 +64,6 @@ def fit_channel(
     bin_width = 5
     line_energy = 570
     sigma_guess = 40
-    #fit_half_width = 170
-    fit_half_width = 250
 
     # gaus + exponential
     fit_formula = "gausn(0) + [3]*TMath::Exp(-[4]*x) + [5]"
