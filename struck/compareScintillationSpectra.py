@@ -33,10 +33,22 @@ gStyle.SetTitleBorderSize(0)
 
 def compare_spectra(directory, filename_prefixes):
 
+    pmt_channel = struck_analysis_parameters.pmt_channel
+    print "PMT channel: %i" % pmt_channel
+
     # options:
     min_bin = 0
     max_bin = 8000
     bin_width = 50
+    if struck_analysis_parameters.is_6th_LXe:
+        min_bin = 0
+        max_bin = 8000
+        bin_width = 50
+    elif struck_analysis_parameters.is_7th_LXe:
+        min_bin = 0
+        max_bin = 3000
+        bin_width = 5
+        
 
     n_bins = int(math.floor((max_bin - min_bin)/bin_width))
     #-------------------------------------------------------------------------------
@@ -56,10 +68,22 @@ def compare_spectra(directory, filename_prefixes):
         print "\t%i files" % len(files)
 
         try:
-            cathode_bias = filename_prefix.split("_")[3]
-            cathode_bias = int(cathode_bias.split("V")[0])
-        except:
+            if struck_analysis_parameters.is_6th_LXe:
+                # 6th LXe format:
+                cathode_bias = filename_prefix.split("_")[3]
+                cathode_bias = cathode_bias.split("V")
+                cathode_bias = int(cathode_bias[0])
+            elif struck_analysis_parameters.is_7th_LXe:
+                # 7th LXe format:
+                cathode_bias = filename_prefix.split("_")[5]
+                cathode_bias = cathode_bias.split("V")
+                cathode_bias = int(cathode_bias[0])
+        except ValueError:
+            cathode_bias = 0
+            print "default bias:", cathode_bias
+        except IndexError:
             cathode_bias = 1700
+            print "default bias:", cathode_bias
 
         print "\t %i V bias" % cathode_bias
 
@@ -74,6 +98,9 @@ def compare_spectra(directory, filename_prefixes):
         hist.SetLineColor(colors[len(hists)])
         hist.SetXTitle("Energy [keV]")
         hist.SetYTitle("Counts / %i keV / second" % bin_width)
+        if struck_analysis_parameters.is_7th_LXe:
+            hist.SetXTitle("Energy [ADC units]")
+            hist.SetYTitle("Counts / %i ADC units / second" % bin_width)
 
         run_duration = 0.0
 
@@ -85,21 +112,44 @@ def compare_spectra(directory, filename_prefixes):
             tree = tfile.Get("tree")
             run_tree = tfile.Get("run_tree")
             tree.GetEntry(0)
+            for i, channel in enumerate(tree.channel):
+                channel = ord(channel)
+                #print "tree channels:", i, channel
+                if channel == pmt_channel:
+                    pmt_index = i
+            try:
+                calibration = tree.calibration[pmt_index]
+                print "PMT calibration:", calibration
+            except:
+                tree.Show(0)
+                return
 
             for entry in xrange(run_tree.GetEntries()):
                 run_tree.GetEntry(entry)
-                run_duration += run_tree.run_time
+                try:
+                    run_duration += run_tree.run_duration
+                except AttributeError: # old version
+                    run_duration += run_tree.run_time
 
-            if tree.baseline_mean_file[6] < 8000:
-                multiplier /= 2.5
+            try:
+                if tree.baseline_mean_file[pmt_index] < 8000:
+                    multiplier /= 2.5
+            except AttributeError:
+                print "no baseline_mean_file info available"
 
             #if cathode_bias == 0:
             #    multiplier *= 2
 
+            
             draw_command = "lightEnergy*%s >>+ %s" % (multiplier, hist.GetName())
-            print "\tbaseline mean:", tree.baseline_mean_file[6]
-            print "\tbaseline RMS:", tree.baseline_rms_file[6]
-            print "\tis amplified:", tree.is_amplified[6]
+            if struck_analysis_parameters.is_7th_LXe:
+                draw_command = "lightEnergy/%s >>+ %s" % (calibration, hist.GetName())
+            try:
+                print "\tbaseline mean:", tree.baseline_mean_file[pmt_index]
+                print "\tbaseline RMS:", tree.baseline_rms_file[pmt_index]
+                print "\tis amplified:", tree.is_amplified[pmt_index]
+            except AttributeError:
+                pass
             print "\t draw_command:", draw_command
             n_entries = tree.Draw(draw_command, "", "goff")
 
@@ -111,7 +161,7 @@ def compare_spectra(directory, filename_prefixes):
 
         hists.append(hist)
 
-        legend_entry = "%i V (%.1f kV/cm), %.1E counts" % (
+        legend_entry = "%i V (%i kV/cm), %.1E counts" % (
             cathode_bias, 
             cathode_bias/1.7,
             hist.GetEntries()
@@ -143,24 +193,35 @@ def compare_spectra(directory, filename_prefixes):
 if __name__ == "__main__":
 
 
-    directory = "/u/xo/alexis4/test-stand/2015_12_07_6thLXe/tier3_from_tier2"
+    #directory = "/u/xo/alexis4/test-stand/2015_12_07_6thLXe/tier3_from_tier2"
+    directory = "/u/xo/alexis4/test-stand/2016_03_07_7thLXe/tier3_external"
 
     # data from 6th LXe at +1200V PMT bias
-    filename_prefixes = [
-        #"tier3_xenon8300g_1200VPMT_0Vcathode_amplified_PMT_shaper_",
-        "tier3_xenon8300g_1200VPMT_100Vcathode_amplified_shaped_",
-        "tier3_xenon8300g_1200VPMT_300Vcathode_amplified_shaped_",
-        "tier3_xenon8300g_1200VPMT_500Vcathode_amplified_shaped_",
-        "tier3_xenon8300g_1200VPMT_1000Vcathode_amplified_shaped_",
-        #"tier3_xenon8300g_1200VPMT_1700Vcathode_amplified_2",
-        #"tier3_Xxenon8300g_1200VPMT_1700Vcathode_amplified_600delay",
-    ]
+    #filename_prefixes = [
+    #    #"tier3_xenon8300g_1200VPMT_0Vcathode_amplified_PMT_shaper_",
+    #    "tier3_xenon8300g_1200VPMT_100Vcathode_amplified_shaped_",
+    #    "tier3_xenon8300g_1200VPMT_300Vcathode_amplified_shaped_",
+    #    "tier3_xenon8300g_1200VPMT_500Vcathode_amplified_shaped_",
+    #    "tier3_xenon8300g_1200VPMT_1000Vcathode_amplified_shaped_",
+    #    #"tier3_xenon8300g_1200VPMT_1700Vcathode_amplified_2",
+    #    #"tier3_Xxenon8300g_1200VPMT_1700Vcathode_amplified_600delay",
+    #]
 
 
     # data from 6th LXe at +1300V PMT bias
+    #filename_prefixes = [
+    #    "tier3_xenon8300g_1300VPMT_0Vcathode_amplified_PMT_shaper_2",
+    #    "tier2to3_overnight",
+    #]
+
+    # data from 7th LXe at +1250V PMT 9921QB bias
     filename_prefixes = [
-        "tier3_xenon8300g_1300VPMT_0Vcathode_amplified_PMT_shaper_2",
-        "tier2to3_overnight",
+        "tier3_cell_full_cathode_bias_off_2Vinput_DT1750mV_disc_teed_preamp_extraamplified_trigger_200delay_2016",
+        "tier3_cell_full_cathode_bias_36V_2Vinput_DT1750mV_disc_teed_preamp_extraamplified_trigger_200delay_2016",
+        "tier3_cell_full_cathode_bias_300V_2Vinput_DT1750mV_disc_teed_preamp_extraamplified_trigger_200delay_2016",
+        "tier3_cell_full_cathode_bias_500V_2Vinput_DT1750mV_disc_teed_preamp_extraamplified_trigger_200delay_2016",
+        "tier3_cell_full_cathode_bias_1000V_2Vinput_DT1750mV_disc_teed_preamp_extraamplified_trigger_200delay_2016", 
+        "overnight7thLXe",
     ]
 
     compare_spectra(directory, filename_prefixes)
