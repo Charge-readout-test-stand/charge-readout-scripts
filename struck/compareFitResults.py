@@ -26,7 +26,22 @@ def add_point_to_graph(results, graph):
     #key = graph.GetHistogram().GetYaxis().GetTitle()
     key = graph.GetTitle()
     i = graph.GetN()
-    value = float(results[key])
+    try:
+        value = float(results[key])
+    except KeyError:
+        if key == "do_use_exp":
+            value = 1.0
+        elif key == "step_height":
+            value = 0.0
+        elif key == "do_use_step":
+            try:
+                results["step_height"]
+                value=1.0
+            except KeyError:
+                value = 0.0
+        else:
+            print "no key", key
+            
     graph.SetPoint(i, i+1, value)
     print key
     try:
@@ -68,6 +83,8 @@ def main(filenames):
     graphs.append(get_graph("fit_stop_energy", TColor.kBlue))
     graphs.append(get_graph("fit_status", TColor.kBlue))
     graphs.append(get_graph("integral_counts", TColor.kBlue))
+    graphs.append(get_graph("do_use_exp", TColor.kBlue))
+    graphs.append(get_graph("do_use_step", TColor.kBlue))
 
     # remove bad files from list
     print "%i files" % len(filenames)
@@ -117,20 +134,41 @@ def main(filenames):
         line_energy = float(results["line_energy"])
         selection = results["selection"]
         draw_cmd = results["draw_cmd"]
-        print "--->", filename
-        print "\t", draw_cmd
-        print "\t", selection
+        print "---> %i of %i" % (i, len(filenames)), filename
+        #print "\t", draw_cmd
+        #print "\t", selection
         
-        try:
-            label = results["cuts_label"]
-        except:
-            label = struck_analysis_parameters.get_cuts_label(draw_cmd, selection)
-        print "\t", label
+        # two label schemes:
+        if True:
+            label = "%i to %i" % (
+                float(results["fit_start_energy"]), 
+                float(results["fit_stop_energy"]),
+            )
+            try:
+                results["step_height"]
+                label += " step"
+            except:
+                pass
+            try:
+                val = results["do_use_exp"]
+                #print "exp val", val
+                if val: label += " exp"
+            except:
+                label += " exp"
+                
+        else:
+            try:
+                label = results["cuts_label"]
+            except:
+                label = struck_analysis_parameters.get_cuts_label(draw_cmd, selection)
+            print "\t", label
 
         for graph in graphs:
             hist = graph.GetHistogram()
             hist.GetXaxis().SetBinLabel(hist.FindBin(i+1), label)
             #print graph.GetHistogram().GetNbinsX()
+
+        print "label:", label
 
     # draw the hists:
     canvas = TCanvas("canvas","")
