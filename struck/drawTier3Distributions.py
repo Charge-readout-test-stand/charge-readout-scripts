@@ -46,7 +46,7 @@ def setup_hist(hist, color, xtitle, xUnits):
     hist.SetMarkerColor(color)
     hist.SetLineWidth(2)
     hist.SetXTitle("%s [%s]" % (xtitle, xUnits))
-    hist.SetYTitle("Counts / %.1f %s" % (hist.GetBinWidth(1), xUnits,))
+    hist.SetYTitle("Counts / %s %s" % (hist.GetBinWidth(1), xUnits,))
     #hist.SetFillColor(color)
 
 
@@ -59,10 +59,12 @@ def process_file(filename):
 
     # choose one:
     do_draw_energy = 0
-    do_draw_drift_times = 1
+    do_draw_drift_times = 0
     do_draw_rms = 0
+    do_draw_rms_keV = 1
+    do_draw_rms_mV = 0
     do_draw_ADC_units = 0
-    do_draw_mV = 1
+    do_draw_mV = 0
 
     #do_draw_sum = False # sum energy
     do_draw_sum = True # sum energy
@@ -97,15 +99,38 @@ def process_file(filename):
         xtitle = "Drift time"
         selections.append("energy1_pz>300")
 
-    elif do_draw_rms:
-        print "---> drawing RMS noise"
+    elif do_draw_rms_keV:
+        print "---> drawing RMS noise [keV]"
         draw_command = "baseline_rms*calibration"
         min_bin = 0
         max_bin = 100
         bin_width = 0.5
         xUnits = "keV"
         xtitle = "RMS noise"
+        prefix = "keV_"
         do_draw_sum = False
+
+    elif do_draw_rms:
+        print "---> drawing RMS noise"
+        draw_command = "baseline_rms"
+        min_bin = 0
+        max_bin = 100
+        bin_width = 0.5
+        xUnits = "ADC units"
+        xtitle = "RMS noise"
+        do_draw_sum = False
+
+    elif do_draw_rms_mV:
+        print "---> drawing RMS noise [mV]"
+        draw_command = "baseline_rms*2.5*1e3/16384"
+        min_bin = 0
+        max_bin = 6
+        bin_width = 0.01
+        xUnits = "mV"
+        xtitle = "RMS noise"
+        prefix = "mV_"
+        do_draw_sum = False
+
 
     elif do_draw_ADC_units:
         print "---> drawing adc energies... "
