@@ -59,7 +59,7 @@ def process_file(filename):
 
     # choose one:
     do_draw_energy = 0
-    do_draw_drift_times = 0
+    do_draw_drift_times = 1
     do_draw_rms = 0
     do_draw_ADC_units = 0
     do_draw_mV = 1
@@ -87,12 +87,15 @@ def process_file(filename):
         
     elif do_draw_drift_times:
         print "---> drawing drift times"
-        draw_command = "rise_time_stop95 - trigger_time"
-        min_bin = -10.02
-        max_bin = 30.02
+        draw_command = "rise_time_stop99 - trigger_time"
+        #min_bin = -10.02
+        #max_bin = 30.02
+        min_bin = -5.02
+        max_bin = 25.02
         bin_width = 0.04
         xUnits = "#mus"
         xtitle = "Drift time"
+        selections.append("energy1_pz>300")
 
     elif do_draw_rms:
         print "---> drawing RMS noise"
