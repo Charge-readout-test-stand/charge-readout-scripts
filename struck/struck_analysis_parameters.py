@@ -211,18 +211,27 @@ def get_long_drift_time_cut(
     selection = []
     for channel, value  in enumerate(charge_channels_to_use): 
         if value:
-            cut = "(energy1_pz[%i]>%s)&&(rise_time_stop99[%i]-trigger_time>%s)" % (
-                channel, 
-                energy_threshold,
-                channel,
-                drift_time_low,
-            )
+            cut = []
+            if energy_threshold != None:
+                part = "(energy1_pz[%i]>%s)" % (
+                    channel, 
+                    energy_threshold,
+                )
+                cut.append(part)
             if drift_time_high != None:
-                cut += "&&(rise_time_stop99[%i]-trigger_time<%s)" % (
+                part = "(rise_time_stop99[%i]-trigger_time>%s)" % (
+                    channel, 
+                    drift_time_low,
+                )
+                cut.append(part)
+            if drift_time_high != None:
+                part = "(rise_time_stop99[%i]-trigger_time<%s)" % (
                     channel,
                     drift_time_high,
                 )
+                cut.append(part)
             #print cut
+            cut = "&&".join(cut)
             selection.append(cut)
             
     # join each channel requirement with or
@@ -546,7 +555,6 @@ if __name__ == "__main__":
 
     print "\nlong drift time cut:"
     print "\t" + "\n\t ||".join(get_long_drift_time_cut().split("||"))
-    #print "\n"+ get_long_drift_time_cut(drift_time_low=6.0,drift_time_high=8.0)
 
     print "\nget_few_channels_cmd:"
     print "\t" + "\n\t +".join(get_few_channels_cmd().split("+"))
@@ -563,3 +571,5 @@ if __name__ == "__main__":
     print "\n get_single_strip_cut:"
     print get_single_strip_cut()
 
+    #print "\n"+ get_long_drift_time_cut(energy_threshold=200,drift_time_low=7.0,drift_time_high=8.5)
+    print "\n"+ get_long_drift_time_cut(drift_time_high=8.5)
