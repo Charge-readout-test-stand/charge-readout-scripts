@@ -85,6 +85,7 @@ def main(filenames):
     graphs.append(get_graph("integral_counts", TColor.kBlue))
     graphs.append(get_graph("do_use_exp", TColor.kBlue))
     graphs.append(get_graph("do_use_step", TColor.kBlue))
+    graphs.append(get_graph("ratio", TColor.kBlue))
 
     # remove bad files from list
     print "%i files" % len(filenames)
@@ -172,7 +173,7 @@ def main(filenames):
 
     # draw the hists:
     canvas = TCanvas("canvas","")
-    canvas.SetBottomMargin(0.2)
+    canvas.SetBottomMargin(0.3)
     canvas.SetLeftMargin(0.15)
     canvas.SetGrid(1,1)
     for graph in graphs:
