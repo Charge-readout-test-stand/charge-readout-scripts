@@ -1,10 +1,7 @@
 
 # for RalphWF.py:
-#import numpy as np
-#import matplotlib.pyplot as plt
 import RalphWF
 
-# for AGS root macro:
 from ROOT import gROOT
 gROOT.SetBatch(True)
 from ROOT import TF1
@@ -51,6 +48,8 @@ def make_graph(
     hist.SetYTitle("Fraction of ionization charge observed")
     graph.SetMarkerStyle(8)
     graph.SetMarkerSize(0.5)
+    graph.SetFillColor(0)
+    graph.SetFillStyle(0)
     print "integral_distance:", integral_distance
     print "integral_efficiency", integral_efficiency
     print "integral_efficiency / integral_distance:", integral_efficiency/integral_distance
