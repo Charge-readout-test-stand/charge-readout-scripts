@@ -54,7 +54,7 @@ def process_file(filename):
         print "could not get entries from tree"
 
     legend = TLegend(0.1, 0.9, 0.9, 0.99)
-    legend.SetNColumns(4)
+    legend.SetNColumns(5)
 
     hists = []
 
@@ -88,7 +88,9 @@ def process_file(filename):
             selection=selection,
             do_use_step=True,    
             min_bin=200,
+            max_bin=1000,
             fit_half_width = 300,
+            do_use_exp=True,
         )
         result["dt"] = dt
         all_results[t] = result
@@ -117,6 +119,7 @@ def process_file(filename):
     c1.SetLogy(1)
     bin_max = hists[0].GetBinContent(hists[0].FindBin(50))
     hists[0].SetMaximum(bin_max*1.5)
+    hists[0].SetMinimum(0.5)
     for i,hist in enumerate(hists):
         hist.SetLineWidth(2)
         if i == 0:
@@ -128,6 +131,9 @@ def process_file(filename):
             colors = struck_analysis_parameters.get_colors()
             i_color = colors[(i-1) % len(colors)]
             hist.SetLineColor(i_color)
+            i_style = (i-1) / len(colors) + 1
+            print "i_style", i_style
+            hist.SetLineStyle(i_style)
             hist.Draw("same")
 
     legend.Draw()
