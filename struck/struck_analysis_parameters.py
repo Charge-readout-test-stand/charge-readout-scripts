@@ -262,7 +262,7 @@ def get_multiplicity_cmd(energy_threshold=100.0):
     draw_cmd = "+".join(draw_cmd)
     return draw_cmd
 
-def get_single_strip_cut(energy_threhold=100.0):
+def get_single_strip_cut(energy_threhold=10.0):
     """Select events with only one channel above threshold"""
     selection = "(%s==1)" % get_multiplicity_cmd(energy_threhold)
     return selection
