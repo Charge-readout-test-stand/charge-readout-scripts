@@ -134,7 +134,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     start_time = time.clock()
     last_time = start_time
     prev_time_stamp = 0.0
-    basename = wfmProcessing.create_basename(filename)
+    basename = wfmProcessing.create_basename(filename, isMC)
 
 
     # calculate file start time, in POSIX time, from filename suffix
@@ -185,7 +185,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         is_tier1 = False
 
     # open output file and tree
-    out_filename = wfmProcessing.create_outfile_name(filename)
+    out_filename = wfmProcessing.create_outfile_name(filename, isMC)
     out_filename = dir_name + out_filename
     if not do_overwrite:
         if os.path.isfile(out_filename):
