@@ -62,7 +62,8 @@ def process_file(filename):
     fit_hist.SetLineColor(2)
 
     selection = "(channel==52)" # since we only did fits of this channel
-    #selection += "&&(energy>300)"
+    selection += "&&(energy>200)"
+
     print tree.Draw("rise_time95-drift_time_MC >> %s" % rise_time_hist.GetName(), selection)
     legend.AddEntry(
         rise_time_hist, 
