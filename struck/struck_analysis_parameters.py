@@ -113,18 +113,29 @@ MCchannels = range(60)
 MCn_channels = len(MCchannels)
 
 MCcharge_channels_to_use = [0]*60
-MCcharge_channels_to_use[25] = 1
-MCcharge_channels_to_use[26] = 1 
-MCcharge_channels_to_use[28] = 1
-MCcharge_channels_to_use[52] = 1
-MCcharge_channels_to_use[53] = 1
-n_MCchargechannels = sum(MCcharge_channels_to_use)
+
 mc_channel_map = {}
 mc_channel_map[25] = "X26"
 mc_channel_map[26] = "X27"
 mc_channel_map[28] = "X29"
 mc_channel_map[52] = "Y23"
 mc_channel_map[53] = "Y24"
+if is_6th_LXe:
+    MCcharge_channels_to_use[25] = 1
+    MCcharge_channels_to_use[26] = 1 
+    MCcharge_channels_to_use[28] = 1
+    MCcharge_channels_to_use[52] = 1
+    MCcharge_channels_to_use[53] = 1
+elif is_7th_LXe:
+    MCcharge_channels_to_use[15] = 1 
+    MCcharge_channels_to_use[16] = 1
+    MCcharge_channels_to_use[17] = 1
+    MCcharge_channels_to_use[18] = 1
+    MCcharge_channels_to_use[45] = 1
+    MCcharge_channels_to_use[46] = 1 
+    MCcharge_channels_to_use[47] = 1
+    MCcharge_channels_to_use[48] = 1 
+n_MCchargechannels = sum(MCcharge_channels_to_use)
 
 def is_tree_MC(tree):
     """ test whether tree is of MC results or not"""
@@ -143,7 +154,14 @@ def is_tree_MC(tree):
     except:
         return False
 
-    
+def get_corrected_energy_cmd(energy_var="energy1_pz"):
+    ""
+    return "energy1_pz*(1-(%s-x)*.01/(%s-%s))" % (
+        max_drift_time,
+        max_drift_time,
+        drift_time_threshold,
+    )
+
 
 def get_negative_energy_cut(threshold=-20.0):
     """
@@ -570,6 +588,9 @@ if __name__ == "__main__":
 
     print "\n get_single_strip_cut:"
     print get_single_strip_cut()
+
+    print "\n get_corrected_energy_cmd:"
+    print get_corrected_energy_cmd()
 
     #print "\n"+ get_long_drift_time_cut(energy_threshold=200,drift_time_low=7.0,drift_time_high=8.5)
     print "\n"+ get_long_drift_time_cut(drift_time_high=8.5)
