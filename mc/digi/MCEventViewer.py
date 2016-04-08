@@ -5,6 +5,7 @@ import matplotlib as mpl
 import numpy as np
 from optparse import OptionParser
 import numpy as np
+import math
 
 ROOT.gROOT.SetStyle("Plain")
 ROOT.gStyle.SetOptStat(0)
@@ -84,6 +85,8 @@ def SignalViewer(tData, eventN):
             WF[nch][i] = tData.ChannelWaveform[int(nch)][int(i)]+47.5*rand.Gaus(0,17.805) #value from RMS in ch2 converted in num electrons
         if WF[nch][-1] > 0:
             print "Hit Ch = ", nch, " Qvalue = ", WF[nch][-1]
+        elif math.isnan(WF[nch][-1]):
+            print "**************Ch %i has nan" % nch
         plt.plot(t, WF[nch], label='Sim Ch='+str(nch))
     plt.title("Channel Signals")
     plt.xlabel("time[$\mu$s]")
