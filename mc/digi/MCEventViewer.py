@@ -65,6 +65,7 @@ def PCDViewer(tData, eventN):
     plt.scatter(x,y, c= 'r', s=100.0)
     plt.xlim([min(x) - 3.0, max(x) + 3.0])
     plt.ylim([min(y) - 3.0, max(y) + 3.0])
+    
     plt.title("X/Y Event Plane with Tile Grid")
     plt.xlabel("xpos[mm]")
     plt.ylabel("ypos[mm]")
