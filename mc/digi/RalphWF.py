@@ -52,7 +52,7 @@ def Q_rot(xpcd, ypcd, zpcd, chx, chy):
 
 def sum_channel(xpcd,ypcd,zpcd,chID,chx,chy):
     #xpcd,ypcd,zpcd --- x,y,z of intial pcd
-    #z = 0 is cathode 18.76 is anode
+    #z = 0 is cathode 18.16 is anode for 7th LXe
     #chID is ID for channel < 30 is X Channel
     #chx, chy is x,y pos of channel
     
