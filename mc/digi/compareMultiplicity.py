@@ -27,19 +27,28 @@ def process_files(filenames):
 
     hists = []
     n_pcds_hists = []
+    energy_hists = []
 
     colors = [
-        TColor.kRed,
-        TColor.kOrange+1,
-        TColor.kGreen+2,
-        TColor.kBlue,
+        TColor.kMagenta, 
+        TColor.kMagenta+2, 
+        TColor.kRed, 
+        TColor.kOrange+1, 
+        TColor.kGreen+2, 
         TColor.kCyan+1,
-        TColor.kViolet,
+        TColor.kBlue, 
+        TColor.kBlue+2, 
+        #TColor.kTeal, 
+        TColor.kGray+2, 
     ]
+
+
     legend = TLegend(0.1, 0.91, 0.9, 0.99)
-    legend.SetNColumns(2)
+    legend.SetNColumns(3)
     legend2 = TLegend(0.1, 0.91, 0.9, 0.99)
-    legend2.SetNColumns(2)
+    legend2.SetNColumns(3)
+    legend3 = TLegend(0.1, 0.91, 0.9, 0.99)
+    legend3.SetNColumns(3)
     Wvalue = 20.138 # eV / e-
 
 
@@ -74,6 +83,16 @@ def process_files(filenames):
         n_pcds_hist.SetXTitle("N PCDs")
         n_pcds_hists.append(n_pcds_hist)
 
+        energy_hist = TH1D("energy_hist%i" % len(energy_hists), basename, 100, 0, 1000)
+        energy_hist.SetLineColor(color)
+        energy_hist.SetLineWidth(2)
+        energy_hist.SetMarkerColor(color)
+        energy_hist.SetMarkerStyle(21)
+        energy_hist.SetMarkerSize(1.5)
+        energy_hist.SetXTitle("Energy [keV] (ChannelWaveform[][799]*%s/1e3>%s)" % (Wvalue, energy_threshold))
+        energy_hists.append(energy_hist)
+
+
     for (i, filename) in enumerate(filenames):
 
         print "processing file: ", filename
@@ -84,6 +103,7 @@ def process_files(filenames):
         print "%i entries" % n_entries
         hist = hists[i]
         n_pcds_hist = n_pcds_hists[i]
+        energy_hist = energy_hists[i]
         hist.GetDirectory().cd()
 
 
@@ -106,7 +126,15 @@ def process_files(filenames):
             options,
         )
         tree.Draw("NumPCDs >> %s" % n_pcds_hist.GetName(), "NumPCDs>0", "goff")
-        legend2.AddEntry(n_pcds_hist, n_pcds_hist.GetTitle() + " mean=%.1f" % n_pcds_hist.GetMean(), "p")
+        legend2.AddEntry(n_pcds_hist, n_pcds_hist.GetTitle() + " mean=%.1f" % n_pcds_hist.GetMean(), "l")
+
+        # energy
+        tree.Draw(
+            "ChannelWaveform[][799]*%s/1e3 >> %s" % ( Wvalue,energy_hist.GetName()), 
+            "ChannelWaveform[][799]*%s/1e3>%s" % (Wvalue, energy_threshold),
+            "goff"
+        )
+        legend3.AddEntry(energy_hist, energy_hist.GetTitle() + " mean=%.1f" % energy_hist.GetMean(), "l")
 
         print "%i drawn entries" % n_entries
         n_entries = hist.GetEntries()
@@ -114,7 +142,7 @@ def process_files(filenames):
         #hist.Scale(1.0/n_entries)
         print "mean", hist.GetMean()
 
-        legend.AddEntry(hist, hist.GetTitle() + " mean=%.4f" % hist.GetMean(), "p")
+        legend.AddEntry(hist, hist.GetTitle() + " mean=%.4f" % hist.GetMean(), "l")
 
 
     # set up a canvas
@@ -131,7 +159,8 @@ def process_files(filenames):
     legend.Draw()
     canvas.Update()
     canvas.Print("multiplicity.pdf")
-    raw_input("any key to continue  ")
+    if not gROOT.IsBatch():
+        raw_input("any key to continue  ")
 
     n_pcds_hists[0].SetMaximum(n_pcds_hists[0].GetEntries())
     n_pcds_hists[0].SetMinimum(0.5)
@@ -142,7 +171,23 @@ def process_files(filenames):
     legend2.Draw()
     canvas.Update()
     canvas.Print("nPCDs.pdf")
-    raw_input("any key to continue  ")
+    if not gROOT.IsBatch():
+        raw_input("any key to continue  ")
+
+
+    energy_hists[0].SetMaximum(energy_hists[0].GetEntries())
+    energy_hists[0].SetMinimum(0.5)
+    energy_hists[0].SetTitle("")
+    energy_hists[0].Draw()
+    for hist in energy_hists[1:]:
+        hist.Draw("same")
+    legend3.Draw()
+    canvas.Update()
+    canvas.Print("channelEnergies_PCD_study.pdf")
+    if not gROOT.IsBatch():
+        raw_input("any key to continue  ")
+
+
 
 
 
@@ -158,6 +203,7 @@ if __name__ == "__main__":
     "/nfs/slac/g/exo_data4/users/alexis4/bucket/slac/test-stand/mcTests/dcoef200_5x_pcd.root",
     "/nfs/slac/g/exo_data4/users/alexis4/bucket/slac/test-stand/mcTests/dcoef200_6x_pcd.root",
     "/nfs/slac/g/exo_data4/users/alexis4/bucket/slac/test-stand/mcTests/dcoef200_8x_pcd.root",
+    "/nfs/slac/g/exo_data4/users/alexis4/bucket/slac/test-stand/mcTests/dcoef200_16x_pcd.root",
     ]
 
     process_files(filenames)
