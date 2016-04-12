@@ -11,7 +11,6 @@ import time
 from ROOT import gROOT
 #gROOT.SetBatch(True)
 from ROOT import TH1D
-from ROOT import TH2D
 from ROOT import TFile
 from ROOT import TCanvas
 from ROOT import TColor
