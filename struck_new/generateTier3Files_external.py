@@ -77,7 +77,6 @@ def process_file(filename, verbose=True, do_overwrite=True):
 
     # whether to run in debug mode (draw wfms):
     do_debug = not gROOT.IsBatch()
-    do_draw_extra = not gROOT.IsBatch()
 
     reporting_period = 1000
 
@@ -210,12 +209,11 @@ def process_file(filename, verbose=True, do_overwrite=True):
     #store some processing parameters:
     n_baseline_samples = array('I', [0]) # double
     out_tree.Branch('n_baseline_samples', n_baseline_samples, 'n_baseline_samples/i')
-    n_baseline_samples[0] = tree[0].wfm_delay / 4
+    n_baseline_samples[0] = 100
 
     decay_time = array('d', [0]*n_channels) # double
     out_tree.Branch('decay_time', decay_time, 'decay_time[%i]/D' % n_channels)
     decay_time_values = struck_analysis_parameters.decay_time_values
-    decay_time_values[pmt_channel] = 1e9*CLHEP.microsecond
     for (i, channel) in enumerate(channels):
         try:
             decay_time[i] = decay_time_values[channel]
