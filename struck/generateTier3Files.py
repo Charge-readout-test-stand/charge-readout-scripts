@@ -102,7 +102,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         reporting_period = 100
 
     # samples at wfm start and end to use for energy calc:
-    n_baseline_samples_to_use = 50
+    n_baseline_samples_to_use = 100
 
     sampling_freq_Hz = struck_analysis_parameters.sampling_freq_Hz
    
