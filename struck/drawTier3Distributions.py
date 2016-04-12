@@ -47,6 +47,7 @@ def setup_hist(hist, color, xtitle, xUnits):
     hist.SetLineWidth(2)
     hist.SetXTitle("%s [%s]" % (xtitle, xUnits))
     hist.SetYTitle("Counts / %s %s" % (hist.GetBinWidth(1), xUnits,))
+    print "hist %s bin width" % hist.GetName(), hist.GetBinWidth(1)
     #hist.SetFillColor(color)
 
 
@@ -58,7 +59,7 @@ def process_file(filename):
     # options
 
     # choose one:
-    do_draw_energy = 0
+    do_draw_energy = 1
     do_draw_drift_times = 0
     do_draw_rms = 0
     do_draw_rms_keV = 1
@@ -81,11 +82,16 @@ def process_file(filename):
         min_bin = 0
         max_bin = 2000
         bin_width = 10
-        bin_width = 15
 
         xUnits = "keV"
         xtitle = "Energy"
         prefix = "energy_"
+        selections.append(struck_analysis_parameters.get_single_strip_cut(10.0))
+        #selections.append(struck_analysis_parameters.get_long_drift_time_cut(
+        #    energy_threshold=None,
+        #    drift_time_high=9.0,
+        #))
+        selections.append("(rise_time_stop99-trigger_time>6.43)&&(rise_time_stop99-trigger_time<9.0)")
         
     elif do_draw_drift_times:
         print "---> drawing drift times"
@@ -161,6 +167,8 @@ def process_file(filename):
         sys.exit()
 
     n_bins = int(math.floor((max_bin - min_bin)*1.0 / bin_width))
+    print "bin_width:   ", bin_width
+    print "n_bins:", n_bins
 
     #-------------------------------------------------------------------------------
 
