@@ -43,7 +43,7 @@ def process_file(filename):
 
     # open the root file and grab the tree
     root_file = TFile(filename)
-    tree = root_file.Get("tree")
+    tree = root_file.Get("tree9")
     n_entries = tree.GetEntries()
     print "%i entries" % n_entries
 
@@ -68,7 +68,9 @@ def process_file(filename):
         #    print i_entry, i, tree.wfm[i], tree.maw[i]
         #    maw_graph.SetPoint(i, tree.maw[i])
         #graph.Draw("al")
-        if tree.channel != 8:
+        channel = ord(tree.channel)
+        print "entry %i, channel %i" % (i_entry, channel)
+        if channel != 9:
             i_entry+=1
             continue
 
@@ -81,9 +83,9 @@ def process_file(filename):
         tree.SetMarkerSize(0.8)
 
         legend = TLegend(0.7, 0.92, 0.9, 0.99)
-        legend.AddEntry(tree, "channel %i" % tree.channel, "pl")
+        legend.AddEntry(tree, "channel %i" % channel, "pl")
         selection = "Entry$==%i" % i_entry
-        selection += " && Iteration$>180 && Iteration$<250"
+        selection += " && Iteration$>0 && Iteration$<300"
         tree.Draw("wfm:Iteration$",selection, "lp")
         legend.Draw()
 
@@ -92,7 +94,7 @@ def process_file(filename):
         tree.Draw("maw:Iteration$","Entry$==%i" % i_entry, "l")
 
         canvas.Update()
-        val = raw_input("--> entry %i | ch %i | enter to continue (q to quit, p to print, or entry number) " % (i_entry, tree.channel))
+        val = raw_input("--> entry %i | ch %i | enter to continue (q to quit, p to print, or entry number) " % (i_entry, channel))
         i_entry += 1
 
         if val == 'q': break
