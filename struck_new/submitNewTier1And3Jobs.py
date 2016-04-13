@@ -1,1 +1,0 @@
-../struck/submitNewTier1And3Jobs.py

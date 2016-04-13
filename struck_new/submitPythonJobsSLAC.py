@@ -1,1 +1,0 @@
-../struck/submitPythonJobsSLAC.py
