@@ -17,7 +17,7 @@ from ROOT import TColor
 from ROOT import TLegend
 from ROOT import gStyle
 
-import struck_analysis_parameters
+from struck import struck_analysis_parameters
 
 
 gROOT.SetStyle("Plain")     
