@@ -32,7 +32,7 @@ gStyle.SetPalette(1)
 gStyle.SetTitleStyle(0)     
 gStyle.SetTitleBorderSize(0)
 
-import struck_analysis_parameters
+from struck import struck_analysis_parameters
 
 
 gSystem.Load("$EXOLIB/lib/libEXOUtilities")

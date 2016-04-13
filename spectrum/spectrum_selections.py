@@ -31,11 +31,30 @@ gStyle.SetPalette(1)
 gStyle.SetTitleStyle(0)     
 gStyle.SetTitleBorderSize(0)
 
-import struck_analysis_parameters
+from struck import struck_analysis_parameters
+from struck import struck_analysis_cuts
+
 n_chargechannels = struck_analysis_parameters.n_chargechannels
 
 gSystem.Load("$EXOLIB/lib/libEXOUtilities")
 from ROOT import CLHEP
+
+def get_elists(tree, selection, selections):
+
+    n_total_entries = tree.GetEntries()
+    selections.append(selection)
+    elist_name = "elist%i" % len(selections)
+    print "%s selection:" % elist_name
+    print "\t" + "\n\t|| ".join(selection.split("||"))
+    n_total_entries
+    n_entries = tree.Draw(">>%s" % elist_name, selection)
+    print "\t%.1e entries in selection (excluded %.1e entries)" % (n_entries, n_total_entries-n_entries)
+    elist = gDirectory.Get(elist_name)
+
+    n_entries = tree.Draw(">>n%s" % elist_name, "!(%s)" % selection)
+    print "\t%.1e entries in !selection (excluded %.1e entries)" % (n_entries, n_total_entries-n_entries)
+    nelist = gDirectory.Get("n%s" % elist_name)
+    return elist, nelist
 
 def process_file(filename):
 
@@ -43,8 +62,9 @@ def process_file(filename):
     energy_threshold = 200
     #drifttime_low = 8.0
     drifttime_low = struck_analysis_parameters.drift_time_threshold
-    drifttime_high = 10.0
+    drifttime_high = 9.0
     negative_energy_cut = -20
+    selections = []
 
 
     print "processing file: ", filename
@@ -71,28 +91,12 @@ def process_file(filename):
     elist0 = gDirectory.Get("elist0")
 
     ## selection1: at least one channel has energy < negative_energy_cut keV
-    print "selection1:"
-    selection1 = "!(%s)" % struck_analysis_parameters.get_negative_energy_cut(negative_energy_cut)
-    print selection1
-    n_entries = tree.Draw(">>elist1", "!(%s)" % selection1)
-    print "\n%.1e entries in selection1 (excluded %.1e entries)" % (n_entries, n_total_entries-n_entries)
-    elist1 = gDirectory.Get("elist1")
-
-    n_entries = tree.Draw(">>nelist1", selection1)
-    print "\n%.1e entries in !selection1 (excluded %.1e entries)" % (n_entries, n_total_entries-n_entries)
-    nelist1 = gDirectory.Get("nelist1")
+    selection = struck_analysis_cuts.get_negative_energy_cut(negative_energy_cut)
+    elist1, nelist1 = get_elists(tree, selection, selections)
 
     ## selection2: at least one channel has drift time < 8us and energy > 200keV
-    print "selection2:"
-    selection2 = "!(%s)" % struck_analysis_parameters.get_short_drift_time_cut(energy_threshold, drifttime_low)
-    print selection2
-    n_entries = tree.Draw(">>elist2", "!(%s)" % selection2)
-    print "\n%.1e entries in !selection2 (excluded %.1e entries)" % (n_entries, n_total_entries-n_entries)
-    elist2 = gDirectory.Get("elist2")
-
-    n_entries = tree.Draw(">>nelist2", selection2)
-    print "\n%.1e entries in selection2 (excluded %.1e entries)" % (n_entries, n_total_entries-n_entries)
-    nelist2 = gDirectory.Get("nelist2")
+    selection = struck_analysis_cuts.get_short_drift_time_cut(energy_threshold, drifttime_low)
+    elist2, nelist2 = get_elists(tree, selection, selections)
 
     ## selection3: at least one channel has energy > energy_threshold and 
     ## drift time between drifttime_low and drifttime_high (in us), and not meeting any criteria above
@@ -129,22 +133,20 @@ def process_file(filename):
     
     #selection3 = "(%s)&&(!(%s))&&(!(%s))" % (selection3, selection1, selection2)
     selection3 = "(%s)" % (selection3, )
-    selection3 = struck_analysis_parameters.get_long_drift_time_cut(energy_threshold,
-    drifttime_low, drifttime_high)
+    selection3 = struck_analysis_cuts.get_long_drift_time_cut(energy_threshold, drifttime_low, drifttime_high)
 
     ## create event list
     if with_allevents:
         append = "_allevents"
         selection3 = ""
-    print "selection3:"
-    print selection3
-    n_entries = tree.Draw(">>elist3", selection3)
-    print "\n%.1e entries in selection3 (excluded %.1e entries)" % (n_entries, n_total_entries-n_entries)
-    elist3 = gDirectory.Get("elist3")
 
-    n_entries = tree.Draw(">>nelist3", "!(%s)" % selection3)
-    print "\n%.1e entries in !selection3 (excluded %.1e entries)" % (n_entries, n_total_entries-n_entries)
-    nelist3 = gDirectory.Get("nelist3")
+    ## drift time slice
+    elist3, nelist3 = get_elists(tree, selection3, selections)
+
+    ## fiducial cut
+    selection = struck_analysis_cuts.get_fiducial_cut()
+    elist4, nelist4 = get_elists(tree, selection, selections)
+
 
     ## drawing histograms
     canvas.Clear()
@@ -157,7 +159,7 @@ def process_file(filename):
     #hist0.SetTitle("Charge energy spectrum")
     hist0.SetTitle("")
     hist0.GetYaxis().SetTitleOffset(1.5)
-    hist0.SetMaximum(3e4)
+    hist0.SetMaximum(2.5e4)
     legend.AddEntry(hist0, "All events", "l")
 
     tree.SetEventList(elist1)
@@ -170,8 +172,8 @@ def process_file(filename):
     tree.Draw("chargeEnergy >> hist2(175, 0., 1400.)", "", "SAME")
     hist2 = gDirectory.Get("hist2")
     hist2.SetLineColor(TColor.kGreen + 3)
-    #legend.AddEntry(hist2, "After cutting evts with any strip > %i & drift t < %.1f #mus or > %.1f #mus" % (energy_threshold, drifttime_low, drifttime_high), "l")
-    legend.AddEntry(hist2, "After cutting evts with any strip > %i & drift t < %.1f #mus" % (energy_threshold, drifttime_low), "l")
+    legend.AddEntry(hist2, "After cutting evts with any strip > %i & drift t < %.1f #mus or > %.1f #mus" % (energy_threshold, drifttime_low, drifttime_high), "l")
+    #legend.AddEntry(hist2, "After cutting evts with any strip > %i & drift t < %.1f #mus" % (energy_threshold, drifttime_low), "l")
 
     tree.SetEventList(elist3)
     tree.Draw("chargeEnergy >> hist3(175, 0., 1400.)", "", "SAME")
@@ -180,12 +182,33 @@ def process_file(filename):
     #legend.AddEntry(hist3, "Kept events"), "l"
     legend.AddEntry(hist3, "Events with any strip E > %i & drift t > %.1f #mus" % (energy_threshold, drifttime_low)), "l"
     
-    tree.SetEventList(elist0-nelist1-nelist2-nelist3)
+    tree.SetEventList(elist4)
+    n_entries = tree.Draw("chargeEnergy >> hist6(175, 0., 1400.)", "", "SAME")
+    print "%i entries after fiducial cut" % n_entries
+    hist6 = gDirectory.Get("hist6")
+    hist6.SetLineColor(TColor.kBlue+1)
+    hist6.SetLineWidth(1)
+    legend.AddEntry(hist6, "After fiducial cut", "l")
+
+    tree.SetEventList(elist0-nelist1-nelist2-nelist3-nelist4)
+    #tree.SetEventList(elist0-nelist1-nelist2-nelist3)
     n_entries = tree.Draw("chargeEnergy >> hist4(175, 0., 1400.)", "", "SAME")
     print "%i entries after all cuts" % n_entries
     hist4 = gDirectory.Get("hist4")
     hist4.SetLineColor(TColor.kViolet - 6)
     legend.AddEntry(hist4, "After all cuts", "l")
+    n_entries = tree.Draw(">>elist")
+    elist = gDirectory.Get("elist")
+    print "%i entries in elist" % elist.GetN()
+
+    cut = struck_analysis_cuts.get_single_strip_cut(10)
+    print cut
+    n_entries = tree.Draw("chargeEnergy >> hist5(175, 0., 1400.)", cut, "SAME")
+    print "%i entries after single-strip cut" % n_entries
+    hist5 = gDirectory.Get("hist5")
+    hist5.SetLineColor(TColor.kMagenta)
+    legend.AddEntry(hist5, "After single-strip cut", "l")
+
 
     legend.Draw()
     canvas.Update()
@@ -209,9 +232,14 @@ def process_file(filename):
     fout = TFile("eventLists.root", "RECREATE") 
     #tree_selected = tree.CopyTree("")
     #tree_selected.Write()
+    elist.Write()
     elist1.Write()
     elist2.Write()
     elist3.Write()
+    try:
+        elist4.Write()
+    except: 
+        pass
 
     end_time = time.clock()
     print "processing time = ", end_time, " s" 

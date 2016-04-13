@@ -46,7 +46,7 @@ from ROOT import gStyle
 from ROOT import TGraph
 from ROOT import TTree
 from ROOT import TChain
-import struck_analysis_parameters
+from struck import struck_analysis_parameters
 
 
 gROOT.SetStyle("Plain")     

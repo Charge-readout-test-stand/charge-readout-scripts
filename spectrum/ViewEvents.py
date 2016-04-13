@@ -36,7 +36,7 @@ gStyle.SetTitleBorderSize(0)
 
 gSystem.Load("$EXOLIB/lib/libEXOUtilities")
 from ROOT import CLHEP
-import struck_analysis_parameters
+from struck import struck_analysis_parameters
 
 def process_file(filename):
 
