@@ -213,13 +213,17 @@ def process_file(mc_filename, struck_filename):
 
 if __name__ == "__main__":
 
+
+    data_file = "/u/xo/alexis4/test-stand/2016_03_07_7thLXe/tier3_external/overnight7thLXe.root" 
+    mc_file = "/nfs/slac/g/exo_data4/users/alexis4/test-stand/mc/Bi207_Full_Ralph/tier3_5x/all_pcd_size_5x_dcoeff200.root",
+
     if len(sys.argv) < 2:
-        print "arguments: [sis root files]"
-        sys.exit(1)
+        print "optional arguments: [sis root files]"
+        process_file(data_file, mc_file)
 
 
-    # loop over all provided arguments
-    process_file(sys.argv[1], sys.argv[2])
+    else:
+        process_file(sys.argv[1], sys.argv[2])
 
 
 
