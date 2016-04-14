@@ -139,7 +139,7 @@ elif is_7th_LXe:
 n_MCchargechannels = sum(MCcharge_channels_to_use)
 
 def is_tree_MC(tree):
-    """ test whether tree is of MC results or not"""
+    """ test whether tier3 tree is of MC results or not"""
     try:
         n_entries = tree.GetEntries()
     except:

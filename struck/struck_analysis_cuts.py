@@ -16,13 +16,17 @@ def get_corrected_energy_cmd(
     )
 
 
-def get_negative_energy_cut(threshold=-20.0):
+def get_negative_energy_cut(threshold=-20.0, isMC=False):
     """
     return a cut on events with too much negative energy on any one channel
     """
 
     selection = []
-    for channel, value  in enumerate(struck_analysis_parameters.charge_channels_to_use): 
+    if isMC:
+        charge_channels_to_use = struck_analysis_parameters.MCcharge_channels_to_use
+    else:
+        charge_channels_to_use = struck_analysis_parameters.charge_channels_to_use
+    for channel, value  in enumerate(charge_channels_to_use): 
         if value:
             cut = "(energy1_pz[%i]<%s)" % (
                 channel, 
@@ -74,13 +78,18 @@ def get_long_drift_time_cut(
     energy_threshold=200.0,
     drift_time_low=struck_analysis_parameters.drift_time_threshold,
     drift_time_high=None,
+    isMC=False,
 ):
     """
     Select events with energy above threshold and long enough drift time
     """
 
     selection = []
-    for channel, value  in enumerate(struck_analysis_parameters.charge_channels_to_use): 
+    if isMC:
+        charge_channels_to_use = struck_analysis_parameters.MCcharge_channels_to_use
+    else:
+        charge_channels_to_use = struck_analysis_parameters.charge_channels_to_use
+    for channel, value  in enumerate(charge_channels_to_use): 
         if value:
             cut = []
             cut2 = []
