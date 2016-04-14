@@ -134,19 +134,23 @@ def get_chargeEnergy_no_pz():
     draw_cmd = " + ".join(draw_cmd)
     return draw_cmd
 
-def get_multiplicity_cmd(energy_threshold=100.0):
+def get_multiplicity_cmd(energy_threshold=100.0,isMC=False):
     """A draw command for multiplicity """
     draw_cmd = []
-    for channel, value in enumerate(struck_analysis_parameters.charge_channels_to_use): 
+    if isMC:
+        charge_channels_to_use = struck_analysis_parameters.MCcharge_channels_to_use
+    else:
+        charge_channels_to_use = struck_analysis_parameters.charge_channels_to_use
+    for channel, value in enumerate(charge_channels_to_use): 
         if value:
             draw_cmd.append("(energy1_pz[%i]>%s)" % (channel,energy_threshold))
     # join each part with "+"
     draw_cmd = "+".join(draw_cmd)
     return draw_cmd
 
-def get_single_strip_cut(energy_threhold=10.0):
+def get_single_strip_cut(energy_threshold=10.0, isMC=False):
     """Select events with only one channel above threshold"""
-    selection = "(%s==1)" % get_multiplicity_cmd(energy_threhold)
+    selection = "(%s==1)" % get_multiplicity_cmd(energy_threshold, isMC)
     return selection
 
 def get_few_channels_cmd(
@@ -211,6 +215,15 @@ def get_energy_weighted_drift_time():
     selection = "(%s)/chargeEnergy" % selection
     return selection
 
+def get_mc_channels_selection():
+    selection = []
+    for channel, value in enumerate(struck_analysis_parameters.MCcharge_channels_to_use):
+        if value:
+            part = "(channel==%i)" % channel
+            selection.append(part)
+    selection = "||".join(selection)
+    return selection
+
 
 if __name__ == "__main__":
 
@@ -242,9 +255,14 @@ if __name__ == "__main__":
     print get_corrected_energy_cmd()
 
     print "\n get_fiducial_cut:"
-    print get_fiducial_cut()
+    print get_fiducial_cut(energy_threshold=10)
+
+    print "\n get_mc_channels_selection:"
+    print get_mc_channels_selection()
 
     #print "\n"+ get_long_drift_time_cut(energy_threshold=200,drift_time_low=7.0,drift_time_high=8.5)
-    print "\n"+ get_long_drift_time_cut(drift_time_high=8.5)
+    print "\n"+ get_long_drift_time_cut(drift_time_low=7.0,drift_time_high=8.0)
+
+    print "\n" + get_negative_energy_cut()
 
 
