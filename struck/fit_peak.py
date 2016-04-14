@@ -37,6 +37,7 @@ from ROOT import TPaveText
 from ROOT import Math
 
 import struck_analysis_parameters
+import struck_analysis_cuts
 
 
 def fit_channel(
@@ -49,9 +50,9 @@ def fit_channel(
     do_use_step=False,
     min_bin=200,
     max_bin=1000,
-    #fit_half_width=250,
-    fit_half_width=170,
-    do_use_exp=True
+    fit_half_width=250,
+    #fit_half_width=170,
+    do_use_exp=True,
 ):
 
     #-------------------------------------------------------------------------------
@@ -104,6 +105,7 @@ def fit_channel(
     print "fit_stop_energy", fit_stop_energy
 
 
+    isMC = struck_analysis_parameters.is_tree_MC(tree)
     #-------------------------------------------------------------------------------
 
     if not do_individual_channels and channel != None:
@@ -117,7 +119,10 @@ def fit_channel(
     pad1 = canvas.cd(1)
     #canvas.SetLeftMargin(0.12)
     if channel != None:
-        channel_name = struck_analysis_parameters.channel_map[channel]
+        try:
+            channel_name = struck_analysis_parameters.channel_map[channel]
+        except KeyError:
+            channel_name = "?"
         hist_title = "ch %i: %s" % (channel, channel_name)
     else:
         channel_name = "all"
@@ -155,7 +160,10 @@ def fit_channel(
     print "\tfit_stop_height", fit_stop_height
     print "\tfit_start_height", fit_start_height
     if fit_stop_height == 0.0: fit_stop_height = 1.0
-    decay_const_guess = math.log(fit_stop_height/fit_start_height)/(fit_start_energy - fit_stop_energy)
+    try:
+        decay_const_guess = math.log(fit_stop_height/fit_start_height)/(fit_start_energy - fit_stop_energy)
+    except ZeroDivisionError:
+        decay_const_guess = 0.0
     if do_use_exp:
         exp_height_guess = hist.GetBinContent(hist.FindBin(fit_start_energy))*math.exp(fit_start_energy*decay_const_guess)
         bkg_height = exp_height_guess*math.exp(-line_energy*decay_const_guess)
@@ -335,7 +343,11 @@ def fit_channel(
         bestfit_step.SetLineColor(TColor.kGreen+2)
 
     if channel != None:
-        new_calibration_value = struck_analysis_parameters.calibration_values[channel]*calibration_ratio
+        if isMC:
+            calibration_value = struck_analysis_parameters.Wvalue
+        else:
+            calibration_value = struck_analysis_parameters.calibration_values[channel]
+        new_calibration_value = calibration_value*calibration_ratio
     else:
         new_calibration_value = calibration_ratio
 
@@ -388,7 +400,7 @@ def fit_channel(
     #canvas.Print("%s_log.pdf" % plot_name)
 
     pad1.cd()
-    cuts_label = struck_analysis_parameters.get_cuts_label(draw_cmd, selection) 
+    cuts_label = struck_analysis_cuts.get_cuts_label(draw_cmd, selection) 
     pave_text = TPaveText(0.01, 0.01, 0.2, 0.05, "NDC")
     pave_text.SetFillColor(0)
     pave_text.SetFillStyle(0)
@@ -471,7 +483,7 @@ def process_file(
     #basename = "step" + basename
 
     # cuts label prefix:
-    cuts_label = struck_analysis_parameters.get_cuts_label(all_energy_var, selection) 
+    cuts_label = struck_analysis_cuts.get_cuts_label(all_energy_var, selection) 
     cuts_label = "_".join(cuts_label.split("+"))
     basename = cuts_label + "_" + basename
 
@@ -499,8 +511,15 @@ def process_file(
     result = fit_channel(tree, None, basename, do_1064_fit, all_energy_var, selection, do_use_step)
     all_results["all"] = result
 
-    for channel in struck_analysis_parameters.channels:
-        if struck_analysis_parameters.charge_channels_to_use[channel]:
+    isMC = struck_analysis_parameters.is_tree_MC(tree)
+
+    if isMC:
+        charge_channels_to_use = struck_analysis_parameters.MCcharge_channels_to_use
+    else:
+        charge_channels_to_use = struck_analysis_parameters.charge_channels_to_use
+
+    for channel, value in enumerate(charge_channels_to_use):
+        if value:
             result = fit_channel(tree, channel, basename, do_1064_fit, all_energy_var, channel_selection, do_use_step)
             if result:
                 all_results["channel %i" % channel] = result
@@ -518,10 +537,10 @@ if __name__ == "__main__":
         print "argument: [sis tier 3 root file]"
         sys.exit(1)
 
-    nc = struck_analysis_parameters.get_negative_energy_cut()
-    sc = struck_analysis_parameters.get_short_drift_time_cut()
-    lc = struck_analysis_parameters.get_long_drift_time_cut()
-    lc = struck_analysis_parameters.get_long_drift_time_cut(drift_time_high=8.5)
+    nc = struck_analysis_cuts.get_negative_energy_cut()
+    sc = struck_analysis_cuts.get_short_drift_time_cut()
+    lc = struck_analysis_cuts.get_long_drift_time_cut()
+    lc = struck_analysis_cuts.get_long_drift_time_cut(drift_time_high=8.5)
     channel_selection = "(rise_time_stop99-trigger_time>6.43)&&(rise_time_stop99-trigger_time<8.5)"
     selections = []
     selections.append([lc])
@@ -548,13 +567,13 @@ if __name__ == "__main__":
         # get_few_channels_cmd:
 
         all_energy_var = "chargeEnergy"
-        process_file(sys.argv[1], False, all_energy_var, selection, do_use_step=True)
-        process_file(sys.argv[1], True, all_energy_var, selection)
+        process_file(sys.argv[1], False, all_energy_var, selection, channel_selection, do_use_step=False)
+        #process_file(sys.argv[1], True, all_energy_var, selection, channel_selection)
 
         # cuts need more work to be used with this "few channels" draw command 
-        #all_energy_var = struck_analysis_parameters.get_few_channels_cmd()
+        #all_energy_var = struck_analysis_cuts.get_few_channels_cmd()
 
-        #all_energy_var = struck_analysis_parameters.get_chargeEnergy_no_pz()
-        #process_file(sys.argv[1], False, all_energy_var, selection)
-        #process_file(sys.argv[1], True, all_energy_var, selection)
+        #all_energy_var = struck_analysis_cuts.get_chargeEnergy_no_pz()
+        #process_file(sys.argv[1], False, all_energy_var, selection, channel_selection)
+        #process_file(sys.argv[1], True, all_energy_var, selection, channel_selection)
 
