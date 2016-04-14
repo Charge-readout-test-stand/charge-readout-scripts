@@ -269,6 +269,7 @@ def get_colors():
     return colors
 
 # from tier2to3_overnight.root, baseline_rms
+n_baseline_samples = 200.0
 rms_keV = {}
 rms_keV[0] = 18.137
 rms_keV[1] = 17.557
@@ -293,12 +294,12 @@ chargeEnergy_rms_keV = 0.0
 energy1_pz_digitization_noise_keV = 0.0
 for channel, value in enumerate(charge_channels_to_use):
     if value:
-        rms = rms_keV[channel]*math.sqrt(2.0/100.0)
+        rms = rms_keV[channel]*math.sqrt(2.0/n_baseline_samples)
         chargeEnergy_rms_keV += math.pow(rms,2.0)
         dig_rms = calibration_values[channel]*0.5 # 0.5 ADC units
         energy1_pz_digitization_noise_keV += math.pow(dig_rms, 2.0)
 chargeEnergy_rms_keV = math.sqrt(chargeEnergy_rms_keV)
-energy1_pz_rms_keV = avg_rms_keV*math.sqrt(2.0/100.0)
+energy1_pz_rms_keV = avg_rms_keV*math.sqrt(2.0/n_baseline_samples) 
 energy1_pz_digitization_noise_keV = math.sqrt(energy1_pz_digitization_noise_keV)/n_chargechannels
 
 # from NEST MC:
