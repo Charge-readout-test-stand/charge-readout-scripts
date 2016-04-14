@@ -112,7 +112,7 @@ def process_file(mc_filename, struck_filename):
     if sigma_keV == 0: # we don't add sigma anymore, since it's added in tier3
         hist.GetDirectory().cd()
         mc_entries = mc_tree.Draw(
-            "chargeEnergy*1.15 >> %s" % hist.GetName(),
+            "chargeEnergy >> %s" % hist.GetName(),
             "chargeEnergy>0",
             "goff"
         )
@@ -189,7 +189,8 @@ def process_file(mc_filename, struck_filename):
     #scale_factor = source_activity_Bq*seconds_per_minute*run_duration_minutes/(i_entry+1)
     struck_height = hist_struck.GetBinContent(hist_struck.FindBin(570))
     mc_height = hist.GetBinContent(hist.FindBin(570))
-    scale_factor = 0.5*struck_height/mc_height
+    scale_factor = struck_height/mc_height
+    #scale_factor *= 0.5 # extra offset for viewing
     print "scale_factor", scale_factor
     hist.Scale(scale_factor)
 
@@ -251,8 +252,12 @@ if __name__ == "__main__":
 
 
     #mc_file = "/nfs/slac/g/exo_data4/users/mjewell/nEXO_MC/digitization/Bi207_Full_Ralph/Tier3/all_tier3_Bi207_Full_Ralph.root"
-    mc_file = "207biMc.root"
-    data_file = "/nfs/slac/g/exo_data4/users/alexis4/test-stand/2015_12_07_6thLXe/tier3_from_tier2/tier2to3_overnight.root"
+    #mc_file = "207biMc.root"
+    #data_file = "/nfs/slac/g/exo_data4/users/alexis4/test-stand/2015_12_07_6thLXe/tier3_from_tier2/tier2to3_overnight.root"
+
+    # 7th LXe
+    mc_file = "/nfs/slac/g/exo_data4/users/alexis4/test-stand/mc/Bi207_Full_Ralph/tier3_5x/all_pcd_size_5x_dcoeff0.root"
+    data_file = "/u/xo/alexis4/test-stand/2016_03_07_7thLXe/tier3_external/overnight7thLXe.root" 
 
     process_file(mc_file, data_file)
 
