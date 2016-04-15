@@ -34,10 +34,10 @@ def process_file(
 
 
     # options:
-    energy_threshold = 200.0 # for each channel
-    charge_energy_low_threshold = 1000.0
-    charge_energy_high_threshold = 1400.0
-    hist_max = 8.5
+    energy_threshold = 10.0 # for each channel
+    charge_energy_low_threshold = 400.0
+    charge_energy_high_threshold = 1500.0
+    hist_max = 9.5
     hist_min = -0.5
     #n_bins = int((hist_max - hist_min)*1.0)*(len(mc_filenames)+2)
     n_bins = int((hist_max - hist_min)*1.0)
@@ -109,7 +109,7 @@ def process_file(
         hist.SetLineColor(color)
         #hist.SetFillColor(color)
         #hist.SetFillStyle(3004)
-        hist.SetMarkerStyle(8)
+        hist.SetMarkerStyle(24+mc_i)
         hist.SetMarkerSize(1.0)
         hist.SetMarkerColor(color)
         hist.SetLineWidth(2)
@@ -130,7 +130,7 @@ def process_file(
             selection,
             "goff"
         )
-        print "\t%.1e MC entries" % mc_entries
+        print "\t%s: %.1e MC hist entries" % (mc_basename, mc_entries)
         hist.Scale(1.0/mc_entries)
         legend.AddEntry(hist, mc_basename, "lp")
         mc_hists.append(hist)
@@ -164,12 +164,12 @@ def process_file(
         i = i_bin+1
         #print hist_struck.GetBinCenter(i)
         result = "%i" % i_bin
-        result += " | %.4f +/- %.4f" % (
+        result += " | %.3e +/- %.3e" % (
             hist_struck.GetBinContent(i),
             hist_struck.GetBinError(i),
         )
         for hist in mc_hists:
-            result += " | %.4f +/- %.4f" % (
+            result += " | %.3e +/- %.3e" % (
                 hist.GetBinContent(i),
                 hist.GetBinError(i),
             )
@@ -212,8 +212,10 @@ if __name__ == "__main__":
     # 7th LXe
     data_file = "/u/xo/alexis4/test-stand/2016_03_07_7thLXe/tier3_external/overnight7thLXe.root" 
     mc_files = [
-        "/nfs/slac/g/exo_data4/users/alexis4/test-stand/mc/Bi207_Full_Ralph/tier3_5x/all_pcd_size_5x_dcoeff200.root",
-        "/nfs/slac/g/exo_data4/users/alexis4/test-stand/mc/Bi207_Full_Ralph/tier3_5x/all_pcd_size_5x_dcoeff0.root",
+        "/nfs/slac/g/exo_data4/users/alexis4/test-stand/mc/Bi207_Full_Ralph/tier3_5x/all_dcoef200_pcd_size_5x.root",
+        #"/nfs/slac/g/exo_data4/users/alexis4/test-stand/mc/Bi207_Full_Ralph/tier3_5x/all_dcoef200_pcd_size_5x.root",
+        "/nfs/slac/g/exo_data4/users/alexis4/test-stand/mc/Bi207_Full_Ralph/tier3_5x/all_dcoef0_pcd_size_5x.root",
+        "/nfs/slac/g/exo_data4/users/alexis4/test-stand/mc/Bi207_Full_Ralph/tier3_2x/all_dcoef200_2x.root",
     ]
 
     process_file(
