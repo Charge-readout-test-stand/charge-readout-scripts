@@ -79,29 +79,30 @@ def process_file(mc_filename, struck_filename):
     print "\t%.2e events in MC tree" % mc_tree.GetEntries()
 
     # make a histogram to hold energies
-    hist = TH1D("hist", "", 200, 0, 2500)
+    hist = TH1D("hist", "", 250, 0, 2500)
     hist.SetLineColor(TColor.kRed)
     hist.SetFillColor(TColor.kRed)
     hist.SetFillStyle(3004)
     hist.SetLineWidth(2)
 
-    hist_struck = TH1D("hist_struck","",200,0,2500)
+    hist_struck = TH1D("hist_struck","",250,0,2500)
     hist_struck.SetLineColor(TColor.kBlue)
     hist_struck.SetFillColor(TColor.kBlue)
     hist_struck.SetFillStyle(3004)
     hist_struck.SetLineWidth(2)
+    hist_struck.GetYaxis().SetTitleOffset(1.3)
 
     # open the struck file and get its entries
-    print "processing file: ", mc_filename
+    print "processing file: ", struck_filename
     struck_file = TFile(struck_filename)
     struck_tree = struck_file.Get("tree")
     hist_struck.GetDirectory().cd()
     struck_entries = struck_tree.Draw(
-        "chargeEnergy >> %s" % hist_struck.GetName(),
+        "chargeEnergy*0.92 >> %s" % hist_struck.GetName(), # until e-calibration is fixed
+        #"chargeEnergy >> %s" % hist_struck.GetName(),
         "chargeEnergy>0",
         "goff"
     )
-    #hist_struck.SetMaximum(20e3)
     print "\t%.1e struck entries" % struck_entries
 
     mc_tree.SetLineColor(TColor.kRed)
@@ -222,11 +223,14 @@ def process_file(mc_filename, struck_filename):
 
     # print a linear scale version
     canvas.SetLogy(0)
+    hist_max = hist_struck.GetMaximum()
+    hist_struck.SetMaximum(struck_height*2.0)
     canvas.Update()
     canvas.Print("%s_spectrum_sigma_%i_keV_lin.pdf" % (basename, sigma_keV))
 
     if not gROOT.IsBatch():
         canvas.SetLogy(1)
+        hist_struck.SetMaximum(hist_max*2.0)
         canvas.Update()
         raw_input("pause...")
 
@@ -256,7 +260,7 @@ if __name__ == "__main__":
     #data_file = "/nfs/slac/g/exo_data4/users/alexis4/test-stand/2015_12_07_6thLXe/tier3_from_tier2/tier2to3_overnight.root"
 
     # 7th LXe
-    mc_file = "/nfs/slac/g/exo_data4/users/alexis4/test-stand/mc/Bi207_Full_Ralph/tier3_5x/all_pcd_size_5x_dcoeff0.root"
+    mc_file = "/nfs/slac/g/exo_data4/users/alexis4/test-stand/mc/old_Bi207_Full_Ralph/tier3_5x/all_dcoef200_pcd_size_5x.root"
     data_file = "/u/xo/alexis4/test-stand/2016_03_07_7thLXe/tier3_external/overnight7thLXe.root" 
 
     process_file(mc_file, data_file)
