@@ -153,7 +153,7 @@ if __name__ == "__main__":
              "/afs/slac.stanford.edu/u/xo/mjj46/Test_Stand/LXe_4th/MCA_overnight/LXe_10V_point2perThreshold_cathConnected_1700VnegBiasX27_Bi207_6_12am.mca",
              "/afs/slac.stanford.edu/u/xo/mjj46/Test_Stand/LXe_4th/MCA_overnight/LXe_10V_point2perThreshold_cathConnected_1700VnegBiasX27_Bi207_7_630am.mca"]
 
-    my_calib = 0.75
+    my_calib = 0.775810129852
 
     make_plots(files, my_calib)
 

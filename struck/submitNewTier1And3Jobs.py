@@ -48,19 +48,21 @@ def process_file(filename, verbose=True):
     # -b runs sis3316_offline in batch mode
     tier1_dir = os.path.abspath(os.path.split(filename)[0]) + "/../tier1"
     cmd += 'mkdir -p %s \n' % tier1_dir
+    cmd += 'umask 002 \n' # add write permissions for group
     cmd += 'cd %s \n' % tier1_dir
     cmd +=  '(time %s -b %s ) >& %s.out \n' % (
         executable,
         filename,
         tier1_basename,
     )
+    cmd += 'chmod 664 %s.root \n' % tier1_basename # add write permissions for group to root file
 
     cmd += 'echo starting tier3... \n'
     python_script_name = os.path.splitext(inspect.getfile(generateTier3Files_external))[0] + ".py"
     tier3_dir = os.path.abspath(os.path.split(filename)[0]) + "/../tier3_external"
     cmd += 'mkdir -p %s \n' % tier3_dir
     cmd += 'cd %s \n' % tier3_dir
-
+    cmd += 'umask 002 \n' # add write permissions for group
     cmd += '(time python %s %s) >& %s \n' % (
         python_script_name,
         "%s/%s.root" % (tier1_dir, tier1_basename),

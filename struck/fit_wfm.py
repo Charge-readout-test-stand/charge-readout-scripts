@@ -39,6 +39,7 @@ from ROOT import gStyle
 from ROOT import gSystem
 from ROOT import TLine
 from ROOT import TPaveText
+from ROOT import TLegend
 from ROOT import TRandom3
 
 import wfmProcessing
@@ -52,6 +53,7 @@ gStyle.SetTitleBorderSize(0)
 
 # be sure to use the "+" -- it made fitting about 30x faster!
 gROOT.ProcessLine('.L ralphWF.C+')
+gROOT.ProcessLine('.L ../mc/digi/ralphWF.C+')
 from ROOT import OnePCD
 from ROOT import TwoPCDsOneZ
 from ROOT import OneStripWithIonAndCathode
@@ -63,6 +65,10 @@ from ROOT import EXOBaselineRemover
 
 # definition of calibration constants, decay times, channels
 import struck_analysis_parameters
+struck_analysis_parameters.drift_velocity = 1.7 ## FIXME -- for old MC!
+print "=== ** WARNING ** -- changing drift time ==="
+struck_analysis_parameters.drift_length = 17.0 ## FIXME -- for old MC!
+print "=== ** WARNING ** -- changing drift length ==="
 
 def print_fit_info(fit_result, fit_duration):
 
@@ -83,6 +89,7 @@ def get_drift_stop_time_from_z(z):
     # options
     trigger_time = 8.0 # microseconds
     drift_velocity = struck_analysis_parameters.drift_velocity
+    print "drift_velocity:", drift_velocity
     t = trigger_time + z/drift_velocity
     return t
 
@@ -250,16 +257,20 @@ MCz = None, rise_time=None):
         # calculate drift stop time and draw a line to represent
         drift_stop = get_drift_stop_time_from_z(test.GetParameter(2))
         print "drift_stop [microseconds]: %.2f" % drift_stop
+        legend = TLegend(0.6, 0.9, 0.9, 0.99)
+        legend.SetFillColor(0)
         line = TLine(drift_stop, wfm_hist.GetMinimum(), drift_stop, wfm_hist.GetMaximum())
         line.SetLineStyle(2)
         line.SetLineWidth(2)
         line.SetLineColor(TColor.kBlue)
+        legend.AddEntry(line, "fit drift stop: %.2f" % drift_stop, "l")
         line.Draw()
 
         line1 = TLine(rise_time, wfm_hist.GetMinimum(), rise_time, wfm_hist.GetMaximum())
         #line1.SetLineStyle(2)
         line1.SetLineWidth(2)
         line1.SetLineColor(TColor.kViolet)
+        legend.AddEntry(line1, "99% drift time:" + " %.2f" % rise_time, "l")
         line1.Draw()
 
 
@@ -272,6 +283,7 @@ MCz = None, rise_time=None):
             #line2.SetLineStyle(2)
             #line2.SetLineWidth(2)
             line2.SetLineColor(TColor.kGreen+2)
+            legend.AddEntry(line2, "MC truth drift time: %.2f" % MCt, "l")
             line2.Draw()
 
 
@@ -313,6 +325,7 @@ MCz = None, rise_time=None):
                 test.GetParError(2),
             ))
         pave_text.Draw()
+        legend.Draw()
 
 
         # setup residuals hist
@@ -378,7 +391,7 @@ def process_file(file_name):
     drift_length = struck_analysis_parameters.drift_length
 
     print "---> processing", file_name
-    canvas = TCanvas("canvas","", 800, 1100)
+    canvas = TCanvas("canvas1","", 800, 1100)
     canvas.Divide(1,2)
 
     pad1 = canvas.cd(1)
@@ -415,7 +428,7 @@ def process_file(file_name):
     print "%i entries in tree" % n_entries
 
     # open output file and tree
-    out_filename = "fits_" + wfmProcessing.create_outfile_name(file_name)
+    out_filename = "fits_" + wfmProcessing.create_outfile_name(file_name, isMC=isMC)
     out_file = TFile(out_filename, "recreate")
     out_tree = TTree("tree", "fits to wfms")
 
@@ -461,6 +474,10 @@ def process_file(file_name):
     rise_time95 = array('d', [0.0]*n_channels) # double
     out_tree.Branch('rise_time95', rise_time95, 'rise_time95[%i]/D' % n_channels)
 
+    # rise_time99
+    rise_time99 = array('d', [0.0]*n_channels) # double
+    out_tree.Branch('rise_time99', rise_time99, 'rise_time99[%i]/D' % n_channels)
+
     if isMC:
         # drift time, from MC
         drift_time_MC = array('d', [0.0]*n_channels) # double
@@ -489,7 +506,7 @@ def process_file(file_name):
         else:
             calibration = struck_analysis_parameters.calibration_values[tree.channel[3]]
 
-        calibration/=2.5 # correction for ADC input range FIXME for different files...
+        #calibration/=2.5 # correction for ADC input range FIXME for different files...
         #print calibration
 
         # only ch Y23 for now -- FIXME
@@ -517,7 +534,7 @@ def process_file(file_name):
 
         # add noise to MC
         if isMC:
-            sigma = rms_keV[1]/calibration
+            sigma = struck_analysis_parameters.avg_rms_keV/calibration
             print "%.1f keV noise to MC" % sigma
             for i_point in xrange(len(wfm)):
                 noise = generator.Gaus()*sigma
@@ -552,6 +569,8 @@ def process_file(file_name):
                 print "\tenergy hitting this channel: %.1f" % hit_e
                 e_sum += hit_e
                 z_sum += hit_e*z
+                print "e_sum:", e_sum
+                print "z_sum:", z_sum
                 print "\tPCD %i: E=%.1f, x=%.2f, y=%.2f, z=%.2f" % (
                     iPCD, 
                     e, 
@@ -563,7 +582,7 @@ def process_file(file_name):
 
             # calculate drift stop time from MC:
             MCz = z_sum/e_sum
-        print "energy-weighted z: %.2f" % z
+        print "energy-weighted z: %.2f" % MCz
 
         exo_wfm = EXODoubleWaveform(array('d',wfm), waveform_length)
         exo_wfm*=calibration # convert wfm from ADC units to keV
@@ -584,10 +603,11 @@ def process_file(file_name):
 
         risetimes = wfmProcessing.get_risetimes(exo_wfm, waveform_length, sampling_freq_Hz)
         rise_time95[0] = risetimes[10]
+        rise_time99[0] = risetimes[11]
 
         output = do_fit(exo_wfm=exo_wfm, canvas=canvas, i_entry=i_entry,
         rms=rms, channel=channel, doTwoPCDs=False, isMC=isMC, MCz=MCz,
-        rise_time=rise_time95[0])
+        rise_time=rise_time99[0])
         chi2_per_ndf = output[1]
 
         #if chi2_per_ndf > 2.0:
@@ -595,7 +615,7 @@ def process_file(file_name):
             print "===> repeating fit with 2 PCDs... "
             output = do_fit(exo_wfm=exo_wfm, canvas=canvas,
             i_entry=i_entry, rms=rms, channel=channel, doTwoPCDs=True,
-            isMC=isMC, MCz=MCz, rise_time=rise_time95[0])
+            isMC=isMC, MCz=MCz, rise_time=rise_time99[0])
 
             chi2_per_ndf = output[1]
 
@@ -629,18 +649,22 @@ if __name__ == "__main__":
     # one test:
 
     # at SLAC:
-    file_name = "/nfs/slac/g/exo_data4/users/alexis4/test-stand/2015_12_07_6thLXe/tier2/tier2_xenon8300g_1300VPMT_1700Vcathode_amplified_shaped_2015-12-07_21-28-20.root"
+    #file_name = "/nfs/slac/g/exo_data4/users/alexis4/test-stand/2015_12_07_6thLXe/tier2/tier2_xenon8300g_1300VPMT_1700Vcathode_amplified_shaped_2015-12-07_21-28-20.root"
     # alexis' virtual ubuntu:
-    file_name = "/home/alexis/myBucket/testStand/tier2_xenon8300g_1300VPMT_1700Vcathode_amplified_shaped_2015-12-07_21-28-20.root"
+    #file_name = "/home/alexis/myBucket/testStand/tier2_xenon8300g_1300VPMT_1700Vcathode_amplified_shaped_2015-12-07_21-28-20.root"
 
     # MJJ MC file, 207-Bi:
-    file_name = "~/testStandMC/digitization/Bi207_Full_Ralph/Digi/digi1_Bi207_Full_Ralph_dcoef0.root"
+    #file_name = "~/testStandMC/digitization/Bi207_Full_Ralph/Digi/digi1_Bi207_Full_Ralph_dcoef0.root"
 
     # MC file, 1-MeV electron:
-    file_name = "/nfs/slac/g/exo_data4/users/mjewell/nEXO_MC/digitization/electron_1MeV_Ralph/Digi/digi1_electron_1MeV_Ralph_dcoef0.root"
+    #file_name = "/nfs/slac/g/exo_data4/users/mjewell/nEXO_MC/digitization/electron_1MeV_Ralph/Digi/digi1_electron_1MeV_Ralph_dcoef0.root"
+    #file_name = "/nfs/slac/g/exo_data4/users/mjewell/nEXO_MC/digitization/electron_1MeV_Ralph/Digi/digi10_electron_1MeV_Ralph_dcoef0.root"
 
     # MC file, 1-MeV gamma:
     #file_name = "/nfs/slac/g/exo_data4/users/mjewell/nEXO_MC/digitization/gamma_1MeV_Ralph/Digi/digi1_gamma_1MeV_Ralph_dcoef0.root"
+
+    # MC, 570-keV e-
+    file_name="/nfs/slac/g/exo_data4/users/mjewell/nEXO_MC/digitization/electron_570keV_Ralph/Digi/digi1_electron_570keV_Ralph_dcoef0.root"
 
     process_file(file_name)
 

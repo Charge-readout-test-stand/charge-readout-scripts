@@ -2,9 +2,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 import ROOT
 import MakeTile
+import math
 
 posion  = True #Use Positive Ion
 cathsupress = False #Use Cathode Supression
+cathodeToAnodeDistance = 18.16 # mm
+drift_velocity = 2.0 # mm/microsecond
+e_lifetime=None # e- lifetime, microseconds
+consider_capturedQ=False # electrons captured on impurities
 
 def f(xi, yi, h):
     inside = (xi*yi)/(h*np.sqrt(xi*xi + yi*yi + h*h))
@@ -47,7 +52,7 @@ def Q_rot(xpcd, ypcd, zpcd, chx, chy):
 
 def sum_channel(xpcd,ypcd,zpcd,chID,chx,chy):
     #xpcd,ypcd,zpcd --- x,y,z of intial pcd
-    #z = 0 is cathode 17 is anode
+    #z = 0 is cathode 18.16 is anode for 7th LXe
     #chID is ID for channel < 30 is X Channel
     #chx, chy is x,y pos of channel
     
@@ -68,36 +73,61 @@ def sum_channel(xpcd,ypcd,zpcd,chID,chx,chy):
 def make_WF(xpcd, ypcd, zpcd, Epcd, chID):
 
     xch_list, ych_list =  np.loadtxt("/nfs/slac/g/exo/mjewell/nEXO/nEXO_Analysis/utilities/scripts/localChannelsMap.txt", usecols = (1,2) ,unpack=True)
-    dZ = 0.04 * 0.171 * 10
+    dZ = 0.04 * 0.2 * 10
     
     chx = xch_list[chID]
     chy = ych_list[chID]
     WF = np.zeros(800)
 
     #Ralphs anode is at z = 0.0mm
-    zpcd = 17.0 - zpcd
+    zpcd = cathodeToAnodeDistance - zpcd
     
     ionQ = sum_channel(xpcd,ypcd,zpcd,chID,chx,chy)
     
     #Cathode Supression
     #Anode at z = 0 has no supression
     ionQ = ionQ
-    if cathsupress: ionQ = ionQ*(17-zpcd)/17.0
+    if cathsupress: ionQ = ionQ*(cathodeToAnodeDistance-zpcd)/cathodeToAnodeDistance
 
-    #17 is top in Daves
+    # electron lifetime:
+    z0 = zpcd # initial z position
+    capturedQ = 0.0 # for electrons captured on impurities
+
+    #cathodeToAnodeDistance is top in Daves
     #0 is top in Ralphs??
     ki = 200
     for k in np.arange(ki,800,1):    
         zpcd -= dZ
+        if zpcd < 0: zpcd = 0.0
+        if e_lifetime:
+            drift_time = (z0-zpcd)/drift_velocity # so far
+            exp_factor = math.exp(-drift_time/e_lifetime)
+            frac_captured = 1.0 - math.exp(-dZ/drift_velocity/e_lifetime)
+            if False: # debugging
+                print "z: %.1f | drift_time: %.1f | exp_factor: %.3f | frac_captured: %.3f | capturedQ: %.3f" % (
+                    zpcd,
+                    drift_time,
+                    exp_factor,
+                    frac_captured,
+                    capturedQ,
+                )
         if(zpcd <= 0.0):
             Q = sum_channel(xpcd,ypcd,0.00001,chID,chx,chy) 
-            if cathsupress: Q = Q*(17-zpcd)/17.0
+            if e_lifetime: Q = Q*exp_factor
+            if cathsupress: Q = Q*(cathodeToAnodeDistance-zpcd)/cathodeToAnodeDistance
+            if e_lifetime and consider_capturedQ: 
+                capturedQ += Q*frac_captured
+                Q += capturedQ
             if posion: Q -= ionQ
-            WF[k:] = Q*Epcd
+            WF[k:] = Q*Epcd # set rest of waveform to final value
             break
         else:
             Q = sum_channel(xpcd,ypcd,zpcd,chID,chx,chy) 
-            if cathsupress: Q = Q*(17-zpcd)/17.0
+            if e_lifetime: Q = Q*exp_factor
+            if cathsupress: Q = Q*(cathodeToAnodeDistance-zpcd)/cathodeToAnodeDistance
+            if e_lifetime and consider_capturedQ: 
+                capturedQ += Q*frac_captured
+                Q += capturedQ
             if posion: Q -= ionQ
             WF[k] = Q*Epcd
  

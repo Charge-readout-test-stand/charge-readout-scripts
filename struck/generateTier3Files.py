@@ -96,13 +96,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     # whether to run in debug mode (draw wfms):
     do_debug = not gROOT.IsBatch()
     do_draw_extra = not gROOT.IsBatch()
-
-    reporting_period = 1000
-    if isMC:
-        reporting_period = 100
-
     # samples at wfm start and end to use for energy calc:
-    n_baseline_samples_to_use = 50
+    n_baseline_samples_to_use = 100
 
     sampling_freq_Hz = struck_analysis_parameters.sampling_freq_Hz
    
@@ -112,16 +107,6 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     n_channels = struck_analysis_parameters.n_channels
     charge_channels_to_use = struck_analysis_parameters.charge_channels_to_use
 
-    if isMC:
-        #MC has different structure so use MC channels
-        channels = struck_analysis_parameters.MCchannels
-        n_chargechannels = struck_analysis_parameters.n_MCchargechannels
-        pmt_channel = None #No PMT in MC
-        n_channels = struck_analysis_parameters.MCn_channels
-        charge_channels_to_use = struck_analysis_parameters.MCcharge_channels_to_use
-        generator = TRandom3(0) # random number generator, initialized with TUUID object
-        rms_keV = struck_analysis_parameters.rms_keV
-    
     # this is the number of channels per event (1 if we are processing tier1
     # data, len(channels) if we are processing tier2 data
     n_channels_in_event = n_channels
@@ -134,22 +119,6 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     start_time = time.clock()
     last_time = start_time
     prev_time_stamp = 0.0
-    basename = wfmProcessing.create_basename(filename)
-
-
-    # calculate file start time, in POSIX time, from filename suffix
-    # date and time are last two parts of filename separated with "_":
-    try:
-        file_start = "_".join(basename.split("_")[-2:])
-        #print file_start
-        # create datetime object from relevant parts of filename:
-        file_start  = datetime.datetime.strptime(file_start, "%Y-%m-%d_%H-%M-%S")
-        # get the POSIX timestamp, in seconds:
-        posix_start_time = int(time.mktime(file_start.timetuple()))
-        #print posix_start_time
-        #print "this file was started at:", file_start
-    except:
-        posix_start_time = 0
 
     # a canvas for drawing, if debugging:
     canvas = TCanvas()
@@ -166,8 +135,48 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     try:
         n_entries = tree.GetEntries()
     except AttributeError:
-        print "==> problem accessing tree -- skipping this file"
-        return 0
+        tree = root_file.Get("evtTree")
+        try:
+            n_entries = tree.GetEntries()
+            isMC = True
+        except AttributeError:
+            print "==> problem accessing tree -- skipping this file"
+            return 0
+
+
+    reporting_period = 1000
+    if isMC:
+        reporting_period = 100
+
+
+    if isMC:
+        #MC has different structure so use MC channels
+        channels = struck_analysis_parameters.MCchannels
+        n_chargechannels = struck_analysis_parameters.n_MCchargechannels
+        pmt_channel = None #No PMT in MC
+        n_channels = struck_analysis_parameters.MCn_channels
+        charge_channels_to_use = struck_analysis_parameters.MCcharge_channels_to_use
+        generator = TRandom3(0) # random number generator, initialized with TUUID object
+        rms_keV = struck_analysis_parameters.rms_keV
+        
+    basename = wfmProcessing.create_basename(filename, isMC)
+
+    # calculate file start time, in POSIX time, from filename suffix
+    # date and time are last two parts of filename separated with "_":
+    try:
+        file_start = "_".join(basename.split("_")[-2:])
+        #print file_start
+        # create datetime object from relevant parts of filename:
+        file_start  = datetime.datetime.strptime(file_start, "%Y-%m-%d_%H-%M-%S")
+        # get the POSIX timestamp, in seconds:
+        posix_start_time = int(time.mktime(file_start.timetuple()))
+        #print posix_start_time
+        #print "this file was started at:", file_start
+    except:
+        posix_start_time = 0
+
+
+
 
     # decide if this is a tier1 or tier2 file
     is_tier1 = False
@@ -185,7 +194,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         is_tier1 = False
 
     # open output file and tree
-    out_filename = wfmProcessing.create_outfile_name(filename)
+    out_filename = wfmProcessing.create_outfile_name(filename, isMC)
     out_filename = dir_name + out_filename
     if not do_overwrite:
         if os.path.isfile(out_filename):
@@ -296,18 +305,18 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
     decay_time_values = struck_analysis_parameters.decay_time_values
     decay_time_values[pmt_channel] = 1e9*CLHEP.microsecond
+    
+    if isMC:
+        #No decay in MC so set to infinite
+        decay_time_values = [1e9*CLHEP.microsecond]*n_channels
+
+
     for (i, i_channel) in enumerate(channels):
         try:
             decay_time[i] = decay_time_values[i_channel]
         except KeyError:
             print "no decay info for channel %i" % i_channel
             decay_time[i] = 1e9*CLHEP.microsecond
-
-
-    
-    if isMC:
-        #No decay in MC so set to infinite
-        decay_time_values = [1e9*CLHEP.microsecond]*n_channels
 
 
     # energy calibration, keV:
@@ -549,12 +558,34 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     chargeEnergy = array('d', [0.0]) # double
     out_tree.Branch('chargeEnergy', chargeEnergy, 'chargeEnergy/D')
  
-    #Total Energy in MC for all channels including not active channels
-    MCchargeEnergy = array('d', [0.0])
-    out_tree.Branch('MCchargeEnergy', MCchargeEnergy, 'MCchargeEnergy/D')
-
     lightEnergy = array('d', [0.0]) # double
     out_tree.Branch('lightEnergy', lightEnergy, 'lightEnergy/D')
+
+    if isMC:
+        #Total Energy in MC for all channels including not active channels
+        MCchargeEnergy = array('d', [0.0])
+        out_tree.Branch('MCchargeEnergy', MCchargeEnergy, 'MCchargeEnergy/D')
+
+        MCtotalEventEnergy = array('d',[0.0])
+        out_tree.Branch("MCtotalEventEnergy",MCtotalEventEnergy,"MCtotalEventEnergy/D")
+
+        MCEventNumber = array('i', [0]) # signed int
+        out_tree.Branch('MCEventNumber', MCEventNumber, 'MCEventNumber/I')
+
+        NumPCDs = array('i', [0]) # signed int
+        out_tree.Branch('NumPCDs', NumPCDs, 'NumPCDs/I')
+
+        NumTE = array('i', [0]) # signed int
+        out_tree.Branch('NumTE', NumTE, 'NumTE/I')
+
+        NPrimaries = array('i', [0]) # signed int
+        out_tree.Branch('NPrimaries', NPrimaries, 'NPrimaries/I')
+
+        PdgCode = array('d', [0.0]*200) # double
+        out_tree.Branch('PdgCode', PdgCode, 'PdgCode[NPrimaries]/D')
+
+        KineticEnergy = array('d', [0.0]*200) # double
+        out_tree.Branch('KineticEnergy', KineticEnergy, 'KineticEnergy[NPrimaries]/D')
 
     # energy & rms before processing, using 2x sample length
     energy1 = array('d', [0]*n_channels_in_event) # double
@@ -630,8 +661,17 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
         # initialize these two to zero
         chargeEnergy[0] = 0.0
-        MCchargeEnergy[0] = 0.0
         lightEnergy[0] = 0.0
+        if isMC:
+            MCchargeEnergy[0] = 0.0
+            MCtotalEventEnergy[0] = tree.Energy
+            MCEventNumber[0] = tree.EventNumber
+            NumPCDs[0] = tree.NumPCDs
+            NumTE[0] = tree.NumTE
+            NPrimaries[0] = tree.NPrimaries
+            for i_primary in xrange(tree.NPrimaries):
+                PdgCode[i_primary] = tree.PdgCode[i_primary]
+                KineticEnergy[i_primary] = tree.KineticEnergy[i_primary]
 
         sum_wfm = None
         for i in xrange(n_channels_in_event):

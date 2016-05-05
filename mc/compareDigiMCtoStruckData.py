@@ -79,29 +79,30 @@ def process_file(mc_filename, struck_filename):
     print "\t%.2e events in MC tree" % mc_tree.GetEntries()
 
     # make a histogram to hold energies
-    hist = TH1D("hist", "", 200, 0, 2500)
+    hist = TH1D("hist", "", 250, 0, 2500)
     hist.SetLineColor(TColor.kRed)
     hist.SetFillColor(TColor.kRed)
     hist.SetFillStyle(3004)
     hist.SetLineWidth(2)
 
-    hist_struck = TH1D("hist_struck","",200,0,2500)
+    hist_struck = TH1D("hist_struck","",250,0,2500)
     hist_struck.SetLineColor(TColor.kBlue)
     hist_struck.SetFillColor(TColor.kBlue)
     hist_struck.SetFillStyle(3004)
     hist_struck.SetLineWidth(2)
+    hist_struck.GetYaxis().SetTitleOffset(1.3)
 
     # open the struck file and get its entries
-    print "processing file: ", mc_filename
+    print "processing file: ", struck_filename
     struck_file = TFile(struck_filename)
     struck_tree = struck_file.Get("tree")
     hist_struck.GetDirectory().cd()
     struck_entries = struck_tree.Draw(
-        "chargeEnergy >> %s" % hist_struck.GetName(),
+        "chargeEnergy*0.92 >> %s" % hist_struck.GetName(), # until e-calibration is fixed
+        #"chargeEnergy >> %s" % hist_struck.GetName(),
         "chargeEnergy>0",
         "goff"
     )
-    #hist_struck.SetMaximum(20e3)
     print "\t%.1e struck entries" % struck_entries
 
     mc_tree.SetLineColor(TColor.kRed)
@@ -112,7 +113,7 @@ def process_file(mc_filename, struck_filename):
     if sigma_keV == 0: # we don't add sigma anymore, since it's added in tier3
         hist.GetDirectory().cd()
         mc_entries = mc_tree.Draw(
-            "chargeEnergy*1.15 >> %s" % hist.GetName(),
+            "chargeEnergy >> %s" % hist.GetName(),
             "chargeEnergy>0",
             "goff"
         )
@@ -189,7 +190,8 @@ def process_file(mc_filename, struck_filename):
     #scale_factor = source_activity_Bq*seconds_per_minute*run_duration_minutes/(i_entry+1)
     struck_height = hist_struck.GetBinContent(hist_struck.FindBin(570))
     mc_height = hist.GetBinContent(hist.FindBin(570))
-    scale_factor = 0.5*struck_height/mc_height
+    scale_factor = struck_height/mc_height
+    #scale_factor *= 0.5 # extra offset for viewing
     print "scale_factor", scale_factor
     hist.Scale(scale_factor)
 
@@ -221,11 +223,14 @@ def process_file(mc_filename, struck_filename):
 
     # print a linear scale version
     canvas.SetLogy(0)
+    hist_max = hist_struck.GetMaximum()
+    hist_struck.SetMaximum(struck_height*2.0)
     canvas.Update()
     canvas.Print("%s_spectrum_sigma_%i_keV_lin.pdf" % (basename, sigma_keV))
 
     if not gROOT.IsBatch():
         canvas.SetLogy(1)
+        hist_struck.SetMaximum(hist_max*2.0)
         canvas.Update()
         raw_input("pause...")
 
@@ -251,8 +256,12 @@ if __name__ == "__main__":
 
 
     #mc_file = "/nfs/slac/g/exo_data4/users/mjewell/nEXO_MC/digitization/Bi207_Full_Ralph/Tier3/all_tier3_Bi207_Full_Ralph.root"
-    mc_file = "207biMc.root"
-    data_file = "/nfs/slac/g/exo_data4/users/alexis4/test-stand/2015_12_07_6thLXe/tier3_from_tier2/tier2to3_overnight.root"
+    #mc_file = "207biMc.root"
+    #data_file = "/nfs/slac/g/exo_data4/users/alexis4/test-stand/2015_12_07_6thLXe/tier3_from_tier2/tier2to3_overnight.root"
+
+    # 7th LXe
+    mc_file = "/nfs/slac/g/exo_data4/users/alexis4/test-stand/mc/old_Bi207_Full_Ralph/tier3_5x/all_dcoef200_pcd_size_5x.root"
+    data_file = "/u/xo/alexis4/test-stand/2016_03_07_7thLXe/tier3_external/overnight7thLXe.root" 
 
     process_file(mc_file, data_file)
 
