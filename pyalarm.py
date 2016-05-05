@@ -17,14 +17,14 @@ Modified from Brian Mong's monitoring of EXO-200.
 import os
 import sys
 import time
+import argparse
 import datetime
 import commands
 import smtplib
 
+#-------------------------------------------------------------------------------
 # options:
-do_debug = False # print verbose info
-do_test = False # lower thresholds and send MANY test emails
-lxe_in_system = True # whether we are checking LXe stuff -- temps & LN
+#-------------------------------------------------------------------------------
 
 # monitoring thresholds:
 temperature_threshold = 168.0 # LXe & Cu operating threshold, K
@@ -37,29 +37,42 @@ lookback_time_minutes = 6.0 # minutes
 users = {
     'alexis':[
         'schubert.alexis@gmail.com', 
-        'agschube@gmail.com',
-        '2064121866@tmomail.net', # cell phone
+        #'agschube@gmail.com',
+        #'2064121866@tmomail.net', # cell phone
     ],
 }
+#-------------------------------------------------------------------------------
 
-if do_test:
-    # change thresholds so all alarms will trigger:
-    temperature_threshold = 0.0
-    dp_threshold = -1e5
-    ln_mass_threshold = -100
-    ln_hours_left_threshold = -100
-    lookback_time_minutes = -1.0
-    do_debug = True
-    lxe_in_system = True
+# global variables -- initial values don't really matter here...
+do_debug = False
+do_test = False
+lxe_in_system = True
 
-def main():
+
+def main(debug, test, no_lxe):
+
+    do_debug = debug
+    do_test = test
+    lxe_in_system = not no_lxe
+    print "do_debug:", do_debug
+    print "do_test:", do_test
+    print "lxe_in_system:", lxe_in_system
 
     if not lxe_in_system:
         print '--> WARNING: lxe_in_system is set to false!'
         print '\t LN mass, Cu & cell temps, will not be monitored'
 
+
     if do_test:
         print "===> this is a test... "
+        # change thresholds so all alarms will trigger:
+        temperature_threshold = 0.0
+        dp_threshold = -1e5
+        ln_mass_threshold = -100
+        ln_hours_left_threshold = -100
+        lookback_time_minutes = -1.0
+        do_debug = True
+        lxe_in_system = True
 
     if do_debug:
         print "--> DEBUGGING"
@@ -79,6 +92,7 @@ def main():
         if do_test:
             print "====> testing is done"
             break
+        break # FIXME
 
 
 def self_checks():
@@ -88,7 +102,7 @@ def self_checks():
     * loop over users and addresses
     """
 
-    print "--> testing that mail info exists:"
+    print "--> checking that mail info exists:"
     load_gmail_info()
     print "\t ok"
 
@@ -226,6 +240,8 @@ def check_dropbox_data():
         messages.append(message)
         print_warning(message)
 
+    print "lxe_in_system:", lxe_in_system
+    return
     if lxe_in_system:
 
         if data['ln_hours_left'] < ln_hours_left_threshold:
@@ -296,5 +312,18 @@ def sendmail(message,address):
 
 
 if __name__ == '__main__':
-    main()
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--debug', action='store_true')
+    parser.add_argument('--test', action='store_true')
+    parser.add_argument('--no_lxe', action='store_true')
+    args = parser.parse_args()
+
+    print "debug:", args.debug
+    print "test:", args.test
+    print "no_lxe:", args.no_lxe
+            
+
+    main(debug=args.debug, test=args.test, no_lxe=args.no_lxe)
+
 
