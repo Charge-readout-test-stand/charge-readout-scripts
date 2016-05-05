@@ -1,13 +1,17 @@
 """
+The environment variable LXEPASS should be set to the password for the gmail
+account. 
 
 This script sends email if one of these conditions is met: 
-* Unable to ping Omega LN controller (power may be out)
-* temperate in the HFE dewar is above threshold
+* Unable to ping IP address of Omega LN controller (power may be out)
+* any temperate in the HFE dewar (on cell or Cu plate) is above threshold
 * dP is above threshold
 * LN mass is below threshold
+* LN is predicted to last less than a minimum time
 * Dropbox is not updating (this means we can't monitor the system)
 
 Modified from Brian Mong's monitoring of EXO-200. 
+05 May 2016
 """
 
 import os
@@ -16,36 +20,35 @@ import time
 import datetime
 import commands
 import smtplib
-import json
 
 # options:
 do_debug = False # print verbose info
 do_test = False # lower thresholds and send MANY test emails
-lxe_in_system = False # whether we are checking LXe stuff -- temps & LN
+lxe_in_system = True # whether we are checking LXe stuff -- temps & LN
 
 # monitoring thresholds:
 temperature_threshold = 168.0 # LXe & Cu operating threshold, K
 dp_threshold = 400.0 # xenon - HFE, torr
 ln_mass_threshold = 70.0 # lbs of LN needed
-lookback_time_minutes = 6.0 # minutes
 ln_hours_left_threshold = 1.0 # at least 1 hour of LN must remain! 
+lookback_time_minutes = 6.0 # minutes
 
 #define users here:
 users = {
     'alexis':[
         'schubert.alexis@gmail.com', 
-        #'agschube@gmail.com',
-        #'2064121866@tmomail.net', # cell phone
+        'agschube@gmail.com',
+        '2064121866@tmomail.net', # cell phone
     ],
 }
 
 if do_test:
-    # set thresholds to trigger all alarms:
+    # change thresholds so all alarms will trigger:
     temperature_threshold = 0.0
     dp_threshold = -1e5
     ln_mass_threshold = -100
-    lookback_time_minutes = -1.0
     ln_hours_left_threshold = -100
+    lookback_time_minutes = -1.0
     do_debug = True
     lxe_in_system = True
 
@@ -54,6 +57,9 @@ def main():
     if not lxe_in_system:
         print '--> WARNING: lxe_in_system is set to false!'
         print '\t LN mass, Cu & cell temps, will not be monitored'
+
+    if do_test:
+        print "===> this is a test... "
 
     if do_debug:
         print "--> DEBUGGING"
@@ -71,7 +77,7 @@ def main():
         #time.sleep(60*5.0)
 
         if do_test:
-            print "test is done"
+            print "====> testing is done"
             break
 
 
@@ -135,12 +141,14 @@ def do_ping(timeout=3):
 
 
 def get_dropbox_data():
+    """ download text file summary from dropbox currentPlots, parse for info """
     print "--> trying to download log file from dropbox:"
     
     cmd = 'curl -L -o 99-log.txt https://www.dropbox.com/sh/an4du1pzdnl4e5z/AADd6Xcdi78WinEMHz3XGEO1a/99-log.txt'
     output = commands.getstatusoutput(cmd)
     if output[0] != 0:
         print output[1]
+        return
     else:
         print "\t success"
 
@@ -202,6 +210,7 @@ def get_dropbox_data():
 
 
 def check_dropbox_data():
+    """ check dropbox data against thresholds """
     data = get_dropbox_data()
     print "--> checking dropbox data:"
 
@@ -260,15 +269,9 @@ def check_dropbox_data():
 
     print "\t done"
 
-
-
-
-def load_gmail_info(file_name="lxeSetupEmailInfo.json"):
-    """ load gmail username and password from a json file"""
-    gmail_file = file(file_name)
-    gmail_info = json.load(gmail_file)
-    gmail_user = gmail_info['guser']
-    gmail_pwd = gmail_info['gpass']
+def load_gmail_info():
+    gmail_user = "lxe.readout@gmail.com"
+    gmail_pwd = os.environ["LXEPASS"]
     return gmail_user, gmail_pwd
 
 def sendmail(message,address):
