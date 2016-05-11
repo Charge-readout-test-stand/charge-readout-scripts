@@ -27,8 +27,8 @@ temperature_threshold = 168.0 # LXe & Cu operating threshold, K
 dp_threshold = 400.0 # xenon - HFE, torr
 ln_mass_threshold = 70.0 # lbs of LN needed
 ln_hours_left_threshold = 1.0 # at least 1 hour of LN must remain! 
-lookback_time_minutes = 6.0 # minutes
-sleep_seconds = 60*5 # sleep for this many seconds between tests
+lookback_time_minutes = 10.0 # LabView plots shouldn't be older than this, minutes
+sleep_seconds = 60 # sleep for this many seconds between tests
 
 def print_warning(warning):
     print "WARNING:", warning
@@ -83,20 +83,32 @@ class LXeMonitoring:
         # check once to be sure this script is working ok
         self.self_checks() 
 
+        n_issues = 0
         # perform other checks in infinite loop!
         while True:
 
             now = datetime.datetime.now()
-            print '==> starting test loop', now
+            print '===> starting test loop', now
 
-            self.do_ping() # ping the Omega LN controller
-            self.check_dropbox_data()
+            try:
 
-            if self.do_test:
-                print "====> testing is done"
-                break
+                self.do_ping() # ping the Omega LN controller
+                self.check_dropbox_data()
 
-            print "sleeping for %i seconds" % sleep_seconds
+                if self.do_test:
+                    print "====> testing is done"
+                    break
+
+            except:
+                n_issues += 1
+                print "There have been %i issues with script!" % n_issues
+                for i in xrange(10):
+                    print('\a') # audible alarm!
+
+            now = datetime.datetime.now()
+            print '===> done with test loop at', now
+
+            print "---> sleeping for %i seconds" % sleep_seconds
             time.sleep(sleep_seconds) # sleep for sleep_seconds
 
 
@@ -122,10 +134,10 @@ class LXeMonitoring:
     def send_messages(self, msg, users):
         """ loop over all addresses for users and email message"""
         print "--> sending mail..."
-        print('\a')
-        print "\tmessage:", msg
+        print('\a') # audible alarm!
+        #print "\t message:", msg
         for user, addresses  in self.users.items():
-            print "\tuser: %s:" % user
+            print "\t user: %s:" % user
             for address in addresses:
                 print "\t\t", address
                 self.sendmail(msg, address)
@@ -172,7 +184,8 @@ class LXeMonitoring:
             print cmd
             print output[1]
  
-        cmd = 'curl -L -o 99-log.txt https://www.dropbox.com/sh/an4du1pzdnl4e5z/AADd6Xcdi78WinEMHz3XGEO1a/%s' % file_name
+        cmd = 'curl -L -o %s https://www.dropbox.com/sh/an4du1pzdnl4e5z/AADd6Xcdi78WinEMHz3XGEO1a/%s' % (
+            file_name, file_name)
         output = commands.getstatusoutput(cmd)
         if output[0] != 0 or self.do_debug:
             print "--> trying to download log file from dropbox:"
