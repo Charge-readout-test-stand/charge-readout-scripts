@@ -163,6 +163,7 @@ def is_tree_MC(tree):
 # from NumTE from 1 MeV electrons: 1e3/4.96561538461538439e+04 
 #Wvalue = 20.138 #eV needed to make 1e- # from old SU LXe setup
 #Wvalue = 22.1225754074916985 # eV, for gammas @ 936 V/cm, nEXO MC, 10k events
+#22.1099058855006163; 10k nEXO MC events with different seed
 # new physics list 11 May 2016:
 #Wvalue = 21.1403194621 # eV, e-s @ 936 V/cm in SU LXe setup
 Wvalue = 22.0043657088 # eV, gammas @ 936 V/cm in SU LXe setup, 46k events
