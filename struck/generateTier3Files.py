@@ -222,6 +222,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     event = array('I', [0]) # unsigned int
     out_tree.Branch('event', event, 'event/i')
 
+    sub_event = array('I', [0]) # unsigned int
+    out_tree.Branch('sub_event', sub_event, 'sub_event/i')
+
     file_start_time = array('I', [0]) # unsigned int
     file_start_time[0] = posix_start_time
     out_tree.Branch('file_start_time', file_start_time, 'file_start_time/i')
@@ -566,8 +569,17 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         MCchargeEnergy = array('d', [0.0])
         out_tree.Branch('MCchargeEnergy', MCchargeEnergy, 'MCchargeEnergy/D')
 
+        # energy in active LXe:
         MCtotalEventEnergy = array('d',[0.0])
         out_tree.Branch("MCtotalEventEnergy",MCtotalEventEnergy,"MCtotalEventEnergy/D")
+
+        # energy in all LXe:
+        MCtotalEventLXeEnergy = array('d',[0.0])
+        out_tree.Branch("MCtotalEventLXeEnergy",MCtotalEventLXeEnergy,"MCtotalEventLXeEnergy/D")
+
+        # energy NEST processed:
+        MCnestEventEnergy = array('d',[0.0])
+        out_tree.Branch("MCnestEventEnergy",MCnestEventEnergy,"MCnestEventEnergy/D")
 
         MCEventNumber = array('i', [0]) # signed int
         out_tree.Branch('MCEventNumber', MCEventNumber, 'MCEventNumber/I')
@@ -636,7 +648,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         # set event-level output tree variables
         if isMC:
             #Event number
-            event[0] = i_entry
+            event[0] = tree.EventNumber
+            sub_event[0] = tree.SubEventNumber
         else:
             event[0] = tree.event
 
@@ -645,8 +658,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             time_stampDouble[0] = tree.timestampDouble
         elif isMC:
             #No timestamp in MC 
-            time_stamp[0] = 0
-            time_stampDouble[0] = 0
+            time_stamp[0] = int( tree.EventTime/sampling_freq_Hz ) 
+            time_stampDouble[0] = tree.EventTime/sampling_freq_Hz
         else:
             time_stamp[0] = tree.time_stamp
             time_stampDouble[0] = tree.time_stampDouble
@@ -665,6 +678,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         if isMC:
             MCchargeEnergy[0] = 0.0
             MCtotalEventEnergy[0] = tree.Energy
+            MCtotalEventLXeEnergy[0] = tree.TotalEventLXeEnergy
+            MCnestEventEnergy[0] = tree.NestEventEnergy
             MCEventNumber[0] = tree.EventNumber
             NumPCDs[0] = tree.NumPCDs
             NumTE[0] = tree.NumTE
