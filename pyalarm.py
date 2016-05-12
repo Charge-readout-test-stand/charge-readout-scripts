@@ -10,6 +10,20 @@ This script sends email if one of these conditions is met:
 * LN is predicted to last less than a minimum time
 * Dropbox is not updating (this means we can't monitor the system)
 
+To do: FIXME
+* 12 May 2016 -- script hung while trying to send mail, I think internet was
+  down printed text:
+
+        --> sending mail...
+
+           user: alexis:
+            schubert.alexis@gmail.com
+        trying to send mail...
+
+* send heart beat email info?
+* 
+
+
 Modified from Brian Mong's monitoring of EXO-200. 
 05 May 2016
 """
@@ -29,6 +43,7 @@ ln_mass_threshold = 70.0 # lbs of LN needed
 ln_hours_left_threshold = 1.0 # at least 1 hour of LN must remain! 
 lookback_time_minutes = 10.0 # LabView plots shouldn't be older than this, minutes
 sleep_seconds = 60 # sleep for this many seconds between tests
+heartbeat_interval_hours = 24
 
 def print_warning(warning):
     print "WARNING:", warning
@@ -56,6 +71,9 @@ class LXeMonitoring:
         self.do_test = do_test
         self.do_debug = do_debug
         self.lxe = lxe
+        
+
+        start_time = datetime.datetime.now()
 
         if self.lxe:
             print 'monitoring for LXe'
@@ -108,6 +126,12 @@ class LXeMonitoring:
             now = datetime.datetime.now()
             print '===> done with test loop at', now
 
+            message = "heartbeat at: %s \n" % now
+            message += "there have been %i issues" % n_issues
+            message += "script has been running since: %s \n" % start_time
+            print message
+            #self.send_messages(message, is_heartbeat=True)
+
             print "---> sleeping for %i seconds" % sleep_seconds
             time.sleep(sleep_seconds) # sleep for sleep_seconds
 
@@ -131,16 +155,17 @@ class LXeMonitoring:
                 print "\t\t", address
 
 
-    def send_messages(self, msg, users):
+    def send_messages(self, msg, users=None, is_heartbeat=False):
         """ loop over all addresses for users and email message"""
         print "--> sending mail..."
-        print('\a') # audible alarm!
+        if not is_heartbeat: print('\a') # audible alarm!
         #print "\t message:", msg
-        for user, addresses  in self.users.items():
+        if users==None: users = self.users
+        for user, addresses  in users.items():
             print "\t user: %s:" % user
             for address in addresses:
                 print "\t\t", address
-                self.sendmail(msg, address)
+                self.sendmail(msg, address, is_heartbeat)
 
     def do_ping(self, timeout=3):
         """ 
@@ -164,7 +189,7 @@ class LXeMonitoring:
             message += output[1]
 
             print_warning(message)
-            self.send_messages(message, self.users)
+            self.send_messages(message)
         else:
             print "\t success"
 
@@ -189,8 +214,11 @@ class LXeMonitoring:
         output = commands.getstatusoutput(cmd)
         if output[0] != 0 or self.do_debug:
             print "--> trying to download log file from dropbox:"
-            print cmd
-            print output[1]
+            message = "Trouble downloading file from dropbox \n"
+            message += "command: %s \n" % cmd
+            message += "output: %s \n " % output[1]
+            print_warning(message)
+            self.send_messages(message)
         else:
             print "\t success"
 
@@ -307,12 +335,12 @@ class LXeMonitoring:
         if len(messages) > 0:
             print "%i warnings" % len(messages)
             message = "\n".join(messages)
-            self.send_messages(message, self.users)
+            self.send_messages(message)
 
         print "\t done"
 
 
-    def sendmail(self,message,address):
+    def sendmail(self,message,address,is_heartbeat=False):
         """ send a message to a user """
         print "trying to send mail..."
         gmail_user, gmail_pwd = load_gmail_info()
@@ -323,6 +351,7 @@ class LXeMonitoring:
         smtpserver.login(gmail_user, gmail_pwd)
         subject = "Stanford LXe System Alarm!"
         if self.do_test: subject = "TEST of " + subject
+        if is_heartbeat: subject = "Stanford LXe system heartbeat"
         header = 'To:' + address + '\n' + 'From: ' + gmail_user + '\n' + 'Subject:%s \n' % subject
         print header
         info = "time: %s  \n" % datetime.datetime.now()
