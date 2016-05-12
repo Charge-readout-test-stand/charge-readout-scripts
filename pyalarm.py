@@ -55,7 +55,10 @@ def load_gmail_info():
     return gmail_user, gmail_pwd
 
 def filter_SMS(users):
-    """ return dict of users, with email-to-SMS removed"""
+    """ 
+    return dict of users, with email-to-SMS removed
+    * also remove alexis's gmail
+    """
     new_dict = {}
     for user, addresses in users.items():
         new_addresses = []
@@ -66,6 +69,7 @@ def filter_SMS(users):
             if "sprintpcs" in address: continue # sprint
             if "vtext" in address: continue # verizon
             if "att" in address: continue # AT&T
+            if "agschube@gmail.com" in address: continue # alexis gmail
             #print "keeping %s: %s" % (user, address)
             new_addresses.append(address)
         if len(new_addresses) > 0: new_dict[user] = new_addresses
