@@ -43,7 +43,7 @@ ln_mass_threshold = 70.0 # lbs of LN needed
 ln_hours_left_threshold = 1.0 # at least 1 hour of LN must remain! 
 lookback_time_minutes = 10.0 # LabView plots shouldn't be older than this, minutes
 sleep_seconds = 60 # sleep for this many seconds between tests
-heartbeat_interval_hours = 24
+heartbeat_interval_hours = 1.0
 
 def print_warning(warning):
     print "WARNING:", warning
@@ -52,6 +52,26 @@ def load_gmail_info():
     gmail_user = "lxe.readout@gmail.com"
     gmail_pwd = os.environ["LXEPASS"]
     return gmail_user, gmail_pwd
+
+def filter_SMS(users):
+    """ return dict of users, with email-to-SMS removed"""
+    new_dict = {}
+    for user, addresses in users.items():
+        new_addresses = []
+        for address in addresses:
+            #print "%s: %s" % (user, address)
+            # skip SMS:
+            if "tmomail" in address: continue # t-mobile
+            if "sprintpcs" in address: continue # sprint
+            if "vtext" in address: continue # verizon
+            if "att" in address: continue # AT&T
+            #print "keeping %s: %s" % (user, address)
+            new_addresses.append(address)
+        if len(new_addresses) > 0: new_dict[user] = new_addresses
+    return new_dict
+
+
+
 
 class LXeMonitoring:
 
@@ -102,6 +122,7 @@ class LXeMonitoring:
         self.self_checks() 
 
         n_issues = 0
+        last_heartbeat = None
         # perform other checks in infinite loop!
         while True:
 
@@ -126,11 +147,24 @@ class LXeMonitoring:
             now = datetime.datetime.now()
             print '===> done with test loop at', now
 
-            message = "heartbeat at: %s \n" % now
-            message += "there have been %i issues" % n_issues
-            message += "script has been running since: %s \n" % start_time
-            print message
-            #self.send_messages(message, is_heartbeat=True)
+
+            # heartbeat info -- send a periodic email to show that things are
+            # working
+
+            if last_heartbeat == None or last_heartbeat < now - datetime.timedelta(hours=heartbeat_interval_hours):
+                message = "heartbeat at: %s \n" % now
+                message += "there have been %i issues \n" % n_issues
+                message += "script has been running since: %s \n" % start_time
+                message += "heartbeat_interval_hours: %s \n" % heartbeat_interval_hours
+                if last_heartbeat:
+                    message += "last heartbeat sent at %s \n" % last_heartbeat
+                else:
+                    message += "this is the first heartbeat \n"
+                last_heartbeat = now
+                #print message
+                filtered_users = filter_SMS(self.users) 
+                #print filtered_users
+                self.send_messages(message, users=filtered_users, is_heartbeat=True)
 
             print "---> sleeping for %i seconds" % sleep_seconds
             time.sleep(sleep_seconds) # sleep for sleep_seconds
@@ -176,8 +210,10 @@ class LXeMonitoring:
         """
 
         print "--> pinging Omega LN controller"
-        #cmd = "ping -o -t %i 171.64.56.58" % timeout
-        cmd = "ping -c 1 -w %i 171.64.56.58" % timeout # SLAC rhel6-64
+        if os.uname()[0] == "Darwin":
+            cmd = "ping -o -t %i 171.64.56.58" % timeout # AGS Mac OSX
+        else:
+            cmd = "ping -c 1 -w %i 171.64.56.58" % timeout # SLAC rhel6-64
         output = commands.getstatusoutput(cmd)
         if self.do_debug: 
             print "\t", cmd
