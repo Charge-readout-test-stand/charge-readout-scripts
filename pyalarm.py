@@ -151,7 +151,8 @@ class LXeMonitoring:
         """
 
         print "--> pinging Omega LN controller"
-        cmd = "ping -o -t %i 171.64.56.58" % timeout
+        #cmd = "ping -o -t %i 171.64.56.58" % timeout
+        cmd = "ping -c 1 -w %i 171.64.56.58" % timeout # SLAC rhel6-64
         output = commands.getstatusoutput(cmd)
         if self.do_debug: 
             print "\t", cmd
@@ -327,6 +328,7 @@ class LXeMonitoring:
         print header
         info = "time: %s  \n" % datetime.datetime.now()
         info += "user: %s \n" % os.getlogin()
+        info += "system info: %s \n" % " ".join(os.uname())
         msg = header + '\n%s\n%s\n' % (info, message)
         smtpserver.sendmail(gmail_user, address, msg)
         print 'done!'
