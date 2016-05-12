@@ -2,6 +2,8 @@
 The environment variable LXEPASS should be set to the password for the gmail
 account. 
 
+** run this script with "python -u" to pipe output to a log file... 
+
 This script sends email if one of these conditions is met: 
 * Unable to ping IP address of Omega LN controller (power may be out)
 * any temperate in the HFE dewar (on cell or Cu plate) is above threshold
@@ -21,7 +23,6 @@ To do: FIXME
         trying to send mail...
 
 * send heart beat email info?
-* 
 
 
 Modified from Brian Mong's monitoring of EXO-200. 
@@ -152,6 +153,7 @@ class LXeMonitoring:
             # working
 
             if last_heartbeat == None or last_heartbeat < now - datetime.timedelta(hours=heartbeat_interval_hours):
+                print "--> heartbeat at:", now
                 message = "heartbeat at: %s \n" % now
                 message += "there have been %i issues \n" % n_issues
                 message += "script has been running since: %s \n" % start_time
@@ -379,7 +381,7 @@ class LXeMonitoring:
 
     def sendmail(self,message,address,is_heartbeat=False):
         """ send a message to a user """
-        print "trying to send mail..."
+        print "trying to send mail to %s..." % address
         gmail_user, gmail_pwd = load_gmail_info()
         smtpserver = smtplib.SMTP("smtp.gmail.com",587)
         smtpserver.ehlo()
@@ -390,7 +392,7 @@ class LXeMonitoring:
         if self.do_test: subject = "TEST of " + subject
         if is_heartbeat: subject = "Stanford LXe system heartbeat"
         header = 'To:' + address + '\n' + 'From: ' + gmail_user + '\n' + 'Subject:%s \n' % subject
-        print header
+        #print header
         info = "time: %s  \n" % datetime.datetime.now()
         info += "user: %s \n" % os.getlogin()
         info += "system info: %s \n" % " ".join(os.uname())
