@@ -44,37 +44,7 @@ def get_negative_energy_cut(threshold=-20.0, isMC=False):
     return selection
 
 
-def get_short_drift_time_cut(
-    energy_threshold=200.0,
-    drift_time_cut=struck_analysis_parameters.drift_time_threshold,
-):
-    """
-    Cut any events with energy above threshold and too short a drift time
-    """
-
-    selection = []
-    for channel, value  in enumerate(struck_analysis_parameters.charge_channels_to_use): 
-        if value:
-            cut = "((energy1_pz[%i]>%s) && (rise_time_stop95[%i]-trigger_time<%s))" % (
-                channel,
-                energy_threshold,
-                channel,
-                drift_time_cut,
-            )
-            #print cut
-            selection.append(cut)
-
-    # join each channel requirement with or
-    selection = " || ".join(selection)
-
-    # enclose in parentheses and add not
-    selection = "!(%s)" % selection
-
-    return selection
-
-
-
-def get_long_drift_time_cut(
+def get_drift_time_cut(
     energy_threshold=200.0,
     drift_time_low=struck_analysis_parameters.drift_time_threshold,
     drift_time_high=None,
@@ -202,9 +172,7 @@ def get_cuts_label(draw_cmd, selection):
     # check selection
     if get_negative_energy_cut() in selection:
         label.append("NC")
-    if get_short_drift_time_cut() in selection:
-        label.append("SC")
-    if get_long_drift_time_cut() in selection:
+    if get_drift_time_cut() in selection:
         label.append("LC")
     label = "+".join(label)
     if label == "": label = "No_cuts"
@@ -224,14 +192,19 @@ def get_energy_weighted_drift_time():
     selection = "(%s)/chargeEnergy" % selection
     return selection
 
-def get_mc_channels_selection():
+
+
+def get_channel_selection(isMC=False):
     selection = []
-    for channel, value in enumerate(struck_analysis_parameters.MCcharge_channels_to_use):
+    charge_channels_to_use = struck_analysis_parameters.charge_channels_to_use
+    if isMC:
+        charge_channels_to_use = struck_analysis_parameters.MCcharge_channels_to_use
+    for channel, value in enumerate(charge_channels_to_use):
         if value:
             part = "(channel==%i)" % channel
             selection.append(part)
     selection = "||".join(selection)
-    return selection
+    return "(%s)" % selection
 
 
 if __name__ == "__main__":
@@ -239,11 +212,8 @@ if __name__ == "__main__":
     print "\nnegative energy cut:"
     print "\t" + "\n\t ||".join(get_negative_energy_cut().split("||"))
 
-    print "\nshort drift time cut:"
-    print "\t" + "\n\t ||".join(get_short_drift_time_cut().split("||"))
-
-    print "\nlong drift time cut:"
-    print "\t" + "\n\t ||".join(get_long_drift_time_cut().split("||"))
+    print "\ndrift time cut:"
+    print "\t" + "\n\t ||".join(get_drift_time_cut().split("||"))
 
     print "\nget_few_channels_cmd:"
     print "\t" + "\n\t +".join(get_few_channels_cmd().split("+"))
@@ -266,11 +236,16 @@ if __name__ == "__main__":
     print "\n get_fiducial_cut:"
     print get_fiducial_cut(energy_threshold=10)
 
-    print "\n get_mc_channels_selection:"
-    print get_mc_channels_selection()
+    print "\n get_channel_selection:"
+    print get_channel_selection()
 
-    #print "\n"+ get_long_drift_time_cut(energy_threshold=200,drift_time_low=7.0,drift_time_high=8.5)
-    print "\n"+ get_long_drift_time_cut(drift_time_low=7.0,drift_time_high=8.0)
+    print "\n get_channel_selection (MC):"
+    print get_channel_selection(isMC=True)
+
+    #print "\n"+ get_drift_time_cut(energy_threshold=200,drift_time_low=7.0,drift_time_high=8.5)
+    #print "\n"+ get_drift_time_cut(drift_time_low=7.0,drift_time_high=8.0)
+    print "\n"+ get_drift_time_cut(drift_time_low=8.0,drift_time_high=10.0,isMC=True)
+    print "\n" +get_single_strip_cut(isMC=True)
 
     print "\n" + get_negative_energy_cut()
 
