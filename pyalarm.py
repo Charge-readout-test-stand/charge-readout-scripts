@@ -132,12 +132,30 @@ class LXeMonitoring:
         while True:
 
             now = datetime.datetime.now()
-            print '===> starting test loop', now
+            print '===> starting monitoring loop', now
 
             try:
 
                 self.do_ping() # ping the Omega LN controller
                 self.check_dropbox_data()
+
+                # heartbeat info -- send a periodic email to show that things are
+                # working
+                if last_heartbeat == None or last_heartbeat < now - datetime.timedelta(hours=heartbeat_interval_hours):
+                    print "--> heartbeat at:", now
+                    message = "heartbeat at: %s \n" % now
+                    message += "there have been %i issues \n" % n_issues
+                    message += "script has been running since: %s \n" % start_time
+                    message += "heartbeat_interval_hours: %s \n" % heartbeat_interval_hours
+                    if last_heartbeat:
+                        message += "last heartbeat sent at %s \n" % last_heartbeat
+                    else:
+                        message += "this is the first heartbeat \n"
+                    last_heartbeat = now
+                    #print message
+                    filtered_users = filter_SMS(self.users) 
+                    #print filtered_users
+                    self.send_messages(message, users=filtered_users, is_heartbeat=True)
 
                 if self.do_test:
                     print "====> testing is done"
@@ -150,27 +168,7 @@ class LXeMonitoring:
                     print('\a') # audible alarm!
 
             now = datetime.datetime.now()
-            print '===> done with test loop at', now
-
-
-            # heartbeat info -- send a periodic email to show that things are
-            # working
-
-            if last_heartbeat == None or last_heartbeat < now - datetime.timedelta(hours=heartbeat_interval_hours):
-                print "--> heartbeat at:", now
-                message = "heartbeat at: %s \n" % now
-                message += "there have been %i issues \n" % n_issues
-                message += "script has been running since: %s \n" % start_time
-                message += "heartbeat_interval_hours: %s \n" % heartbeat_interval_hours
-                if last_heartbeat:
-                    message += "last heartbeat sent at %s \n" % last_heartbeat
-                else:
-                    message += "this is the first heartbeat \n"
-                last_heartbeat = now
-                #print message
-                filtered_users = filter_SMS(self.users) 
-                #print filtered_users
-                self.send_messages(message, users=filtered_users, is_heartbeat=True)
+            print '===> done with monitoring cycle at', now
 
             print "---> sleeping for %i seconds" % sleep_seconds
             time.sleep(sleep_seconds) # sleep for sleep_seconds
