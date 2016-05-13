@@ -205,7 +205,7 @@ class LXeMonitoring:
                 print "\t\t", address
                 self.sendmail(msg, address, is_heartbeat)
 
-    def do_ping(self, timeout=3):
+    def do_ping(self, timeout=20):
         """ 
         ping the Omega LN controller to test for power outage 
         ping options:
@@ -392,7 +392,8 @@ class LXeMonitoring:
         smtpserver.login(gmail_user, gmail_pwd)
         subject = "Stanford LXe System Alarm!"
         if self.do_test: subject = "TEST of " + subject
-        if is_heartbeat: subject = "Stanford LXe system heartbeat"
+        if is_heartbeat: subject = "Stanford LXe system heartbeat from %s %s" % (
+            os.uname()[0], os.uname()[1])
         header = 'To:' + address + '\n' + 'From: ' + gmail_user + '\n' + 'Subject:%s \n' % subject
         #print header
         info = "time: %s  \n" % datetime.datetime.now()
