@@ -54,6 +54,7 @@ def process_file(mc_filename, struck_filename):
 
     do_use_drift_time_cut = True
     do_use_single_strip_cut = True
+    i_channel = 4 # None # 5
 
     # drift-time cut info
     drift_time_low = struck_analysis_parameters.drift_time_threshold 
@@ -123,6 +124,8 @@ def process_file(mc_filename, struck_filename):
         plot_name += "_SS"
     if "energy1_pz" in draw_cmd:
         plot_name += "_E1PZ"
+        if i_channel != None:
+            plot_name += "_ch%i" % i_channel
     print "plot_name:", plot_name
 
 
@@ -159,8 +162,10 @@ def process_file(mc_filename, struck_filename):
         part = struck_analysis_cuts.get_single_strip_cut()
         struck_selection.append(part)
     if "energy1_pz" in draw_cmd:
-        #struck_selection.append(struck_analysis_cuts.get_channel_selection())
-        struck_selection.append("channel==5")
+        if i_channel != None:
+            struck_selection.append("channel==%i" % i_channel)
+        else:
+            struck_selection.append(struck_analysis_cuts.get_channel_selection())
     struck_selection = "&&".join(struck_selection)
     print "struck_selection:", struck_selection
 
@@ -305,7 +310,11 @@ def process_file(mc_filename, struck_filename):
     legend.SetFillColor(0)
     legend.SetNColumns(2)
     if sigma_keV == 0:
-        legend.AddEntry(hist, "MC (%.1e cts x %.2f)" % (hist.GetEntries(), scale_factor), "fl")
+        mc_title = "MC "
+        if "energy1_pz" in draw_cmd and i_channel != None:
+            mc_title += "Ch%i " % i_channel
+        mc_title += "(%.1e cts x %.2f)" % (hist.GetEntries(), scale_factor)
+        legend.AddEntry(hist, mc_title)
     else:
         legend.AddEntry(hist, "MC, #sigma_{addl}=%i keV" % sigma_keV, "fl") 
     legend.AddEntry(hist_struck, "Struck data (%.1e cts)" % hist_struck.GetEntries(), "fl")
