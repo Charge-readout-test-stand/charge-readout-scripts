@@ -66,7 +66,6 @@ elif is_7th_LXe:
     charge_channels_to_use[6] = 1
     charge_channels_to_use[7] = 1
 
-
 else:
     # channels for 5th LXe
     channels = [0,1,2,3,4,8]
@@ -83,14 +82,15 @@ n_chargechannels = sum(charge_channels_to_use)
 
 # channel names for 6th LXe    
 channel_map = {}
+# early runs:
 channel_map[0] = "X26"
 channel_map[1] = "X27"
 channel_map[2] = "X29"
 channel_map[3] = "Y23"
 channel_map[4] = "Y24"
+channel_map[pmt_channel] = "PMT"
 if is_6th_LXe:
     channel_map[5] = "X2" # ortec preamp added 04 Dec for 6th LXe
-channel_map[8] = "PMT"
 if is_7th_LXe:
     channel_map = {}
     # x channels
@@ -103,8 +103,6 @@ if is_7th_LXe:
     channel_map[5] = "Y17"
     channel_map[6] = "Y18"
     channel_map[7] = "Y19"
-    channel_map[9] = "PMT"
-
 
 #MC Channels index starts at 0 so X26 = 25
 #Y  Channles are offset by 30
@@ -112,31 +110,22 @@ if is_7th_LXe:
 #All MC channels are there but only use the 5 for sum energies
 MCchannels = range(60)
 MCn_channels = len(MCchannels)
-
-MCcharge_channels_to_use = [0]*60
-
-mc_channel_map = {}
-mc_channel_map[25] = "X26"
-mc_channel_map[26] = "X27"
-mc_channel_map[28] = "X29"
-mc_channel_map[52] = "Y23"
-mc_channel_map[53] = "Y24"
-if is_6th_LXe:
-    MCcharge_channels_to_use[25] = 1
-    MCcharge_channels_to_use[26] = 1 
-    MCcharge_channels_to_use[28] = 1
-    MCcharge_channels_to_use[52] = 1
-    MCcharge_channels_to_use[53] = 1
-elif is_7th_LXe:
-    MCcharge_channels_to_use[15] = 1 
-    MCcharge_channels_to_use[16] = 1
-    MCcharge_channels_to_use[17] = 1
-    MCcharge_channels_to_use[18] = 1
-    MCcharge_channels_to_use[45] = 1
-    MCcharge_channels_to_use[46] = 1 
-    MCcharge_channels_to_use[47] = 1
-    MCcharge_channels_to_use[48] = 1 
+MCcharge_channels_to_use = [0]*MCn_channels
+mc_channel_map = {} # map MC channel to label
+struck_to_mc_channel_map = {} # map struck channel to MC channel
+for struck_channel, label in channel_map.items():
+    is_y = False
+    if "Y" in label:
+        is_y = True
+    elif "PMT" in label: continue
+    mc_channel = int(label[1:]) -1
+    if is_y: mc_channel += 30
+    print "channel %s: struck=%i | mc=%i" % (label, struck_channel, mc_channel)
+    struck_to_mc_channel_map[struck_channel] = mc_channel
+    mc_channel_map[mc_channel] = label
+    MCcharge_channels_to_use[mc_channel] = 1
 n_MCchargechannels = sum(MCcharge_channels_to_use)
+
 
 def is_tree_MC(tree):
     """ test whether tier3 tree is of MC results or not"""
@@ -372,7 +361,7 @@ if __name__ == "__main__":
     for (channel, value) in rms_keV.items():
         print "\t RMS channel %i: %.2f | contribution to energy1_pz: %.2f" % (channel, value, value*math.sqrt(2.0/100))
     print "average RMS noise: %.2f" % avg_rms_keV
-    print "RMS contribution to chargeEnergy, chargeEnergy_rms_keV: %.2f" % chargeEnergy_rms_keV
+    print "RMS contribution to chargeEnergy, chargeEnergy_rms_keV: %.4f" % chargeEnergy_rms_keV
     print "chargeEnergy_rms_keV/570  [%]:","%.2f" % (chargeEnergy_rms_keV/570.0*100)
     print "chargeEnergy_rms_keV/1064 [%]:","%.2f" % (chargeEnergy_rms_keV/1064.0*100)
     print "chargeEnergy_rms_keV/1164 [%]:","%.2f" % (chargeEnergy_rms_keV/1164.0*100)
