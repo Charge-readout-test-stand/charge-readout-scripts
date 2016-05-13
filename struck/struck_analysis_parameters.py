@@ -120,7 +120,7 @@ for struck_channel, label in channel_map.items():
     elif "PMT" in label: continue
     mc_channel = int(label[1:]) -1
     if is_y: mc_channel += 30
-    print "channel %s: struck=%i | mc=%i" % (label, struck_channel, mc_channel)
+    #print "channel %s: struck=%i | mc=%i" % (label, struck_channel, mc_channel)
     struck_to_mc_channel_map[struck_channel] = mc_channel
     mc_channel_map[mc_channel] = label
     MCcharge_channels_to_use[mc_channel] = 1
