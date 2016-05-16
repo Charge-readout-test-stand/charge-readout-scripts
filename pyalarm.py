@@ -43,7 +43,7 @@ dp_threshold = 400.0 # xenon - HFE, torr
 ln_mass_threshold = 70.0 # lbs of LN needed
 ln_hours_left_threshold = 1.0 # at least 1 hour of LN must remain! 
 lookback_time_minutes = 10.0 # LabView plots shouldn't be older than this, minutes
-sleep_seconds = 60 # sleep for this many seconds between tests
+sleep_seconds = 60*5 # sleep for this many seconds between tests
 heartbeat_interval_hours = 1.0
 
 def print_warning(warning):
