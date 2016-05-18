@@ -51,18 +51,18 @@ def setup_hist(hist, color, xtitle, xUnits):
     #hist.SetFillColor(color)
 
 
-def process_file(filename):
+def process_files(filenames):
 
-    print "processing file: ", filename
+    print "processing %i files: " % len(filenames)
 
     #-------------------------------------------------------------------------------
     # options
 
     # choose one:
-    do_draw_energy = 1
-    do_draw_drift_times = 0
+    do_draw_energy = 0
+    do_draw_drift_times = 1
     do_draw_rms = 0
-    do_draw_rms_keV = 1
+    do_draw_rms_keV = 0
     do_draw_rms_mV = 0
     do_draw_ADC_units = 0
     do_draw_mV = 0
@@ -91,19 +91,22 @@ def process_file(filename):
         #    energy_threshold=None,
         #    drift_time_high=9.0,
         #))
-        selections.append("(rise_time_stop99-trigger_time>6.43)&&(rise_time_stop99-trigger_time<9.0)")
+        #selections.append("(rise_time_stop99-trigger_time>6.43)&&(rise_time_stop99-trigger_time<9.0)")
+        selections.append("(rise_time_stop95-trigger_time>6.43)&&(rise_time_stop95-trigger_time<9.0)")
         
     elif do_draw_drift_times:
         print "---> drawing drift times"
-        draw_command = "rise_time_stop99 - trigger_time"
+        #draw_command = "rise_time_stop99 - trigger_time"
+        draw_command = "rise_time_stop95 - trigger_time"
         #min_bin = -10.02
         #max_bin = 30.02
         min_bin = -5.02
         max_bin = 25.02
         bin_width = 0.04
         xUnits = "#mus"
-        xtitle = "Drift time"
+        xtitle = "Drift time 95"
         selections.append("energy1_pz>300")
+        do_draw_sum=False
 
     elif do_draw_rms_keV:
         print "---> drawing RMS noise [keV]"
@@ -174,29 +177,10 @@ def process_file(filename):
 
     sampling_freq_Hz = struck_analysis_parameters.sampling_freq_Hz
     channels = struck_analysis_parameters.channels
-    channel_map = struck_analysis_parameters.channel_map
-    charge_channels_to_use = struck_analysis_parameters.charge_channels_to_use
-    pmt_channel = struck_analysis_parameters.pmt_channel
+    #pmt_channel = struck_analysis_parameters.pmt_channel
     colors = struck_analysis_parameters.get_colors() 
 
-    # open the root file and grab the tree
-    root_file = TFile(filename)
-    tree = root_file.Get("tree")
-    n_entries = tree.GetEntries()
-    print "%i entries" % n_entries
-
-    # decide if this is a tier1 or tier2 file
-    is_tier1 = False
-    try:
-        tree.GetEntry(0)
-        tree.wfm0
-        print "this is a tier2 file"
-    except AttributeError:
-        print "this is a tier1/tier3 file"
-        n_channels = 1
-        is_tier1 = True
-
-    basename = os.path.basename(filename)
+    basename = os.path.basename(filenames[0])
     basename = os.path.splitext(basename)[0]
     basename = prefix + basename
     basename += "_".join(xtitle.split())
@@ -207,15 +191,8 @@ def process_file(filename):
     canvas.SetGrid(1,1)
     #canvas.SetLeftMargin(0.15)
 
-    tree.SetLineColor(TColor.kBlue+1)
-    #tree.SetFillColor(TColor.kBlue+1)
-    #tree.SetFillStyle(3004)
-    tree.SetLineWidth(2)
-
     legend = TLegend(0.1, 0.91, 0.9, 0.99)
     legend.SetNColumns(len(channels))
-
-
 
     # set up some hists to hold TTree::Draw results
     hists = []
@@ -236,75 +213,121 @@ def process_file(filename):
     frame_hist = TH1D("frame_hist","",n_bins,min_bin,max_bin)
     frame_hist.SetLineWidth(2)
     frame_hist.SetMinimum(1.0)
-    tree.Draw("")
+    #tree.Draw("")
     selection = " && ".join(selections)
 
-    if do_draw_sum:
-        if do_draw_energy:
-            print "%i entries in sum hist" % tree.Draw("chargeEnergy >> frame_hist", selection)
-        else:
-            print "%i entries in sum hist" % tree.Draw("%s >> frame_hist" % draw_command, selection)
-        setup_hist(frame_hist, TColor.kBlack, xtitle, xUnits)
-        legend.AddEntry(frame_hist, "sum","lp")
-
-
-    y_max = 0
-    for (channel, value) in enumerate(charge_channels_to_use):
-
+    # setup hists:
+    i_channel = 0
+    for (channel, value) in enumerate(struck_analysis_parameters.charge_channels_to_use):
         if not value:
             continue
- 
         hist = TH1D("hist%i" % channel,"",n_bins,min_bin,max_bin)
         try:
-            color = colors[channel]
+            color = colors[i_channel]
         except IndexError:
             color = TColor.kBlack
-        
         setup_hist(hist, color, xtitle, xUnits)
         hists.append(hist)
-        legend.AddEntry(hist, channel_map[channel],"pl")
+        legend.AddEntry(hist, struck_analysis_parameters.channel_map[channel],"pl")
+        i_channel+=1
 
-        print "channel %i | %s " % (channel, channel_map[channel])
 
-        
-        #draw_command = "wfm%i-baseline_mean" % channel
-        draw_cmd = "%s >> %s" % (draw_command, hist.GetName())
+    for i_file, filename in enumerate(filenames):
 
-        print "\t draw command: %s" % draw_cmd
-
-        extra_selections = [
-            "channel == %i" % channel,
-            #"energy > 0",
-            #"(rise_time_stop95 - trigger_time) >6",
-            #"(adc_max_time - adc_max_time[5])*40.0/1000 < 15"
-        ]
-        selection = " && ".join(selections + extra_selections)
-        print "\t selection: %s" % selection
-
-        options = "same"
-        if not do_draw_sum and channel == 0:
-            options = ""
-        print "\t options: %s" % options
-
+        # open the root file and grab the tree
+        print "--> processing",filename
+        root_file = TFile(filename)
+        tree = root_file.Get("tree")
         try:
-            color = colors[channel]
-        except IndexError:
-            color = TColor.kBlack
-        tree.SetLineColor(color)
+            n_entries = tree.GetEntries()
+            print "\t %i tree entries, file %i of %i" % (n_entries, i_file, len(filenames))
+        except AttributeError:
+            print "\t skipping bad file!"
+            continue
 
-        n_entries = tree.Draw(draw_cmd, selection, options)
+        # decide if this is a tier1 or tier2 file
+        is_tier1 = False
+        try:
+            tree.GetEntry(0)
+            tree.wfm0
+            print "this is a tier2 file"
+        except AttributeError:
+            #print "this is a tier1/tier3 file"
+            n_channels = 1
+            is_tier1 = True
 
-        hist_mean = hist.GetMean()
-        hist_rms = hist.GetRMS()
-        print "\t hist mean: %.4f" % hist.GetMean()
-        print "\t hist sigma: %.4f" % hist.GetRMS()
+        isMC = struck_analysis_parameters.is_tree_MC(tree)
 
+        channel_map = struck_analysis_parameters.channel_map
+        charge_channels_to_use = struck_analysis_parameters.charge_channels_to_use
+        if isMC: 
+            charge_channels_to_use = struck_analysis_parameters.MCcharge_channels_to_use
+            channel_map = struck_analysis_parameters.mc_channel_map
+
+        frame_hist.GetDirectory().cd()
+
+        if do_draw_sum:
+            if do_draw_energy:
+                print "%i entries in sum hist" % tree.Draw("chargeEnergy >>+ frame_hist", selection, "goff")
+            else:
+                print "sum draw_command:", draw_command
+                print "sum selection:", selection
+                print "%i entries in sum hist" % tree.Draw("%s >>+ frame_hist" % draw_command, selection, "goff")
+            setup_hist(frame_hist, TColor.kBlack, xtitle, xUnits)
+            legend.AddEntry(frame_hist, "sum","lp")
+
+
+        y_max = 0
+
+        i_channel = 0
+        for (channel, value) in enumerate(charge_channels_to_use):
+
+            if not value:
+                continue
+     
+            #print "channel %i | %s " % (channel, channel_map[channel])
+
+            
+            #draw_command = "wfm%i-baseline_mean" % channel
+            hist = hists[i_channel]
+            draw_cmd = "%s >>+ %s" % (draw_command, hist.GetName())
+
+
+            extra_selections = [
+                "channel == %i" % channel,
+                #"energy > 0",
+                #"(rise_time_stop95 - trigger_time) >6",
+                #"(adc_max_time - adc_max_time[5])*40.0/1000 < 15"
+            ]
+            selection = " && ".join(selections + extra_selections)
+
+            n_entries = tree.Draw(draw_cmd, selection, "goff")
+
+            hist_mean = hist.GetMean()
+            hist_rms = hist.GetRMS()
+            
+            if i_file == len(filenames)-1:
+                print "\t draw command: %s" % draw_cmd, "selection: %s" % selection
+            #print "\t %i entries drawn, %i entries in hist" % (n_entries, hist.GetEntries())
+            i_channel += 1
+            # end loop over files
+    
+    
+    for hist in hists:
+        print "hist", hist.GetName()
         if y_max < hist.GetMaximum(): y_max = hist.GetMaximum()
-        print "\t %i entries" % n_entries
+        print "\t hist mean: %.4f | hist sigma: %.4f" % (hist.GetMean(), hist.GetRMS())
+
+    if do_draw_sum:
+        frame_hist.Draw()
+    else:
+        hists[0].SetMaximum(y_max*1.2)
+        hists[0].Draw()
+        
+    for hist in hists:
+        hist.Draw("same")
 
     legend.Draw()
-    if not do_draw_sum:
-        hists[0].SetMaximum(y_max)
     canvas.Update()
 
     if do_draw_energy and False:
@@ -315,7 +338,7 @@ def process_file(filename):
         line.Draw()
 
     canvas.Update()
-    canvas.Print("%s_log.png" % (basename))
+    #canvas.Print("%s_log.png" % (basename))
     canvas.Print("%s_log.pdf" % (basename))
     if not gROOT.IsBatch():
         val = raw_input("--> enter to continue ")
@@ -330,7 +353,7 @@ def process_file(filename):
         )
 
         frame_hist.SetMaximum(12000)
-    canvas.Print("%s_lin.png" % (basename))
+    #canvas.Print("%s_lin.png" % (basename))
     canvas.Print("%s_lin.pdf" % (basename))
     if not gROOT.IsBatch():
         val = raw_input("--> enter to continue ")
@@ -344,8 +367,8 @@ if __name__ == "__main__":
         sys.exit(1)
 
 
-    for filename in sys.argv[1:]:
-        process_file(filename)
+    filenames = sys.argv[1:]
+    process_files(filenames)
 
 
 
