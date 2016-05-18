@@ -6,6 +6,7 @@ this script compares struck and MC drift times
 
 import os
 import sys
+import glob
 
 from ROOT import gROOT
 #gROOT.SetBatch(True) # comment out to run interactively
@@ -34,8 +35,10 @@ def process_file(
 
 
     # options:
+    struck_energy_multiplier = struck_analysis_parameters.struck_energy_multiplier
     energy_threshold = 10.0 # for each channel
-    charge_energy_low_threshold = 400.0
+    charge_energy_low_threshold = 700.0
+    #charge_energy_low_threshold = 400.0
     charge_energy_high_threshold = 1500.0
     hist_max = 9.5
     hist_min = -0.5
@@ -43,26 +46,28 @@ def process_file(
     n_bins = int((hist_max - hist_min)*1.0)
     print hist_min, hist_max, n_bins
     
-    selection = "chargeEnergy>%s && chargeEnergy<%s" % (charge_energy_low_threshold, charge_energy_high_threshold)
+    selection = "chargeEnergy>%s && chargeEnergy<%s" % (
+        charge_energy_low_threshold/struck_energy_multiplier, 
+        charge_energy_high_threshold/struck_energy_multiplier
+    )
+    print "selection:", selection
+
+    mc_selection = "chargeEnergy>%s && chargeEnergy<%s" % (
+        charge_energy_low_threshold, 
+        charge_energy_high_threshold
+    )
+    print "mc_selection:", mc_selection
+
 
     print "charge_energy_low_threshold:", charge_energy_low_threshold
     print "charge_energy_high_threshold:", charge_energy_high_threshold
 
+    mc_draw_cmd = struck_analysis_cuts.get_multiplicity_cmd(energy_threshold,isMC=True)
+    print "mc_draw_cmd:", mc_draw_cmd
 
-    mc_draw_cmd = []
-    mc_channels = struck_analysis_parameters.MCcharge_channels_to_use
-    for (channel, value)  in enumerate(mc_channels):
-        if mc_channels[channel]:
-            print "MC channel %i" % channel
-            mc_draw_cmd.append("(energy1_pz[%i]>%.2f)" % (channel, energy_threshold))
-
-    mc_draw_cmd = " + ".join(mc_draw_cmd)
-    print mc_draw_cmd
-
-
-    draw_cmd = struck_analysis_cuts.get_multiplicity_cmd(energy_threshold)
-    print draw_cmd
-
+    draw_cmd = struck_analysis_cuts.get_multiplicity_cmd(
+        energy_threshold/struck_energy_multiplier)
+    print "draw_cmd:", draw_cmd
 
 
     # construct a basename from the input filename
@@ -75,6 +80,7 @@ def process_file(
     hist_struck.SetFillColor(TColor.kBlue)
     hist_struck.SetFillStyle(3004)
     hist_struck.SetLineWidth(2)
+    struck_channels = hist_struck.Clone("struck_channels")
 
     # open the struck file and get its entries
     print "processing Struck file: ", struck_filename
@@ -90,75 +96,114 @@ def process_file(
     )
     print "\t%.1e struck hist entries" % struck_entries
 
+    struck_channel_selection = "energy1_pz>%s && energy1_pz<%s && %s" %(
+        charge_energy_low_threshold/struck_energy_multiplier,
+        charge_energy_high_threshold/struck_energy_multiplier,
+        struck_analysis_cuts.get_channel_selection(),
+    )
+    print "struck_channel_selection:", struck_channel_selection
+
+    struck_channel_entries = struck_tree.Draw(
+        "channel >> %s" % struck_channels.GetName(),
+        struck_channel_selection, 
+        "goff"
+    )
+    print "\t%.1e struck channel hist entries" % struck_channel_entries
+
+
+    mc_channel_selection = "energy1_pz>%s && energy1_pz<%s && %s" %(
+        charge_energy_low_threshold,
+        charge_energy_high_threshold,
+        struck_analysis_cuts.get_channel_selection(isMC=True),
+    )
+    print "mc_channel_selection:", mc_channel_selection
+
+
     # set up a legend
     legend = TLegend(0.1, 0.91, 0.9, 0.99)
     legend.SetFillColor(0)
     legend.SetNColumns(2)
 
-    mc_hists = []
+    # make a histogram to hold MC multiplicity
+    mc_hist = TH1D("hist", "", n_bins, hist_min, hist_max)
+    hist = mc_hist
+    hist.Sumw2()
+    color = struck_analysis_parameters.get_colors()[0]
+    hist.SetLineColor(color)
+    #hist.SetFillColor(color)
+    #hist.SetFillStyle(3004)
+    hist.SetMarkerStyle(24)
+    hist.SetMarkerSize(1.0)
+    hist.SetMarkerColor(color)
+    hist.SetLineWidth(2)
+    mc_channels = mc_hist.Clone("mc_channels")
+
+
+    # a weird command to map MC channel numbers to integers 0 to 7:
+    mc_channel_draw_cmd = "channel-15-26*(channel>40)>>+ %s" % mc_channels.GetName()
+    print mc_channel_draw_cmd
+
     for mc_i, mc_filename in enumerate(mc_filenames):
 
         print "--> processing", mc_filename
         mc_basename = os.path.basename(mc_filename)
         mc_basename = os.path.splitext(mc_basename)[0]
 
-        # make a histogram to hold energies
-        hist = TH1D("hist", "", n_bins, hist_min, hist_max)
-        hist.Sumw2()
-        color = struck_analysis_parameters.get_colors()[mc_i]
-        hist.SetLineColor(color)
-        #hist.SetFillColor(color)
-        #hist.SetFillStyle(3004)
-        hist.SetMarkerStyle(24+mc_i)
-        hist.SetMarkerSize(1.0)
-        hist.SetMarkerColor(color)
-        hist.SetLineWidth(2)
-
-
-        print "processing MC file: ", mc_filename
+    
+        #print "processing MC file: ", mc_filename
         # open the root file and grab the tree
         mc_file = TFile(mc_filename)
         mc_tree = mc_file.Get("tree")
-        print "\t%.2e events in MC tree" % mc_tree.GetEntries()
+        try:
+            print "\t%.2e events in MC tree" % mc_tree.GetEntries()
+        except AttributeError:
+            print "\t skipping this file..."
+            continue
 
-        hist.GetDirectory().cd()
-        offset = (mc_i+1.0)/(len(mc_filenames)+2)
-        print "offset:", offset
-        offset = 0.0
+        mc_hist.GetDirectory().cd()
         mc_entries = mc_tree.Draw(
-            "%s + %s >> %s" % (mc_draw_cmd, offset, hist.GetName()),
-            selection,
+            "%s >>+ %s" % (mc_draw_cmd, hist.GetName()),
+            mc_selection,
             "goff"
         )
-        print "\t%s: %.1e MC hist entries" % (mc_basename, mc_entries)
-        hist.Scale(1.0/mc_entries)
-        legend.AddEntry(hist, mc_basename, "lp")
-        mc_hists.append(hist)
+        print "\t%s: %.2e MC entries drawn" % (mc_basename, mc_entries)
+        print "\t%s: %.2e MC hist entries" % (mc_basename, mc_hist.GetEntries())
+
+        mc_entries = mc_tree.Draw(
+            mc_channel_draw_cmd,
+            mc_channel_selection,
+            "goff"
+        )
+        print "\t%s: %.2e MC channel entries drawn" % (mc_basename, mc_entries)
+        print "\t%s: %.2e MC channels hist entries" % (mc_basename, mc_hist.GetEntries())
+
+    hist.Scale(1.0/mc_hist.GetEntries())
+    mc_channels.Scale(1.0/mc_channels.GetEntries())
+    legend.AddEntry(hist, mc_basename, "lp")
 
     # set up a canvas
     canvas = TCanvas("canvas","")
     canvas.SetGrid(1,1)
 
     hist_struck.Scale(1.0/struck_entries)
+    struck_channels.Scale(1.0/struck_channels.GetEntries())
 
     hist_struck.SetXTitle("Number of strips with E > %s keV" % energy_threshold)
 
-    legend.AddEntry(hist_struck, "Struck data", "fl")
+    legend.AddEntry(hist_struck, "Struck data", "f")
 
     hist_struck.SetMaximum(1.0)
     hist_struck.Draw("hist")
-    for hist in mc_hists:
-        hist.Draw("p same") 
-        print "%i mc entries" % hist.GetEntries()
+    mc_hist.Draw("p same") 
+    mc_hist.GetEntries()
     legend.Draw()
     #hist_struck.Draw("same")
     print "%i struck entries" % hist_struck.GetEntries()
 
     header =  "n | struck"
-    for mc_filename in mc_filenames:
-        mc_basename = os.path.basename(mc_filename)
-        mc_basename = os.path.splitext(mc_basename)[0]
-        header += " | %s" % mc_basename  
+    mc_basename = os.path.basename(mc_filenames[0])
+    mc_basename = os.path.splitext(mc_basename)[0]
+    header += " | %s" % mc_basename  
     print header
     for i_bin in xrange(hist_struck.GetNbinsX()):
         i = i_bin+1
@@ -168,32 +213,52 @@ def process_file(
             hist_struck.GetBinContent(i),
             hist_struck.GetBinError(i),
         )
-        for hist in mc_hists:
-            result += " | %.3e +/- %.3e" % (
-                hist.GetBinContent(i),
-                hist.GetBinError(i),
-            )
+        result += " | %.3e +/- %.3e" % (
+            mc_hist.GetBinContent(i),
+            mc_hist.GetBinError(i),
+        )
         print result
                 
 
 
-    plot_name = "%s_multiplicity%i_to_%i_keV_%i_threshold" % (
+    plot_name = "%s_vs_%s_%i_to_%i_keV_%i_threshold" % (
         basename,
+        mc_basename,
         charge_energy_low_threshold,
         charge_energy_high_threshold,
         energy_threshold,
     )
 
     canvas.Update()
-    canvas.Print("%s_lin.pdf" % plot_name)
+    canvas.Print("%s_multiplicity_lin.pdf" % plot_name)
 
     canvas.SetLogy(1)
     canvas.Update()
-    canvas.Print("%s_log.pdf" % plot_name)
+    canvas.Print("%s_multiplicity_log.pdf" % plot_name)
 
     if not gROOT.IsBatch():
         canvas.Update()
-        raw_input("pause...")
+        raw_input("enter to continue...")
+
+    struck_channels.SetMaximum(1.0)
+    struck_channels.Draw("hist")
+    mc_channels.Draw("p same")
+    legend.Draw()
+
+    canvas.SetLogy(0)
+    canvas.Update()
+    canvas.Print("%s_channels_lin.pdf" % plot_name)
+
+    canvas.SetLogy(1)
+    canvas.Update()
+    canvas.Print("%s_channels_log.pdf" % plot_name)
+
+    if not gROOT.IsBatch():
+        canvas.Update()
+        raw_input("enter to continue...")
+
+
+
 
 if __name__ == "__main__":
 
@@ -212,11 +277,15 @@ if __name__ == "__main__":
     # 7th LXe
     data_file = "/u/xo/alexis4/test-stand/2016_03_07_7thLXe/tier3_external/overnight7thLXe.root" 
     mc_files = [
-        "/nfs/slac/g/exo_data4/users/alexis4/test-stand/mc/Bi207_Full_Ralph/tier3_5x/all_dcoef200_pcd_size_5x.root",
         #"/nfs/slac/g/exo_data4/users/alexis4/test-stand/mc/Bi207_Full_Ralph/tier3_5x/all_dcoef200_pcd_size_5x.root",
-        "/nfs/slac/g/exo_data4/users/alexis4/test-stand/mc/Bi207_Full_Ralph/tier3_5x/all_dcoef0_pcd_size_5x.root",
-        "/nfs/slac/g/exo_data4/users/alexis4/test-stand/mc/Bi207_Full_Ralph/tier3_2x/all_dcoef200_2x.root",
+        #"/nfs/slac/g/exo_data4/users/alexis4/test-stand/mc/Bi207_Full_Ralph/tier3_5x/all_dcoef200_pcd_size_5x.root",
+        #"/nfs/slac/g/exo_data4/users/alexis4/test-stand/mc/Bi207_Full_Ralph/tier3_5x/all_dcoef0_pcd_size_5x.root",
+        #"/nfs/slac/g/exo_data4/users/alexis4/test-stand/mc/Bi207_Full_Ralph/tier3_2x/all_dcoef200_2x.root",
     ]
+    mc_files = glob.glob(
+        #"/nfs/slac/g/exo_data4/users/alexis4/test-stand/mc/Bi207_Full_Ralph_dcoeff50/tier3/tier3_*00*.root"
+        "/nfs/slac/g/exo_data4/users/alexis4/test-stand/mc/Bi207_Full_Ralph_dcoeff70/tier3/tier3_*.root"
+    )
 
     process_file(
         data_file,
