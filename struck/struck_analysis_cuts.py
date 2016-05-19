@@ -49,10 +49,19 @@ def get_drift_time_cut(
     drift_time_low=struck_analysis_parameters.drift_time_threshold,
     drift_time_high=None,
     isMC=False,
+    is_single_channel=False,
 ):
     """
     Select events with energy above threshold and long enough drift time
     """
+
+    if is_single_channel:
+        selection = "((rise_time_stop95-trigger_time>%s)&&(rise_time_stop95-trigger_time<%s))" % (
+            drift_time_low,
+            drift_time_high,
+        )
+        return selection
+
 
     selection = []
     if isMC:
@@ -267,6 +276,7 @@ if __name__ == "__main__":
     #print "\n"+ get_drift_time_cut(energy_threshold=200,drift_time_low=7.0,drift_time_high=8.5)
     #print "\n"+ get_drift_time_cut(drift_time_low=7.0,drift_time_high=8.0)
     print "\n"+ get_drift_time_cut(drift_time_high=9.0,isMC=True)
+    print "\n"+ get_drift_time_cut(drift_time_high=9.0,is_single_channel=True)
     print "\n" +get_single_strip_cut(isMC=True)
 
     print "\n" + get_negative_energy_cut()
