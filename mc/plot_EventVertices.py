@@ -51,9 +51,13 @@ def make_tile():
 
 
 fData =  ROOT.TFile(WFFile)
-tData =  fData.Get("nEXOevents")
-nEvents = tData.GetEntries()
-print "There are nEvents = ", nEvents
+try:
+    tData =  fData.Get("nEXOevents")
+    nEvents = tData.GetEntries()
+    print "There are nEvents = ", nEvents
+except AttributeError:
+    print "couldn't find TTree"
+    sys.exit()
 
 basename = os.path.basename(WFFile)
 basename = os.path.splitext(basename)[0]
