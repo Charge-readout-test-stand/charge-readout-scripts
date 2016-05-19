@@ -195,6 +195,7 @@ if is_7th_LXe:
 # convert energies to keV by multiplying by these factors:
 # NOTE: for 2V input, need to divide by 2.5
 
+struck_energy_multiplier = 0.92 # match struck calibration to MC TE calib
 calibration_values = {}
 calibration_values[0] = 5.827591
 calibration_values[1] = 5.146835
@@ -204,15 +205,16 @@ calibration_values[4] = 5.586442
 
 if is_7th_LXe:
 
-    # these are guesses (now better guesses 3/8/2016) 
-    calibration_values[0] = 4.983489
-    calibration_values[1] = 5.291246
-    calibration_values[2] = 5.114710
-    calibration_values[3] = 5.062006
-    calibration_values[4] = 5.223209
-    calibration_values[5] = 5.138381
-    calibration_values[6] = 4.807294
-    calibration_values[7] = 5.034257 
+    # updated 19 May 2016 after calibration with drift-time cut
+    # from: cat fit_results_570_No_cuts_overnight7thLXe2016_05_18_19_00_32_.txt | grep calib
+    calibration_values[0] = 4.776016
+    calibration_values[1] = 5.034547
+    calibration_values[2] = 4.906185
+    calibration_values[3] = 4.835585
+    calibration_values[4] = 5.189365
+    calibration_values[5] = 4.998089
+    calibration_values[6] = 4.730643
+    calibration_values[7] = 4.941646 
 
     # PMT
     calibration_values[9] = 2.12352
@@ -333,9 +335,9 @@ if __name__ == "__main__":
     print "\t drift_velocity:", drift_velocity
     print "\t drift_time_threshold:", drift_time_threshold
 
-    print "\nchannels used:"
-    for channel in channels:
-        print "\t channel %i" % channel
+    #print "\nchannels used:"
+    #for channel in channels:
+    #    print "\t channel %i" % channel
 
     print "\npmt channel:", pmt_channel
 
@@ -347,6 +349,10 @@ if __name__ == "__main__":
 
     print "\nchannel names:"
     for (channel, name) in channel_map.items():
+        print "\t channel %i: %s" % (channel, name)
+
+    print "\nMC channel names:"
+    for (channel, name) in mc_channel_map.items():
         print "\t channel %i: %s" % (channel, name)
 
     print "\nlinear calibration info:"
