@@ -195,7 +195,8 @@ if is_7th_LXe:
 # convert energies to keV by multiplying by these factors:
 # NOTE: for 2V input, need to divide by 2.5
 
-struck_energy_multiplier = 0.92 # match struck calibration to MC TE calib
+struck_energy_multiplier = 0.96 # match struck calibration to MC TE calib
+#struck_energy_multiplier = 1.0 # match struck calibration to MC TE calib
 calibration_values = {}
 calibration_values[0] = 5.827591
 calibration_values[1] = 5.146835
@@ -205,16 +206,17 @@ calibration_values[4] = 5.586442
 
 if is_7th_LXe:
 
-    # updated 19 May 2016 after calibration with drift-time cut
-    # from: cat fit_results_570_No_cuts_overnight7thLXe2016_05_18_19_00_32_.txt | grep calib
-    calibration_values[0] = 4.776016
-    calibration_values[1] = 5.034547
-    calibration_values[2] = 4.906185
-    calibration_values[3] = 4.835585
-    calibration_values[4] = 5.189365
-    calibration_values[5] = 4.998089
-    calibration_values[6] = 4.730643
-    calibration_values[7] = 4.941646 
+    # updated 19 May 2016 after calibration with drift-time cut 6.43 to 9.0 microseconds
+    # fit_results_570_No_cuts_overnight7thLXe2016_05_19_13_54_09_.txt
+    # cat fit.out | grep calibration_values
+    calibration_values[0] = 4.806178 # +/- 0.014936
+    calibration_values[1] = 5.045101 # +/- 0.013461
+    calibration_values[2] = 4.932245 # +/- 0.016006
+    calibration_values[3] = 4.846766 # +/- 0.019288
+    calibration_values[4] = 5.203141 # +/- 0.016417
+    calibration_values[5] = 5.004507 # +/- 0.013618
+    calibration_values[6] = 4.740380 # +/- 0.014216
+    calibration_values[7] = 4.938769 # +/- 0.020818
 
     # PMT
     calibration_values[9] = 2.12352
@@ -274,14 +276,15 @@ rms_keV[3] = 17.137
 rms_keV[4] = 18.182
 
 if is_7th_LXe:
-    rms_keV[0] = 21.86031
-    rms_keV[1] = 22.51043
-    rms_keV[2] = 21.54204
-    rms_keV[3] = 20.75134
-    rms_keV[4] = 18.95259
-    rms_keV[5] = 18.65399
-    rms_keV[6] = 18.53005
-    rms_keV[7] = 19.02136
+    # from findAverageWfmNoise.py:
+    rms_keV[0] = 22.32325
+    rms_keV[1] = 22.52304
+    rms_keV[2] = 21.84460
+    rms_keV[3] = 21.01474
+    rms_keV[4] = 19.32956
+    rms_keV[5] = 18.58932
+    rms_keV[6] = 18.66388
+    rms_keV[7] = 19.21589
 
 avg_rms_keV = sum(rms_keV.values())/len(rms_keV)
 
