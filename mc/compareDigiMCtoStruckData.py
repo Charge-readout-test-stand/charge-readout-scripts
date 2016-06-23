@@ -6,6 +6,8 @@ This script draws a spectrum from a root tree of digitized nEXO_MC results.
 
 Arguments: [MC root filename] [tier3 Struck data]
 
+takes ~1 hour, 42 minutes (no TChain) 20 MAy 2016
+
 for 6th LXe:
 python compareDigiMCtoStruckData.py
 /nfs/slac/g/exo_data4/users/mjewell/nEXO_MC/digitization/Bi207_Full_Ralph/Tier3/all_tier3_Bi207_Full_Ralph.root
@@ -218,10 +220,11 @@ def process_file(
         # open the root file and grab the tree
         mc_draw_cmd = draw_cmd
         print "mc_draw_cmd:", mc_draw_cmd
+        print "%i MC files" % len(mc_files)
         for i_file, mc_file in enumerate(mc_files):
             tfile = TFile(mc_file)
             mc_tree = tfile.Get("tree")
-            n_entries = mc_tree.GetEntries()
+            n_entries = mc_tree.GetEntriesFast()
 
             hist.GetDirectory().cd()
             mc_entries = mc_tree.Draw(
@@ -230,13 +233,13 @@ def process_file(
                 "goff"
             )
 
-            print "---> file %i of %i: %i events in MC tree, %i entries drawn, %.2e hist entries" % (
-                i_file,
-                len(mc_files),
-                n_entries,
-                mc_entries,
-                hist.GetEntries(),
-            )
+            #print "---> file %i of %i: %i events in MC tree, %i entries drawn, %.2e hist entries" % (
+            #    i_file,
+            #    len(mc_files),
+            #    n_entries,
+            #    mc_entries,
+            #    hist.GetEntries(),
+            #)
 
     else: # for non-zero sigma -- FIXME -- this doesn't work anymore
 
@@ -306,7 +309,7 @@ def process_file(
 
     integral_energy_min = 300.0
     integral_energy_max = 2500.0
-    if False: # use integral counts
+    if True: # use integral counts
         # normalize each channel independently
         min_bin = hist.FindBin(integral_energy_min)
         max_bin = hist.FindBin(integral_energy_max) 
@@ -453,7 +456,7 @@ if __name__ == "__main__":
     for i_channel in xrange(8):
         process_file(mc_file, data_file,
             i_channel=i_channel,
-            do_use_single_strip_cut=False,
+            do_use_single_strip_cut=True,
         )
 
 
