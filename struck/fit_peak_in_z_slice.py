@@ -2,37 +2,42 @@
 19 slices takes 20 minutes
 """
 
+from ROOT import gROOT
+gROOT.SetBatch(True)
+
 import os
 import sys
 import json
 import fit_peak
 import commands
 import struck_analysis_parameters
+import struck_analysis_cuts
 
-from ROOT import gROOT
 from ROOT import TFile
 from ROOT import TLegend
 from ROOT import TH1D
 from ROOT import TCanvas
-gROOT.SetBatch(True)
 
 def process_file(filename):
 
     # options 
+    do_fit = True # whether to do fits of z slices
     all_energy_var = "energy1_pz"
     max_drift_length = 19.0 # mm
     n_slices = 19 # 1-mm slices
+    #n_slices = 8 # ~2-mm slices
     #n_slices = 3 # 3 detector regions
     #n_slices = 4 # 3 detector regions
-    single_strip_cut = struck_analysis_parameters.get_single_strip_cut(10.0)
+    single_strip_cut = struck_analysis_cuts.get_single_strip_cut(10.0)
     n_bins = 160
     min_bin = 0
     max_bin = 1600
-    fit_half_width=300
+    fit_half_width=200
     #fit_half_width=170
 
     selections = []
     selections.append(single_strip_cut)
+    selections.append("channel<8")
 
     print "---> processing", filename
     basename = os.path.splitext(os.path.basename(filename))[0]
@@ -66,14 +71,14 @@ def process_file(filename):
     hist = TH1D("hist_all", "",n_bins,min_bin,max_bin)
     tree.Draw("%s >> %s" % (all_energy_var, hist.GetName()),"","goff")
     print "%i entries in hist %s" % (hist.GetEntries(), hist.GetName())
-    hists.append(hist)
-    legend.AddEntry(hist,"all","l")
+    #hists.append(hist)
+    #legend.AddEntry(hist,"all","l")
 
     hist = TH1D("hist_ss", "",n_bins,min_bin,max_bin)
     tree.Draw("%s >> %s" % (all_energy_var, hist.GetName()),single_strip_cut,"goff")
     print "%i entries in hist %s" % (hist.GetEntries(), hist.GetName())
-    hists.append(hist)
-    legend.AddEntry(hist,"single-strip","l")
+    #hists.append(hist)
+    #legend.AddEntry(hist,"single-strip","l")
 
     t = 0.0
     i = 0
@@ -111,33 +116,40 @@ def process_file(filename):
 
         print "\t drift_time_cut", drift_time_cut
 
-        result = fit_peak.fit_channel(
-            tree=tree, 
-            channel=None, 
-            basename=basename, 
-            do_1064_fit=False, 
-            all_energy_var=all_energy_var, 
-            selection=selection,
-            do_use_step=True,    
-            min_bin=300,
-            max_bin=1200,
-            fit_half_width=fit_half_width,
-            do_use_exp=True,
-        )
-        result["dt"] = dt
-        all_results[t] = result
+        if do_fit:
+            result = fit_peak.fit_channel(
+                tree=tree, 
+                channel=None, 
+                basename=basename, 
+                do_1064_fit=False, 
+                all_energy_var=all_energy_var, 
+                selection=selection,
+                do_use_step=True,    
+                min_bin=300,
+                max_bin=1200,
+                line_energy = 570,
+                fit_half_width=fit_half_width,
+                do_use_exp=True,
+            )
+            result["dt"] = dt
+            all_results[t] = result
+
+            # rename fit plot to something more descriptive:
+            plot_name = "fit_all_%s_lin.pdf" % basename
+            new_plot_name = "z_slice_fit_%i_to_%i.pdf" % (t*1e3, (t+dt)*1e3)
+            cmd = "mv -f %s %s" % (plot_name, new_plot_name)
+            output = commands.getstatusoutput(cmd)
+            if output[0] != 0:
+                print output[1]
+
 
         hist = TH1D("hist_%i_to_%i" % (t*1e3, (t+dt)*1e3), "",n_bins,min_bin,max_bin)
         hists.append(hist)
         tree.Draw("%s >> %s" % (all_energy_var, hist.GetName()),selection,"goff")
         print "%i entries in hist %s" % (hist.GetEntries(), hist.GetName())
+        print selection
+        print all_energy_var
         legend.AddEntry(hist,"%.1f to %.1f #mus" % (t, t+dt),"l")
-        plot_name = "fit_all_%s_lin.pdf" % basename
-        new_plot_name = "z_slice_fit_%i_to_%i.pdf" % (t*1e3, (t+dt)*1e3)
-        cmd = "mv -f %s %s" % (plot_name, new_plot_name)
-        output = commands.getstatusoutput(cmd)
-        if output[0] != 0:
-            print output[1]
 
         t += dt
         i += 1
@@ -171,6 +183,9 @@ def process_file(filename):
     legend.Draw()
     c1.Update()
     c1.Print("z_slices_%i.pdf" % (len(hists)-2))
+    c1.SetLogy(0)
+    c1.Update()
+    c1.Print("z_slices_%i_lin.pdf" % (len(hists)-2))
 
     if not gROOT.IsBatch():
         raw_input("enter to continue ")
