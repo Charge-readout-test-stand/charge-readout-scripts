@@ -45,6 +45,20 @@ gStyle.SetTitleBorderSize(0)
 from struck import struck_analysis_cuts
 from struck import struck_analysis_parameters
 
+def get_integral(hist, energy_min, energy_max):
+
+    min_bin = hist.FindBin(energy_min)
+    max_bin = hist.FindBin(energy_max)
+    integral = hist.Integral(min_bin, max_bin)
+    print "integral of %s between %.1f and %.1f keV (bins %i and %i): %.2f" % (
+        hist.GetName(),
+        energy_min,
+        energy_max,
+        min_bin,
+        max_bin,
+        integral,
+    )
+    return integral
 
 def process_file(
     mc_filenames, 
@@ -68,11 +82,14 @@ def process_file(
 
     # drift-time cut info
     drift_time_low = struck_analysis_parameters.drift_time_threshold 
-    #drift_time_low = 7.0
+    #drift_time_low = 8.0 # for investigating electrons from cathode
+    print "drift_time_low:", drift_time_low
     
-    #drift_time_high = drift_time_low+1.0
-    drift_time_high = 9.0
+    drift_time_high = 9.5 # for electrons from cathode
+    #drift_time_high = drift_time_low+1.0 # for a slice
+    #drift_time_high = 8.0
     #drift_time_high = 11.0 # microseconds
+    print "drift_time_low:", drift_time_high
 
     #struck_draw_cmd = draw_cmd 
     struck_energy_multiplier = struck_analysis_parameters.struck_energy_multiplier
@@ -402,6 +419,16 @@ def process_file(
             drift_time_low, drift_time_high,))
     pave_text.Draw()
 
+    energy_min = 430.0
+    energy_max = 700.0
+    get_integral(hist_struck, energy_min, energy_max)
+    get_integral(hist, energy_min, energy_max)
+
+    energy_min = 900.0
+    energy_max = 1200.0
+    get_integral(hist_struck, energy_min, energy_max)
+    get_integral(hist, energy_min, energy_max)
+
     # print log scale
     legend.Draw()
     canvas.Update()
@@ -410,7 +437,7 @@ def process_file(
     # print a linear scale version
     canvas.SetLogy(0)
     hist_max = hist_struck.GetMaximum()
-    hist_struck.SetMaximum(struck_height*2.0)
+    hist_struck.SetMaximum(struck_height*2.4)
     canvas.Update()
     canvas.Print("%s_lin.pdf" % plot_name)
 
@@ -451,8 +478,11 @@ if __name__ == "__main__":
     data_file = "/u/xo/alexis4/test-stand/2016_03_07_7thLXe/tier3_external/overnight7thLXe.root" 
 
     process_file(mc_file, data_file,draw_cmd="chargeEnergy", do_use_single_strip_cut=False)
+    #sys.exit()  # testing
     process_file(mc_file, data_file,draw_cmd="chargeEnergy")
+    process_file(mc_file, data_file,i_channel=None, do_use_single_strip_cut=False)
     process_file(mc_file, data_file,i_channel=None)
+    process_file(mc_file, data_file,draw_cmd="chargeEnergy", do_use_single_strip_cut=False, do_use_drift_time_cut=False)
     for i_channel in xrange(8):
         process_file(mc_file, data_file,
             i_channel=i_channel,
