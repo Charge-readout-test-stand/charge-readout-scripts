@@ -19,6 +19,8 @@ from ROOT import gStyle
 from ROOT import TTree
 from ROOT import TGraphErrors
 from ROOT import TGraph
+from ROOT import TF1
+from ROOT import TH1D
 
 gROOT.SetStyle("Plain")     
 gStyle.SetOptStat(0)        
@@ -27,6 +29,9 @@ gStyle.SetTitleStyle(0)
 gStyle.SetTitleBorderSize(0)
 
 import struck_analysis_parameters
+#gROOT.ProcessLine('.L ralphWF.C+')
+gROOT.ProcessLine('.L ../mc/digi/ralphWF.C+')
+from ROOT import FinalAmplitude
 
 def make_graph(
     original_graph, # original graph to clone
@@ -37,7 +42,9 @@ def make_graph(
     make a new graph from the TGraph calculated from ion and cathode effects
     """
     drift_velocity = struck_analysis_parameters.drift_velocity
+    print "drift_velocity", drift_velocity
     drift_length = struck_analysis_parameters.drift_length
+    print "drift_length", drift_length
     new_graph = TGraph()
     new_graph.SetLineWidth(2)
     if tau:
@@ -54,7 +61,89 @@ def make_graph(
         #print x, y
         new_graph.SetPoint(i_point, x, y)
     return new_graph
- 
+
+
+def do_fit(graph):
+
+    test = TF1("test", FinalAmplitude, 1.0, 18.16, 4)
+    test.SetLineColor(TColor.kRed)
+
+    # set some variable names:
+    test.SetParName(0, "x for PCD 0")
+    test.SetParName(1, "y for PCD 0")
+    test.SetParName(2, "tau")
+    test.SetParName(3, "energy")
+
+    test.FixParameter(0,1.5)
+    test.FixParameter(1,0.0)
+
+    # initial guesses:
+    test.SetParameter(2, 100.0) # tau
+    test.SetParError(2, 20.0) 
+    test.SetParameter(3, 570.0) # E
+    test.SetParError(3, 20.0) 
+
+        
+    canvas = TCanvas("canvas1","")
+    canvas.SetGrid(1,1)
+    #canvas = TCanvas("canvas1","", 800, 1100)
+    #canvas.Divide(1,2)
+    #pad1 = canvas.cd(1)
+    hist = test.GetHistogram()
+    hist.SetXTitle("Drift distance [mm]");
+    hist.SetYTitle("Energy [keV]");
+    hist.SetTitle("")
+
+    test.Draw() 
+    graph.Draw('p')
+    hist = graph.GetHistogram()
+    hist1 = TH1D("graph_hist","",20,0.5,20.5)
+    for i_point in xrange(graph.GetN()):
+        x = graph.GetX()[i_point]
+        y = graph.GetY()[i_point]
+        error_y = graph.GetEY()[i_point]
+        i_bin = hist1.FindBin(x)
+        hist1.SetBinContent(i_bin, y)
+        hist1.SetBinError(i_bin, error_y)
+        print i_point, x, hist1.GetBinLowEdge(i_bin), y, error_y
+    print hist1.GetNbinsX()
+    print hist1.GetBinWidth(1)
+    canvas.Update()
+    if False and not gROOT.IsBatch(): 
+        print "before fit"
+        val = raw_input("enter to continue (q to quit) ")
+        if val == 'q': sys.exit()
+
+    fit_options = "SNR"
+    # fit options:
+    # S -- save output to fit_result
+    # N -- don't store the fit function graphics with the histogram
+    # R -- use fit fcn's range
+    # M -- more; look for new minimum 
+    #fit_result = graph.Fit(test, fit_options)
+    fit_result = hist1.Fit(test, "SNRI")
+
+
+    print "tau from fit: %.2e +/- %.2e" % (
+        test.GetParameter(2),
+        test.GetParError(2),
+    )
+    test.Draw() 
+    hist = test.GetHistogram()
+    hist.SetXTitle("Drift distance [mm]");
+    hist.SetYTitle("Energy [keV]");
+    hist.SetTitle("")
+    graph.Draw('p')
+    canvas.Update()
+    canvas.Print("tauFit.pdf")
+    if not gROOT.IsBatch(): 
+        print "after fit"
+        val = raw_input("enter to continue (q to quit) ")
+        if val == 'q': sys.exit()
+
+
+
+
 def process_file(filename, fit_results_filename):
     drift_velocity = struck_analysis_parameters.drift_velocity
 
@@ -83,13 +172,15 @@ def process_file(filename, fit_results_filename):
         dt = float(values["dt"])
         dz = dt*drift_velocity
         z=drift_time*drift_velocity
-        print "drift_time %i: %.1f:" % (i, drift_time)
-        print "\t centroid", centroid
-        print "\t sigma", sigma
-        print "\t dt", dt
-        print "\t dz", dz
-        print "\t z", z
-        print "\t fit_status", fit_status
+        if False:
+            print "drift_time %i: %.1f:" % (i, drift_time)
+            print "\t centroid", centroid
+            print "\t centroid_err", centroid_err
+            print "\t sigma", sigma
+            print "\t dt", dt
+            print "\t dz", dz
+            print "\t z", z
+            print "\t fit_status", fit_status
         if fit_status != 0:
             print "BAD FIT!"
         #    continue
@@ -97,6 +188,8 @@ def process_file(filename, fit_results_filename):
         graph.SetPoint(i_point,z+dz/2.0, centroid)
         #graph.SetPointError(i_point,dz/2.0,sigma)
         graph.SetPointError(i_point,dz/2.0,centroid_err)
+
+    do_fit(graph)
 
     canvas = TCanvas("canvas","")
     canvas.SetGrid(1,1)
@@ -107,16 +200,20 @@ def process_file(filename, fit_results_filename):
 
     # draw data points
     hist = graph.GetHistogram()
-    #hist.SetMinimum(450)
+    hist.SetMinimum(450)
     hist.SetMaximum(640)
     hist.SetYTitle("Energy [keV]")
     hist.SetXTitle("Distance from anode [mm]")
-    graph.Draw("ap")
+    #graph.Draw("ap")
 
     # draw different electron lifetime curves
-    y_max = 615 # final energy
+    y_max = graph.GetY()[graph.GetN()-1] # final energy
+    y_max = 600
     new_graph = make_graph(effects_graph, y_max)
     new_graph.SetLineColor(TColor.kRed)
+    new_graph.Draw("al")
+    hist1 = new_graph.GetHistogram()
+    hist1.SetMinimum(300)
     new_graph.Draw("l")
     legend.AddEntry(new_graph, "ion + cathode effect curve", "l")
 
@@ -146,7 +243,7 @@ def process_file(filename, fit_results_filename):
 
 
     legend.Draw()
-    graph.Draw("p")
+    #graph.Draw("p")
     canvas.Update()
     n_slices = len(fit_results.keys())
     print "%i slices" % n_slices
