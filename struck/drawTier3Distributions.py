@@ -29,6 +29,7 @@ from ROOT import gStyle
 from ROOT import TLine
 
 import struck_analysis_parameters
+import struck_analysis_cuts
 
 gROOT.SetStyle("Plain")     
 gStyle.SetOptStat(0)        
@@ -59,8 +60,8 @@ def process_files(filenames):
     # options
 
     # choose one:
-    do_draw_energy = 0
-    do_draw_drift_times = 1
+    do_draw_energy = 1
+    do_draw_drift_times = 0
     do_draw_rms = 0
     do_draw_rms_keV = 0
     do_draw_rms_mV = 0
@@ -80,19 +81,19 @@ def process_files(filenames):
         print "---> drawing energies... "
         draw_command = "energy1_pz"
         min_bin = 0
-        max_bin = 2000
-        bin_width = 10
+        max_bin = 2010
+        bin_width = 15
 
         xUnits = "keV"
         xtitle = "Energy"
         prefix = "energy_"
-        selections.append(struck_analysis_parameters.get_single_strip_cut(10.0))
+        #selections.append(struck_analysis_cuts.get_single_strip_cut(10.0))
         #selections.append(struck_analysis_parameters.get_long_drift_time_cut(
         #    energy_threshold=None,
         #    drift_time_high=9.0,
         #))
         #selections.append("(rise_time_stop99-trigger_time>6.43)&&(rise_time_stop99-trigger_time<9.0)")
-        selections.append("(rise_time_stop95-trigger_time>6.43)&&(rise_time_stop95-trigger_time<9.0)")
+        #selections.append("(rise_time_stop95-trigger_time>6.43)&&(rise_time_stop95-trigger_time<9.0)")
         
     elif do_draw_drift_times:
         print "---> drawing drift times"
@@ -104,9 +105,9 @@ def process_files(filenames):
         max_bin = 25.02
         bin_width = 0.04
         xUnits = "#mus"
-        xtitle = "Drift time 95"
-        selections.append("energy1_pz>300")
-        do_draw_sum=False
+        xtitle = "Drift time"
+        selections.append("energy1_pz>700")
+        do_draw_sum=True
 
     elif do_draw_rms_keV:
         print "---> drawing RMS noise [keV]"
@@ -257,6 +258,7 @@ def process_files(filenames):
             is_tier1 = True
 
         isMC = struck_analysis_parameters.is_tree_MC(tree)
+        print "isMC:", isMC
 
         channel_map = struck_analysis_parameters.channel_map
         charge_channels_to_use = struck_analysis_parameters.charge_channels_to_use
@@ -268,8 +270,12 @@ def process_files(filenames):
 
         if do_draw_sum:
             if do_draw_energy:
+                selection = " && ".join(selections)
+                print "sum selection:", selection
                 print "%i entries in sum hist" % tree.Draw("chargeEnergy >>+ frame_hist", selection, "goff")
             else:
+                selection = " && ".join(selections + [struck_analysis_cuts.get_channel_selection(isMC)])
+                print "selection:", selection
                 print "sum draw_command:", draw_command
                 print "sum selection:", selection
                 print "%i entries in sum hist" % tree.Draw("%s >>+ frame_hist" % draw_command, selection, "goff")
@@ -308,7 +314,7 @@ def process_files(filenames):
             
             if i_file == len(filenames)-1:
                 print "\t draw command: %s" % draw_cmd, "selection: %s" % selection
-            #print "\t %i entries drawn, %i entries in hist" % (n_entries, hist.GetEntries())
+                print "\t %i entries drawn, %i entries in hist" % (n_entries, hist.GetEntries())
             i_channel += 1
             # end loop over files
     
@@ -351,7 +357,10 @@ def process_files(filenames):
                 frame_hist.FindBin(400)
             )
         )
+    elif do_draw_drift_times:
+        print "frame hist max:", frame_hist.GetMaximum()
 
+    else:
         frame_hist.SetMaximum(12000)
     #canvas.Print("%s_lin.png" % (basename))
     canvas.Print("%s_lin.pdf" % (basename))
