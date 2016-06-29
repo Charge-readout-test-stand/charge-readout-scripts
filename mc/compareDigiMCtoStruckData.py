@@ -6,6 +6,8 @@ This script draws a spectrum from a root tree of digitized nEXO_MC results.
 
 Arguments: [MC root filename] [tier3 Struck data]
 
+takes ~1 hour, 42 minutes (no TChain) 20 MAy 2016
+
 for 6th LXe:
 python compareDigiMCtoStruckData.py
 /nfs/slac/g/exo_data4/users/mjewell/nEXO_MC/digitization/Bi207_Full_Ralph/Tier3/all_tier3_Bi207_Full_Ralph.root
@@ -45,7 +47,7 @@ from struck import struck_analysis_parameters
 
 
 def process_file(
-    mc_filename, 
+    mc_filenames, 
     struck_filename,
     i_channel=None,
     draw_cmd="energy1_pz",
@@ -54,7 +56,8 @@ def process_file(
     do_use_single_strip_cut=True,
 ):
 
-    print "====> processing file: ", mc_filename
+    print "====> processing MC files:", mc_filenames
+    print "====> processing Struck data file:", struck_filename
     print "\t i_channel:", i_channel
     print "\t draw_cmd:", draw_cmd
     print "\t do_use_drift_time_cut:", do_use_drift_time_cut
@@ -72,7 +75,7 @@ def process_file(
     #drift_time_high = 11.0 # microseconds
 
     #struck_draw_cmd = draw_cmd 
-    struck_energy_multiplier = 0.92
+    struck_energy_multiplier = struck_analysis_parameters.struck_energy_multiplier
     struck_draw_cmd = "%s*%s" % (draw_cmd, struck_energy_multiplier) # until e-calibration is fixed
     print "\t struck_draw_cmd:", struck_draw_cmd
 
@@ -101,22 +104,11 @@ def process_file(
 
     print "\t sigma_keV", sigma_keV
 
-    mc_files = glob.glob(mc_filename)
-
-    # open the root file and grab the tree
-    if len(mc_filename) == 1:
-        mc_file = TFile(mc_filename)
-        mc_tree = mc_file.Get("tree")
-        n_entries = mc_tree.GetEntries()
-        basename = mc_filename
-    else:
-        mc_tree = TChain("tree")
-        mc_tree.Add(mc_filename)
-        n_entries = mc_tree.GetEntries()
-        basename = os.path.commonprefix(mc_files)
-    print "\t %.2e events in MC tree" % mc_tree.GetEntries()
+    mc_files = glob.glob(mc_filenames)
+    mc_files.sort()
 
     # construct a basename from the input filename
+    basename = os.path.commonprefix(mc_files)
     basename = os.path.basename(basename) # get rid of file path
     basename = os.path.splitext(basename)[0] # get rid of file suffix
     print "\t basename:", basename 
@@ -194,11 +186,6 @@ def process_file(
     )
     print "\t%.1e struck entries drawn" % struck_entries
 
-    # set MC color & style
-    mc_tree.SetLineColor(TColor.kRed)
-    #mc_tree.SetFillColor(TColor.kRed)
-    #mc_tree.SetFillStyle(3005)
-    mc_tree.SetLineWidth(2)
 
     # MC drawing selection
     mc_selection = [chargeEnergy_cut]
@@ -229,19 +216,32 @@ def process_file(
 
     if sigma_keV == 0: # we don't add sigma anymore, since it's added in tier3
 
+
+        # open the root file and grab the tree
         mc_draw_cmd = draw_cmd
         print "mc_draw_cmd:", mc_draw_cmd
+        print "%i MC files" % len(mc_files)
+        for i_file, mc_file in enumerate(mc_files):
+            tfile = TFile(mc_file)
+            mc_tree = tfile.Get("tree")
+            n_entries = mc_tree.GetEntriesFast()
 
-        hist.GetDirectory().cd()
-        mc_entries = mc_tree.Draw(
-            "%s >> %s" % (mc_draw_cmd, hist.GetName()),
-            mc_selection,
-            "goff"
-        )
-        print "\t%.1e MC entries drawn" % mc_entries
+            hist.GetDirectory().cd()
+            mc_entries = mc_tree.Draw(
+                "%s >>+ %s" % (mc_draw_cmd, hist.GetName()),
+                mc_selection,
+                "goff"
+            )
 
+            #print "---> file %i of %i: %i events in MC tree, %i entries drawn, %.2e hist entries" % (
+            #    i_file,
+            #    len(mc_files),
+            #    n_entries,
+            #    mc_entries,
+            #    hist.GetEntries(),
+            #)
 
-    else: # for non-zero sigma
+    else: # for non-zero sigma -- FIXME -- this doesn't work anymore
 
         # random number generator
         generator = TRandom3(0)
@@ -309,7 +309,7 @@ def process_file(
 
     integral_energy_min = 300.0
     integral_energy_max = 2500.0
-    if False: # use integral counts
+    if True: # use integral counts
         # normalize each channel independently
         min_bin = hist.FindBin(integral_energy_min)
         max_bin = hist.FindBin(integral_energy_max) 
@@ -447,14 +447,17 @@ if __name__ == "__main__":
 
     # 7th LXe
     #mc_file = "/nfs/slac/g/exo_data4/users/alexis4/test-stand/mc/old_Bi207_Full_Ralph/tier3_5x/all_dcoef200_pcd_size_5x.root"
-    mc_file = "/nfs/slac/g/exo_data4/users/alexis4/test-stand/mc/Bi207_Full_Ralph_dcoeff50/tier3/tier3_*1000*.root"
+    mc_file = "/nfs/slac/g/exo_data4/users/alexis4/test-stand/mc/Bi207_Full_Ralph_dcoeff50/tier3/tier3_*.root"
     data_file = "/u/xo/alexis4/test-stand/2016_03_07_7thLXe/tier3_external/overnight7thLXe.root" 
 
     process_file(mc_file, data_file,draw_cmd="chargeEnergy", do_use_single_strip_cut=False)
     process_file(mc_file, data_file,draw_cmd="chargeEnergy")
     process_file(mc_file, data_file,i_channel=None)
     for i_channel in xrange(8):
-        process_file(mc_file, data_file,i_channel=i_channel)
+        process_file(mc_file, data_file,
+            i_channel=i_channel,
+            do_use_single_strip_cut=True,
+        )
 
 
 

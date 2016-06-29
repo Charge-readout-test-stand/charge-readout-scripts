@@ -98,6 +98,7 @@ def process_file(filenames, fit_results_filename):
             isMC = struck_analysis_parameters.is_tree_MC(tree)
         except AttributeError:
             print "could not get entries from tree"
+            continue
 
 
         # selections:

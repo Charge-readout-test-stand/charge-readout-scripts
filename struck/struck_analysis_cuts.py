@@ -49,10 +49,19 @@ def get_drift_time_cut(
     drift_time_low=struck_analysis_parameters.drift_time_threshold,
     drift_time_high=None,
     isMC=False,
+    is_single_channel=False,
 ):
     """
     Select events with energy above threshold and long enough drift time
     """
+
+    if is_single_channel:
+        selection = "((rise_time_stop95-trigger_time>%s)&&(rise_time_stop95-trigger_time<%s))" % (
+            drift_time_low,
+            drift_time_high,
+        )
+        return selection
+
 
     selection = []
     if isMC:
@@ -206,6 +215,25 @@ def get_channel_selection(isMC=False):
     selection = "||".join(selection)
     return "(%s)" % selection
 
+def get_noise_cut(energy_threshold=35.0,isMC=False):
+    selection = []
+    charge_channels_to_use = struck_analysis_parameters.charge_channels_to_use
+    if isMC:
+        charge_channels_to_use = struck_analysis_parameters.MCcharge_channels_to_use
+    for channel, value in enumerate(charge_channels_to_use):
+        if value:
+            part = "((baseline_rms[%i]*calibration[%i]>%s)||(energy_rms1[%i]>%s))" % (
+                channel, 
+                channel, 
+                energy_threshold,
+                channel, 
+                energy_threshold,
+            )
+            selection.append(part)
+    selection = "+".join(selection)
+    return "(%s==0)" % selection
+
+
 
 if __name__ == "__main__":
 
@@ -242,11 +270,16 @@ if __name__ == "__main__":
     print "\n get_channel_selection (MC):"
     print get_channel_selection(isMC=True)
 
+    print "\n get_noise_cut:"
+    print get_noise_cut()
+
     #print "\n"+ get_drift_time_cut(energy_threshold=200,drift_time_low=7.0,drift_time_high=8.5)
     #print "\n"+ get_drift_time_cut(drift_time_low=7.0,drift_time_high=8.0)
-    print "\n"+ get_drift_time_cut(drift_time_low=8.0,drift_time_high=10.0,isMC=True)
+    print "\n"+ get_drift_time_cut(drift_time_high=9.0,isMC=True)
+    print "\n"+ get_drift_time_cut(drift_time_high=9.0,is_single_channel=True)
     print "\n" +get_single_strip_cut(isMC=True)
 
     print "\n" + get_negative_energy_cut()
+    print "\n" + get_single_strip_cut(energy_threshold=20.0)
 
 

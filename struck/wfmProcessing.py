@@ -38,7 +38,7 @@ def do_draw(
     title="", 
     extra_wfm=None, 
     extra_wfm2=None,
-    vline=None):
+    vlines=None):
     
     if gROOT.IsBatch(): return
     # a canvas for drawing, if debugging:
@@ -48,17 +48,18 @@ def do_draw(
     hist = exo_wfm.GimmeHist("hist")
     hist.SetTitle(title)
     hist.SetLineWidth(2)
-    #hist.SetAxisRange(7.5,9.5)
+    #hist.SetAxisRange(7.9,16.1) # zoom to interesting times
+    hist.SetAxisRange(vlines[-1]-3.0,vlines[-1]+1.0) # zoom to interesting times
     hist.SetMarkerStyle(8)
-    hist.SetMarkerSize(0.5)
+    hist.SetMarkerSize(0.7)
     hist.Draw()
     hist_max = hist.GetMaximum()
     hist_min = hist.GetMinimum()
-    #hist.Draw("p")
+    hist.Draw("p same")
     if extra_wfm:
         hist2 = extra_wfm.GimmeHist("hist2")
         hist2.SetLineColor(TColor.kBlue)
-        hist2.Draw("same")
+        hist2.Draw("l same")
         if hist2.GetMaximum() > hist_max:
             hist_max = hist2.GetMaximum()
         if hist2.GetMinimum() < hist_min:
@@ -67,16 +68,19 @@ def do_draw(
     if extra_wfm2:
         hist3 = extra_wfm2.GimmeHist("hist3")
         hist3.SetLineColor(TColor.kRed)
-        hist3.Draw("same")
+        hist3.Draw("l same")
         if hist3.GetMaximum() > hist_max:
             hist_max = hist3.GetMaximum()
         if hist3.GetMinimum() < hist_min:
             hist_min = hist3.GetMinimum()
-    if vline:
-        line = TLine(vline, hist.GetMinimum(), vline, hist.GetMaximum())
-        line.SetLineStyle(2)
-        line.SetLineWidth(2)
-        line.Draw()
+    if vlines:
+        lines = []
+        for vline in vlines:
+            line = TLine(vline, hist.GetMinimum(), vline, hist.GetMaximum())
+            line.SetLineStyle(2)
+            line.SetLineWidth(2)
+            line.Draw()
+            lines.append(line)
     hist.SetMaximum(hist_max*1.1)
     hist.SetMinimum(hist_min-hist_max*0.1)
 
@@ -131,8 +135,6 @@ def get_wfmparams(
     baseline_remover.SetBaselineSamples(n_baseline_samples)
     baseline_remover.SetStartSample(0)
     baseline_remover.Transform(exo_wfm)
-    baseline_mean = baseline_remover.GetBaselineMean()
-    baseline_rms = baseline_remover.GetBaselineRMS()
     #do_draw(energy_wfm, "after baseline_remover")
 
     # measure energy before PZ correction -- use baseline_remover for this
@@ -145,6 +147,8 @@ def get_wfmparams(
     baseline_remover.SetBaselineSamples(2*n_baseline_samples)
     baseline_remover.SetStartSample(0)
     baseline_remover.Transform(exo_wfm)
+    baseline_mean = baseline_remover.GetBaselineMean()
+    baseline_rms = baseline_remover.GetBaselineRMS()
 
     # measure energy before PZ correction, use 2x n_baseline_samples
     baseline_remover.SetStartSample(wfm_length - 2*n_baseline_samples - 1)
@@ -241,7 +245,7 @@ def get_wfmparams(
             #extra_wfm=trap_wfm,
             extra_wfm=exo_wfm,
             extra_wfm2=pz_wfm,
-            vline=index_of_max*exo_wfm.GetSamplingPeriod()/CLHEP.microsecond,
+            vlines=[index_of_max*exo_wfm.GetSamplingPeriod()/CLHEP.microsecond],
         )
 
 
@@ -276,6 +280,29 @@ def get_risetimes(exo_wfm, wfm_length, sampling_freq_Hz):
     exo_wfm.SetSamplingFreq(sampling_freq_Hz/CLHEP.second)
     new_wfm = EXODoubleWaveform(exo_wfm)
 
+    # 20 May 2016 testing alternate smoothing
+    if not gROOT.IsBatch():
+
+        maw_wfm = EXODoubleWaveform(exo_wfm)
+        n_to_average = 5
+        #for i in xrange(exo_wfm.size()):
+        for i in xrange(wfm_length):
+            #print "exo_wfm[",i,"]=", exo_wfm[i]  #, maw_data
+            n_avg = n_to_average if i + n_to_average < wfm_length else wfm_length-i
+            stop = int(n_to_average*1.0/2.0)
+            start = stop - n_to_average+1
+            stop = stop if i + stop < wfm_length else wfm_length-i
+            start = start if i+start > 0 else -i
+            sum_val = 0.0
+            for j in xrange(start,stop+1,1):
+                #print "i,j:", i, j, exo_wfm[i+j]
+                sum_val += exo_wfm[i+j]
+            maw_wfm[i] = sum_val/(stop-start+1)
+            #print "maw_wfm[",i,"]=", maw_wfm[i], start, stop  #, maw_data
+
+            #np.convolve(x, np.ones((N,))/N, mode='valid')
+            
+
     period = exo_wfm.GetSamplingPeriod()
 
     # perform some smoothing -- be careful because this changes the rise time
@@ -305,13 +332,33 @@ def get_risetimes(exo_wfm, wfm_length, sampling_freq_Hz):
     rise_time_stop99 = do_risetime_calc(rise_time_calculator, 0.99, exo_wfm, max_val, period)
 
     if not gROOT.IsBatch():
-        print "max_val:", max_val
-        print "rise_time_stop90:", rise_time_stop90
-        print "rise_time_stop90:", rise_time_stop90
-        print "rise_time_stop95:", rise_time_stop95
-        print "rise_time_stop99:", rise_time_stop99
+        print "rise times:"
+        print "\tmax_val:", max_val
+        print "\trise_time_stop10:", rise_time_stop10
+        print "\trise_time_stop20:", rise_time_stop20
+        print "\trise_time_stop30:", rise_time_stop30
+        print "\trise_time_stop40:", rise_time_stop40
+        print "\trise_time_stop50:", rise_time_stop50
+        print "\trise_time_stop60:", rise_time_stop60
+        print "\trise_time_stop70:", rise_time_stop70
+        print "\trise_time_stop80:", rise_time_stop80
+        print "\trise_time_stop90:", rise_time_stop90
+        print "\trise_time_stop95:", rise_time_stop95
+        print "\trise_time_stop99:", rise_time_stop99
 
-    do_draw(exo_wfm, "after smoothing", new_wfm, rise_time_stop90)
+    do_draw(exo_wfm, "after smoothing", new_wfm, maw_wfm, vlines=[
+        rise_time_stop10,
+        rise_time_stop20,
+        rise_time_stop30,
+        rise_time_stop40,
+        rise_time_stop50,
+        rise_time_stop60,
+        rise_time_stop70,
+        rise_time_stop80,
+        rise_time_stop90,
+        rise_time_stop95,
+        rise_time_stop99,
+    ])
 
     return (smoothed_max, rise_time_stop10, rise_time_stop20, rise_time_stop30,
             rise_time_stop40, rise_time_stop50, rise_time_stop60, rise_time_stop70,
