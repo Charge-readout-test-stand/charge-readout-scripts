@@ -1,5 +1,8 @@
 // This macro constructs a function from Ralph's analytical expression for the
 // charge signal. 
+// This is a ROOT macro so that it can be used by ROOT for fitting, like by
+// TH1D::Fit(). This is used for fitting waveforms and for fitting electron
+// lifetime. 
 
 // from https://root.cern.ch/root/html534/TF1.html#F3
 // test from the command line with: root ralphWF.C
@@ -78,7 +81,7 @@ Double_t OneStripWithIonAndCathode(Double_t x, Double_t y, Double_t z, Double_t 
   // ion location
 
   // options
-  Double_t driftDistance = 17.0; // mm
+  Double_t driftDistance = 18.16; // mm
 
   Double_t ionAmplitude = OneStrip(x,y,z0);
   Double_t electronAmplitude = OneStrip(x,y,z);
@@ -94,6 +97,32 @@ Double_t OneStripWithIonAndCathode(Double_t x, Double_t y, Double_t z, Double_t 
   Double_t amplitude = electronAmplitude - ionAmplitude; 
   if (doDebug) { cout << "\tamplitude: " << amplitude << endl; }
   return amplitude; 
+}
+
+Double_t FinalAmplitude(
+  Double_t *var, 
+  Double_t *par 
+) {
+
+  // return "final" amplitude -- this is the steady-state value that we see
+  // after charge has arrived at the anode. 
+  // parameters:
+  // 1 variable: dist from anode (location z0)
+  // 0: x0
+  // 1: y0
+  // 2: tau
+  // 3; energy
+  Double_t driftVelocity = 2.0; // mm/microsecond
+  Double_t x = par[0];
+  Double_t y = par[1];
+  Double_t tau = par[2]; // electron lifetime
+  Double_t energy = par[3];
+  Double_t z0 = var[0];
+  Double_t z = 0.0; // final value
+  Double_t amplitude = OneStripWithIonAndCathode(x, y, z, z0, false);
+  Double_t driftTime = z0/driftVelocity;  
+  amplitude*=exp(-driftTime/tau)*energy;
+  return amplitude;
 }
 
 Double_t OnePCDWithOptions(
@@ -114,7 +143,7 @@ Double_t OnePCDWithOptions(
   //    3: q
 
   Double_t triggerTime = 8.0; // microseconds
-  Double_t driftVelocity = 1.71; // mm/microsecond
+  Double_t driftVelocity = 2.0; // mm/microsecond
 
   Double_t t = var[0];
 
@@ -246,5 +275,6 @@ Double_t ralphWF() {
     cout << "any key to continue" << endl;
     Char_t input; 
     cin >> input;  
+    return 0;
 }
 
