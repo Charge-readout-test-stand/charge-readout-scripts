@@ -5,7 +5,7 @@ import glob
 import json
 
 from ROOT import gROOT
-gROOT.SetBatch(True)
+#gROOT.SetBatch(True)
 from ROOT import TH2D
 from ROOT import TFile
 from ROOT import TCanvas
@@ -33,7 +33,7 @@ def process_file(filenames, fit_results_filename):
     drift_velocity = struck_analysis_parameters.drift_velocity
 
     # options:
-    do_draw_fit_results = False
+    do_draw_fit_results = True
     #draw_cmd = "energy1_pz:(rise_time_stop99-trigger_time+0.020)"
     #draw_cmd = "energy1_pz:(rise_time_stop99-trigger_time+0.020)*%s" % drift_velocity
     draw_cmd = "energy1_pz:(rise_time_stop95-trigger_time+0.020)*%s" % drift_velocity
@@ -86,10 +86,12 @@ def process_file(filenames, fit_results_filename):
     hist.GetYaxis().SetTitleOffset(1.3)
 
 
+    basename = os.path.splitext(os.path.basename(filenames[0]))[0]
+    print basename
+
 
     for i_file, filename in enumerate(filenames):
         print "---> processing", filename
-        basename = os.path.splitext(os.path.basename(filename[0]))[0]
         root_file = TFile(filename)
         tree = root_file.Get("tree")
         try:
@@ -100,13 +102,18 @@ def process_file(filenames, fit_results_filename):
             print "could not get entries from tree"
             continue
 
-
-        # selections:
+        # selections (these go in the loop so isMC can be set):
         single_strip_cut = struck_analysis_cuts.get_single_strip_cut(10.0, isMC)
         selection = []
         selection.append(single_strip_cut)
         selection.append(struck_analysis_cuts.get_channel_selection(isMC))
+        #selection.append("Entry$<1e5") # debugging
         selection = "&&".join(selection)
+
+
+
+        print "draw cmd:", "%s >>+ %s" % (draw_cmd, hist.GetName())
+        print "selection:", selection
 
         # draw 2D hist
         hist.GetDirectory().cd()
@@ -122,12 +129,13 @@ def process_file(filenames, fit_results_filename):
     print "isMC:", isMC
     print "draw_cmd:", draw_cmd
     print "selection:",selection
+    print "hist entries", hist.GetEntries()
     print "\n"
 
 
     plot_name = basename + plot_name
-    hist.Draw("colz")
     canvas = TCanvas("canvas","")
+    hist.Draw("colz")
     canvas.SetGrid(1,1)
     canvas.SetLogz(1)
     canvas.Update()
@@ -146,7 +154,8 @@ def process_file(filenames, fit_results_filename):
         plot_name = "%s_%islices" % (plot_name, n_slices)
         canvas.Print("%s.pdf" % plot_name)
         canvas.Print("%s.png" % plot_name)
-        raw_input("enter... ")
+        if not gROOT.IsBatch():
+            raw_input("enter... ")
 
 
 
@@ -160,11 +169,11 @@ if __name__ == "__main__":
         #fit_results_file = "fit_results_z_slices_overnight7thLXe_21.txt"
         fit_results_file = "fit_results_z_slices_overnight7thLXe_19.txt"
 
-        #data_file = "overnight7thLXe.root"
-        data_file = "/nfs/slac/g/exo_data4/users/alexis4/test-stand/mc/Bi207_Full_Ralph_dcoeff50/tier3/all.root"
+        data_file = "overnight7thLXe.root"
+        #data_file = "/nfs/slac/g/exo_data4/users/alexis4/test-stand/mc/Bi207_Full_Ralph_dcoeff50/tier3/all.root"
 
 
-        process_file(data_file, fit_results_file)
+        process_file([data_file], fit_results_file)
 
     elif len(sys.argv) == 2:
         process_file([sys.argv[1]], None)
