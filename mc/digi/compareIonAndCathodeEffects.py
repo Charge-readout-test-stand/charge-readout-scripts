@@ -103,6 +103,18 @@ def main():
     graph4.Draw("l")
     legend.AddEntry(graph4, "Ion screening + cathode effect", "l")
     
+    cathodeToAnodeDistance = RalphWF.cathodeToAnodeDistance
+    line = TLine(cathodeToAnodeDistance, hist.GetMinimum(), 
+        cathodeToAnodeDistance, hist.GetMaximum())
+    line.SetLineStyle(2)
+    line.SetLineWidth(2)
+    line.Draw()
+
+    legend.Draw()
+    canvas.Update()
+    canvas.Print("ionAndCathodeEffect.pdf")
+    canvas.Print("ionAndCathodeEffect.png")
+
     print "e- lifetime"
     RalphWF.posion = False
     RalphWF.cathsupress = False
@@ -131,17 +143,10 @@ def main():
     graph7.Draw("l")
     legend.AddEntry(graph7, "ion + cathode + #tau_{e-}=%i#mus" % RalphWF.e_lifetime, "l")
 
-    cathodeToAnodeDistance = RalphWF.cathodeToAnodeDistance
-    line = TLine(cathodeToAnodeDistance, hist.GetMinimum(), 
-        cathodeToAnodeDistance, hist.GetMaximum())
-    line.SetLineStyle(2)
-    line.SetLineWidth(2)
-    line.Draw()
-
     legend.Draw()
     canvas.Update()
-    canvas.Print("ionAndCathodeEffect.pdf")
-    canvas.Print("ionAndCathodeEffect.png")
+    canvas.Print("ionAndCathodeEffectWithTau.pdf")
+    canvas.Print("ionAndCathodeEffectWithTau.png")
 
     if not gROOT.IsBatch():
         val = raw_input("press enter to continue") # pause
