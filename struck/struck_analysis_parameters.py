@@ -168,7 +168,7 @@ decay_time_values[4] = 450.0*microsecond
 if is_6th_LXe:
     # Ortec 142-IH manual says 200 to 300 microseconds... we should measure this.
     decay_time_values[5] = 300.0*microsecond
-    decay_time_values[pmt_channel] = 1e9*CLHEP.microsecond
+    decay_time_values[pmt_channel] = 1e9*microsecond
 
 if is_7th_LXe:
     # updated with fits to 7th LXe overnight -- 30 Mar 2016
@@ -182,7 +182,7 @@ if is_7th_LXe:
     decay_time_values[5] = 439.96*microsecond # +/- 1.24 
     decay_time_values[6] = 417.95*microsecond # +/- 1.77 
     decay_time_values[7] = 448.86*microsecond # +/- 2.91 
-    decay_time_values[9] = 1.5*CLHEP.microsecond 
+    decay_time_values[9] = 1.5*microsecond 
 
 
 # charge calbration from these files for 5th LXe:
