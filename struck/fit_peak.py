@@ -22,8 +22,7 @@ import datetime
 
 
 from ROOT import gROOT
-# run in batch mode:
-gROOT.SetBatch(True)
+#gROOT.SetBatch(True) # run in batch mode
 from ROOT import TFile
 from ROOT import TTree
 from ROOT import TCanvas
@@ -50,6 +49,7 @@ def fit_channel(
     do_use_step=False,
     min_bin=200,
     max_bin=1000,
+    line_energy = 570,
     fit_half_width=250,
     #fit_half_width=170,
     do_use_exp=True,
@@ -66,7 +66,7 @@ def fit_channel(
 
     # defaults for 570-keV
     bin_width = 5
-    line_energy = 620
+    #line_energy = 620
     sigma_guess = 40
 
     # gaus + exponential
@@ -78,7 +78,8 @@ def fit_channel(
     if do_1064_fit: # 1064-keV peak fit
         min_bin = 500
         max_bin = 2000
-        line_energy = 1150
+        #line_energy = 1150
+        line_energy = 1063
         sigma_guess = 60
         bin_width = 10
         fit_half_width = 300
@@ -228,6 +229,7 @@ def fit_channel(
 
         pad1 = canvas.cd(1)
         pad1.SetGrid(1,1)
+        original_max = hist.GetMaximum()
         hist.SetMaximum(1.2*fit_start_height)
         peak_height = hist.GetBinContent(hist.FindBin(line_energy))
         if peak_height > fit_start_height:
@@ -320,6 +322,7 @@ def fit_channel(
     centroid = testfit.GetParameter(1)
     centroid_err = testfit.GetParError(1)
     calibration_ratio = line_energy/centroid
+    calibration_ratio_err = line_energy/(centroid*centroid)*centroid_err
     sigma = testfit.GetParameter(2) # *calibration_ratio
     sigma_err = testfit.GetParError(2) # *calibration_ratio
     n_peak_counts = testfit.GetParameter(0)/bin_width
@@ -348,8 +351,10 @@ def fit_channel(
         else:
             calibration_value = struck_analysis_parameters.calibration_values[channel]
         new_calibration_value = calibration_value*calibration_ratio
+        new_calibration_value_err = calibration_value*calibration_ratio_err
     else:
         new_calibration_value = calibration_ratio
+        new_calibration_value_err = calibration_ratio_err
 
 
     pad1 = canvas.cd(1)
@@ -414,7 +419,11 @@ def fit_channel(
     pave_text.Draw()
     hist.SetMinimum(0)
     canvas.Update()
+    print "original_max:", original_max
+    print "max", hist.GetMaximum()
+    hist.SetMaximum(original_max*1.2)
     canvas.Print("%s_lin.pdf" % plot_name)
+    print "printed %s" % plot_name
 
     # save some results
     result = {}
@@ -453,6 +462,14 @@ def fit_channel(
     print "saved results:"
     for key in keys:
         print "\t%s : %s" % (key, result[key])
+        
+
+    if channel != None:
+        print "calibration_values[%i] = %.6f # +/- %.6f" % (
+            channel, 
+            new_calibration_value,
+            new_calibration_value_err,
+        )
 
 
     if not gROOT.IsBatch():
@@ -537,13 +554,19 @@ if __name__ == "__main__":
         print "argument: [sis tier 3 root file]"
         sys.exit(1)
 
-    nc = struck_analysis_cuts.get_negative_energy_cut()
-    sc = struck_analysis_cuts.get_short_drift_time_cut()
-    lc = struck_analysis_cuts.get_long_drift_time_cut()
-    lc = struck_analysis_cuts.get_long_drift_time_cut(drift_time_high=8.5)
-    channel_selection = "(rise_time_stop99-trigger_time>6.43)&&(rise_time_stop99-trigger_time<8.5)"
+    #isMC = True
+    isMC = False
+    drift_time_high=9.0 # microseconds
+
+    nc = struck_analysis_cuts.get_negative_energy_cut(isMC=isMC)
+    sc = struck_analysis_cuts.get_drift_time_cut()
+    lc = struck_analysis_cuts.get_drift_time_cut(drift_time_low=None,
+        drift_time_high=drift_time_high, isMC=isMC)
+    channel_selection = struck_analysis_cuts.get_drift_time_cut(
+        is_single_channel=True, drift_time_high=drift_time_high)
+    dc = struck_analysis_cuts.get_drift_time_cut(drift_time_high=drift_time_high, isMC=isMC)
     selections = []
-    selections.append([lc])
+    #selections.append([lc])
     #selections.append([""])
     #selections.append([nc])
     #selections.append([sc])
@@ -552,8 +575,10 @@ if __name__ == "__main__":
     #selections.append([sc, lc])
     #selections.append([nc, lc])
     #selections.append([nc, sc, lc])
+    #selections.append([dc])
+    selections.append([dc])
 
-    # loop over all combinations of selections
+    # loop over all selections
     for i,selection in enumerate(selections):
 
         selection = " && ".join(selection)
