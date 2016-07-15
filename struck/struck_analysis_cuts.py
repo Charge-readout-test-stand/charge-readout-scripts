@@ -39,9 +39,82 @@ def get_negative_energy_cut(threshold=-20.0, isMC=False):
     selection = " || ".join(selection)
 
     # enclose in parentheses and add not
-    selection = "!(%s)" % selection
+    selection = "(!(%s))" % selection
 
     return selection
+
+
+
+def get_drift_time_selection(
+    energy_threshold=200.0,
+    drift_time_low=struck_analysis_parameters.drift_time_threshold,
+    drift_time_high=None,
+    isMC=False,
+    is_single_channel=False,
+):
+    """
+    KEEP -- Select events with energy above threshold and long enough drift time
+    """
+
+    if is_single_channel:
+        selection = "((rise_time_stop95-trigger_time>%s)&&(rise_time_stop95-trigger_time<%s))" % (
+            drift_time_low,
+            drift_time_high,
+        )
+        return selection
+
+
+    selection = []
+    if isMC:
+        charge_channels_to_use = struck_analysis_parameters.MCcharge_channels_to_use
+    else:
+        charge_channels_to_use = struck_analysis_parameters.charge_channels_to_use
+    for channel, value  in enumerate(charge_channels_to_use): 
+        if value:
+            cut = []
+            cut2 = []
+            if drift_time_low != None:
+                cut1 = []
+                if energy_threshold != None:
+                    part = "(energy1_pz[%i]>%s)" % (
+                        channel, 
+                        energy_threshold,
+                    )
+                    cut1.append(part)
+                part = "(rise_time_stop95[%i]-trigger_time>%s)" % (
+                    channel, 
+                    drift_time_low,
+                )
+                cut1.append(part)
+                cut.append("&&".join(cut1))
+            if drift_time_high != None:
+                cut2 = []
+                if energy_threshold != None:
+                    part = "(energy1_pz[%i]>%s)" % (
+                        channel, 
+                        energy_threshold,
+                    )
+                    cut2.append(part)
+                part = "(rise_time_stop95[%i]-trigger_time>%s)" % (
+                    channel,
+                    drift_time_high,
+                )
+                cut2.append(part)
+                cut.append("&&".join(cut2))
+            #print cut
+            cut = "||".join(cut)
+            selection.append(cut)
+            
+    # join each channel requirement with or
+    selection = " || ".join(selection)
+
+    # enclose in parentheses
+    selection = "(%s)" % selection
+
+    return selection
+
+
+
 
 
 def get_drift_time_cut(
@@ -108,7 +181,7 @@ def get_drift_time_cut(
     selection = " || ".join(selection)
 
     # enclose in parentheses
-    selection = "!(%s)" % selection
+    selection = "(!(%s))" % selection
 
     return selection
 
@@ -275,11 +348,16 @@ if __name__ == "__main__":
 
     #print "\n"+ get_drift_time_cut(energy_threshold=200,drift_time_low=7.0,drift_time_high=8.5)
     #print "\n"+ get_drift_time_cut(drift_time_low=7.0,drift_time_high=8.0)
+    print "\n"+ get_drift_time_cut(drift_time_high=9.0)
     print "\n"+ get_drift_time_cut(drift_time_high=9.0,isMC=True)
     print "\n"+ get_drift_time_cut(drift_time_high=9.0,is_single_channel=True)
-    print "\n" +get_single_strip_cut(isMC=True)
+    print "\n"+ get_single_strip_cut(isMC=True)
 
     print "\n" + get_negative_energy_cut()
     print "\n" + get_single_strip_cut(energy_threshold=20.0)
+    print "\n"+ get_drift_time_cut(drift_time_low=7.0,drift_time_high=8.0,isMC=True)
+    print "\n"+ get_drift_time_cut(drift_time_low=8.0,drift_time_high=9.0,isMC=True)
+
+    print "\n"+ get_drift_time_cut(drift_time_low=8.0,drift_time_high=10.0)
 
 
