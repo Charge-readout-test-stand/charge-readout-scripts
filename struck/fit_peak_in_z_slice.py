@@ -3,7 +3,7 @@
 """
 
 from ROOT import gROOT
-gROOT.SetBatch(True)
+#gROOT.SetBatch(True)
 
 import os
 import sys
@@ -22,9 +22,12 @@ def process_file(filename):
 
     # options 
     do_fit = True # whether to do fits of z slices
-    all_energy_var = "energy1_pz"
-    max_drift_length = 19.0 # mm
-    n_slices = 19 # 1-mm slices
+    max_drift_length = 18.0 # for Liang
+    n_slices = 9 # for Liang
+    all_energy_var = "chargeEnergy*%s" % struck_analysis_parameters.struck_energy_multiplier # for Liang
+    #all_energy_var = "energy1_pz"
+    #max_drift_length = 19.0 # mm
+    #n_slices = 19 # 1-mm slices
     #n_slices = 8 # ~2-mm slices
     #n_slices = 3 # 3 detector regions
     #n_slices = 4 # 3 detector regions
@@ -36,8 +39,8 @@ def process_file(filename):
     #fit_half_width=170
 
     selections = []
-    selections.append(single_strip_cut)
-    selections.append("channel<8")
+    #selections.append(single_strip_cut) # ignore for Liang's plot
+    #selections.append("channel<8") # ignore for Liang's plot
 
     print "---> processing", filename
     basename = os.path.splitext(os.path.basename(filename))[0]
@@ -71,16 +74,16 @@ def process_file(filename):
     hist = TH1D("hist_all", "",n_bins,min_bin,max_bin)
     tree.Draw("%s >> %s" % (all_energy_var, hist.GetName()),"","goff")
     print "%i entries in hist %s" % (hist.GetEntries(), hist.GetName())
-    #hists.append(hist)
-    #legend.AddEntry(hist,"all","l")
+    hists.append(hist)
+    legend.AddEntry(hist,"all","l")
 
     hist = TH1D("hist_ss", "",n_bins,min_bin,max_bin)
     tree.Draw("%s >> %s" % (all_energy_var, hist.GetName()),single_strip_cut,"goff")
     print "%i entries in hist %s" % (hist.GetEntries(), hist.GetName())
-    #hists.append(hist)
-    #legend.AddEntry(hist,"single-strip","l")
+    hists.append(hist)
+    legend.AddEntry(hist,"single-strip","l")
 
-    t = 0.0
+    t = 8.0
     i = 0
     if n_slices == 4:
         legend.SetNColumns(3)
@@ -111,8 +114,13 @@ def process_file(filename):
         
         print "---> %i: t=%.2f microseconds, dt=%.2f" % (i,t, dt)
         drift_time_cut = "(rise_time_stop99-trigger_time>%s)&&(rise_time_stop99-trigger_time<%s)" % (t, t+dt)
+        if "chargeEnergy" in all_energy_var:
+            drift_time_cut = struck_analysis_cuts.get_drift_time_cut(
+                drift_time_low=t,
+                drift_time_high=t+dt,
+            )
         selection = " && ".join(selections + [drift_time_cut])
-        print selection
+        print "\t selection:", selection
 
         print "\t drift_time_cut", drift_time_cut
 
@@ -125,14 +133,15 @@ def process_file(filename):
                 all_energy_var=all_energy_var, 
                 selection=selection,
                 do_use_step=True,    
-                min_bin=300,
-                max_bin=1200,
+                min_bin=200,
+                max_bin=1500,
                 line_energy = 570,
                 fit_half_width=fit_half_width,
                 do_use_exp=True,
             )
             result["dt"] = dt
             all_results[t] = result
+
 
             # rename fit plot to something more descriptive:
             plot_name = "fit_all_%s_lin.pdf" % basename
@@ -141,6 +150,24 @@ def process_file(filename):
             output = commands.getstatusoutput(cmd)
             if output[0] != 0:
                 print output[1]
+
+
+
+            fit_peak.fit_channel(
+                tree=tree, 
+                channel=None, 
+                basename=basename, 
+                do_1064_fit=True, 
+                all_energy_var=all_energy_var, 
+                selection=selection,
+                do_use_step=True,    
+                min_bin=200,
+                max_bin=1500,
+                line_energy = 1060, # not sure this does anything for 1-MeV peak...
+                fit_half_width=fit_half_width,
+                do_use_exp=True,
+            )
+
 
 
         hist = TH1D("hist_%i_to_%i" % (t*1e3, (t+dt)*1e3), "",n_bins,min_bin,max_bin)

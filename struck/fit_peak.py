@@ -47,8 +47,8 @@ def fit_channel(
     all_energy_var,
     selection,
     do_use_step=False,
-    min_bin=200,
-    max_bin=1000,
+    min_bin=200, # just for drawing plots
+    max_bin=1000, # just for plotting
     line_energy = 570,
     fit_half_width=250,
     #fit_half_width=170,
@@ -78,8 +78,8 @@ def fit_channel(
     if do_1064_fit: # 1064-keV peak fit
         min_bin = 500
         max_bin = 2000
-        #line_energy = 1150
-        line_energy = 1063
+        line_energy = 1150
+        #line_energy = 1063
         sigma_guess = 60
         bin_width = 10
         fit_half_width = 300
@@ -421,7 +421,7 @@ def fit_channel(
     canvas.Update()
     print "original_max:", original_max
     print "max", hist.GetMaximum()
-    hist.SetMaximum(original_max*1.2)
+    #hist.SetMaximum(original_max*1.2)
     canvas.Print("%s_lin.pdf" % plot_name)
     print "printed %s" % plot_name
 
