@@ -279,11 +279,11 @@ def do_risetime_calc(rise_time_calculator, threshold_percent, wfm, max_val, peri
 def get_risetimes(exo_wfm, wfm_length, sampling_freq_Hz):
     exo_wfm.SetSamplingFreq(sampling_freq_Hz/CLHEP.second)
     new_wfm = EXODoubleWaveform(exo_wfm)
+    maw_wfm = EXODoubleWaveform(exo_wfm)
 
     # 20 May 2016 testing alternate smoothing
     if not gROOT.IsBatch():
 
-        maw_wfm = EXODoubleWaveform(exo_wfm)
         n_to_average = 5
         #for i in xrange(exo_wfm.size()):
         for i in xrange(wfm_length):
