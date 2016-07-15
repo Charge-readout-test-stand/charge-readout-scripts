@@ -320,9 +320,13 @@ def process_files(filenames):
     
     
     for hist in hists:
-        print "hist", hist.GetName()
         if y_max < hist.GetMaximum(): y_max = hist.GetMaximum()
-        print "\t hist mean: %.4f | hist sigma: %.4f" % (hist.GetMean(), hist.GetRMS())
+        print "\t hist %s | max: %.2e | mean: %.4f | sigma: %.4f" % (
+            hist.GetName(),
+            hist.GetMaximum(),
+            hist.GetMean(), 
+            hist.GetRMS(),
+        )
 
     if do_draw_sum:
         frame_hist.Draw()
@@ -352,11 +356,8 @@ def process_files(filenames):
     canvas.SetLogy(0)
     if do_draw_energy:
         # set maximum to the bin content at XXX keV
-        frame_hist.SetMaximum(
-            frame_hist.GetBinContent(
-                frame_hist.FindBin(400)
-            )
-        )
+        y_max = frame_hist.GetBinContent(frame_hist.FindBin(570))
+        frame_hist.SetMaximum(y_max*1.2)
     elif do_draw_drift_times:
         print "frame hist max:", frame_hist.GetMaximum()
 
