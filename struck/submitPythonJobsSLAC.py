@@ -52,7 +52,7 @@ def main(python_script, filenames, options="", verbose=True):
       -R rhel60 \\
       -q %(queue)s \\
       -W %(hours)02i:%(minutes)02i \\
-      -o out_%(base)s.out \\
+      -oo out_%(base)s.out \\
       -J %(base)s \\
        'printenv; python %(python_script)s %(options)s %(filename)s'
     """ % {
