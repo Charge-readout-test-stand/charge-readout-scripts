@@ -161,7 +161,7 @@ def main(filenames):
             try:
                 label = results["cuts_label"]
             except:
-                label = struck_analysis_parameters.get_cuts_label(draw_cmd, selection)
+                label = struck_analysis_cuts.get_cuts_label(draw_cmd, selection)
             print "\t", label
 
         for graph in graphs:
