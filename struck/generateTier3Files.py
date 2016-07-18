@@ -225,6 +225,18 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     sub_event = array('I', [0]) # unsigned int
     out_tree.Branch('sub_event', sub_event, 'sub_event/i')
 
+    NOP = array("I", [0])
+    out_tree.Branch('NOP', NOP, 'NOP/i')
+
+    NOPactive = array("I", [0])
+    out_tree.Branch('NOPactive', NOPactive, 'NOPactive/i')
+
+    NPE = array("d", [0])
+    out_tree.Branch('NPE', NPE, 'NPE/D')
+
+    NPEactive = array("d", [0])
+    out_tree.Branch('NPEactive', NPEactive, 'NPEactive/D')
+
     file_start_time = array('I', [0]) # unsigned int
     file_start_time[0] = posix_start_time
     out_tree.Branch('file_start_time', file_start_time, 'file_start_time/i')
@@ -650,6 +662,10 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             #Event number
             event[0] = tree.EventNumber
             sub_event[0] = tree.SubEventNumber
+	    NOP[0] = tree.NOP
+	    NOPactive[0] = tree.NOPactive
+	    NPE[0] = tree.NPE
+	    NPEactive[0] = tree.NPEactive
         else:
             event[0] = tree.event
 
