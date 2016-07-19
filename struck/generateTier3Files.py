@@ -3,15 +3,14 @@
 """
 FIXME -- Jan 28, 2016 -- energy PZ values are screwed up after switching for wfmProcessing!!!
 
-NGM FIXME:
-* add time stamp for each channel?
-* test this script with MC & data at SLAC when done  
-
-
 Do some waveform processing to extract energies, etc. 
 
 EXO class index, with waveform transformers: 
 http://exo-data.slac.stanford.edu/exodoc/ClassIndex.html
+
+NGM to do list:
+* add time stamp for each channel?
+* test this script with MC & data at SLAC when done  
 
 to do:
   * ID wfms with multiple PMT signals?
@@ -174,7 +173,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     if isMC:
         reporting_period = 100
     if isNGM:
-        reporting_period = 100 # FIXME
+        reporting_period = 32*100 # 100 32-channel events
 
 
     if isMC:
@@ -687,6 +686,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
     if isNGM:
         n_events = 0
+        n_channels_in_this_event = 0
 
     # loop over all entries in tree
     i_entry = 0
@@ -695,17 +695,21 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         tree.GetEntry(i_entry)
 
 
-        if i_entry > 10000: break # debugging
+        if i_entry > 100000: break # debugging
 
         # print periodic output message
         if i_entry % reporting_period == 0:
             now = time.clock()
-            print "----> entry %i of %i (%.2f percent in %.1f seconds, %.1f seconds total)" % (
-                i_entry, n_entries, 100.0*i_entry/n_entries, now - last_time, now -
-                start_time)
+            print "----> entry %i of %i: %.2f percent done in %.1f seconds | %i events in %.1f seconds (%.2f Hz)" % (
+                i_entry, 
+                n_entries, 
+                100.0*i_entry/n_entries, 
+                now - start_time,
+                reporting_period,
+                now - last_time, 
+                reporting_period/(now-last_time),
+            )
             last_time = now
-        if isNGM:
-            hit = tree.HitTree # get this NGMHit object from the tree
 
 
         # set event-level output tree variables
@@ -732,6 +736,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         elif isNGM:
             time_stamp[0] = int( tree.HitTree.GetRawClock() ) 
             time_stampDouble[0] = tree.HitTree.GetRawClock()/sampling_freq_Hz
+            n_channels_in_this_event = 0
         else:
             time_stamp[0] = tree.time_stamp
             time_stampDouble[0] = tree.time_stampDouble
@@ -762,7 +767,6 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
         sum_wfm = None
         for i in xrange(n_channels_in_event):
-            n_channels_in_this_event += 1
 
             if is_tier1:
                 wfm = tree.wfm
@@ -773,14 +777,19 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 wfm = [wfmp for wfmp in tree.ChannelWaveform[i]]
                 channel[i] = i
                 wfm_max_time[i] = np.argmax(wfm)
+
             elif isNGM:
-                if i > 0: # For NGM, each wfm is its own tree entry
+                if n_channels_in_this_event > 0: # For NGM, each wfm is its own tree entry
                     i_entry += 1
                     tree.GetEntry(i_entry)
+
+                # trying to get i -> channel -- FIXME?
+                i = tree.HitTree.GetSlot()*16 + tree.HitTree.GetChannel()
+
                 channel[i] = tree.HitTree.GetSlot()*16 + tree.HitTree.GetChannel()
                 
                 if do_debug: # debugging
-                    print "event", n_events, \
+                    print "NGM event", n_events, \
                         "i", i, \
                         "channel", channel[i], \
                         "time stamp", tree.HitTree.GetRawClock(), \
@@ -796,6 +805,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                     n_events += 1
                     break # break from loop over events
 
+                n_channels_in_this_event += 1
 
                 # wfm decoding isn't working!!!
                 #wfm = hit.GetGraph().GetY()
@@ -810,11 +820,11 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 #wfm = hit.GetGraph().GetY()[:hit.GetNSamples()]
                 #wfm = hit.GetWaveformArray()[:hit.GetNSamples()]
 
-                # OMG FIXME
-                wfm = [0]*hit.GetNSamples()
-                for i_sample in xrange(hit.GetNSamples()):
+                # OMG FIXME -- there must be a better way to do this
+                wfm = [0]*tree.HitTree.GetNSamples()
+                for i_sample in xrange(tree.HitTree.GetNSamples()):
                   #print i_sample
-                  wfm[i_sample] = hit.GetWaveformArray()[i_sample]
+                  wfm[i_sample] = tree.HitTree.GetWaveformArray()[i_sample]
                 #print wfm
                 wfm_max_time[i] = np.argmax(wfm)
 
@@ -880,7 +890,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 wfm_min[i],
             ) = wfmProcessing.get_wfmparams(
                 exo_wfm=exo_wfm, 
-                wfm_length=wfm_length[0], 
+                wfm_length=wfm_length[i], 
                 sampling_freq_Hz=sampling_freq_Hz,
                 n_baseline_samples=n_baseline_samples[0], 
                 calibration=calibration[i], 
@@ -921,7 +931,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 rise_time_stop99[i],
             ) = wfmProcessing.get_risetimes(
                 exo_wfm, 
-                wfm_length[0], 
+                wfm_length[i], 
                 sampling_frequency_Hz[0],
             )
 
@@ -1004,8 +1014,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         #raw_input("Press Enter...")
 
         if isNGM: # check that event contains all channels:
-            if (i+1 < len(charge_channels_to_use)):
-              print "====> only %i channels in this event!!" % i
+            if (n_channels_in_this_event != len(charge_channels_to_use)):
+              print "====> WARNING: %i channels in this event!!" % i
             else:
                 out_tree.Fill()
         else:
