@@ -17,10 +17,21 @@ from ROOT import TLegend
 from ROOT import TH1D
 from ROOT import TLine
 from ROOT import gSystem
+from ROOT import *
+
+# workaround for systems without EXO offline / CLHEP
+microsecond = 1.0e3
+second = 1.0e9
+if os.getenv("EXOLIB") is not None:
+    try:
+        gSystem.Load("$EXOLIB/lib/libEXOROOT")
+        from ROOT import CLHEP
+        microsecond = CLHEP.microsecond
+        second = CLHEP.second
+    except ImportError:
+        print "couldn't import CLHEP/ROOT"
 
 
-gSystem.Load("$EXOLIB/lib/libEXOROOT")
-from ROOT import CLHEP
 from ROOT import EXODoubleWaveform
 from ROOT import EXOBaselineRemover
 from ROOT import EXORisetimeCalculation
@@ -49,7 +60,8 @@ def do_draw(
     hist.SetTitle(title)
     hist.SetLineWidth(2)
     #hist.SetAxisRange(7.9,16.1) # zoom to interesting times
-    hist.SetAxisRange(vlines[-1]-3.0,vlines[-1]+1.0) # zoom to interesting times
+    if vlines != None:
+        hist.SetAxisRange(vlines[-1]-3.0,vlines[-1]+1.0) # zoom to interesting times
     hist.SetMarkerStyle(8)
     hist.SetMarkerSize(0.7)
     hist.Draw()
@@ -58,7 +70,7 @@ def do_draw(
     hist.Draw("p same")
     if extra_wfm:
         hist2 = extra_wfm.GimmeHist("hist2")
-        hist2.SetLineColor(TColor.kBlue)
+        hist2.SetLineColor(kBlue)
         hist2.Draw("l same")
         if hist2.GetMaximum() > hist_max:
             hist_max = hist2.GetMaximum()
@@ -67,7 +79,7 @@ def do_draw(
 
     if extra_wfm2:
         hist3 = extra_wfm2.GimmeHist("hist3")
-        hist3.SetLineColor(TColor.kRed)
+        hist3.SetLineColor(kRed)
         hist3.Draw("l same")
         if hist3.GetMaximum() > hist_max:
             hist_max = hist3.GetMaximum()
@@ -122,8 +134,16 @@ def get_wfmparams(
     decay_time, 
     is_pmtchannel
 ):
+    if False:
+        print "exo_wfm:", exo_wfm
+        print "wfm_length:", wfm_length
+        print "sampling_freq_Hz:", sampling_freq_Hz
+        print "n_baseline_samples:", n_baseline_samples
+        print "calibration:", calibration
+        print "decay_time:", decay_time
+        print "is_pmtchannel:", is_pmtchannel
 
-    exo_wfm.SetSamplingFreq(sampling_freq_Hz/CLHEP.second)
+    exo_wfm.SetSamplingFreq(sampling_freq_Hz/second)
     energy_wfm = EXODoubleWaveform(exo_wfm)
 
     # calculate wfm max and min:
@@ -226,14 +246,14 @@ def get_wfmparams(
         
         trap_wfm = EXODoubleWaveform(exo_wfm)
         trap_filter = EXOTrapezoidalFilter()
-        trap_filter.SetFlatTime(2.0*CLHEP.microsecond)
-        trap_filter.SetRampTime(4.0*CLHEP.microsecond)
+        trap_filter.SetFlatTime(2.0*microsecond)
+        trap_filter.SetRampTime(4.0*microsecond)
         trap_filter.Transform(pz_wfm, trap_wfm)
         #trap_filter.Transform(exo_wfm, trap_wfm)
         #trap_wfm /= 20.0
         energy_pz = trap_wfm.GetMaxValue()
 
-        trap_filter.SetRampTime(2.0*CLHEP.microsecond)
+        trap_filter.SetRampTime(2.0*microsecond)
         trap_filter.Transform(pz_wfm, trap_wfm)
         energy1_pz = trap_wfm.GetMaxValue()
 
@@ -245,7 +265,7 @@ def get_wfmparams(
             #extra_wfm=trap_wfm,
             extra_wfm=exo_wfm,
             extra_wfm2=pz_wfm,
-            vlines=[index_of_max*exo_wfm.GetSamplingPeriod()/CLHEP.microsecond],
+            vlines=[index_of_max*exo_wfm.GetSamplingPeriod()/microsecond],
         )
 
 
@@ -271,13 +291,13 @@ def do_risetime_calc(rise_time_calculator, threshold_percent, wfm, max_val, peri
     rise_time_calculator.SetInitialThresholdPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.02)
     if max_val > 0.0: # throws an alert if max_val is 0
         rise_time_calculator.Transform(wfm, wfm)
-    return rise_time_calculator.GetFinalThresholdCrossing()*period/CLHEP.microsecond
+    return rise_time_calculator.GetFinalThresholdCrossing()*period/microsecond
 
 
 
 
 def get_risetimes(exo_wfm, wfm_length, sampling_freq_Hz):
-    exo_wfm.SetSamplingFreq(sampling_freq_Hz/CLHEP.second)
+    exo_wfm.SetSamplingFreq(sampling_freq_Hz/second)
     new_wfm = EXODoubleWaveform(exo_wfm)
     maw_wfm = EXODoubleWaveform(exo_wfm)
 
