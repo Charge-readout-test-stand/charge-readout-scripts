@@ -59,10 +59,12 @@ for i_file, filename in enumerate(filenames):
 legend = ROOT.TLegend(0.1, 0.91, 0.9, 0.99)
 legend.SetNColumns(2)
 canvas = ROOT.TCanvas("canvas","")
-# loop over hists and draw
 print "--> drawing hists..."
+# loop over hists and draw
 for i_hist, hist in enumerate(hists):
     legend.AddEntry(hist, hist.GetTitle(),"f")
+    n_entries = hist.GetEntries()
+    hist.Scale(1.0/n_entries) # normalize to 1
     print "\t %s | %s: %i entries" % (hist.GetName(), hist.GetTitle(), hist.GetEntries())
     if i_hist == 0:
         hist.SetTitle("")
@@ -79,7 +81,7 @@ canvas.SetLogy(1)
 canvas.SetGrid()
 canvas.Update()
 canvas.Print("pmt_comparison.pdf")
-raw_input("any key to continue... ")
+raw_input("any key to continue... ") # pause
     
 
 
