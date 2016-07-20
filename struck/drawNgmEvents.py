@@ -8,7 +8,7 @@ arguments [NGM root files of events: HitOut*.root]
 
 import os
 import sys
-import glob
+import commands
 from scipy.fftpack import fft
 
 import ROOT
@@ -55,7 +55,17 @@ def print_tier2_info(tree, energies, sampling_freq_Hz=25.0e6):
             )
             i+=1
 
-def process_file(filename, n_plots=0):
+def process_file(filename=None, n_plots=0):
+
+
+    #If input filename is null assume we want to examine the most recent file
+    if(filename == None):
+        # example name: SIS3316Raw_20160712204526_1.bin
+        output  = commands.getstatusoutput("ls -rt Hit*.root | tail -n1")
+        filename = output[1]
+        print "--> using most recent NGM file, ", filename
+
+
 
     # options ------------------------------------------
     threshold = 0 # keV
@@ -63,9 +73,9 @@ def process_file(filename, n_plots=0):
     #threshold = 50 # ok for unshaped, unamplified data
 
     # y axis limits:
-    y_min = -200
+    y_min = -50
     #y_max = 7000 # unamplified, keV
-    y_max = 5000 # amplified, keV
+    y_max = 200 # amplified, keV
 
     samples_to_avg = 100 # n baseline samples to use for energy 
 
@@ -125,10 +135,11 @@ def process_file(filename, n_plots=0):
     trigger_time = card0.pretriggerdelay_block[0] # /sampling_freq_Hz*1e6
     print "trigger time: [microseconds]", trigger_time
 
-    frame_hist = ROOT.TH1D("hist", "", 100, 0, 820)
+    frame_hist = ROOT.TH1D("hist", "", 100, 0, trace_length_us*1.1)
     frame_hist.SetLineColor(ROOT.kWhite)
-    frame_hist.SetXTitle("Time [clock ticks]")
-    frame_hist.SetYTitle("Energy (with arbitrary offsets) [keV] ")
+    frame_hist.SetXTitle("Time [#mus]")
+    #frame_hist.SetYTitle("Energy (with arbitrary offsets) [keV] ")
+    frame_hist.SetYTitle("ADC units ")
     frame_hist.GetYaxis().SetTitleOffset(1.3)
     frame_hist.SetBinContent(1, pow(2,14))
 
@@ -197,7 +208,8 @@ def process_file(filename, n_plots=0):
                 color = ROOT.kBlack
 
 
-            multiplier = calibration_values[channel]
+            #multiplier = calibration_values[channel]
+            multiplier = 1.0
             #print "entry %i, channel: %i, multiplier: %.2f" % (i_entry, channel, multiplier)
 
             # add an offset so the channels are draw at different levels
@@ -205,7 +217,7 @@ def process_file(filename, n_plots=0):
             offset = 0
             if offset < y_min: y_min = offset - 100
             if channel == pmt_channel:
-                offset = 1000
+                offset = 100
 
             graph = tree.HitTree.GetGraph()
             graph.SetLineColor(color)
@@ -214,12 +226,19 @@ def process_file(filename, n_plots=0):
             #print "fcn_string:", fcn_string
             fcn = ROOT.TF2("fcn",fcn_string)
             graph.Apply(fcn)
+            # convert x axis to microseconds
+            for i_point in xrange(graph.GetN()):
+                x = graph.GetX()[i_point]
+                y = graph.GetY()[i_point]
+                graph.SetPoint(i_point, x/sampling_freq_Hz*1e6, y)
+
             graph.SetLineWidth(2)
             graph.Draw("l")
             #print "\t entry %i, ch %i, slot %i" % ( i_entry-1, channel, slot,)
 
             # construct a sum wfm
             if channel + slot*16 != 0: # skip ch 0 since it had a pulser during testing:
+                #if slot != 0:
                 for i_point in xrange(tree.HitTree.GetNSamples()):
                     y = graph.GetY()[i_point]
                     sum_wfm[i_point] = sum_wfm[i_point] + y
@@ -237,7 +256,7 @@ def process_file(filename, n_plots=0):
 
         sum_graph = ROOT.TGraph()
         for i_point in xrange(len(sum_wfm)):
-            sum_graph.SetPoint(i_point, i_point, sum_wfm[i_point]+2000)
+            sum_graph.SetPoint(i_point, i_point/sampling_freq_Hz*1e6, sum_wfm[i_point]+100)
 
         #sum_graph.SetLineWidth(3)
         sum_graph.Draw("l")
@@ -281,12 +300,15 @@ def process_file(filename, n_plots=0):
                 for i_point in xrange(len(sum_wfm)/2):
                     if i_point <= 0: continue
                     x = i_point*sampling_freq_Hz/1e6/2/len(sum_wfm)  # MHz?
-                    fft_graph.SetPoint(fft_graph.GetN(), x, abs(sum_fft[i_point]))
+                    #fft_graph.SetPoint(fft_graph.GetN(), x, abs(sum_fft[i_point]))
+                    fft_graph.SetPoint(fft_graph.GetN(), i_point, abs(sum_fft[i_point]))
                     if  abs(sum_fft[i_point]) > 1e4:
                         print "freq=%s kHz | val = %.2e" % (
                             x*1e3, 
                             abs(sum_fft[i_point])
                         )
+                #fft_graph.Draw("l")
+                #canvas.Update()
 
 
 
@@ -305,14 +327,19 @@ def process_file(filename, n_plots=0):
             except: 
                 pass
 
-                if False: # draw FFT
+                if True: # draw FFT
                     fft_graph.Draw("alp")
                     fft_hist = fft_graph.GetHistogram()
                     fft_hist.SetXTitle("Freq [MHz]")
+                    fft_hist.SetTitle("Sum wfm FFT")
+                    fft_hist.SetMinimum(100)
+                    fft_hist.SetMaximum(1e5)
+                    fft_hist.Draw()
+                    fft_graph.Draw("lp")
                     canvas.SetLogy(1)
                     canvas.SetLogx(1)
                     canvas.Update()
-                    #val = raw_input("--> FFT -- enter to continue (q to quit) ")
+                    val = raw_input("--> FFT -- enter to continue (q to quit) ")
                     if val == 'q': sys.exit()
                     canvas.SetLogy(0)
                     canvas.SetLogx(0)
@@ -339,14 +366,12 @@ def process_file(filename, n_plots=0):
 
 if __name__ == "__main__":
 
-    if len(sys.argv) < 2:
-        print "arguments: [NGM root files (HitOut*.root)]"
-        sys.exit(1)
-
-
     n_plots = 0
-    for filename in sys.argv[1:]:
-        n_plots += process_file(filename, n_plots)
+    if len(sys.argv) > 1:
+        for filename in sys.argv[1:]:
+            n_plots += process_file(filename, n_plots)
+    else:
+        process_file()
 
 
 
