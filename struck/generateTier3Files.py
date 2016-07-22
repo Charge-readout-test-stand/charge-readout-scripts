@@ -71,14 +71,17 @@ from ROOT import TRandom3
 try: # for root 6!
     from ROOT import kBlue
     from ROOT import kRed
-    print "generateTier3Files: this is ROOT 6"
 except:
     kBlue = TColor.kBlue
     kRed = TColor.kRed
     
 
 
-#gSystem.Load("$EXOLIB/lib/libEXOROOT")
+if os.getenv("EXOLIB") is not None:
+    try:
+        gSystem.Load("$EXOLIB/lib/libEXOROOT")
+    except:
+        pass
 
 try:
     from ROOT import CLHEP
