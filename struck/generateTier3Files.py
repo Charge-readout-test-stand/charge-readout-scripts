@@ -3,11 +3,14 @@
 """
 FIXME -- Jan 28, 2016 -- energy PZ values are screwed up after switching for wfmProcessing!!!
 
-
 Do some waveform processing to extract energies, etc. 
 
 EXO class index, with waveform transformers: 
 http://exo-data.slac.stanford.edu/exodoc/ClassIndex.html
+
+NGM to do list:
+* add time stamp for each channel?
+* test this script with MC & data at SLAC when done  
 
 to do:
   * ID wfms with multiple PMT signals?
@@ -48,15 +51,14 @@ hadd -O all_tier3.root tier3*.root
 import os
 import sys
 import time
+import math
 import datetime
 import numpy as np
 from optparse import OptionParser
 
 
 from ROOT import gROOT
-# run in batch mode -- set to False for debugging:
-#gROOT.SetBatch(False)
-gROOT.SetBatch(True)
+gROOT.SetBatch(True) # run in batch mode:
 from ROOT import TFile
 from ROOT import TTree
 from ROOT import TCanvas
@@ -66,11 +68,31 @@ from ROOT import TH1D
 from ROOT import gSystem
 from ROOT import TRandom3
 
+try: # for root 6!
+    from ROOT import kBlue
+    from ROOT import kRed
+except:
+    kBlue = TColor.kBlue
+    kRed = TColor.kRed
+    
 
-gSystem.Load("$EXOLIB/lib/libEXOROOT")
-from ROOT import CLHEP
-from ROOT import EXODoubleWaveform
+
+if os.getenv("EXOLIB") is not None:
+    try:
+        gSystem.Load("$EXOLIB/lib/libEXOROOT")
+    except:
+        pass
+
+try:
+    from ROOT import CLHEP
+    microsecond = CLHEP.microsecond
+    second = CLHEP.second
+except ImportError:
+    # workaround for our Ubuntu DAQ, which doesn't have CLHEP -- CLHEP unit of time is ns:
+    microsecond = 1.0e3
+    second = 1.0e9
 from ROOT import EXOBaselineRemover
+from ROOT import EXODoubleWaveform
 from ROOT import EXORisetimeCalculation
 from ROOT import EXOSmoother
 from ROOT import EXOPoleZeroCorrection
@@ -126,6 +148,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
     # open the root file and grab the tree
     root_file = TFile(filename)
+    isNGM = False # flag for Jason Newby's NGM code
     tree = None
     if isMC:
         tree = root_file.Get("evtTree")
@@ -140,13 +163,20 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             n_entries = tree.GetEntries()
             isMC = True
         except AttributeError:
-            print "==> problem accessing tree -- skipping this file"
-            return 0
+            tree = root_file.Get("HitTree")
+            try:
+                n_entries = tree.GetEntries()
+                isNGM = True
+                print "==> This is an NGM tree!"
+            except AttributeError:
+                print "==> problem accessing tree -- skipping this file"
 
-
+    print "%i tree entries" % n_entries
     reporting_period = 1000
     if isMC:
         reporting_period = 100
+    if isNGM:
+        reporting_period = 32*100 # 100 32-channel events
 
 
     if isMC:
@@ -160,6 +190,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         rms_keV = struck_analysis_parameters.rms_keV
         
     basename = wfmProcessing.create_basename(filename, isMC)
+
+    if isNGM:
+        basename = os.path.splitext(filename)[0]
 
     # calculate file start time, in POSIX time, from filename suffix
     # date and time are last two parts of filename separated with "_":
@@ -180,21 +213,24 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
     # decide if this is a tier1 or tier2 file
     is_tier1 = False
-    try:
-        tree.GetEntry(0)
-        tree.wfm0
-        print "this is a tier2 file"
-    except AttributeError:
-        print "this is a tier1 file"
-        n_channels_in_event = 1
-        is_tier1 = True
-    
+    if isMC is False and isNGM is False:
+        try:
+            tree.GetEntry(0)
+            tree.wfm0
+            print "this is a tier2 file"
+        except AttributeError:
+            print "this is a tier1 file"
+            n_channels_in_event = 1
+            is_tier1 = True
+        
     if isMC:
         n_channels_in_event = n_channels
         is_tier1 = False
 
     # open output file and tree
     out_filename = wfmProcessing.create_outfile_name(filename, isMC)
+    if isNGM:
+        out_filename = "tier3_%s.root" % basename
     out_filename = dir_name + out_filename
     if not do_overwrite:
         if os.path.isfile(out_filename):
@@ -202,9 +238,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             return 0
     out_file = TFile(out_filename, "recreate")
     out_tree = TTree("tree", "%s processed wfm tree" % basename)
-    out_tree.SetLineColor(TColor.kBlue)
+    out_tree.SetLineColor(kBlue)
     out_tree.SetLineWidth(2)
-    out_tree.SetMarkerColor(TColor.kRed)
+    out_tree.SetMarkerColor(kRed)
     out_tree.SetMarkerStyle(8)
     out_tree.SetMarkerSize(0.5)
     run_tree = TTree("run_tree", "run-level data")
@@ -270,6 +306,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     elif isMC:
         #MC so this doesn't exist
         run_time[0] = 0
+    elif isNGM:
+        run_time[0] = (tree.GetMaximum("_rawclock") -
+            tree.GetMinimum("_rawclock"))/sampling_freq_Hz
     else:
         run_time[0] = (tree.GetMaximum("time_stampDouble") -
             tree.GetMinimum("time_stampDouble"))/sampling_freq_Hz
@@ -288,6 +327,10 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         trigger_time[0] = 200/sampling_freq_Hz*1e6
     elif do_debug:
         print "--> debugging -- skipping trigger_time calc"
+    elif isNGM:
+        ngm_config = root_file.Get("NGMSystemConfiguration")
+        trigger_time[0] = ngm_config.GetSlotParameters().GetParValueO("card",0).pretriggerdelay_block[0] 
+        print "NGM trigger_time:", trigger_time[0]
     else:
         trigger_hist = TH1D("trigger_hist","",5000,0,5000)
         selection = "channel==%i && wfm_max - wfm%i[0] > 20" % (pmt_channel, pmt_channel)
@@ -319,11 +362,11 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     out_tree.Branch('decay_time', decay_time, 'decay_time[%i]/D' % n_channels_in_event)
 
     decay_time_values = struck_analysis_parameters.decay_time_values
-    decay_time_values[pmt_channel] = 1e9*CLHEP.microsecond
+    decay_time_values[pmt_channel] = 1e9*microsecond
     
     if isMC:
         #No decay in MC so set to infinite
-        decay_time_values = [1e9*CLHEP.microsecond]*n_channels
+        decay_time_values = [1e9*microsecond]*n_channels
 
 
     for (i, i_channel) in enumerate(channels):
@@ -331,7 +374,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             decay_time[i] = decay_time_values[i_channel]
         except KeyError:
             print "no decay info for channel %i" % i_channel
-            decay_time[i] = 1e9*CLHEP.microsecond
+            decay_time[i] = 1e9*microsecond
 
 
     # energy calibration, keV:
@@ -455,6 +498,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     print "calculating mean baseline & baseline RMS for each channel in this file..."
     for (i, i_channel) in enumerate(channels):
         if isMC: continue
+        if isNGM: continue #FIXME
         print "%i: ch %i" % (i, i_channel)
         selection = "Iteration$<%i && channel==%i" % (n_baseline_samples[0], i_channel)
 
@@ -555,6 +599,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         pmt_threshold[0] = 0.0
     elif do_debug:
         print "--> debugging -- skipping PMT threshold calc"
+    elif isNGM:
+        pmt_threshold[0] = 0.0 # FIXME
     else:
         draw_command = "wfm_max-wfm[0] >> hist"
         if not is_tier1:
@@ -641,19 +687,31 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
     run_tree.Fill() # this tree only has one entry with run-level entries
 
+    if isNGM:
+        n_events = 0
+        n_channels_in_this_event = 0
+
     # loop over all entries in tree
-    for i_entry in xrange(n_entries):
+    i_entry = 0
+    n_channels_in_this_event = 0
+    while i_entry < n_entries:
         tree.GetEntry(i_entry)
 
 
-        #if i_entry > 1000: break # debugging
+        if i_entry > 100000: break # debugging
 
         # print periodic output message
         if i_entry % reporting_period == 0:
             now = time.clock()
-            print "----> entry %i of %i (%.2f percent in %.1f seconds, %.1f seconds total)" % (
-                i_entry, n_entries, 100.0*i_entry/n_entries, now - last_time, now -
-                start_time)
+            print "----> entry %i of %i: %.2f percent done in %.1f seconds | %i events in %.1f seconds (%.2f Hz)" % (
+                i_entry, 
+                n_entries, 
+                100.0*i_entry/n_entries, 
+                now - start_time,
+                reporting_period,
+                now - last_time, 
+                reporting_period/(now-last_time),
+            )
             last_time = now
 
 
@@ -666,6 +724,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 	    NOPactive[0] = tree.NOPactive
 	    NPE[0] = tree.NPE
 	    NPEactive[0] = tree.NPEactive
+        elif isNGM:
+            event[0] = n_events
         else:
             event[0] = tree.event
 
@@ -676,6 +736,10 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             #No timestamp in MC 
             time_stamp[0] = int( tree.EventTime/sampling_freq_Hz ) 
             time_stampDouble[0] = tree.EventTime/sampling_freq_Hz
+        elif isNGM:
+            time_stamp[0] = int( tree.HitTree.GetRawClock() ) 
+            time_stampDouble[0] = tree.HitTree.GetRawClock()/sampling_freq_Hz
+            n_channels_in_this_event = 0
         else:
             time_stamp[0] = tree.time_stamp
             time_stampDouble[0] = tree.time_stampDouble
@@ -716,6 +780,66 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 wfm = [wfmp for wfmp in tree.ChannelWaveform[i]]
                 channel[i] = i
                 wfm_max_time[i] = np.argmax(wfm)
+
+            elif isNGM:
+                if n_channels_in_this_event > 0: # For NGM, each wfm is its own tree entry
+                    i_entry += 1
+                    tree.GetEntry(i_entry)
+
+                # trying to get i -> channel -- FIXME?
+                i = tree.HitTree.GetSlot()*16 + tree.HitTree.GetChannel()
+
+                channel[i] = tree.HitTree.GetSlot()*16 + tree.HitTree.GetChannel()
+                
+                if do_debug: # debugging
+                    print "NGM event", n_events, \
+                        "i", i, \
+                        "channel", channel[i], \
+                        "time stamp", tree.HitTree.GetRawClock(), \
+                        "event_time_stamp:", time_stamp[0], \
+                        "time diff:", tree.HitTree.GetRawClock() - time_stamp[0]
+
+                if (abs( tree.HitTree.GetRawClock() - time_stamp[0] ) > 2):
+                    print "===> end of event after %i channels: %i clock tick diff" % (
+                        (i+1),
+                        abs( tree.HitTree.GetRawClock() - time_stamp[0] ),
+                    )
+                    i_entry -= 1
+                    n_events += 1
+                    break # break from loop over events
+
+                n_channels_in_this_event += 1
+
+                # wfm decoding isn't working!!!
+                #wfm = hit.GetGraph().GetY()
+                #wfm = hit.GetWaveformArray()
+                #print "wfm len", len(hit.GetWaveformArray())
+                #wfm = [wfmp for wfmp in hit.GetWaveformArray()[:hit.GetNSamples()]]
+                #wfm = hit.GetWaveformArray()[:hit.GetNSamples()]
+                #print hit.GetNSamples()
+                #print len(hit.GetWaveformArray()[:hit.GetNSamples()])
+                #print len(hit.GetGraph().GetY()[:hit.GetNSamples()])
+                #wfm = [wfmp for wfmp in hit.GetGraph().GetY()[:hit.GetNSamples()]]
+                #wfm = hit.GetGraph().GetY()[:hit.GetNSamples()]
+                #wfm = hit.GetWaveformArray()[:hit.GetNSamples()]
+
+                # OMG FIXME -- there must be a better way to do this
+                wfm = [0]*tree.HitTree.GetNSamples()
+                for i_sample in xrange(tree.HitTree.GetNSamples()):
+                  #print i_sample
+                  wfm[i_sample] = tree.HitTree.GetWaveformArray()[i_sample]
+                #print wfm
+                wfm_max_time[i] = np.argmax(wfm)
+
+                #wfm = wfm[:hit.GetNSamples()]
+                #wfm = array('i',hit.GetWaveformArray()[:hit.GetNSamples()])
+                #print hit.GetWaveformArray()
+                #print hit.GetWaveformArray()[0]
+                #print wfm[0]
+                #print hit.GetWaveformArray()[1]
+                #print wfm[1]
+                #print len(wfm)
+                #sys.exit()
             else:
                 channel[i] = tree.channel[i]
                 if i == 0: 
@@ -739,14 +863,14 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             # add noise to MC
             if isMC:
                 # FIXME -- using const noise for all channels!!
-                sigma = rms_keV[1]/calibration[i] 
+                sigma = rms_keV[i]/calibration[i] 
                 #print "%.1f keV (%.1f ADC units) noise to MC" % (rms_keV[1], sigma)
                 for i_point in xrange(len(wfm)):
                     noise = generator.Gaus()*sigma
                     wfm[i_point]+=noise
 
-
-            exo_wfm = EXODoubleWaveform(array('d',wfm), wfm_length[i])
+            else:
+                exo_wfm = EXODoubleWaveform(array('d',wfm), wfm_length[i])
 
             if do_debug:
                 # a copy of the un-transformed wfm, for debugging
@@ -769,7 +893,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 wfm_min[i],
             ) = wfmProcessing.get_wfmparams(
                 exo_wfm=exo_wfm, 
-                wfm_length=wfm_length[0], 
+                wfm_length=wfm_length[i], 
                 sampling_freq_Hz=sampling_freq_Hz,
                 n_baseline_samples=n_baseline_samples[0], 
                 calibration=calibration[i], 
@@ -786,7 +910,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 MCchargeEnergy[0] += energy1_pz[i]
 
  
-            exo_wfm.SetSamplingFreq(sampling_freq_Hz/CLHEP.second)
+            exo_wfm.SetSamplingFreq(sampling_freq_Hz/second)
 
             #Sum the Waveforms of the active channels
             if charge_channels_to_use[channel[i]]:
@@ -810,7 +934,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 rise_time_stop99[i],
             ) = wfmProcessing.get_risetimes(
                 exo_wfm, 
-                wfm_length[0], 
+                wfm_length[i], 
                 sampling_frequency_Hz[0],
             )
 
@@ -861,36 +985,47 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
 
         ##### processing sum waveform
-        (
-            smoothed_max_sum[0], 
-            rise_time_stop10_sum[0], 
-            rise_time_stop20_sum[0], 
-            rise_time_stop30_sum[0],
-            rise_time_stop40_sum[0], 
-            rise_time_stop50_sum[0], 
-            rise_time_stop60_sum[0], 
-            rise_time_stop70_sum[0],
-            rise_time_stop80_sum[0], 
-            rise_time_stop90_sum[0], 
-            rise_time_stop95_sum[0],
-            rise_time_stop99_sum[0]
-        ) = wfmProcessing.get_risetimes(
-            sum_wfm, 
-            wfm_length[0], 
-            sampling_frequency_Hz[0]
-        )
-        
-        baseline_remover = EXOBaselineRemover()
-        baseline_remover.SetBaselineSamples(2*n_baseline_samples[0])
-        baseline_remover.SetStartSample(wfm_length[i] - 2*n_baseline_samples[0] - 1)
-        baseline_remover.Transform(sum_wfm)
-        energy_sum[0] = baseline_remover.GetBaselineMean()
-        energy_rms_sum[0] = baseline_remover.GetBaselineRMS()
+        if sum_wfm == None:
+            print "sum wfm is None!"
+        else:
+            (
+                smoothed_max_sum[0], 
+                rise_time_stop10_sum[0], 
+                rise_time_stop20_sum[0], 
+                rise_time_stop30_sum[0],
+                rise_time_stop40_sum[0], 
+                rise_time_stop50_sum[0], 
+                rise_time_stop60_sum[0], 
+                rise_time_stop70_sum[0],
+                rise_time_stop80_sum[0], 
+                rise_time_stop90_sum[0], 
+                rise_time_stop95_sum[0],
+                rise_time_stop99_sum[0]
+            ) = wfmProcessing.get_risetimes(
+                sum_wfm, 
+                wfm_length[0], 
+                sampling_frequency_Hz[0]
+            )
+            
+            baseline_remover = EXOBaselineRemover()
+            baseline_remover.SetBaselineSamples(2*n_baseline_samples[0])
+            baseline_remover.SetStartSample(wfm_length[i] - 2*n_baseline_samples[0] - 1)
+            baseline_remover.Transform(sum_wfm)
+            energy_sum[0] = baseline_remover.GetBaselineMean()
+            energy_rms_sum[0] = baseline_remover.GetBaselineRMS()
 
         #raw_input("Press Enter...")
 
-        out_tree.Fill()
+        if isNGM: # check that event contains all channels:
+            if (n_channels_in_this_event != len(charge_channels_to_use)):
+              print "====> WARNING: %i channels in this event!!" % i
+            else:
+                out_tree.Fill()
+        else:
+            out_tree.Fill()
 
+        i_entry += 1
+        # end loop over tree entries
     
     run_tree.Write()
 

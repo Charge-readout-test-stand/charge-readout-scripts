@@ -14,18 +14,26 @@ notes:
 
 # options
 is_6th_LXe = False
+#is_7th_LXe = False
 is_7th_LXe = True
+#is_8th_LXe = True
+is_8th_LXe = False
 
+import os
 import math
-try:
-    from ROOT import gROOT
-    from ROOT import gSystem
-    gSystem.Load("$EXOLIB/lib/libEXOROOT")
-    from ROOT import CLHEP
-    microsecond = CLHEP.microsecond
-except ImportError:
-    print "couldn't import CLHEP/ROOT"
-    microsecond = 1.0e3
+from ROOT import gROOT
+from ROOT import gSystem
+
+# workaround for systems without EXO offline / CLHEP
+microsecond = 1.0e3
+if os.getenv("EXOLIB") is not None:
+    print os.getenv("EXOLIB")
+    try:
+        gSystem.Load("$EXOLIB/lib/libEXOROOT")
+        from ROOT import CLHEP
+        microsecond = CLHEP.microsecond
+    except ImportError:
+        print "couldn't import CLHEP/ROOT"
 
 drift_length = 18.16 # mm, from solidworks for 7th LXe + 
 drift_velocity = 2.0 # mm / microsecond  
@@ -40,11 +48,11 @@ sampling_freq_Hz = 25.0e6 # digitizer sampling frequency, Hz
 #FIXME--will be saved in trees so no longer needed
 
 charge_channels_to_use = [0]*16
+if is_8th_LXe:
+    charge_channels_to_use = [0]*32
 
 # in software, struck channels start from 0, not 1
 pmt_channel = 8
-if is_7th_LXe:
-    pmt_channel = 9
 if is_6th_LXe:
     # channels for 6th LXe
     channels = [0,1,2,3,4,5,8]
@@ -55,6 +63,7 @@ if is_6th_LXe:
     charge_channels_to_use[4] = 1
 
 elif is_7th_LXe:
+    pmt_channel = 9
     # channels for 6th LXe
     channels = [0,1,2,3,4,5,6,7,9]
     charge_channels_to_use[0] = 1
@@ -66,6 +75,12 @@ elif is_7th_LXe:
     charge_channels_to_use[6] = 1
     charge_channels_to_use[7] = 1
 
+elif is_8th_LXe:
+    pmt_channel = 0
+    channels = []
+    for i_channel, val in enumerate(charge_channels_to_use):
+        channels.append(i_channel)
+        charge_channels_to_use[i_channel] = 1
 else:
     # channels for 5th LXe
     channels = [0,1,2,3,4,8]
@@ -184,6 +199,10 @@ if is_7th_LXe:
     decay_time_values[7] = 448.86*microsecond # +/- 2.91 
     decay_time_values[9] = 1.5*microsecond 
 
+if is_8th_LXe: # FIXME with real values
+    for i_channel in xrange(len(channels)):
+        decay_time_values[i_channel] = 400.0
+
 
 # charge calbration from these files for 5th LXe:
 # tier3_LXe_Run1_1700VC_2chargechannels_609PM_60thresh_NotShaped_Amplified_GapTime20_2_0.root
@@ -221,10 +240,14 @@ if is_7th_LXe:
     # PMT
     calibration_values[9] = 2.12352
 
+if is_8th_LXe: # FIXME with real values
+    for i_channel in xrange(len(channels)):
+        calibration_values[i_channel] = 5.0
+
 
 # PMT calibration is from PMT-triggered data
 # EMI 9531QB, 1200V PMT bias, 1700V cathode bias
-calibration_values[8] = 0.4470588
+calibration_values[pmt_channel] = 0.4470588
 
 if is_6th_LXe:
     calibration_values[0] = 5.388958
@@ -285,6 +308,10 @@ if is_7th_LXe:
     rms_keV[5] = 18.58932
     rms_keV[6] = 18.66388
     rms_keV[7] = 19.21589
+
+if is_8th_LXe: # FIXME with real values
+    for i_channel in xrange(len(channels)):
+        rms_keV[i_channel] = 20.0
 
 avg_rms_keV = sum(rms_keV.values())/len(rms_keV)
 
