@@ -243,15 +243,15 @@ void fcn(Int_t &npar, Double_t *gin, Double_t &f, Double_t *par, Int_t iflag)
 Double_t ralphWF() {
   TFile *inputroot = TFile::Open("~/../manisha2/MC/Bi207_Full_Ralph_dcoeff0/digitization_dcoeff0/digi1_Bi207_Full_Ralph_dcoef0.root");
   TTree *tree = (TTree*) inputroot->Get("evtTree");
-  c1 = new TCanvas("c1", "");
-
   vector<vector<double> > *ChannelWaveform=0; //defines pointer to vector of vectors
+  cout << "n entries: " << tree->GetEntries() << endl;
   tree->SetBranchAddress("ChannelWaveform", &ChannelWaveform);
-  cout << tree->GetEntry(1) << endl;
+  tree->GetEntry(3);
+
   cout << "size of ChannelWaveform: " << (*ChannelWaveform).size() << endl; //number of channels (should be 60)
   cout << "size of ChannelWaveform[20]: " << ((*ChannelWaveform)[20]).size() << endl; //print out size of nth ChannelWaveform
   cout << "entry ChannelWaveform[0, 200]: " << ((*ChannelWaveform)[0])[200] << endl; //print out nth element of 16th waveform
- 
+  c1 = new TCanvas("c1", "");
   c1->Divide(3, 2);
   for (UInt_t i=0; i<6; i++) {
     hist[i] = new TH1D("sampleHist", "", 800, 0, 32);//wfm_hist in fit_wfm.py gets assigned to this
@@ -293,14 +293,18 @@ Double_t ralphWF() {
   Int_t nvpar, nparx, icstat;
   gMinuit->mnstat(amin, edm, errdef, nvpar, nparx, icstat);
   cout << "best function value found so far: " << amin << " vertical dist remaining to min: " << edm << " how good is fit? 0=bad, 1=approx, 2=full matrix but forced positive-definite, 3=good " << icstat << endl;
- 
+  
+  c1->Print("chisqfits.pdf[");
   for (UInt_t n=0; n<6;  n++) { 
     c1->cd(n+1);
-    test[n]->Draw(); 
+    hist[n]->Draw();
+    test[n]->Draw("same"); 
     test[n]->SetLineColor(kRed);
+    test[n]->SetLineStyle(9);
     c1->Update();
+    c1->Print("chisqfits.pdf");
   }
-    c1->Print("chisqhist.png");
+    c1->Print("chisqfits.pdf]");
     cout << "Hists and fits drawn" << endl;
     Int_t pause;
     cin >> pause; 
