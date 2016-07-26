@@ -15,6 +15,10 @@
 #include "TTree.h"
 #include "TFile.h"
 #include "TMinuit.h"
+#include <iostream>
+#include <vector>
+
+using namespace std;
 
 // options:
 //Double_t diagonal = 3.0; // mm
@@ -237,11 +241,11 @@ void fcn(Int_t &npar, Double_t *gin, Double_t &f, Double_t *par, Int_t iflag)
 }
 
 Double_t ralphWF() {
-  TFile *inputroot = TFile::Open("~/MC/Bi207_Full_Ralph_dcoeff0/digitization_dcoeff0/digi1_Bi207_Full_Ralph_dcoef0.root");
+  TFile *inputroot = TFile::Open("~/../manisha2/MC/Bi207_Full_Ralph_dcoeff0/digitization_dcoeff0/digi1_Bi207_Full_Ralph_dcoef0.root");
   TTree *tree = (TTree*) inputroot->Get("evtTree");
   c1 = new TCanvas("c1", "");
 
-  vector<vector<double> > *ChannelWaveform; //defines pointer to vector of vectors
+  vector<vector<double> > *ChannelWaveform=0; //defines pointer to vector of vectors
   tree->SetBranchAddress("ChannelWaveform", &ChannelWaveform);
   cout << tree->GetEntry(1) << endl;
   cout << "size of ChannelWaveform: " << (*ChannelWaveform).size() << endl; //number of channels (should be 60)
