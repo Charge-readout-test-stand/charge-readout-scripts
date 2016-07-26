@@ -21,15 +21,14 @@ is_8th_LXe = False
 
 import os
 import math
-from ROOT import gROOT
-from ROOT import gSystem
+import ROOT
 
 # workaround for systems without EXO offline / CLHEP
 microsecond = 1.0e3
 if os.getenv("EXOLIB") is not None:
     print os.getenv("EXOLIB")
     try:
-        gSystem.Load("$EXOLIB/lib/libEXOROOT")
+        ROOT.gSystem.Load("$EXOLIB/lib/libEXOROOT")
         from ROOT import CLHEP
         microsecond = CLHEP.microsecond
     except ImportError:
@@ -76,11 +75,12 @@ elif is_7th_LXe:
     charge_channels_to_use[7] = 1
 
 elif is_8th_LXe:
-    pmt_channel = 0
+    pmt_channel = 31
     channels = []
     for i_channel, val in enumerate(charge_channels_to_use):
         channels.append(i_channel)
         charge_channels_to_use[i_channel] = 1
+    charge_channels_to_use[pmt_channel] = 0
 else:
     # channels for 5th LXe
     channels = [0,1,2,3,4,8]
@@ -118,6 +118,9 @@ if is_7th_LXe:
     channel_map[5] = "Y17"
     channel_map[6] = "Y18"
     channel_map[7] = "Y19"
+if is_8th_LXe: # FIXME with real values for 8th LXe
+    for i_channel in xrange(n_chargechannels):
+        channel_map[i_channel] = "X%i" % i_channel
 
 #MC Channels index starts at 0 so X26 = 25
 #Y  Channles are offset by 30
@@ -263,30 +266,75 @@ if is_6th_LXe:
     # EMI 9531QB, 1300V PMT bias, 1700V cathode bias
     calibration_values[8] = 2.12352
 
-def get_colors():
-    from ROOT import TColor
-    
+colors = [
+    ROOT.kBlue, 
+    ROOT.kGreen+2, 
+    ROOT.kViolet+1,
+    ROOT.kRed, 
+    ROOT.kOrange+1,
+    ROOT.kMagenta,
+]
+
+if is_7th_LXe:
     colors = [
-        TColor.kBlue, 
-        TColor.kGreen+2, 
-        TColor.kViolet+1,
-        TColor.kRed, 
-        TColor.kOrange+1,
-        TColor.kMagenta,
+        ROOT.kMagenta, 
+        ROOT.kMagenta+2, 
+        ROOT.kRed, 
+        ROOT.kOrange+1, 
+        ROOT.kGreen+2, 
+        ROOT.kCyan+1,
+        ROOT.kBlue, 
+        ROOT.kBlue+2, 
+        #ROOT.kTeal, 
+        ROOT.kGray+2, 
     ]
 
-    colors = [
-        TColor.kMagenta, 
-        TColor.kMagenta+2, 
-        TColor.kRed, 
-        TColor.kOrange+1, 
-        TColor.kGreen+2, 
-        TColor.kCyan+1,
-        TColor.kBlue, 
-        TColor.kBlue+2, 
-        #TColor.kTeal, 
-        TColor.kGray+2, 
-    ]
+# construct colors from RGB vals:
+if is_8th_LXe:
+
+    # http://tools.medialab.sciences-po.fr/iwanthue
+    rgb_json = \
+    [[255,122,158],
+    [224,0,81],
+    [156,37,45],
+    [255,175,155],
+    [248,91,48],
+    [143,71,0],
+    [216,112,0],
+    [247,186,123],
+    [255,179,87],
+    [109,76,36],
+    [130,100,0],
+    [191,165,0],
+    [180,172,116],
+    [141,138,0],
+    [202,205,59],
+    [165,214,79],
+    [91,141,0],
+    [65,90,28],
+    [114,215,74],
+    [71,216,93],
+    [153,212,156],
+    [0,146,57],
+    [1,196,172],
+    [1,86,157],
+    [2,119,235],
+    [107,109,248],
+    [150,72,207],
+    [215,147,255],
+    [146,15,146],
+    [118,64,104],
+    [255,143,203],
+    [194,0,116]] 
+
+    colors = []
+    color = ROOT.TColor()
+    for i_color, rgb in enumerate(rgb_json):
+        val =  color.GetColor(rgb[0], rgb[1], rgb[2])
+        #print i_color, rgb, val
+        colors.append(val)
+
+def get_colors():
     return colors
 
 # from tier2to3_overnight.root, baseline_rms
@@ -358,7 +406,7 @@ def is_amplified(baseline_mean_file, baseline_rms_file):
 
 
 if __name__ == "__main__":
-    gROOT.SetBatch(True)
+    ROOT.gROOT.SetBatch(True)
 
     print "\nsystem constants:"
     print "\t drift_length:", drift_length
