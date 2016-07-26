@@ -16,7 +16,6 @@ ROOT.gROOT.SetBatch(True) # uncomment to draw multi-page PDF
 
 import struck_analysis_parameters
 
-
 # set the ROOT style
 ROOT.gROOT.SetStyle("Plain")     
 ROOT.gStyle.SetOptStat(0)        
@@ -32,31 +31,32 @@ canvas.SetTopMargin(0.15)
 canvas.SetBottomMargin(0.12)
 
 
-def print_tier2_info(tree, energies, sampling_freq_Hz=25.0e6):
-
-    charge_channels_to_use = struck_analysis_parameters.charge_channels_to_use
-    chargeEnergy = 0.0
-    for energy in energies[len(charge_channels_to_use):]:
-        chargeEnergy += energy
-    print "\t event: %i" % tree.event
-    print "\t time stamp: %.2f" % (tree.time_stamp/sampling_freq_Hz)
-    print "\t charge energy: %i" % chargeEnergy
-    print "\t light energy: %i" % energies[-1]
-
-    i = 0
-    for (channel, value) in enumerate(charge_channels_to_use):
-        if value == 1:
-            print "\t ch %i | energy %i | maw max %i | max time [us]: %.2f" % (
-                tree.channel[i],
-                #tree.energy[i],
-                energies[i],
-                tree.maw_max[i],
-                tree.wfm_max_time[i]/sampling_freq_Hz*1e6,
-            )
-            i+=1
-
 def process_file(filename=None, n_plots_total=0):
 
+    # options ------------------------------------------
+    threshold = 0 # keV
+    #threshold = 570 # keV, for generating multi-page PDF
+    #threshold = 50 # ok for unshaped, unamplified data
+
+    units_to_use = 2 # 0=keV, 1=ADC units, 2=mV
+
+    do_fft = True
+    samples_to_avg = 200 # n baseline samples to use for energy 
+
+    #------------------------------------------------------
+
+    # y axis limits:
+    y_min = -200 # keV
+    if units_to_use == 1:
+        y_min = -50 # ADC units
+    elif units_to_use == 2:
+        y_min = -5 # mV
+
+    y_max = 500 # keV
+    if units_to_use == 1:
+        y_max = 200 # ADC units
+    elif units_to_use == 2:
+        y_max = 40 # mV
 
     #If input filename is null assume we want to examine the most recent file
     if(filename == None):
@@ -65,27 +65,7 @@ def process_file(filename=None, n_plots_total=0):
         filename = output[1]
         print "--> using most recent NGM file, ", filename
 
-
-
-    # options ------------------------------------------
-    threshold = 0 # keV
-    #threshold = 570 # keV, for generating multi-page PDF
-    #threshold = 50 # ok for unshaped, unamplified data
-
-    use_adc_units = True # otherwise keV
-    do_fft = True
-
-    # y axis limits:
-    y_min = -200 # keV
-    if use_adc_units:
-        y_min = -50 # ADC units
-    y_max = 500 # keV
-    if use_adc_units:
-        y_max = 200 # ADC units
-
-    samples_to_avg = 100 # n baseline samples to use for energy 
-
-    #------------------------------------------------------
+    print "--> processing file", filename
 
     calibration_values = struck_analysis_parameters.calibration_values
     channel_map = struck_analysis_parameters.channel_map
@@ -141,12 +121,14 @@ def process_file(filename=None, n_plots_total=0):
 
     frame_hist = ROOT.TH1D("hist", "", int(tree.HitTree.GetNSamples()*1.05), 0, trace_length_us+1)
     frame_hist.SetXTitle("Time [#mus]")
-    if use_adc_units:
-        frame_hist.SetYTitle("ADC units ")
+    sum_offset = 100
+    frame_hist.SetYTitle("Energy (with arbitrary offsets) [keV]")
+    if units_to_use == 1: # ADC units
+        frame_hist.SetYTitle("ADC units")
         sum_offset = 50
-    else:
-        frame_hist.SetYTitle("Energy (with arbitrary offsets) [keV] ")
-        
+    elif units_to_use == 2: # mV
+        frame_hist.SetYTitle("mV")
+        sum_offset = 10
 
     frame_hist.GetYaxis().SetTitleOffset(1.3)
 
@@ -222,9 +204,11 @@ def process_file(filename=None, n_plots_total=0):
                 color = ROOT.kBlack
 
 
-            multiplier = calibration_values[channel]
-            if use_adc_units:
+            multiplier = calibration_values[channel] # keV
+            if units_to_use == 1: # ADC units
                 multiplier = 1.0
+            elif units_to_use == 2: # mV
+                multiplier = 2.0e3/pow(2,14)
             #print "entry %i, channel: %i, multiplier: %.2f" % (i_entry, channel, multiplier)
 
             # add an offset so the channels are draw at different levels
@@ -304,8 +288,6 @@ def process_file(filename=None, n_plots_total=0):
 
         frame_hist.SetMinimum(y_min)
         frame_hist.SetMaximum(y_max)
-        #frame_hist.SetMinimum(0)
-        #frame_hist.SetMaximum(16000)
 
         for i in xrange(len(channels)):
             legend.AddEntry( hists[i], legend_entries[i], "f")
@@ -322,9 +304,41 @@ def process_file(filename=None, n_plots_total=0):
         legend.Draw()
         canvas.Update()
         n_plots += 1
-        print "n_plots / n_plots_total", n_plots, n_plots_total
+        print "--> n_plots / n_plots_total", n_plots, n_plots_total
+        if not ROOT.gROOT.IsBatch(): 
 
-        if do_fft: 
+            val = raw_input("--> entry %i | enter to continue (q to quit, p to print, or entry number) " % i_entry)
+
+            if val == 'q': sys.exit()
+            elif val == 'p':
+                canvas.Update()
+                canvas.Print("%s_event_%i.pdf" % (basename, n_plots-1))
+            try:
+                i_entry = int(val)
+                print "getting entry %i" % i_entry
+                continue
+            except: 
+                pass
+
+        else: # batch mode
+            # if we run in batch mode, print a multi-page canvas
+            #plot_name = "EventsWithChargeAbove%ikeV_6thLXe.pdf" % threshold
+            
+            units = "keV"
+            if units_to_use == 1:
+                units = "AdcUnits"
+            elif units_to_use == 2:
+                units = "mV"
+            plot_name = "2016_07_NoiseTests_%s.pdf" % units
+            if n_plots == 1:
+                canvas.Print("%s[" % plot_name)
+                #plot_name = plot_name + "("
+            #if n_plots >= n_plots_total:
+            #    plot_name = plot_name + ")"
+            canvas.Print(plot_name)
+
+        if do_fft: # calc & draw FFT
+
             # FFT, based on Jacopo's script
             sum_fft = fft(sum_wfm)
             sum_fft0 = fft(sum_wfm0)
@@ -347,94 +361,55 @@ def process_file(filename=None, n_plots_total=0):
                         abs(sum_fft[i_point])
                     )
 
+            canvas.SetLogy(1)
+            canvas.SetLogx(1)
+            fft_graph.Draw("alp")
+            fft_hist = fft_graph.GetHistogram()
+            fft_hist.SetXTitle("Freq [MHz]")
+            fft_hist.SetTitle("Sum wfm FFT")
+            fft_hist.SetMinimum(100)
+            fft_hist.SetMaximum(1e5)
+            if units_to_use == 2:
+                print "setting hist max!!!"
+                fft_hist.SetMinimum(1)
+                fft_hist.SetMaximum(1e3)
+            fft_hist.Draw()
+            fft_graph.Draw("l same")
+            fft_graph0.Draw("l same")
+            fft_graph1.Draw("l same")
+            canvas.Update()
 
-        if not ROOT.gROOT.IsBatch(): 
+            if not ROOT.gROOT.IsBatch(): # interactive mode
+                val = raw_input("--> FFT -- enter to continue (q to quit, p to print) ")
+                if val == 'q': 
+                    sys.exit()
+                elif val == 'p':
+                    canvas.Print("%s_FFT_event_%i.pdf" % (basename, n_plots-1))
 
-            #print_tier2_info(tree, energies)
-            val = raw_input("--> entry %i | enter to continue (q to quit, p to print, or entry number) " % i_entry)
-
-            if val == 'q': sys.exit()
-            elif val == 'p':
-                canvas.Update()
-                canvas.Print("%s_event_%i.pdf" % (basename, n_plots-1))
-            try:
-                i_entry = int(val)
-                print "getting entry %i" % i_entry
-                continue
-            except: 
-                pass
-
-                if do_fft: # draw FFT
-                    canvas.SetLogy(1)
-                    canvas.SetLogx(1)
-                    fft_graph.Draw("alp")
-                    fft_hist = fft_graph.GetHistogram()
-                    fft_hist.SetXTitle("Freq [MHz]")
-                    fft_hist.SetTitle("Sum wfm FFT")
-                    fft_hist.SetMinimum(100)
-                    fft_hist.SetMaximum(1e5)
-                    fft_hist.Draw()
-                    fft_graph.Draw("l same")
-                    fft_graph0.Draw("l same")
-                    fft_graph1.Draw("l same")
-                    canvas.Update()
-                    val = raw_input("--> FFT -- enter to continue (q to quit, p to print) ")
-                    if val == 'q': 
-                        sys.exit()
-                    elif val == 'p':
-                        canvas.Print("%s_FFT_event_%i.pdf" % (basename, n_plots-1))
-                    canvas.SetLogy(0)
-                    canvas.SetLogx(0)
-
-        else:
-            # if we run in batch mode, print a multi-page canvas
-            #plot_name = "EventsWithChargeAbove%ikeV_6thLXe.pdf" % threshold
-            plot_name = "2016_07_NoiseTests.pdf"
-            if n_plots == 1:
-                canvas.Print("%s[" % plot_name)
-                #plot_name = plot_name + "("
-            #if n_plots >= n_plots_total:
-            #    plot_name = plot_name + ")"
-            canvas.Print(plot_name)
-
-            if do_fft: # draw FFT
-                canvas.SetLogy(1)
-                canvas.SetLogx(1)
-                fft_graph.Draw("alp")
-                fft_hist = fft_graph.GetHistogram()
-                fft_hist.SetXTitle("Freq [MHz]")
-                fft_hist.SetTitle("Sum wfm FFT")
-                fft_hist.SetMinimum(100)
-                fft_hist.SetMaximum(1e5)
-                fft_hist.Draw()
-                fft_graph.Draw("l same")
-                fft_graph0.Draw("l same")
-                fft_graph1.Draw("l same")
-                canvas.Update()
+            else: # batch mode
                 canvas.Print(plot_name)
 
-            if n_plots >= n_plots_total:
-                canvas.Print("%s]" % plot_name)
+            # end test of do_fft
 
-            if n_plots >= n_plots_total:
-                print "quitting..."
-                sys.exit()
+
+        if n_plots >= n_plots_total: # end multi-page pdf file
+            canvas.Print("%s]" % plot_name)
+
+        if n_plots >= n_plots_total:
+            print "quitting..."
+            sys.exit()
 
         # end loop over entries
     
     return n_plots
 
 
-
-
 if __name__ == "__main__":
 
-    n_plots_total = 50
+    n_plots_total = 10
     if len(sys.argv) > 1:
         for filename in sys.argv[1:]:
-            n_plots += process_file(filename, n_plots_total)
+            process_file(filename, n_plots_total)
     else:
         process_file(n_plots_total=n_plots_total)
-
-
 
