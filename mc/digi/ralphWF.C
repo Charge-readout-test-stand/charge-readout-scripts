@@ -12,6 +12,9 @@
 #include "TCanvas.h"
 #include "TLegend.h"
 #include "TH1D.h"
+#include "TTree.h"
+#include "TFile.h"
+#include "TMinuit.h"
 
 // options:
 //Double_t diagonal = 3.0; // mm
@@ -64,7 +67,7 @@ Double_t OneStrip(Double_t x, Double_t y, Double_t z) {
   Double_t amplitude = 0.0;
 
   // sum over all 30 pads
-  //for ( int i_pad = 0; i_pad < 1; i_pad++ ){ // FIXME only 1 pad for debugging
+  //for ( int i_pad = 0; i_pad < 1; i_pad++ ) // FIXME only 1 pad for debugging
   for ( int i_pad = 0; i_pad < 30; i_pad++ ){
       Double_t padX = x + i_pad*diagonal - diagonal*14.5; 
 
@@ -130,7 +133,7 @@ Double_t OnePCDWithOptions(
   Double_t *par, 
   Int_t iPCD=0, 
   Bool_t useSameZ = false,
-  Bool_t doDebug=false
+  Bool_t doDebug = false
 ) {
   // reponse of the strip (30 pads in x direction) to one ionization of
   // magnitude q, starting from location x,y,z
@@ -146,7 +149,7 @@ Double_t OnePCDWithOptions(
   Double_t driftVelocity = 2.0; // mm/microsecond
 
   Double_t t = var[0];
-
+  
   if (doDebug){ cout << "PCD: " << iPCD << " useSameZ: " << useSameZ << endl; }
 
   size_t xIndex = 0 + iPCD*4;
@@ -199,8 +202,122 @@ Double_t TwoPCDsOneZ(Double_t *var, Double_t *par) {
 
 }
 
+TH1D *hist[60]; 
+TF1 *test[60]; 
+TCanvas *c1;
+
+void fcn(Int_t &npar, Double_t *gin, Double_t &f, Double_t *par, Int_t iflag)
+{     
+  //cout << "entries test" << hist->GetEntries() << endl;
+  //cout << "nbins" << nbins << endl;
+  //cout << hist->GetNbinsX() << endl;
+  Double_t delta;
+  Double_t chisq = 0.0;
+  for (UInt_t i=0; i<3; i++) { //i is channel #
+    Int_t nbins = hist[i]->GetNbinsX();
+    for (UInt_t n=190; n<600; n++) { //n is time sample
+      Double_t t = n*.04; //each point in the channel waveform separated by 40 ns
+      Double_t P[4];
+      P[0] = -43.5+(3*i)+par[0]; //x
+      P[1] = -43.5+(3*i)+par[1]; //y
+      P[2] = par[2];//z
+      P[3] = par[3];//q
+      delta = ((hist[i]->GetBinContent(n) - OnePCD(&t, P)) * (hist[i]->GetBinContent(n) - OnePCD(&t, P)))/20.0;
+      chisq += delta;
+    }
+    cout << "chisq " << chisq << endl;
+  }
+    f = chisq;
+    cout << "    " << endl;
+    
+    //hist[0]->Draw();
+  for (UInt_t i=0; i<3; i++) {
+    test[i]->SetParameter(0,-43.5+(3*i)+par[0]); // x
+    test[i]->SetParameter(1, -43.5+(3*i)+par[1]); // y
+    test[i]->SetParameter(2, par[2]); // z
+    test[i]->SetParameter(3, par[3]); // q
+    //hist[i]->Draw("same");
+    //test[i]->Draw("same");
+    //test[i]->SetLineColor(kRed);
+ }
+      
+}
+
+cout << "done" << endl;
+    c1->Update();
+    Int_t pause;
+    cin >> pause;
 
 Double_t ralphWF() {
+  TFile *inputroot = TFile::Open("~/MC/Bi207_Full_Ralph_dcoeff0/digitization_dcoeff0/digi1_Bi207_Full_Ralph_dcoef0.root");
+  TTree *tree = (TTree*) inputroot->Get("evtTree");
+  c1 = new TCanvas("c1", "");
+//  c1->cd();
+  vector<vector<double> > *ChannelWaveform; //defines pointer to vector of vectors
+  tree->SetBranchAddress("ChannelWaveform", &ChannelWaveform);
+  cout << tree->GetEntry(1) << endl;
+  cout << "size of ChannelWaveform: " << (*ChannelWaveform).size() << endl; //number of channels (this should be 60)
+  cout << "size of ChannelWaveform[20]: " << ((*ChannelWaveform)[20]).size() << endl; //print out size of nth ChannelWaveform
+  cout << "entry ChannelWaveform[0, 200]: " << ((*ChannelWaveform)[0])[200] << endl; //print out nth element of 16th waveform
+  
+  c1->Divide(30, 2);
+  for (UInt_t i=0; i<3;/*i<(((*ChannelWaveform).size())-1);*/ i++) {
+    hist[i] = new TH1D("sampleHist", "", 800, 0, 32);//wfm_hist in fit_wfm.py gets assigned to this
+    test[i] = new TF1("test", OnePCD, 0, 32, 4);
+    for (UInt_t n=0; n<800;/*n<((*ChannelWaveform)[i].size());*/ n++) {
+      Double_t ChannelWFelement = ((*ChannelWaveform)[i])[n];
+      hist[i]->SetBinContent(n+1, ChannelWFelement);
+     }
+    cout << "contents of bin " << hist[0]->GetBinContent(100) << endl;
+    c1->cd(i);
+    hist[i]->Draw();
+ //   test[i]->Draw("same"); 
+   // test[i]->SetLineColor(kRed);
+    c1->Update();
+//    c1->Print("chisqhist_i.png");
+  //  cout << "stop" << endl;
+    //Int_t pause;
+//    cin >> pause; 
+  }
+  cout << "Hists filled and drawn" << endl;
+
+  TMinuit *gMinuit = new TMinuit(4);  //initialize TMinuit with a maximum of 4 params
+  gMinuit->SetFCN(fcn); 
+ 
+  cout << "TMinuit has begun" << endl; //good
+  Double_t arglist[4];
+  Int_t ierflg = 0;
+  arglist[0] = 1;
+  gMinuit->mnexcm("SET ERR", arglist ,1,ierflg);
+  gMinuit->mnparm(0, "x", 1.5, 3, 0, 0, ierflg);//mm
+  gMinuit->mnparm(1, "y", 0, 3, 0, 0, ierflg);//mm
+  gMinuit->mnparm(2, "z", 10, 3, 0, 0, ierflg);//mm
+  gMinuit->mnparm(3, "q", 35000, 5000, 0, 0, ierflg);
+  
+  cout << "Parameters set, Minimization starting" << endl;//good
+
+  arglist[0] = 500;
+  arglist[1] = 1;
+  gMinuit->mnexcm("MIGRAD", arglist, 2, ierflg);
+
+  cout << "Printing out results: " << endl; //BAD; goes to fcn
+
+  Double_t amin, edm, errdef;
+  Int_t nvpar, nparx, icstat;
+  gMinuit->mnstat(amin, edm, errdef, nvpar, nparx, icstat);
+  cout << "best function value found so far: " << amin << " vertical dist remaining to min: " << edm << " how good is fit? 0=bad, 1=approx, 2=full matrix but forced positive-definite, 3=good " << icstat << endl;
+ 
+  for (UInt_t n=0; n<3; /* n<((*ChannelWaveform).size());*/ n++) { 
+    c1->cd(n);
+    test[n]->Draw("same"); 
+    test[n]->SetLineColor(kRed);
+    c1->Update();
+  }
+    c1->Print("chisqhist.png");
+    cout << "Hists and fits drawn" << endl;
+    Int_t pause;
+    cin >> pause; 
+/*
     // a test -- just draw a sample wfm to see if things are working. 
 
     // options
@@ -214,24 +331,9 @@ Double_t ralphWF() {
     Double_t minTime = 0.0;
     Double_t maxTime = 32.0;
     
-    TCanvas canvas("canvas","");
-    canvas.SetGrid(1,1); 
+//    TCanvas canvas("canvas","");
+  //  canvas.SetGrid(1,1); 
 
-    TLegend legend(0.1, 0.9, 0.9, 0.99);
-    legend.SetFillColor(0);
-    legend.SetNColumns(3);
-
-    // PCD 0
-    TF1* test = new TF1("test", OnePCD, minTime, maxTime, 4);
-    test->SetParameter(0, 1.5); // x
-    test->SetParameter(1, 1.4); // y
-    test->SetParameter(2, z); // z0
-    test->SetParameter(3, q0); // q
-    test->Draw(); 
-    test->SetLineColor(kRed);
-    legend.AddEntry(test, "PCD 0", "l"); 
-    
-    // PCD 1
     TF1* test1 = new TF1("test1", OnePCD, minTime, maxTime, 4);
     test1->SetParameter(0, 1.5); // x
     test1->SetParameter(1, 1.6); // y
@@ -269,12 +371,13 @@ Double_t ralphWF() {
     //double t[1] = {25.0};
     //double par[4] = {x, y0, z, q0};
     //cout << "final value: " << OnePCDWithOptions(t, par, 0, false, true) << endl;
-
     legend.Draw(); 
     canvas.Update();
     cout << "any key to continue" << endl;
     Char_t input; 
     cin >> input;  
     return 0;
+*/
 }
+
 
