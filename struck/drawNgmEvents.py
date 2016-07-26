@@ -12,7 +12,7 @@ import commands
 from scipy.fftpack import fft
 
 import ROOT
-#ROOT.gROOT.SetBatch(True) # uncomment to draw multi-page PDF
+ROOT.gROOT.SetBatch(True) # uncomment to draw multi-page PDF
 
 import struck_analysis_parameters
 
@@ -55,7 +55,7 @@ def print_tier2_info(tree, energies, sampling_freq_Hz=25.0e6):
             )
             i+=1
 
-def process_file(filename=None, n_plots=0):
+def process_file(filename=None, n_plots_total=0):
 
 
     #If input filename is null assume we want to examine the most recent file
@@ -72,14 +72,18 @@ def process_file(filename=None, n_plots=0):
     #threshold = 570 # keV, for generating multi-page PDF
     #threshold = 50 # ok for unshaped, unamplified data
 
+    use_adc_units = True # otherwise keV
+    do_fft = True
+
     # y axis limits:
-    y_min = -50
-    #y_max = 7000 # unamplified, keV
-    y_max = 200 # amplified, keV
+    y_min = -200 # keV
+    if use_adc_units:
+        y_min = -50 # ADC units
+    y_max = 500 # keV
+    if use_adc_units:
+        y_max = 200 # ADC units
 
     samples_to_avg = 100 # n baseline samples to use for energy 
-
-    n_plots_total = 10 # for drawing multi-page PDF, in batch mode
 
     #------------------------------------------------------
 
@@ -135,13 +139,16 @@ def process_file(filename=None, n_plots=0):
     trigger_time = card0.pretriggerdelay_block[0] # /sampling_freq_Hz*1e6
     print "trigger time: [microseconds]", trigger_time
 
-    frame_hist = ROOT.TH1D("hist", "", 100, 0, trace_length_us*1.1)
-    frame_hist.SetLineColor(ROOT.kWhite)
+    frame_hist = ROOT.TH1D("hist", "", int(tree.HitTree.GetNSamples()*1.05), 0, trace_length_us+1)
     frame_hist.SetXTitle("Time [#mus]")
-    #frame_hist.SetYTitle("Energy (with arbitrary offsets) [keV] ")
-    frame_hist.SetYTitle("ADC units ")
+    if use_adc_units:
+        frame_hist.SetYTitle("ADC units ")
+        sum_offset = 50
+    else:
+        frame_hist.SetYTitle("Energy (with arbitrary offsets) [keV] ")
+        
+
     frame_hist.GetYaxis().SetTitleOffset(1.3)
-    frame_hist.SetBinContent(1, pow(2,14))
 
     pave_text = ROOT.TPaveText(0.01, 0.01, 0.75, 0.07, "NDC")
     pave_text.SetTextAlign(11)
@@ -178,9 +185,14 @@ def process_file(filename=None, n_plots=0):
     
     # loop over all events in file
     i_entry = 0
+    n_plots = 0
     y_max_old = y_max
     # use while loop instead of for loop so we can modify i_entry if needed
     while i_entry < n_entries:
+
+        canvas.SetLogy(0)
+        canvas.SetLogx(0)
+
         y_max = y_max_old # reset at start of each event
        
         chargeEnergy = 0.0
@@ -188,6 +200,8 @@ def process_file(filename=None, n_plots=0):
         frame_hist.Draw()
         wfm_length = tree.HitTree.GetNSamples()
         sum_wfm = [0]*wfm_length
+        sum_wfm0 = [0]*wfm_length
+        sum_wfm1 = [0]*wfm_length
 
         #print "==> entry %i of %i | charge energy: %i" % ( i_entry, n_entries, chargeEnergy,)
       
@@ -208,21 +222,28 @@ def process_file(filename=None, n_plots=0):
                 color = ROOT.kBlack
 
 
-            #multiplier = calibration_values[channel]
-            multiplier = 1.0
+            multiplier = calibration_values[channel]
+            if use_adc_units:
+                multiplier = 1.0
             #print "entry %i, channel: %i, multiplier: %.2f" % (i_entry, channel, multiplier)
 
             # add an offset so the channels are draw at different levels
             #offset = 6000 - i*250
             offset = 0
+            #if channel == pmt_channel:
+            #    offset = 200
             if offset < y_min: y_min = offset - 100
-            if channel == pmt_channel:
-                offset = 100
 
             graph = tree.HitTree.GetGraph()
+
+            baseline = 0
+            for i_sample in xrange(samples_to_avg):
+                baseline += graph.GetY()[i_sample]
+            baseline /= samples_to_avg
+
             graph.SetLineColor(color)
             fcn_string = "(y - %s)*%s + %s" % (
-                graph.GetY()[0], multiplier, offset)
+                baseline, multiplier, offset)
             #print "fcn_string:", fcn_string
             fcn = ROOT.TF2("fcn",fcn_string)
             graph.Apply(fcn)
@@ -236,15 +257,17 @@ def process_file(filename=None, n_plots=0):
             graph.Draw("l")
             #print "\t entry %i, ch %i, slot %i" % ( i_entry-1, channel, slot,)
 
-            # construct a sum wfm
-            if channel + slot*16 != 0: # skip ch 0 since it had a pulser during testing:
-                #if slot != 0:
-                for i_point in xrange(tree.HitTree.GetNSamples()):
-                    y = graph.GetY()[i_point]
-                    sum_wfm[i_point] = sum_wfm[i_point] + y
+            # construct sum wfm
+            for i_point in xrange(tree.HitTree.GetNSamples()):
+                y = graph.GetY()[i_point]
+                sum_wfm[i_point] = sum_wfm[i_point] + y
+                if slot == 0:
+                    sum_wfm0[i_point] = sum_wfm0[i_point] + y
+                if slot == 1:
+                    sum_wfm1[i_point] = sum_wfm1[i_point] + y
                 
             # not working yet -- graph_max is always ~ -1111
-            graph_max = graph.GetMaximum()
+            graph_max = graph.GetHistogram().GetMaximum()
             if graph_max > y_max: 
                 y_max = graph_max
             #print "graph_max: %s, y_max: %s" % (graph_max, y_max)
@@ -255,11 +278,19 @@ def process_file(filename=None, n_plots=0):
             # end loop over channels
 
         sum_graph = ROOT.TGraph()
+        sum_graph0 = ROOT.TGraph()
+        sum_graph1 = ROOT.TGraph()
         for i_point in xrange(len(sum_wfm)):
-            sum_graph.SetPoint(i_point, i_point/sampling_freq_Hz*1e6, sum_wfm[i_point]+100)
+            sum_graph.SetPoint(i_point, i_point/sampling_freq_Hz*1e6, sum_wfm[i_point]+sum_offset)
+            sum_graph0.SetPoint(i_point, i_point/sampling_freq_Hz*1e6, sum_wfm0[i_point]+sum_offset*2)
+            sum_graph1.SetPoint(i_point, i_point/sampling_freq_Hz*1e6, sum_wfm1[i_point]+sum_offset*3)
 
         #sum_graph.SetLineWidth(3)
         sum_graph.Draw("l")
+        sum_graph0.SetLineColor(ROOT.kBlue)
+        sum_graph0.Draw("l")
+        sum_graph1.SetLineColor(ROOT.kRed)
+        sum_graph1.Draw("l")
 
         pave_text.Clear()
         pave_text.AddText("page %i, event %i" % (n_plots+1, i_entry/32))
@@ -279,6 +310,10 @@ def process_file(filename=None, n_plots=0):
         for i in xrange(len(channels)):
             legend.AddEntry( hists[i], legend_entries[i], "f")
 
+        legend.AddEntry(sum_graph, "sum","l")
+        legend.AddEntry(sum_graph0, "sum slot 0","l")
+        legend.AddEntry(sum_graph1, "sum slot 1","l")
+
         # line to show trigger time
         line = ROOT.TLine(trigger_time, y_min, trigger_time,y_max)
         line.SetLineWidth(2)
@@ -287,39 +322,41 @@ def process_file(filename=None, n_plots=0):
         legend.Draw()
         canvas.Update()
         n_plots += 1
-        print "n_plots", n_plots
+        print "n_plots / n_plots_total", n_plots, n_plots_total
+
+        if do_fft: 
+            # FFT, based on Jacopo's script
+            sum_fft = fft(sum_wfm)
+            sum_fft0 = fft(sum_wfm0)
+            sum_fft1 = fft(sum_wfm1)
+            fft_graph = ROOT.TGraph()
+            fft_graph.SetLineWidth(2)
+            fft_graph0 = ROOT.TGraph()
+            fft_graph0.SetLineColor(ROOT.kBlue)
+            fft_graph1 = ROOT.TGraph()
+            fft_graph1.SetLineColor(ROOT.kRed)
+            for i_point in xrange(len(sum_wfm)/2):
+                if i_point <= 0: continue
+                x = i_point*sampling_freq_Hz/1e6/2/len(sum_wfm)  # MHz?
+                fft_graph.SetPoint(fft_graph.GetN(), x, abs(sum_fft[i_point]))
+                fft_graph0.SetPoint(fft_graph0.GetN(), x, abs(sum_fft0[i_point]))
+                fft_graph1.SetPoint(fft_graph0.GetN(), x, abs(sum_fft1[i_point]))
+                if  abs(sum_fft[i_point]) > 1e4:
+                    print "freq=%s kHz | val = %.2e" % (
+                        x*1e3, 
+                        abs(sum_fft[i_point])
+                    )
+
 
         if not ROOT.gROOT.IsBatch(): 
-
-
-            if True: # do_fft:
-                # FFT, based on Jacopo's script
-                sum_fft = fft(sum_wfm)
-                fft_graph = ROOT.TGraph()
-                fft_graph.SetLineWidth(2)
-                for i_point in xrange(len(sum_wfm)/2):
-                    if i_point <= 0: continue
-                    x = i_point*sampling_freq_Hz/1e6/2/len(sum_wfm)  # MHz?
-                    #fft_graph.SetPoint(fft_graph.GetN(), x, abs(sum_fft[i_point]))
-                    fft_graph.SetPoint(fft_graph.GetN(), i_point, abs(sum_fft[i_point]))
-                    if  abs(sum_fft[i_point]) > 1e4:
-                        print "freq=%s kHz | val = %.2e" % (
-                            x*1e3, 
-                            abs(sum_fft[i_point])
-                        )
-                #fft_graph.Draw("l")
-                #canvas.Update()
-
-
 
             #print_tier2_info(tree, energies)
             val = raw_input("--> entry %i | enter to continue (q to quit, p to print, or entry number) " % i_entry)
 
             if val == 'q': sys.exit()
-            if val == 'p':
+            elif val == 'p':
                 canvas.Update()
-                canvas.Print("%s_entry_%i.png" % (basename, i_entry))
-                canvas.Print("%s_entry_%i.pdf" % (basename, i_entry))
+                canvas.Print("%s_event_%i.pdf" % (basename, n_plots-1))
             try:
                 i_entry = int(val)
                 print "getting entry %i" % i_entry
@@ -327,7 +364,9 @@ def process_file(filename=None, n_plots=0):
             except: 
                 pass
 
-                if True: # draw FFT
+                if do_fft: # draw FFT
+                    canvas.SetLogy(1)
+                    canvas.SetLogx(1)
                     fft_graph.Draw("alp")
                     fft_hist = fft_graph.GetHistogram()
                     fft_hist.SetXTitle("Freq [MHz]")
@@ -335,24 +374,48 @@ def process_file(filename=None, n_plots=0):
                     fft_hist.SetMinimum(100)
                     fft_hist.SetMaximum(1e5)
                     fft_hist.Draw()
-                    fft_graph.Draw("lp")
-                    canvas.SetLogy(1)
-                    canvas.SetLogx(1)
+                    fft_graph.Draw("l same")
+                    fft_graph0.Draw("l same")
+                    fft_graph1.Draw("l same")
                     canvas.Update()
-                    val = raw_input("--> FFT -- enter to continue (q to quit) ")
-                    if val == 'q': sys.exit()
+                    val = raw_input("--> FFT -- enter to continue (q to quit, p to print) ")
+                    if val == 'q': 
+                        sys.exit()
+                    elif val == 'p':
+                        canvas.Print("%s_FFT_event_%i.pdf" % (basename, n_plots-1))
                     canvas.SetLogy(0)
                     canvas.SetLogx(0)
 
         else:
             # if we run in batch mode, print a multi-page canvas
-            plot_name = "EventsWithChargeAbove%ikeV_6thLXe.pdf" % threshold
+            #plot_name = "EventsWithChargeAbove%ikeV_6thLXe.pdf" % threshold
+            plot_name = "2016_07_NoiseTests.pdf"
             if n_plots == 1:
-                plot_name = plot_name + "("
-            if n_plots >= n_plots_total:
-                plot_name = plot_name + ")"
-            print plot_name
+                canvas.Print("%s[" % plot_name)
+                #plot_name = plot_name + "("
+            #if n_plots >= n_plots_total:
+            #    plot_name = plot_name + ")"
             canvas.Print(plot_name)
+
+            if do_fft: # draw FFT
+                canvas.SetLogy(1)
+                canvas.SetLogx(1)
+                fft_graph.Draw("alp")
+                fft_hist = fft_graph.GetHistogram()
+                fft_hist.SetXTitle("Freq [MHz]")
+                fft_hist.SetTitle("Sum wfm FFT")
+                fft_hist.SetMinimum(100)
+                fft_hist.SetMaximum(1e5)
+                fft_hist.Draw()
+                fft_graph.Draw("l same")
+                fft_graph0.Draw("l same")
+                fft_graph1.Draw("l same")
+                canvas.Update()
+                canvas.Print(plot_name)
+
+            if n_plots >= n_plots_total:
+                canvas.Print("%s]" % plot_name)
+
             if n_plots >= n_plots_total:
                 print "quitting..."
                 sys.exit()
@@ -366,12 +429,12 @@ def process_file(filename=None, n_plots=0):
 
 if __name__ == "__main__":
 
-    n_plots = 0
+    n_plots_total = 50
     if len(sys.argv) > 1:
         for filename in sys.argv[1:]:
-            n_plots += process_file(filename, n_plots)
+            n_plots += process_file(filename, n_plots_total)
     else:
-        process_file()
+        process_file(n_plots_total=n_plots_total)
 
 
 
