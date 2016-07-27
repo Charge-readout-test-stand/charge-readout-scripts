@@ -213,41 +213,37 @@ TCanvas *c1;
 void fcn(Int_t &npar, Double_t *gin, Double_t &f, Double_t *par, Int_t iflag)
 {     
   Double_t delta;
+  Double_t error = 20.0;
   Double_t chisq = 0.0;
-  for (UInt_t i=0; i<16; i++) { //i is channel #
+  for (UInt_t i=0; i<60; i++) { //i is channel #
     Int_t nbins = hist[i]->GetNbinsX();
-    for (UInt_t n=200; n<600; n++) { //n is time sample
+    Double_t P[4]; //P[0] is along the wire, P[1} is transverse dir, P is coord sys of wire (origin=center of wire)
+    for (UInt_t n=200; n<610; n++) { //n is time sample
       Double_t t = n*.04; //each point in channel waveform separated by 40 ns
-      Double_t P[4]; //P[0] is along the wire, P[1} is transverse dir, P is coord sys of wire
       if (i<30) { //X channels
-      P[1] = par[0] - (-43.5+(3*i)); //x
-      P[0] = par[1];
+        P[0] = par[1];
+        P[1] = -43.5 + (3*i) - par[0]; //x; 2nd term = x pos of channel
       }
       else { //Y channels
-      P[0] = par[0];
-      P[1] = par[1] - (-43.5+(3*i)); //y
+        P[0] = par[0];
+        P[1] = par[1] - (-43.5+(3*i)); //y
       }
       P[2] = par[2];//z
       P[3] = par[3];//q
-      delta = ((hist[i]->GetBinContent(n) - OnePCD(&t, P)) * (hist[i]->GetBinContent(n) - OnePCD(&t, P)))/1.0;
-      chisq += delta;
-    }
- //   cout << "chisq " << chisq << endl;
-  }
-  
-    f = chisq;
- //   cout << "    " << endl;
- 
-  for (UInt_t i=0; i<16; i++) {
-    test[i]->SetParameter(0,-43.5+(3*i)+par[0]); // x
-    test[i]->SetParameter(1, -43.5+(3*i)+par[1]); // y
+      delta = ((hist[i]->GetBinContent(n) - OnePCD(&t, P)))/error;
+      chisq += delta*delta;
+     } 
+    test[i]->SetParameter(0,P[0]); // x
+    test[i]->SetParameter(1,P[1]); // y
     test[i]->SetParameter(2, par[2]); // z
-    test[i]->SetParameter(3, par[3]); // q
-  }      
+    test[i]->SetParameter(3, par[3]); // q  
+  }
+  cout << chisq << endl;
+  f = chisq; 
 }
 
 Double_t ralphWF() {
-  TFile *inputroot = TFile::Open("~/../manisha2/MC/Bi207_Full_Ralph_dcoeff0/digitization_dcoeff0/digi1_Bi207_Full_Ralph_dcoef0.root");
+  TFile *inputroot = TFile::Open("~/../manisha2/MC/e1MeV_dcoeff0/digitization_dcoeff0/digi1_e1MeV_dcoef0.root");
   TTree *tree = (TTree*) inputroot->Get("evtTree");
   vector<vector<double> > *ChannelWaveform=0; //defines pointer to vector of vectors
   cout << "n entries: " << tree->GetEntries() << endl;
@@ -259,10 +255,10 @@ Double_t ralphWF() {
   cout << "entry ChannelWaveform[0, 200]: " << ((*ChannelWaveform)[0])[200] << endl; //print out nth element of 16th waveform
   c1 = new TCanvas("c1", "");
 //  c1->Divide(5, 6);
-  for (UInt_t i=0; i<16; i++) {
+  for (UInt_t i=0; i<60; i++) {
     hist[i] = new TH1D("sampleHist", "", 800, 0, 32);//wfm_hist in fit_wfm.py gets assigned to this
     test[i] = new TF1("test", OnePCD, 0, 32, 4);
-    for (UInt_t n=200; n<600;  n++) {
+    for (UInt_t n=0; n<800;  n++) {
       Double_t ChannelWFelement = ((*ChannelWaveform)[i])[n];
       hist[i]->SetBinContent(n+1, ChannelWFelement);
      }
@@ -302,7 +298,7 @@ Double_t ralphWF() {
   cout << "best function value found so far: " << amin << " vertical dist remaining to min: " << edm << " how good is fit? 0=bad, 1=approx, 2=full matrix but forced positive-definite, 3=good " << icstat << endl;
   
   c1->Print("chisqfits3.pdf[");
-  for (UInt_t n=0; n<16;  n++) { 
+  for (UInt_t n=0; n<60;  n++) { 
 //    c1->cd(n+1);
     hist[n]->Draw();
     test[n]->Draw("same"); 
