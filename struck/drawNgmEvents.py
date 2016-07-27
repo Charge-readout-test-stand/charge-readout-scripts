@@ -42,9 +42,10 @@ def process_file(filename=None, n_plots_total=0):
     #threshold = 570 # keV, for generating multi-page PDF
     #threshold = 50 # ok for unshaped, unamplified data
 
-    units_to_use = 0 # 0=keV, 1=ADC units, 2=mV
+    units_to_use = 2 # 0=keV, 1=ADC units, 2=mV
 
     do_fft = True
+    do_fit = False #fit sine to sum wfm
 
     #------------------------------------------------------
 
@@ -209,19 +210,17 @@ def process_file(filename=None, n_plots_total=0):
             gain = card.gain[channel]
             voltage_range_mV = struck_analysis_parameters.get_voltage_range_mV_ngm(gain)
 
-
             try:
                 color = colors[channel+slot*16]
             except IndexError:
                 color = ROOT.kBlack
-
 
             multiplier = calibration_values[channel] # keV
             if units_to_use == 1: # ADC units
                 multiplier = 1.0
             elif units_to_use == 2: # mV
                 multiplier = voltage_range_mV/pow(2,14)
-            #print "entry %i, channel: %i, multiplier: %.2f" % (i_entry, channel, multiplier)
+            #print "entry %i, channel: %i, multiplier: %.2e" % (i_entry, channel, multiplier)
 
 
             graph = tree.HitTree.GetGraph()
@@ -281,6 +280,8 @@ def process_file(filename=None, n_plots_total=0):
         sum_graph = ROOT.TGraphErrors()
         sum_graph0 = ROOT.TGraphErrors()
         sum_graph1 = ROOT.TGraphErrors()
+
+        rms_noise = 0.0
         for i_point in xrange(len(sum_wfm)):
             sum_graph.SetPoint(i_point, i_point/sampling_freq_Hz*1e6, sum_wfm[i_point]+sum_offset)
             #sum_graph.SetPoint(i_point, i_point/sampling_freq_Hz*1e6, sum_wfm[i_point])
@@ -289,6 +290,11 @@ def process_file(filename=None, n_plots_total=0):
             sum_graph0.SetPointError(i_point, 0.0, 0.1*multiplier)
             sum_graph1.SetPoint(i_point, i_point/sampling_freq_Hz*1e6, sum_wfm1[i_point]+sum_offset*3)
             sum_graph1.SetPointError(i_point, 0.0, 0.1*multiplier)
+
+            if i_point < n_samples_to_avg:
+                rms_noise += pow(sum_wfm[i_point], 2.0)/n_samples_to_avg
+
+        rms_noise = math.sqrt(rms_noise)
 
         fit_fcn = ROOT.TF1("fit_fcn", "[0] + [1]*sin(2*pi*(x*[2]+[3]))", 0, trace_length_us)
         fit_fcn.SetLineColor(ROOT.kGreen+2)
@@ -311,9 +317,9 @@ def process_file(filename=None, n_plots_total=0):
         fit_fcn.SetParError(2, 0.1) # freq, MHz
         fit_fcn.SetParError(3, 0.5) # phase shift
 
-        # do the fit
-        #fit_result = sum_graph.Fit(fit_fcn, "SRM")
-        print "freq: ", fit_fcn.GetParameter(2)
+        if do_fit: # do the fit
+            fit_result = sum_graph.Fit(fit_fcn, "SRM")
+            print "freq: ", fit_fcn.GetParameter(2)
 
         #sum_graph.SetLineWidth(3)
         sum_graph.Draw("xl")
@@ -339,7 +345,7 @@ def process_file(filename=None, n_plots_total=0):
         for i in xrange(len(channels)):
             legend.AddEntry( hists[i], legend_entries[i], "f")
 
-        legend.AddEntry(sum_graph, "sum","l")
+        legend.AddEntry(sum_graph, "sum %.1f" % rms_noise,"l")
         legend.AddEntry(sum_graph0, "sum slot 0","l")
         legend.AddEntry(sum_graph1, "sum slot 1","l")
 
