@@ -119,7 +119,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     do_debug = not gROOT.IsBatch()
     do_draw_extra = not gROOT.IsBatch()
     # samples at wfm start and end to use for energy calc:
-    n_baseline_samples_to_use = 100
+    baseline_average_time_microseconds = 4.0 # 100 samples at 25 MHz
 
     sampling_freq_Hz = struck_analysis_parameters.sampling_freq_Hz
    
@@ -258,32 +258,40 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     event = array('I', [0]) # unsigned int
     out_tree.Branch('event', event, 'event/i')
 
-    sub_event = array('I', [0]) # unsigned int
-    out_tree.Branch('sub_event', sub_event, 'sub_event/i')
+    if isMC:
 
-    NOP = array("I", [0])
-    out_tree.Branch('NOP', NOP, 'NOP/i')
+        sub_event = array('I', [0]) # unsigned int
+        out_tree.Branch('sub_event', sub_event, 'sub_event/i')
 
-    NOPactive = array("I", [0])
-    out_tree.Branch('NOPactive', NOPactive, 'NOPactive/i')
+        NOP = array("I", [0])
+        out_tree.Branch('NOP', NOP, 'NOP/i')
 
-    NPE = array("d", [0])
-    out_tree.Branch('NPE', NPE, 'NPE/D')
+        NOPactive = array("I", [0])
+        out_tree.Branch('NOPactive', NOPactive, 'NOPactive/i')
 
-    NPEactive = array("d", [0])
-    out_tree.Branch('NPEactive', NPEactive, 'NPEactive/D')
+        NPE = array("d", [0])
+        out_tree.Branch('NPE', NPE, 'NPE/D')
+
+        NPEactive = array("d", [0])
+        out_tree.Branch('NPEactive', NPEactive, 'NPEactive/D')
 
     file_start_time = array('I', [0]) # unsigned int
     file_start_time[0] = posix_start_time
     out_tree.Branch('file_start_time', file_start_time, 'file_start_time/i')
     run_tree.Branch('file_start_time', file_start_time, 'file_start_time/i')
 
-    time_stamp = array('L', [0]) # timestamp for each event, unsigned long
-    out_tree.Branch('time_stamp', time_stamp, 'time_stamp/l')
-
     sampling_frequency_Hz = array('d', [0]) # double
     out_tree.Branch('sampling_freq_Hz', sampling_frequency_Hz, 'sampling_freq_Hz/D')
     sampling_frequency_Hz[0] = sampling_freq_Hz
+    if isNGM:
+        sys_config = root_file.Get("NGMSystemConfiguration")
+        card = sys_config.GetSlotParameters().GetParValueO("card",0)
+        sampling_frequency_Hz[0] = struck_analysis_parameters.get_clock_frequency_Hz_ngm(card.clock_source_choice)
+        sampling_freq_Hz = sampling_frequency_Hz[0]
+        print "sampling frequency [MHz]:", sampling_frequency_Hz[0]/1e6
+
+    time_stamp = array('L', [0]) # timestamp for each event, unsigned long
+    out_tree.Branch('time_stamp', time_stamp, 'time_stamp/l')
 
     time_stampDouble = array('d', [0]) # double
     out_tree.Branch('time_stampDouble', time_stampDouble, 'time_stampDouble/D')
@@ -312,7 +320,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     else:
         run_time[0] = (tree.GetMaximum("time_stampDouble") -
             tree.GetMinimum("time_stampDouble"))/sampling_freq_Hz
-    print "run time: %.2f seconds" % run_time[0]
+    print "run duration: %.2f seconds" % run_time[0]
 
     channel = array('I', [0]*n_channels_in_event) # unsigned int
     out_tree.Branch('channel', channel, 'channel[%i]/i' % n_channels_in_event)
@@ -330,7 +338,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     elif isNGM:
         ngm_config = root_file.Get("NGMSystemConfiguration")
         trigger_time[0] = ngm_config.GetSlotParameters().GetParValueO("card",0).pretriggerdelay_block[0] 
-        print "NGM trigger_time:", trigger_time[0]
+        print "NGM trigger_time [microseconds]:", trigger_time[0]/sampling_frequency_Hz[0]*1e6
     else:
         trigger_hist = TH1D("trigger_hist","",5000,0,5000)
         selection = "channel==%i && wfm_max - wfm%i[0] > 20" % (pmt_channel, pmt_channel)
@@ -356,7 +364,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     # store some processing parameters:
     n_baseline_samples = array('I', [0]) # double
     out_tree.Branch('n_baseline_samples', n_baseline_samples, 'n_baseline_samples/i')
-    n_baseline_samples[0] = n_baseline_samples_to_use
+    n_baseline_samples[0] = int(baseline_average_time_microseconds*sampling_freq_Hz/1e6)
+    print "n_baseline_samples:", n_baseline_samples[0]
 
     decay_time = array('d', [0]*n_channels_in_event) # double
     out_tree.Branch('decay_time', decay_time, 'decay_time[%i]/D' % n_channels_in_event)
@@ -568,7 +577,16 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         is_2Vinput[i] = struck_analysis_parameters.is_2Vinput(baseline_mean_file[i])
         if isMC:
             is_2Vinput[i] = False
-        elif is_2Vinput[i]:
+        if isNGM:
+            slot = 0
+            if i_channel > 15: slot = 1
+            card = sys_config.GetSlotParameters().GetParValueO("card",slot)
+            gain = card.gain[i_channel-16*slot]
+            voltage_range_mV = struck_analysis_parameters.get_voltage_range_mV_ngm(gain)
+            is_2Vinput[i] = 1
+            if voltage_range_mV == 5000.0:
+                is_2Vinput[i] = 0
+        elif is_2Vinput[i]: # don't do this for NGM -- seems like we treated is_2V differently in the past
             print "\t channel %i used 2V input range" % i_channel
             print "\t dividing calibration by 2.5"
             calibration_values[i_channel] /= 2.5
@@ -576,7 +594,6 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         # this doesn't seem very reliable
         #is_amplified[i] = struck_analysis_parameters.is_amplified(
         #    baseline_mean_file[i], baseline_rms_file[i])
-
 
         if is_amplified[i] == 0 and not isMC:
             if i_channel != pmt_channel:
@@ -703,7 +720,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         # print periodic output message
         if i_entry % reporting_period == 0:
             now = time.clock()
-            print "----> entry %i of %i: %.2f percent done in %.1f seconds | %i events in %.1f seconds (%.2f Hz)" % (
+            print "----> entry %i of %i: %.2f percent done in %.1f seconds | %i entries in %.1f seconds (%.2f Hz)" % (
                 i_entry, 
                 n_entries, 
                 100.0*i_entry/n_entries, 
@@ -738,7 +755,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             time_stampDouble[0] = tree.EventTime/sampling_freq_Hz
         elif isNGM:
             time_stamp[0] = int( tree.HitTree.GetRawClock() ) 
-            time_stampDouble[0] = tree.HitTree.GetRawClock()/sampling_freq_Hz
+            time_stampDouble[0] = tree.HitTree.GetRawClock()
             n_channels_in_this_event = 0
         else:
             time_stamp[0] = tree.time_stamp
@@ -799,7 +816,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                         "event_time_stamp:", time_stamp[0], \
                         "time diff:", tree.HitTree.GetRawClock() - time_stamp[0]
 
-                if (abs( tree.HitTree.GetRawClock() - time_stamp[0] ) > 2):
+                # allowable number of clock ticks of difference: 80 ns 
+                clock_tick_diff = sampling_frequency_Hz[0]*80.0/1e9
+                if (abs( tree.HitTree.GetRawClock() - time_stamp[0] ) > clock_tick_diff):
                     print "===> end of event after %i channels: %i clock tick diff" % (
                         (i+1),
                         abs( tree.HitTree.GetRawClock() - time_stamp[0] ),
@@ -1029,7 +1048,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     
     run_tree.Write()
 
-    print "done processing"
+    print "done processing %i events in %.1e seconds" % (out_tree.GetEntries(), time.clock()-start_time)
     print "writing", out_filename
     out_tree.Write()
 
