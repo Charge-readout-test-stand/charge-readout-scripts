@@ -236,7 +236,7 @@ def process_file(filename=None, n_plots_total=0):
             rms_noise = 0.0
             for i_sample in xrange(n_samples_to_avg):
                 rms_noise += pow(graph.GetY()[i_sample]-baseline, 2.0)/n_samples_to_avg
-            rms_noise = math.sqrt(rms_noise)
+            rms_noise = math.sqrt(rms_noise)*multiplier
                 
 
             # add an offset so the channels are draw at different levels
