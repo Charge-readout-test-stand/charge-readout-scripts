@@ -15,6 +15,10 @@
 #include "TTree.h"
 #include "TFile.h"
 #include "TMinuit.h"
+#include <iostream>
+#include <vector>
+
+using namespace std;
 
 // options:
 //Double_t diagonal = 3.0; // mm
@@ -208,77 +212,63 @@ TCanvas *c1;
 
 void fcn(Int_t &npar, Double_t *gin, Double_t &f, Double_t *par, Int_t iflag)
 {     
-  //cout << "entries test" << hist->GetEntries() << endl;
-  //cout << "nbins" << nbins << endl;
-  //cout << hist->GetNbinsX() << endl;
   Double_t delta;
+  Double_t error = 20.0;
   Double_t chisq = 0.0;
-  for (UInt_t i=0; i<3; i++) { //i is channel #
+  for (UInt_t i=0; i<60; i++) { //i is channel #
     Int_t nbins = hist[i]->GetNbinsX();
-    for (UInt_t n=190; n<600; n++) { //n is time sample
-      Double_t t = n*.04; //each point in the channel waveform separated by 40 ns
-      Double_t P[4];
-      P[0] = -43.5+(3*i)+par[0]; //x
-      P[1] = -43.5+(3*i)+par[1]; //y
+    Double_t P[4]; //P[0] is along the wire, P[1} is transverse dir, P is coord sys of wire (origin=center of wire)
+    for (UInt_t n=200; n<610; n++) { //n is time sample
+      Double_t t = n*.04; //each point in channel waveform separated by 40 ns
+      if (i<30) { //X channels
+        P[0] = par[1];
+        P[1] = -43.5 + (3*i) - par[0]; //x; 2nd term = x pos of channel
+      }
+      else { //Y channels
+        P[0] = par[0];
+        P[1] = par[1] - (-43.5+(3*i)); //y
+      }
       P[2] = par[2];//z
       P[3] = par[3];//q
-      delta = ((hist[i]->GetBinContent(n) - OnePCD(&t, P)) * (hist[i]->GetBinContent(n) - OnePCD(&t, P)))/20.0;
-      chisq += delta;
-    }
-    cout << "chisq " << chisq << endl;
-  }
-    f = chisq;
-    cout << "    " << endl;
-    
-    //hist[0]->Draw();
-  for (UInt_t i=0; i<3; i++) {
-    test[i]->SetParameter(0,-43.5+(3*i)+par[0]); // x
-    test[i]->SetParameter(1, -43.5+(3*i)+par[1]); // y
+      delta = ((hist[i]->GetBinContent(n) - OnePCD(&t, P)))/error;
+      chisq += delta*delta;
+     } 
+    test[i]->SetParameter(0,P[0]); // x
+    test[i]->SetParameter(1,P[1]); // y
     test[i]->SetParameter(2, par[2]); // z
-    test[i]->SetParameter(3, par[3]); // q
-    //hist[i]->Draw("same");
-    //test[i]->Draw("same");
-    //test[i]->SetLineColor(kRed);
- }
-      
+    test[i]->SetParameter(3, par[3]); // q  
+  }
+  cout << chisq << endl;
+  f = chisq; 
 }
 
-cout << "done" << endl;
-    c1->Update();
-    Int_t pause;
-    cin >> pause;
-
 Double_t ralphWF() {
-  TFile *inputroot = TFile::Open("~/MC/Bi207_Full_Ralph_dcoeff0/digitization_dcoeff0/digi1_Bi207_Full_Ralph_dcoef0.root");
+  TFile *inputroot = TFile::Open("~/../manisha2/MC/e1MeV_dcoeff0/digitization_dcoeff0/digi1_e1MeV_dcoef0.root");
   TTree *tree = (TTree*) inputroot->Get("evtTree");
-  c1 = new TCanvas("c1", "");
-//  c1->cd();
-  vector<vector<double> > *ChannelWaveform; //defines pointer to vector of vectors
+  vector<vector<double> > *ChannelWaveform=0; //defines pointer to vector of vectors
+  cout << "n entries: " << tree->GetEntries() << endl;
   tree->SetBranchAddress("ChannelWaveform", &ChannelWaveform);
-  cout << tree->GetEntry(1) << endl;
-  cout << "size of ChannelWaveform: " << (*ChannelWaveform).size() << endl; //number of channels (this should be 60)
+  tree->GetEntry(3);
+
+  cout << "size of ChannelWaveform: " << (*ChannelWaveform).size() << endl; //number of channels (should be 60)
   cout << "size of ChannelWaveform[20]: " << ((*ChannelWaveform)[20]).size() << endl; //print out size of nth ChannelWaveform
   cout << "entry ChannelWaveform[0, 200]: " << ((*ChannelWaveform)[0])[200] << endl; //print out nth element of 16th waveform
-  
-  c1->Divide(30, 2);
-  for (UInt_t i=0; i<3;/*i<(((*ChannelWaveform).size())-1);*/ i++) {
+  c1 = new TCanvas("c1", "");
+//  c1->Divide(5, 6);
+  for (UInt_t i=0; i<60; i++) {
     hist[i] = new TH1D("sampleHist", "", 800, 0, 32);//wfm_hist in fit_wfm.py gets assigned to this
     test[i] = new TF1("test", OnePCD, 0, 32, 4);
-    for (UInt_t n=0; n<800;/*n<((*ChannelWaveform)[i].size());*/ n++) {
+    for (UInt_t n=0; n<800;  n++) {
       Double_t ChannelWFelement = ((*ChannelWaveform)[i])[n];
       hist[i]->SetBinContent(n+1, ChannelWFelement);
      }
     cout << "contents of bin " << hist[0]->GetBinContent(100) << endl;
-    c1->cd(i);
-    hist[i]->Draw();
- //   test[i]->Draw("same"); 
-   // test[i]->SetLineColor(kRed);
-    c1->Update();
-//    c1->Print("chisqhist_i.png");
-  //  cout << "stop" << endl;
-    //Int_t pause;
-//    cin >> pause; 
+ //   c1->cd(i+1);
+//    hist[i]->Draw();
+//    c1->Update();
+
   }
+ 
   cout << "Hists filled and drawn" << endl;
 
   TMinuit *gMinuit = new TMinuit(4);  //initialize TMinuit with a maximum of 4 params
@@ -300,20 +290,24 @@ Double_t ralphWF() {
   arglist[1] = 1;
   gMinuit->mnexcm("MIGRAD", arglist, 2, ierflg);
 
-  cout << "Printing out results: " << endl; //BAD; goes to fcn
+  cout << "Printing out results: " << endl; 
 
   Double_t amin, edm, errdef;
   Int_t nvpar, nparx, icstat;
   gMinuit->mnstat(amin, edm, errdef, nvpar, nparx, icstat);
   cout << "best function value found so far: " << amin << " vertical dist remaining to min: " << edm << " how good is fit? 0=bad, 1=approx, 2=full matrix but forced positive-definite, 3=good " << icstat << endl;
- 
-  for (UInt_t n=0; n<3; /* n<((*ChannelWaveform).size());*/ n++) { 
-    c1->cd(n);
+  
+  c1->Print("chisqfits3.pdf[");
+  for (UInt_t n=0; n<60;  n++) { 
+//    c1->cd(n+1);
+    hist[n]->Draw();
     test[n]->Draw("same"); 
     test[n]->SetLineColor(kRed);
+    test[n]->SetLineStyle(7);
     c1->Update();
+    c1->Print("chisqfits3.pdf");
   }
-    c1->Print("chisqhist.png");
+    c1->Print("chisqfits3.pdf]");
     cout << "Hists and fits drawn" << endl;
     Int_t pause;
     cin >> pause; 
