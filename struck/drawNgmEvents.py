@@ -42,7 +42,7 @@ def process_file(filename=None, n_plots_total=0):
     #threshold = 570 # keV, for generating multi-page PDF
     #threshold = 50 # ok for unshaped, unamplified data
 
-    units_to_use = 2 # 0=keV, 1=ADC units, 2=mV
+    units_to_use = 0 # 0=keV, 1=ADC units, 2=mV
 
     do_fft = True
     do_fit = False #fit sine to sum wfm
@@ -82,21 +82,21 @@ def process_file(filename=None, n_plots_total=0):
     calibration_values = struck_analysis_parameters.calibration_values
     channel_map = struck_analysis_parameters.channel_map
     pmt_channel = struck_analysis_parameters.pmt_channel
+    print "pmt_channel:", pmt_channel
 
     charge_channels_to_use = struck_analysis_parameters.charge_channels_to_use
     channels = []
     for (channel, value) in enumerate(charge_channels_to_use):
         #print channel, value
-        if value: channels.append(channel)
+        if value is not 0: channels.append(channel)
+    print "there are %i charge channels" % len(channels)
     channels.append(pmt_channel)
     n_channels = len(channels)
     colors = struck_analysis_parameters.get_colors()
 
-    print "processing file: ", filename
-
     basename = os.path.basename(filename)
     basename = os.path.splitext(basename)[0]
-    print "basename:", basename
+    #print "basename:", basename
 
     # open the root file and grab the tree
     root_file = ROOT.TFile(filename)
@@ -203,15 +203,16 @@ def process_file(filename=None, n_plots_total=0):
 
             tree.GetEntry(i_entry)
             i_entry += 1
-            channel = tree.HitTree.GetChannel()
             slot = tree.HitTree.GetSlot()
+            card_channel = tree.HitTree.GetChannel() # 0 to 16 for each card
+            channel = card_channel + 16*slot # 0 to 31
             card = sys_config.GetSlotParameters().GetParValueO("card",slot)
 
-            gain = card.gain[channel]
+            gain = card.gain[card_channel]
             voltage_range_mV = struck_analysis_parameters.get_voltage_range_mV_ngm(gain)
 
             try:
-                color = colors[channel+slot*16]
+                color = colors[channel]
             except IndexError:
                 color = ROOT.kBlack
 
@@ -220,8 +221,21 @@ def process_file(filename=None, n_plots_total=0):
                 multiplier = 1.0
             elif units_to_use == 2: # mV
                 multiplier = voltage_range_mV/pow(2,14)
-            #print "entry %i, channel: %i, multiplier: %.2e" % (i_entry, channel, multiplier)
+            elif units_to_use == 0 and channel == pmt_channel: # keV
+                # for digitizer testing, using a typical chanrge-channel energy
+                # conversion, even for PMT channel!!! FIXME
+                multiplier = calibration_values[0]
+                print "*** WARNING -- setting pmt calibration to calibration_values[0] for digitizer tests!!"
 
+
+            if False: # print debug output
+                print "entry %i | slot %i | card ch %i | ch %i | multiplier: %.4f" % (
+                    i_entry, 
+                    slot,
+                    card_channel,
+                    channel, 
+                    multiplier,
+                )
 
             graph = tree.HitTree.GetGraph()
 
@@ -268,8 +282,8 @@ def process_file(filename=None, n_plots_total=0):
                     sum_wfm1[i_point] = sum_wfm1[i_point] + y - offset
                 
             # legend uses hists for color/fill info
-            legend_entries[channel+slot*16] = "%s %.1f" % (
-                channel_map[channel+slot*16], 
+            legend_entries[channel] = "%s %.1f" % (
+                channel_map[channel], 
                 #energy,
                 rms_noise,
             ) 
@@ -456,7 +470,7 @@ def process_file(filename=None, n_plots_total=0):
 
 if __name__ == "__main__":
 
-    n_plots_total = 10
+    n_plots_total = 1
     n_plots_so_far = 0
     if len(sys.argv) > 1:
         for filename in sys.argv[1:]:
