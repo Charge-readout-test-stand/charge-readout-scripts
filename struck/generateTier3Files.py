@@ -296,6 +296,13 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     time_stampDouble = array('d', [0]) # double
     out_tree.Branch('time_stampDouble', time_stampDouble, 'time_stampDouble/D')
 
+    if isNGM: # keep time stamps for individual channels
+        time_stamp_ch = array('L', [0]*n_channels) # timestamp for each event, unsigned long
+        out_tree.Branch('time_stamp_ch', time_stamp_ch, 'time_stamp_ch[%i]/l' % n_channels)
+
+        time_stampDouble_ch = array('d', [0]*n_channels) # double
+        out_tree.Branch('time_stampDouble_ch', time_stampDouble_ch, 'time_stampDouble_ch[%i]/D' % n_channels)
+
     time_since_last = array('d', [0]) # double
     out_tree.Branch('time_since_last', time_since_last, 'time_since_last/D')
 
@@ -713,9 +720,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     n_channels_in_this_event = 0
     while i_entry < n_entries:
         tree.GetEntry(i_entry)
-
-
-        if i_entry > 100000: break # debugging
+        #if i_entry > 100000: break # debugging
 
         # print periodic output message
         if i_entry % reporting_period == 0:
@@ -730,7 +735,6 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 reporting_period/(now-last_time),
             )
             last_time = now
-
 
         # set event-level output tree variables
         if isMC:
@@ -807,7 +811,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 i = tree.HitTree.GetSlot()*16 + tree.HitTree.GetChannel()
 
                 channel[i] = tree.HitTree.GetSlot()*16 + tree.HitTree.GetChannel()
-                
+                time_stamp_ch[i] = int( tree.HitTree.GetRawClock() ) # time stamp for this channel
+                time_stampDouble_ch[i] = tree.HitTree.GetRawClock() # time stamp for this channel
+
                 if do_debug: # debugging
                     print "NGM event", n_events, \
                         "i", i, \
