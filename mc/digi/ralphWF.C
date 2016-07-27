@@ -214,16 +214,22 @@ void fcn(Int_t &npar, Double_t *gin, Double_t &f, Double_t *par, Int_t iflag)
 {     
   Double_t delta;
   Double_t chisq = 0.0;
-  for (UInt_t i=0; i<6; i++) { //i is channel #
+  for (UInt_t i=0; i<16; i++) { //i is channel #
     Int_t nbins = hist[i]->GetNbinsX();
     for (UInt_t n=200; n<600; n++) { //n is time sample
       Double_t t = n*.04; //each point in channel waveform separated by 40 ns
-      Double_t P[4]; //P is in real-world coord system
-      P[0] = -43.5+(3*i)+par[0]; //x
-      P[1] = -43.5+(3*i)+par[1]; //y
+      Double_t P[4]; //P[0] is along the wire, P[1} is transverse dir, P is coord sys of wire
+      if (i<30) { //X channels
+      P[1] = par[0] - (-43.5+(3*i)); //x
+      P[0] = par[1];
+      }
+      else { //Y channels
+      P[0] = par[0];
+      P[1] = par[1] - (-43.5+(3*i)); //y
+      }
       P[2] = par[2];//z
       P[3] = par[3];//q
-      delta = ((hist[i]->GetBinContent(n) - OnePCD(&t, P)) * (hist[i]->GetBinContent(n) - OnePCD(&t, P)))/20.0;
+      delta = ((hist[i]->GetBinContent(n) - OnePCD(&t, P)) * (hist[i]->GetBinContent(n) - OnePCD(&t, P)))/1.0;
       chisq += delta;
     }
  //   cout << "chisq " << chisq << endl;
@@ -232,7 +238,7 @@ void fcn(Int_t &npar, Double_t *gin, Double_t &f, Double_t *par, Int_t iflag)
     f = chisq;
  //   cout << "    " << endl;
  
-  for (UInt_t i=0; i<6; i++) {
+  for (UInt_t i=0; i<16; i++) {
     test[i]->SetParameter(0,-43.5+(3*i)+par[0]); // x
     test[i]->SetParameter(1, -43.5+(3*i)+par[1]); // y
     test[i]->SetParameter(2, par[2]); // z
@@ -252,8 +258,8 @@ Double_t ralphWF() {
   cout << "size of ChannelWaveform[20]: " << ((*ChannelWaveform)[20]).size() << endl; //print out size of nth ChannelWaveform
   cout << "entry ChannelWaveform[0, 200]: " << ((*ChannelWaveform)[0])[200] << endl; //print out nth element of 16th waveform
   c1 = new TCanvas("c1", "");
-  c1->Divide(3, 2);
-  for (UInt_t i=0; i<6; i++) {
+//  c1->Divide(5, 6);
+  for (UInt_t i=0; i<16; i++) {
     hist[i] = new TH1D("sampleHist", "", 800, 0, 32);//wfm_hist in fit_wfm.py gets assigned to this
     test[i] = new TF1("test", OnePCD, 0, 32, 4);
     for (UInt_t n=200; n<600;  n++) {
@@ -261,11 +267,12 @@ Double_t ralphWF() {
       hist[i]->SetBinContent(n+1, ChannelWFelement);
      }
     cout << "contents of bin " << hist[0]->GetBinContent(100) << endl;
-    c1->cd(i+1);
-    hist[i]->Draw();
-    }
-  c1->Update();
+ //   c1->cd(i+1);
+//    hist[i]->Draw();
+//    c1->Update();
 
+  }
+ 
   cout << "Hists filled and drawn" << endl;
 
   TMinuit *gMinuit = new TMinuit(4);  //initialize TMinuit with a maximum of 4 params
@@ -294,17 +301,17 @@ Double_t ralphWF() {
   gMinuit->mnstat(amin, edm, errdef, nvpar, nparx, icstat);
   cout << "best function value found so far: " << amin << " vertical dist remaining to min: " << edm << " how good is fit? 0=bad, 1=approx, 2=full matrix but forced positive-definite, 3=good " << icstat << endl;
   
-  c1->Print("chisqfits.pdf[");
-  for (UInt_t n=0; n<6;  n++) { 
-    c1->cd(n+1);
+  c1->Print("chisqfits3.pdf[");
+  for (UInt_t n=0; n<16;  n++) { 
+//    c1->cd(n+1);
     hist[n]->Draw();
     test[n]->Draw("same"); 
     test[n]->SetLineColor(kRed);
-    test[n]->SetLineStyle(9);
+    test[n]->SetLineStyle(7);
     c1->Update();
-    c1->Print("chisqfits.pdf");
+    c1->Print("chisqfits3.pdf");
   }
-    c1->Print("chisqfits.pdf]");
+    c1->Print("chisqfits3.pdf]");
     cout << "Hists and fits drawn" << endl;
     Int_t pause;
     cin >> pause; 
