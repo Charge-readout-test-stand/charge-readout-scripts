@@ -215,11 +215,11 @@ void TransformCoord (Double_t *par, Double_t *P, UInt_t i)
 {
   if (i<30) { //X channels (0-29)
     P[0] = par[1];
-    P[1] = -43.5 + (3*i) - par[0]; //x
+    P[1] = -43.5 + (3*i) - par[0]; 
   }
   else { //Y channels (30-59)
     P[0] = par[0];
-    P[1] = par[1] - (-43.5+(3*(i-30))); //y
+    P[1] = par[1] - (-43.5+(3*(i-30)));
   }
 
   P[2] = par[2];//z
