@@ -17,7 +17,7 @@
 #include "TMinuit.h"
 #include <iostream>
 #include <vector>
-
+#include <sstream>
 using namespace std;
 
 // options:
@@ -209,36 +209,69 @@ Double_t TwoPCDsOneZ(Double_t *var, Double_t *par) {
 TH1D *hist[60]; 
 TF1 *test[60]; 
 TCanvas *c1;
+UInt_t ncalls = 0;
+
+void TransformCoord (Double_t *par, Double_t *P, UInt_t i)
+{
+  if (i<30) { //X channels
+    P[0] = par[1];
+    P[1] = -43.5 + (3*i) - par[0]; //x; 2nd term = x pos of channel
+  }
+  else { //Y channels
+    P[0] = par[0];
+    P[1] = par[1] - (-43.5+(3*i)); //y
+  }
+
+  P[2] = par[2];//z
+  P[3] = par[3];//q
+}
+
+void draw(Double_t *par)
+{
+  c1->SetGrid();
+  c1->Print("chisqfits3.pdf[");
+  for (UInt_t i=0; i<60;  i++) { 
+    Double_t P[4]; //P[0] is along the wire, P[1} is transverse dir, P is coord sys of wire (origin=center of wire)
+    TransformCoord(par, P, i);
+    test[i]->SetParameter(0,P[0]); // x
+    test[i]->SetParameter(1,P[1]); // y
+    test[i]->SetParameter(2, par[2]); // z
+    test[i]->SetParameter(3, par[3]); // q  
+
+    hist[i]->Draw();
+    test[i]->Draw("same"); 
+    test[i]->SetLineColor(kRed);
+    test[i]->SetLineStyle(7);
+    c1->Update();
+    c1->Print("chisqfits3.pdf");
+  }
+    c1->Print("chisqfits3.pdf]");
+    cout << "Hists and fits drawn" << endl;
+    Int_t pause;
+    cin >> pause; 
+}
 
 void fcn(Int_t &npar, Double_t *gin, Double_t &f, Double_t *par, Int_t iflag)
 {     
   Double_t delta;
   Double_t error = 20.0;
   Double_t chisq = 0.0;
+/*  if (ncalls == 1) {
+    draw(par);
+    } */
+  ncalls += 1;
   for (UInt_t i=0; i<60; i++) { //i is channel #
     Int_t nbins = hist[i]->GetNbinsX();
     Double_t P[4]; //P[0] is along the wire, P[1} is transverse dir, P is coord sys of wire (origin=center of wire)
+    TransformCoord(par, P, i);
     for (UInt_t n=200; n<610; n++) { //n is time sample
       Double_t t = n*.04; //each point in channel waveform separated by 40 ns
-      if (i<30) { //X channels
-        P[0] = par[1];
-        P[1] = -43.5 + (3*i) - par[0]; //x; 2nd term = x pos of channel
-      }
-      else { //Y channels
-        P[0] = par[0];
-        P[1] = par[1] - (-43.5+(3*i)); //y
-      }
-      P[2] = par[2];//z
-      P[3] = par[3];//q
       delta = ((hist[i]->GetBinContent(n) - OnePCD(&t, P)))/error;
-      chisq += delta*delta;
+      chisq += delta*delta/410.0/60.0;//chisq per deg of freedom
      } 
-    test[i]->SetParameter(0,P[0]); // x
-    test[i]->SetParameter(1,P[1]); // y
-    test[i]->SetParameter(2, par[2]); // z
-    test[i]->SetParameter(3, par[3]); // q  
   }
-  cout << chisq << endl;
+//  cout << "ncalls " << ncalls << " chisq " << chisq << " x " << par[0] << " y " << par[1] << " z " << par[2] << " q " << par[3] << endl;
+
   f = chisq; 
 }
 
@@ -254,27 +287,28 @@ Double_t ralphWF() {
   cout << "size of ChannelWaveform[20]: " << ((*ChannelWaveform)[20]).size() << endl; //print out size of nth ChannelWaveform
   cout << "entry ChannelWaveform[0, 200]: " << ((*ChannelWaveform)[0])[200] << endl; //print out nth element of 16th waveform
   c1 = new TCanvas("c1", "");
-//  c1->Divide(5, 6);
+  
   for (UInt_t i=0; i<60; i++) {
-    hist[i] = new TH1D("sampleHist", "", 800, 0, 32);//wfm_hist in fit_wfm.py gets assigned to this
+    ostringstream name;
+    name << "sampleHist" << i;
+    hist[i] = new TH1D(name.str().c_str(), name.str().c_str(), 800, 0, 32);//wfm_hist in fit_wfm.py gets assigned to this
     test[i] = new TF1("test", OnePCD, 0, 32, 4);
     for (UInt_t n=0; n<800;  n++) {
       Double_t ChannelWFelement = ((*ChannelWaveform)[i])[n];
       hist[i]->SetBinContent(n+1, ChannelWFelement);
      }
-    cout << "contents of bin " << hist[0]->GetBinContent(100) << endl;
- //   c1->cd(i+1);
-//    hist[i]->Draw();
-//    c1->Update();
-
-  }
+//    cout << "contents of bin " << hist[0]->GetBinContent(100) << endl;
+    }
  
-  cout << "Hists filled and drawn" << endl;
+  cout << "Hists filled" << endl; 
 
   TMinuit *gMinuit = new TMinuit(4);  //initialize TMinuit with a maximum of 4 params
   gMinuit->SetFCN(fcn); 
- 
-  cout << "TMinuit has begun" << endl; //good
+
+//  Int_t nvpar, nparx, icstat;
+//  if (icstat < 3 ) {
+
+  cout << "TMinuit has begun" << endl; 
   Double_t arglist[4];
   Int_t ierflg = 0;
   arglist[0] = 1;
@@ -284,33 +318,54 @@ Double_t ralphWF() {
   gMinuit->mnparm(2, "z", 10, 3, 0, 0, ierflg);//mm
   gMinuit->mnparm(3, "q", 35000, 5000, 0, 0, ierflg);
   
-  cout << "Parameters set, Minimization starting" << endl;//good
+  cout << "Parameters set, Minimization starting" << endl;
 
-  arglist[0] = 500;
+  arglist[0] = 10000;
   arglist[1] = 1;
   gMinuit->mnexcm("MIGRAD", arglist, 2, ierflg);
+  
+  Double_t val0, error0, bnd10, bnd20;
+  Int_t num0=0;
+  Int_t ivarbl0;
+  TString chnam0;
+  gMinuit->mnpout(num0, chnam0, val0, error0, bnd10, bnd20, ivarbl0);
+  cout << "x: "  << " value0 " << val0  << endl;
+  
+  Double_t val1, error1, bnd11, bnd21;
+  Int_t num1=1;
+  Int_t ivarbl1;
+  TString chnam1;
+  gMinuit->mnpout(num1, chnam1, val1, error1, bnd11, bnd21, ivarbl1);
+  cout << "y: "  << " value1 " << val1  << endl;
+  
+  Double_t val2, error2, bnd12, bnd22;
+  Int_t num2=2;
+  Int_t ivarbl2;
+  TString chnam2;
+  gMinuit->mnpout(num2, chnam2, val2, error2, bnd12, bnd22, ivarbl2);
+  cout << "z: " << " value2 " << val2  << endl;
+
+  Double_t val3, error3, bnd13, bnd23;
+  Int_t num3=3;
+  Int_t ivarbl3;
+  TString chnam3;
+  gMinuit->mnpout(num3, chnam3, val3, error3, bnd13, bnd23, ivarbl3);
+  cout << "q: " << num3 << " chnam3 " << chnam3 << " value3 " << val3  << endl;
+
+  Double_t par[4];
+  par[0] = val0;
+  par[1] = val1;
+  par[2] = val2;
+  par[3] = val3;
+  draw(par);
 
   cout << "Printing out results: " << endl; 
-
   Double_t amin, edm, errdef;
   Int_t nvpar, nparx, icstat;
   gMinuit->mnstat(amin, edm, errdef, nvpar, nparx, icstat);
-  cout << "best function value found so far: " << amin << " vertical dist remaining to min: " << edm << " how good is fit? 0=bad, 1=approx, 2=full matrix but forced positive-definite, 3=good " << icstat << endl;
+  cout << "best function value found so far: " << amin << " vertical dist remaining to min: " << edm << " how good is fit? 0=bad, 1=approx, 2=full matrix but forced positive-definite, 3=good: " << icstat << endl;
   
-  c1->Print("chisqfits3.pdf[");
-  for (UInt_t n=0; n<60;  n++) { 
-//    c1->cd(n+1);
-    hist[n]->Draw();
-    test[n]->Draw("same"); 
-    test[n]->SetLineColor(kRed);
-    test[n]->SetLineStyle(7);
-    c1->Update();
-    c1->Print("chisqfits3.pdf");
-  }
-    c1->Print("chisqfits3.pdf]");
-    cout << "Hists and fits drawn" << endl;
-    Int_t pause;
-    cin >> pause; 
+
 /*
     // a test -- just draw a sample wfm to see if things are working. 
 
