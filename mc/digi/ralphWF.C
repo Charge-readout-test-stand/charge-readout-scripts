@@ -229,9 +229,9 @@ void TransformCoord (Double_t *par, Double_t *P, UInt_t i)
 void draw(Double_t *par)
 {
   c1->SetGrid();
-  c1->Print("chisqfits_entry10.pdf[");
+  c1->Print("chisqfits_entry3.pdf[");
   for (UInt_t i=0; i<60;  i++) { 
-    Double_t P[4]; //P[0] is along the wire, P[1} is transverse dir, P is coord sys of wire (origin=center of wire)
+    Double_t P[4]; //P[0] is along the wire, P[1] is transverse dir, P is coord sys of wire (origin=center of wire)
     TransformCoord(par, P, i);
     test[i]->SetParameter(0,P[0]); // x
     test[i]->SetParameter(1,P[1]); // y
@@ -243,9 +243,9 @@ void draw(Double_t *par)
     test[i]->SetLineColor(kRed);
     test[i]->SetLineStyle(7);
     c1->Update();
-    c1->Print("chisqfits_entry10.pdf");
+    c1->Print("chisqfits_entry3.pdf");
   }
-    c1->Print("chisqfits_entry10.pdf]");
+    c1->Print("chisqfits_entry3.pdf]");
     cout << "Hists and fits drawn" << endl;
     Int_t pause;
     cin >> pause; 
@@ -262,7 +262,7 @@ void fcn(Int_t &npar, Double_t *gin, Double_t &f, Double_t *par, Int_t iflag)
   ncalls += 1;
   for (UInt_t i=0; i<60; i++) { //i is channel #
     Int_t nbins = hist[i]->GetNbinsX();
-    Double_t P[4]; //P[0] is along the wire, P[1} is transverse dir, P is coord sys of wire (origin=center of wire)
+    Double_t P[4]; //P[0] is along the wire, P[1] is transverse dir, P is coord sys of wire (origin=center of wire)
     TransformCoord(par, P, i);
     for (UInt_t n=200; n<610; n++) { //n is time sample
       Double_t t = n*.04; //each point in channel waveform separated by 40 ns
@@ -284,8 +284,8 @@ Double_t ralphWF() {
   tree->GetEntry(3);
 
   cout << "size of ChannelWaveform: " << (*ChannelWaveform).size() << endl; //number of channels (should be 60)
-  cout << "size of ChannelWaveform[20]: " << ((*ChannelWaveform)[20]).size() << endl; //print out size of nth ChannelWaveform
-  cout << "entry ChannelWaveform[0, 200]: " << ((*ChannelWaveform)[0])[200] << endl; //print out nth element of 16th waveform
+  cout << "size of ChannelWaveform[20]: " << ((*ChannelWaveform)[20]).size() << endl; //print out size of nth channel
+  cout << "entry ChannelWaveform[0, 200]: " << ((*ChannelWaveform)[0])[200] << endl; //200th time sample from 0th channel
   c1 = new TCanvas("c1", "");
   
   for (UInt_t i=0; i<60; i++) {
@@ -306,7 +306,7 @@ Double_t ralphWF() {
   gMinuit->SetFCN(fcn); 
 
 //  Int_t nvpar, nparx, icstat;
-//  if (icstat < 3 ) {
+//  if (icstat < 3 ) { //repeat TMinuit multiple times in loop
 
   cout << "TMinuit has begun" << endl; 
   Double_t arglist[4];
@@ -320,7 +320,7 @@ Double_t ralphWF() {
   
   cout << "Parameters set, Minimization starting" << endl;
 
-  arglist[0] = 10000;
+  arglist[0] = 10000; //this is somehow related to number of calls
   arglist[1] = 1;
   gMinuit->mnexcm("MIGRAD", arglist, 2, ierflg);
   
