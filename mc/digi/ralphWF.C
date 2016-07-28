@@ -215,7 +215,7 @@ void TransformCoord (Double_t *par, Double_t *P, UInt_t i)
 {
   if (i<30) { //X channels (0-29)
     P[0] = par[1];
-    P[1] = -43.5 + (3*i) - par[0]; //x; 2nd term = x pos of channel
+    P[1] = -43.5 + (3*i) - par[0]; //x
   }
   else { //Y channels (30-59)
     P[0] = par[0];
