@@ -213,13 +213,13 @@ UInt_t ncalls = 0;
 
 void TransformCoord (Double_t *par, Double_t *P, UInt_t i)
 {
-  if (i<30) { //X channels
+  if (i<30) { //X channels (0-29)
     P[0] = par[1];
     P[1] = -43.5 + (3*i) - par[0]; //x; 2nd term = x pos of channel
   }
-  else { //Y channels
+  else { //Y channels (30-59)
     P[0] = par[0];
-    P[1] = par[1] - (-43.5+(3*i)); //y
+    P[1] = par[1] - (-43.5+(3*(i-30))); //y
   }
 
   P[2] = par[2];//z
@@ -229,7 +229,7 @@ void TransformCoord (Double_t *par, Double_t *P, UInt_t i)
 void draw(Double_t *par)
 {
   c1->SetGrid();
-  c1->Print("chisqfits3.pdf[");
+  c1->Print("chisqfits_entry10.pdf[");
   for (UInt_t i=0; i<60;  i++) { 
     Double_t P[4]; //P[0] is along the wire, P[1} is transverse dir, P is coord sys of wire (origin=center of wire)
     TransformCoord(par, P, i);
@@ -243,9 +243,9 @@ void draw(Double_t *par)
     test[i]->SetLineColor(kRed);
     test[i]->SetLineStyle(7);
     c1->Update();
-    c1->Print("chisqfits3.pdf");
+    c1->Print("chisqfits_entry10.pdf");
   }
-    c1->Print("chisqfits3.pdf]");
+    c1->Print("chisqfits_entry10.pdf]");
     cout << "Hists and fits drawn" << endl;
     Int_t pause;
     cin >> pause; 
