@@ -14,10 +14,11 @@ notes:
 
 # options
 is_6th_LXe = False
-#is_7th_LXe = False
 is_7th_LXe = True
-#is_8th_LXe = True
 is_8th_LXe = False
+if False: # testing 8th LXe
+    is_7th_LXe = False
+    is_8th_LXe = True
 
 import os
 import math
@@ -161,6 +162,32 @@ def is_tree_MC(tree):
         return True
     except:
         return False
+
+def get_voltage_range_mV_ngm(gain):
+    voltage_range_mV = 2000.0 # mV
+    if gain == 0:
+        voltage_range_mV = 5000.0 # mV
+    return voltage_range_mV
+
+def get_clock_frequency_Hz_ngm(clock_source_choice):
+    """
+    return the clock frequency, in Hz, from the clock_source_choice saved in NGM
+    output. 
+    """
+
+    sampling_frequency_Hz = 25.0e6 # our usual
+    if clock_source_choice == 0:
+        sampling_frequency_Hz = 250.0e6
+    elif clock_source_choice == 1:
+        sampling_frequency_Hz = 125.0e6
+    elif clock_source_choice == 2:
+        sampling_frequency_Hz = 62.5e6
+    elif clock_source_choice == 3:
+        sampling_frequency_Hz = 25.0e6
+    else:
+        print "*** WARNING: clock_source_choice unknown -- data collected at 25 MHz?"
+
+    return sampling_frequency_Hz
 
 
 #Wvalue for Xenon

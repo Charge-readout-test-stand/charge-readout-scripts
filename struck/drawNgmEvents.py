@@ -8,6 +8,7 @@ arguments [NGM root files of events: HitOut*.root]
 
 import os
 import sys
+import math
 import commands
 from scipy.fftpack import fft
 
@@ -15,6 +16,9 @@ import ROOT
 ROOT.gROOT.SetBatch(True) # uncomment to draw multi-page PDF
 
 import struck_analysis_parameters
+# doesn't work? :
+#struck_analysis_parameters.is_8th_LXe = True
+#struck_analysis_parameters.is_7th_LXe = False
 
 # set the ROOT style
 ROOT.gROOT.SetStyle("Plain")     
@@ -38,12 +42,20 @@ def process_file(filename=None, n_plots_total=0):
     #threshold = 570 # keV, for generating multi-page PDF
     #threshold = 50 # ok for unshaped, unamplified data
 
-    units_to_use = 2 # 0=keV, 1=ADC units, 2=mV
+    units_to_use = 0 # 0=keV, 1=ADC units, 2=mV
 
     do_fft = True
-    samples_to_avg = 200 # n baseline samples to use for energy 
+    do_fit = False #fit sine to sum wfm
 
     #------------------------------------------------------
+
+    # figure out which units we are using, to construct the file name
+    units = "keV"
+    if units_to_use == 1:
+        units = "AdcUnits"
+    elif units_to_use == 2:
+        units = "mV"
+
 
     # y axis limits:
     y_min = -200 # keV
@@ -52,7 +64,7 @@ def process_file(filename=None, n_plots_total=0):
     elif units_to_use == 2:
         y_min = -5 # mV
 
-    y_max = 500 # keV
+    y_max = 1400 # keV
     if units_to_use == 1:
         y_max = 200 # ADC units
     elif units_to_use == 2:
@@ -70,21 +82,21 @@ def process_file(filename=None, n_plots_total=0):
     calibration_values = struck_analysis_parameters.calibration_values
     channel_map = struck_analysis_parameters.channel_map
     pmt_channel = struck_analysis_parameters.pmt_channel
+    print "pmt_channel:", pmt_channel
 
     charge_channels_to_use = struck_analysis_parameters.charge_channels_to_use
     channels = []
     for (channel, value) in enumerate(charge_channels_to_use):
         #print channel, value
-        if value: channels.append(channel)
+        if value is not 0: channels.append(channel)
+    print "there are %i charge channels" % len(channels)
     channels.append(pmt_channel)
     n_channels = len(channels)
     colors = struck_analysis_parameters.get_colors()
 
-    print "processing file: ", filename
-
     basename = os.path.basename(filename)
     basename = os.path.splitext(basename)[0]
-    print "basename:", basename
+    #print "basename:", basename
 
     # open the root file and grab the tree
     root_file = ROOT.TFile(filename)
@@ -102,13 +114,9 @@ def process_file(filename=None, n_plots_total=0):
         n_entries/len(charge_channels_to_use),
     )
 
-    sampling_freq_Hz = 1
-    if card0.clock_source_choice == 3:
-        print "sampling_freq_Hz: 25 MHz"
-        sampling_freq_Hz = 25.0e6
-    else:
-        print "*** WARNING: clock_source_choice unknown -- data collected at 25 MHz?"
-
+    sampling_freq_Hz = struck_analysis_parameters.get_clock_frequency_Hz_ngm(card0.clock_source_choice)
+    print "sampling_freq_Hz: %.1f MHz" % (sampling_freq_Hz/1e6)
+    n_samples_to_avg = int(200*sampling_freq_Hz/25e6) # n baseline samples to use for energy 
 
     channel_map = struck_analysis_parameters.channel_map
 
@@ -116,12 +124,12 @@ def process_file(filename=None, n_plots_total=0):
     trace_length_us = tree.HitTree.GetNSamples()/sampling_freq_Hz*1e6
     print "length in microseconds:", trace_length_us
 
-    trigger_time = card0.pretriggerdelay_block[0] # /sampling_freq_Hz*1e6
+    trigger_time = card0.pretriggerdelay_block[0]/sampling_freq_Hz*1e6
     print "trigger time: [microseconds]", trigger_time
 
-    frame_hist = ROOT.TH1D("hist", "", int(tree.HitTree.GetNSamples()*1.05), 0, trace_length_us+1)
+    frame_hist = ROOT.TH1D("hist", "", int(tree.HitTree.GetNSamples()*33.0/32.0), 0, trace_length_us+1)
     frame_hist.SetXTitle("Time [#mus]")
-    sum_offset = 100
+    sum_offset = 400
     frame_hist.SetYTitle("Energy (with arbitrary offsets) [keV]")
     if units_to_use == 1: # ADC units
         frame_hist.SetYTitle("ADC units")
@@ -195,39 +203,60 @@ def process_file(filename=None, n_plots_total=0):
 
             tree.GetEntry(i_entry)
             i_entry += 1
-            channel = tree.HitTree.GetChannel()
             slot = tree.HitTree.GetSlot()
+            card_channel = tree.HitTree.GetChannel() # 0 to 16 for each card
+            channel = card_channel + 16*slot # 0 to 31
+            card = sys_config.GetSlotParameters().GetParValueO("card",slot)
+
+            gain = card.gain[card_channel]
+            voltage_range_mV = struck_analysis_parameters.get_voltage_range_mV_ngm(gain)
 
             try:
-                color = colors[channel+slot*16]
+                color = colors[channel]
             except IndexError:
                 color = ROOT.kBlack
-
 
             multiplier = calibration_values[channel] # keV
             if units_to_use == 1: # ADC units
                 multiplier = 1.0
             elif units_to_use == 2: # mV
-                multiplier = 2.0e3/pow(2,14)
-            #print "entry %i, channel: %i, multiplier: %.2f" % (i_entry, channel, multiplier)
+                multiplier = voltage_range_mV/pow(2,14)
+            elif units_to_use == 0 and channel == pmt_channel: # keV
+                # for digitizer testing, using a typical chanrge-channel energy
+                # conversion, even for PMT channel!!! FIXME
+                multiplier = calibration_values[0]
+                print "*** WARNING -- setting pmt calibration to calibration_values[0] for digitizer tests!!"
 
-            # add an offset so the channels are draw at different levels
-            #offset = 6000 - i*250
-            offset = 0
-            #if channel == pmt_channel:
-            #    offset = 200
-            if offset < y_min: y_min = offset - 100
+
+            if False: # print debug output
+                print "entry %i | slot %i | card ch %i | ch %i | multiplier: %.4f" % (
+                    i_entry, 
+                    slot,
+                    card_channel,
+                    channel, 
+                    multiplier,
+                )
 
             graph = tree.HitTree.GetGraph()
 
-            baseline = 0
-            for i_sample in xrange(samples_to_avg):
-                baseline += graph.GetY()[i_sample]
-            baseline /= samples_to_avg
+            baseline = 0.0
+            energy = 0.0
+            for i_sample in xrange(n_samples_to_avg):
+                baseline += graph.GetY()[i_sample] / n_samples_to_avg
+                energy += graph.GetY()[graph.GetN() - i_sample - 1] / n_samples_to_avg
+            energy = (energy - baseline)*multiplier
+
+            rms_noise = 0.0
+            for i_sample in xrange(n_samples_to_avg):
+                rms_noise += pow(graph.GetY()[i_sample]-baseline, 2.0)/n_samples_to_avg
+            rms_noise = math.sqrt(rms_noise)*multiplier
+                
+
+            # add an offset so the channels are draw at different levels
+            offset = 0
 
             graph.SetLineColor(color)
-            fcn_string = "(y - %s)*%s + %s" % (
-                baseline, multiplier, offset)
+            fcn_string = "(y - %s)*%s + %s" % ( baseline, multiplier, offset)
             #print "fcn_string:", fcn_string
             fcn = ROOT.TF2("fcn",fcn_string)
             graph.Apply(fcn)
@@ -242,39 +271,77 @@ def process_file(filename=None, n_plots_total=0):
             #print "\t entry %i, ch %i, slot %i" % ( i_entry-1, channel, slot,)
 
             # construct sum wfm
+            if offset !=0: 
+                print "offset is %s -- this will affect the sum wfms!!" % offset
             for i_point in xrange(tree.HitTree.GetNSamples()):
                 y = graph.GetY()[i_point]
-                sum_wfm[i_point] = sum_wfm[i_point] + y
+                sum_wfm[i_point] = sum_wfm[i_point] + y - offset
                 if slot == 0:
-                    sum_wfm0[i_point] = sum_wfm0[i_point] + y
+                    sum_wfm0[i_point] = sum_wfm0[i_point] + y - offset
                 if slot == 1:
-                    sum_wfm1[i_point] = sum_wfm1[i_point] + y
+                    sum_wfm1[i_point] = sum_wfm1[i_point] + y - offset
                 
-            # not working yet -- graph_max is always ~ -1111
-            graph_max = graph.GetHistogram().GetMaximum()
-            if graph_max > y_max: 
-                y_max = graph_max
-            #print "graph_max: %s, y_max: %s" % (graph_max, y_max)
-
             # legend uses hists for color/fill info
-            legend_entries[channel+slot*16] = "%s, ch %i" % (channel_map[channel+slot*16], channel+slot*16) #"%s E = %.1f keV" % (channel_map[channel], energies[i]),
+            legend_entries[channel] = "%s %.1f" % (
+                channel_map[channel], 
+                #energy,
+                rms_noise,
+            ) 
 
             # end loop over channels
 
-        sum_graph = ROOT.TGraph()
-        sum_graph0 = ROOT.TGraph()
-        sum_graph1 = ROOT.TGraph()
+        # create sum graphs; add offsets & set x-coords
+        sum_graph = ROOT.TGraphErrors()
+        sum_graph0 = ROOT.TGraphErrors()
+        sum_graph1 = ROOT.TGraphErrors()
+
+        rms_noise = 0.0
         for i_point in xrange(len(sum_wfm)):
             sum_graph.SetPoint(i_point, i_point/sampling_freq_Hz*1e6, sum_wfm[i_point]+sum_offset)
+            #sum_graph.SetPoint(i_point, i_point/sampling_freq_Hz*1e6, sum_wfm[i_point])
+            sum_graph.SetPointError(i_point, 0.0, 0.1*multiplier)
             sum_graph0.SetPoint(i_point, i_point/sampling_freq_Hz*1e6, sum_wfm0[i_point]+sum_offset*2)
+            sum_graph0.SetPointError(i_point, 0.0, 0.1*multiplier)
             sum_graph1.SetPoint(i_point, i_point/sampling_freq_Hz*1e6, sum_wfm1[i_point]+sum_offset*3)
+            sum_graph1.SetPointError(i_point, 0.0, 0.1*multiplier)
+
+            if i_point < n_samples_to_avg:
+                rms_noise += pow(sum_wfm[i_point], 2.0)/n_samples_to_avg
+
+        rms_noise = math.sqrt(rms_noise)
+
+        fit_fcn = ROOT.TF1("fit_fcn", "[0] + [1]*sin(2*pi*(x*[2]+[3]))", 0, trace_length_us)
+        fit_fcn.SetLineColor(ROOT.kGreen+2)
+
+        # set parameter names
+        fit_fcn.SetParName(0, "offset")
+        fit_fcn.SetParName(1, "amplitude")
+        fit_fcn.SetParName(2, "freq [MHz]")
+        fit_fcn.SetParName(3, "phase shift")
+
+        # set initial guesses
+        fit_fcn.SetParameter(0, sum_offset) # offset
+        fit_fcn.SetParameter(1, 3.0) # amplitude
+        fit_fcn.SetParameter(2, 0.445) # freq, MHz
+        fit_fcn.SetParameter(3, 0.5) # phase shift
+
+        # set guesses of parameter uncertainty
+        fit_fcn.SetParError(0, sum_offset) # offset
+        fit_fcn.SetParError(1, 2.0) # amplitude
+        fit_fcn.SetParError(2, 0.1) # freq, MHz
+        fit_fcn.SetParError(3, 0.5) # phase shift
+
+        if do_fit: # do the fit
+            fit_result = sum_graph.Fit(fit_fcn, "SRM")
+            print "freq: ", fit_fcn.GetParameter(2)
 
         #sum_graph.SetLineWidth(3)
-        sum_graph.Draw("l")
+        sum_graph.Draw("xl")
+        #fit_fcn.Draw("same")
         sum_graph0.SetLineColor(ROOT.kBlue)
-        sum_graph0.Draw("l")
+        sum_graph0.Draw("xl")
         sum_graph1.SetLineColor(ROOT.kRed)
-        sum_graph1.Draw("l")
+        sum_graph1.Draw("xl")
 
         pave_text.Clear()
         pave_text.AddText("page %i, event %i" % (n_plots+1, i_entry/32))
@@ -292,7 +359,7 @@ def process_file(filename=None, n_plots_total=0):
         for i in xrange(len(channels)):
             legend.AddEntry( hists[i], legend_entries[i], "f")
 
-        legend.AddEntry(sum_graph, "sum","l")
+        legend.AddEntry(sum_graph, "sum %.1f" % rms_noise,"l")
         legend.AddEntry(sum_graph0, "sum slot 0","l")
         legend.AddEntry(sum_graph1, "sum slot 1","l")
 
@@ -304,7 +371,8 @@ def process_file(filename=None, n_plots_total=0):
         legend.Draw()
         canvas.Update()
         n_plots += 1
-        print "--> n_plots / n_plots_total", n_plots, n_plots_total
+        print "--> %i of %i plots so far" % (n_plots, n_plots_total)
+
         if not ROOT.gROOT.IsBatch(): 
 
             val = raw_input("--> entry %i | enter to continue (q to quit, p to print, or entry number) " % i_entry)
@@ -324,17 +392,10 @@ def process_file(filename=None, n_plots_total=0):
             # if we run in batch mode, print a multi-page canvas
             #plot_name = "EventsWithChargeAbove%ikeV_6thLXe.pdf" % threshold
             
-            units = "keV"
-            if units_to_use == 1:
-                units = "AdcUnits"
-            elif units_to_use == 2:
-                units = "mV"
-            plot_name = "2016_07_NoiseTests_%s.pdf" % units
-            if n_plots == 1:
+            plot_name = "%s_%s.pdf" % (basename, units) # the pdf file name
+
+            if n_plots == 1: # start the file
                 canvas.Print("%s[" % plot_name)
-                #plot_name = plot_name + "("
-            #if n_plots >= n_plots_total:
-            #    plot_name = plot_name + ")"
             canvas.Print(plot_name)
 
         if do_fft: # calc & draw FFT
@@ -351,28 +412,31 @@ def process_file(filename=None, n_plots_total=0):
             fft_graph1.SetLineColor(ROOT.kRed)
             for i_point in xrange(len(sum_wfm)/2):
                 if i_point <= 0: continue
-                x = i_point*sampling_freq_Hz/1e6/2/len(sum_wfm)  # MHz?
+                x = i_point*sampling_freq_Hz/1e3/len(sum_wfm)  # kHz
                 fft_graph.SetPoint(fft_graph.GetN(), x, abs(sum_fft[i_point]))
                 fft_graph0.SetPoint(fft_graph0.GetN(), x, abs(sum_fft0[i_point]))
                 fft_graph1.SetPoint(fft_graph0.GetN(), x, abs(sum_fft1[i_point]))
-                if  abs(sum_fft[i_point]) > 1e4:
-                    print "freq=%s kHz | val = %.2e" % (
-                        x*1e3, 
-                        abs(sum_fft[i_point])
-                    )
+                #if  abs(sum_fft[i_point]) > 1e4:
+                #    print "freq=%s kHz | val = %.2e" % ( x*1e3, abs(sum_fft[i_point]))
 
             canvas.SetLogy(1)
             canvas.SetLogx(1)
             fft_graph.Draw("alp")
             fft_hist = fft_graph.GetHistogram()
-            fft_hist.SetXTitle("Freq [MHz]")
+            fft_hist.SetXTitle("Freq [kHz]")
             fft_hist.SetTitle("Sum wfm FFT")
+            fft_hist.GetXaxis().SetTitleOffset(1.2)
             fft_hist.SetMinimum(100)
-            fft_hist.SetMaximum(1e5)
+            fft_hist.SetMaximum(1e6)
+            if sampling_freq_Hz == 250e6:
+                fft_hist.SetMinimum(100)
+                fft_hist.SetMaximum(1e6)
             if units_to_use == 2:
-                print "setting hist max!!!"
                 fft_hist.SetMinimum(1)
-                fft_hist.SetMaximum(1e3)
+                fft_hist.SetMaximum(1e4)
+                if sampling_freq_Hz == 250.0e6:
+                    fft_hist.SetMinimum(1)
+                    fft_hist.SetMaximum(1e6)
             fft_hist.Draw()
             fft_graph.Draw("l same")
             fft_graph0.Draw("l same")
@@ -406,10 +470,11 @@ def process_file(filename=None, n_plots_total=0):
 
 if __name__ == "__main__":
 
-    n_plots_total = 10
+    n_plots_total = 1
+    n_plots_so_far = 0
     if len(sys.argv) > 1:
         for filename in sys.argv[1:]:
-            process_file(filename, n_plots_total)
+            n_plots_so_far += process_file(filename, n_plots_total)
     else:
         process_file(n_plots_total=n_plots_total)
 
