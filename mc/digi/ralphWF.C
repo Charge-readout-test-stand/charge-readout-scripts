@@ -53,10 +53,10 @@ Double_t OnePadRotated(Double_t x, Double_t y, Double_t z) {
       if ( x_n > side_length/2.0 ) { return 0; } 
       if ( y_n < -side_length/2.0 ) { return 0; } 
       if ( y_n > side_length/2.0 ) { return 0; }
-      if (x_n = side_length/2.0) { return 0.5; }
-      if (x_n = -side_length/2.0) { return 0.5; } 
-      if (y_n = side_length/2.0) { return 0.5; } 
-      if (y_n = -side_length/2.0) { return 0.5; } 
+      if (x_n == side_length/2.0) { return 0.5; }
+      if (x_n == -side_length/2.0) { return 0.5; } 
+      if (y_n == side_length/2.0) { return 0.5; } 
+      if (y_n == -side_length/2.0) { return 0.5; } 
       
       // otherwise return 1
       return 1.0;
