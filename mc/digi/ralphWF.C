@@ -49,10 +49,15 @@ Double_t OnePadRotated(Double_t x, Double_t y, Double_t z) {
   if ( z <= 0) {
       // if the charge is outside the pad, return 0
       // use asymmetric limits so that two pads can't both see a charge
-      if ( x_n <= -side_length/2.0 ) { return 0; }
+      if ( x_n < -side_length/2.0 ) { return 0; }
       if ( x_n > side_length/2.0 ) { return 0; } 
-      if ( y_n <= -side_length/2.0 ) { return 0; } 
-      if ( y_n > side_length/2.0 ) { return 0; } 
+      if ( y_n < -side_length/2.0 ) { return 0; } 
+      if ( y_n > side_length/2.0 ) { return 0; }
+      if (x_n = side_length/2.0) { return 0.5; }
+      if (x_n = -side_length/2.0) { return 0.5; } 
+      if (y_n = side_length/2.0) { return 0.5; } 
+      if (y_n = -side_length/2.0) { return 0.5; } 
+      
       // otherwise return 1
       return 1.0;
   }
@@ -352,6 +357,8 @@ Double_t ralphWF() {
   gMinuit->mnpout(num3, chnam3, val3, error3, bnd13, bnd23, ivarbl3);
   cout << "q: " << num3 << " chnam3 " << chnam3 << " value3 " << val3  << endl;
 
+  Int_t pause;
+  cin >> pause;
   Double_t par[4];
   par[0] = val0;
   par[1] = val1;
