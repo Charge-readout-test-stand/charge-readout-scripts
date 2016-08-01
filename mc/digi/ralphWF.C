@@ -49,15 +49,10 @@ Double_t OnePadRotated(Double_t x, Double_t y, Double_t z) {
   if ( z <= 0) {
       // if the charge is outside the pad, return 0
       // use asymmetric limits so that two pads can't both see a charge
-      if ( x_n < -side_length/2.0 ) { return 0; }
+      if ( x_n <= -side_length/2.0 ) { return 0; }
       if ( x_n > side_length/2.0 ) { return 0; } 
-      if ( y_n < -side_length/2.0 ) { return 0; } 
+      if ( y_n <= -side_length/2.0 ) { return 0; } 
       if ( y_n > side_length/2.0 ) { return 0; }
-      if (x_n == side_length/2.0) { return 0.5; }
-      if (x_n == -side_length/2.0) { return 0.5; } 
-      if (y_n == side_length/2.0) { return 0.5; } 
-      if (y_n == -side_length/2.0) { return 0.5; } 
-      
       // otherwise return 1
       return 1.0;
   }
@@ -78,9 +73,9 @@ Double_t OneStrip(Double_t x, Double_t y, Double_t z) {
   // sum over all 30 pads
   //for ( int i_pad = 0; i_pad < 1; i_pad++ ) // FIXME only 1 pad for debugging
   for ( int i_pad = 0; i_pad < 30; i_pad++ ){
-      Double_t padX = x + i_pad*diagonal - diagonal*14.5; 
+      Double_t padX = x + i_pad*diagonal - diagonal*14.0; 
 
-      Double_t onePad = OnePadRotated(x + i_pad*diagonal - diagonal*14.5, y, z);
+      Double_t onePad = OnePadRotated(x + i_pad*diagonal - diagonal*14.0, y, z);
       //Double_t onePad = OnePadRotated(x, y, z); // FIXME -- only one pad
       //cout << "\t\t pad: "<< i_pad << " | pad x: " << padX << " | amplitude: " << onePad << endl;
       amplitude += onePad;
