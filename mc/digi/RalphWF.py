@@ -5,7 +5,7 @@ import MakeTile
 import math
 
 posion  = True #Use Positive Ion
-cathsupress = False #Use Cathode Supression
+cathsupress = True #Use Cathode Supression
 cathodeToAnodeDistance = 18.16 # mm
 drift_velocity = 2.0 # mm/microsecond
 e_lifetime=None # e- lifetime, microseconds
