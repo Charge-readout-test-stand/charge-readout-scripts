@@ -1,3 +1,7 @@
+"""
+Run this on digitized data
+"""
+
 import ROOT, sys
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -5,7 +9,6 @@ import matplotlib as mpl
 import numpy as np
 from optparse import OptionParser
 import numpy as np
-import math
 
 ROOT.gROOT.SetStyle("Plain")
 ROOT.gStyle.SetOptStat(0)
@@ -66,14 +69,17 @@ def PCDViewer(tData, eventN):
     plt.scatter(x,y, c= 'r', s=100.0)
     plt.xlim([min(x) - 3.0, max(x) + 3.0])
     plt.ylim([min(y) - 3.0, max(y) + 3.0])
-    
     plt.title("X/Y Event Plane with Tile Grid")
     plt.xlabel("xpos[mm]")
     plt.ylabel("ypos[mm]")
     plt.show()
-    save = raw_input("Save figure? (y or n)")
+    save = raw_input("Save figure? (y or n, q to quit)")
     if save == 'y':
-        plt.savefig("./plots/pcds_event"+str(eventN)+".png")
+        #plt.savefig("./plots/pcds_event"+str(eventN)+".png")
+        #plt.savefig("pcds_event"+str(eventN)+".png")
+        plt.savefig("pcds_event"+str(eventN)+".pdf")
+    elif save == 'q':
+        sys.exit()
     plt.clf()
 
 
@@ -82,18 +88,21 @@ def SignalViewer(tData, eventN):
     for nch in np.arange(num_channels):
         if tData.NumPCDs == 0: continue
         for i in np.arange(len_WF):
-            WF[nch][i] = tData.ChannelWaveform[int(nch)][int(i)]+47.5*rand.Gaus(0,17.805) #value from RMS in ch2 converted in num electrons
+            #WF[nch][i] = tData.ChannelWaveform[int(nch)][int(i)]+47.5*rand.Gaus(0,17.805) #value from RMS in ch2 converted in num electrons
+            WF[nch][i] = tData.ChannelWaveform[int(nch)][int(i)]
         if WF[nch][-1] > 0:
             print "Hit Ch = ", nch, " Qvalue = ", WF[nch][-1]
-        elif math.isnan(WF[nch][-1]):
-            print "**************Ch %i has nan" % nch
         plt.plot(t, WF[nch], label='Sim Ch='+str(nch))
     plt.title("Channel Signals")
     plt.xlabel("time[$\mu$s]")
     plt.ylabel("Q[#e-]")
-    save = raw_input("Save figure? (y or n)")
+    save = raw_input("Save figure? (y or n, q to quit)")
     if save == 'y':
-        plt.savefig("./plots/signal_event"+str(eventN)+".png")
+        #plt.savefig("./plots/signal_event"+str(eventN)+".png")
+        #plt.savefig("signal_event"+str(eventN)+".png")
+        plt.savefig("signal_event"+str(eventN)+".pdf")
+    elif save == 'q':
+        sys.exit()
     plt.clf()
 
 def EventViewer(tData):
@@ -104,6 +113,7 @@ def EventViewer(tData):
     print "There are nEvents = ", nEvents
 
     for ev in np.arange(nEvents):
+        print "Event", ev
         tData.GetEntry(ev)
         if tData.NumPCDs == 0: continue
         PCDViewer(tData, ev)
