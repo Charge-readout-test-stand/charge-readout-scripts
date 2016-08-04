@@ -215,7 +215,7 @@ def get_single_strip_cut(energy_threshold=10.0, isMC=False):
     return selection
 
 def get_few_channels_cmd(
-    energy_threshold=100.0,
+    energy_threshold=10.0,
 ):
     """ A draw command for total energy, only including  events above threshold """
     draw_cmd = []
@@ -359,5 +359,7 @@ if __name__ == "__main__":
     print "\n"+ get_drift_time_cut(drift_time_low=8.0,drift_time_high=9.0,isMC=True)
 
     print "\n"+ get_drift_time_cut(drift_time_low=8.0,drift_time_high=10.0)
+
+    print "\n" + get_few_channels_cmd()
 
 
