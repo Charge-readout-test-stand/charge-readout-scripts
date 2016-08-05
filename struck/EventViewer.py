@@ -1,5 +1,5 @@
 import ROOT
-ROOT.gROOT.SetBatch(True)
+#ROOT.gROOT.SetBatch(True)
 import sys
 import os
 import struck_analysis_parameters
@@ -20,8 +20,10 @@ c1 = ROOT.TCanvas()
 c1.SetGrid(1,1)
 c1.SetTopMargin(0.15)
 
-energy_cut = 570.0
-n_plots_total = 30
+#energy_cut = 570.0
+#energy_cut = 1000.0
+energy_cut = 0.0
+n_plots_total = 100
 #n_plots_total = 200
 trigger_time = 8.0
 
@@ -95,6 +97,15 @@ def DrawEvents(fname):
     
     GetTier3_Energy(fname, entries, 0)
 
+
+    # get tier3 file:
+    directory =  os.path.dirname(fname).replace("tier1", "tier3_external")
+    basename =  os.path.basename(fname).replace("tier1", "tier3")
+    tier3_file_name =  os.path.join(directory, basename)
+    tier3_file = ROOT.TFile(tier3_file_name)
+    tier3_tree = tier3_file.Get("tree")
+    print "%i entries in tier3" % tier3_tree.GetEntries()
+
     hists = []
     print "making hists"
     for (i, tree) in enumerate(good_trees):
@@ -107,14 +118,26 @@ def DrawEvents(fname):
         hist.SetLineColor(color)
         hist.SetFillColor(color)
         hists.append(hist)
+        print "%i entries in %s" % (tree.GetEntries(), tree.GetName())
     n_plots = 0
     for eventi in range(0,entries,1):
+        tree.GetEntry(eventi)
+        tier3_tree.GetEntry(eventi)
+        n_rms_above_threshold = 0
+        for i_ch in xrange(8):
+            rms_keV = tier3_tree.baseline_rms[i_ch]*tier3_tree.calibration[i_ch]
+            if rms_keV > 40.0: 
+                print "ch %i RMS [keV]: %.3f" % (i_ch, rms_keV)
+                n_rms_above_threshold += 1
+        if n_rms_above_threshold == 0:
+            print "Skipping Event based on RMS:", eventi
+            continue
         cE = GetTier3_Energy(fname, entries, eventi)
         if cE < energy_cut:
-            print "Skipping Event", eventi
+            print "Skipping Event based on energy:", eventi
             continue
         else:
-            print "Got Event with Energy", cE
+            print "---> Got Event %i with Energy %s" % (eventi,  cE)
         frame_hist = ROOT.TH1D("hist", "", 100, 0, 800/25.0e6*1e6)
         frame_hist.SetLineColor(ROOT.kWhite)
         #frame_hist.SetTitle("Waveforms")
@@ -141,7 +164,7 @@ def DrawEvents(fname):
             else:
                 calib = 1.0
             draw_cmd = "((wfm - wfm[0])*%f + %i):Iteration$*40/1e3" % (calib, (i+2)*offset)
-            print i, eventi, draw_cmd, calib
+            print "\t", i, eventi, draw_cmd, calib
             tree.SetLineColor(color_list[i])
             tree.SetLineWidth(2)
             tree.Draw(draw_cmd,"Entry$=="+str(eventi), "l same")
@@ -194,15 +217,21 @@ def DrawEvents(fname):
             n_plots_total,
             int(energy_cut),
         )
+        if not ROOT.gROOT.IsBatch():
+            val = raw_input("--> press enter to continue, p to print ")
+            print val
+            if val == "p":
+                c1.Print("Event_%i_%s" % (eventi, plot_name))
+
+        # print a multi-page pdf:
         if n_plots == 1:
             plot_name = plot_name + "("
         if n_plots >= n_plots_total:
             plot_name = plot_name + ")"
         
         c1.Print(plot_name)
-        if not ROOT.gROOT.IsBatch():
-            raw_input("--> press enter to continue ")
-        
+
+
         if n_plots >= n_plots_total:
             print "quitting..."
             sys.exit()
