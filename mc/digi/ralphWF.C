@@ -15,6 +15,7 @@
 #include "TTree.h"
 #include "TFile.h"
 #include "TMinuit.h"
+#include "TRandom3.h"
 #include <iostream>
 #include <vector>
 #include <sstream>
@@ -134,7 +135,7 @@ Double_t FinalAmplitude(
 
 Double_t OnePCDWithOptions(
   Double_t *var, 
-  Double_t *par, 
+  Double_t *par,
   Int_t iPCD=0, 
   Bool_t useSameZ = false,
   Bool_t doDebug = false
@@ -148,6 +149,7 @@ Double_t OnePCDWithOptions(
   //    1: y
   //    2: z
   //    3: q
+  //    4: w (charge weight)
 
   Double_t triggerTime = 8.0; // microseconds
   Double_t driftVelocity = 2.0; // mm/microsecond
@@ -173,13 +175,30 @@ Double_t OnePCDWithOptions(
   Double_t q = par[qIndex]; 
   if (doDebug){ cout << "\tqIndex: " << qIndex << " q: " << q << endl; }
 
+  size_t wIndex = 4 + iPCD*4; //what is iPCD*4? 
+  Double_t w = par[wIndex];
+  if (doDebug){ cout << "\twIndex: " << wIndex << " weight: " << w << endl; }
+
   Double_t z = z0 - (t-triggerTime) * driftVelocity;  
 
   if (doDebug){ cout << "\tt: " << t << endl; }
 
   if (t < triggerTime) { return 0.0; } // wfm is 0 for times before drift starts
-  Double_t amplitude = OneStripWithIonAndCathode(x, y, z, z0, doDebug);
-  return q*amplitude; 
+  
+  Double_t weight_center = 0.5*q*(1+sin(w));
+  Double_t weight_outer = (1 - 0.5*q*(1+sin(w)))/4;
+  Double_t Q0 = x + 0.3;
+  Double_t R1 = y - 0.3;
+  Double_t S0 = x - 0.3;
+  Double_t T1 = y + 0.3;
+  
+  Double_t amplitude = weight_center*OneStripWithIonAndCathode(x, y, z, z0, doDebug);
+  amplitude += weight_outer*OneStripWithIonAndCathode(Q0, y, z, z0, doDebug);
+  amplitude += weight_outer*OneStripWithIonAndCathode(x, R1, z, z0, doDebug);
+  amplitude += weight_outer*OneStripWithIonAndCathode(S0, y, z, z0, doDebug);
+  amplitude += weight_outer*OneStripWithIonAndCathode(x, T1, z, z0, doDebug);
+  
+  return amplitude; 
 }
 
 Double_t OnePCD(Double_t *var, Double_t *par) {
@@ -210,42 +229,47 @@ TH1D *hist[60];
 TF1 *test[60]; 
 TCanvas *c1;
 UInt_t ncalls = 0;
+Double_t RMS_noise = 20.44;
 
+
+//Model cloud of charge: P = center, Q = right, R-S-T clockwise
 void TransformCoord (Double_t *par, Double_t *P, UInt_t i)
 {
   if (i<30) { //X channels (0-29)
-    P[0] = par[1];
-    P[1] = -43.5 + (3*i) - par[0]; 
+    P[0] = par[1];   //center x
+    P[1] = -43.5 + (3*i) - par[0]; //center y
   }
   else { //Y channels (30-59)
     P[0] = par[0];
     P[1] = par[1] - (-43.5+(3*(i-30)));
   }
 
-  P[2] = par[2];//z
-  P[3] = par[3];//q
+  P[2] = par[2]; //center z
+  P[3] = par[3]; //center q
+  P[4] = par[4];
 }
 
 void draw(Double_t *par)
 {
   c1->SetGrid();
-  c1->Print("chisqfits_entry3.pdf[");
+  c1->Print("chisqfits_entry2.pdf[");
   for (UInt_t i=0; i<60;  i++) { 
-    Double_t P[4]; //P[0] is along the wire, P[1] is transverse dir, P is coord sys of wire (origin=center of wire)
+    Double_t P[5]; //P[0] is along the wire, P[1] is transverse dir, P is coord sys of wire (origin=center of wire)
     TransformCoord(par, P, i);
     test[i]->SetParameter(0,P[0]); // x
     test[i]->SetParameter(1,P[1]); // y
     test[i]->SetParameter(2, par[2]); // z
     test[i]->SetParameter(3, par[3]); // q  
-
+    test[i]->SetParameter(4, par[4]);
+    
     hist[i]->Draw();
     test[i]->Draw("same"); 
     test[i]->SetLineColor(kRed);
     test[i]->SetLineStyle(7);
     c1->Update();
-    c1->Print("chisqfits_entry3.pdf");
+    c1->Print("chisqfits_entry2.pdf");
   }
-    c1->Print("chisqfits_entry3.pdf]");
+    c1->Print("chisqfits_entry2.pdf]");
     cout << "Hists and fits drawn" << endl;
     Int_t pause;
     cin >> pause; 
@@ -254,19 +278,15 @@ void draw(Double_t *par)
 void fcn(Int_t &npar, Double_t *gin, Double_t &f, Double_t *par, Int_t iflag)
 {     
   Double_t delta;
-  Double_t error = 20.0;
   Double_t chisq = 0.0;
-/*  if (ncalls == 1) {
-    draw(par);
-    } */
   ncalls += 1;
   for (UInt_t i=0; i<60; i++) { //i is channel #
     Int_t nbins = hist[i]->GetNbinsX();
-    Double_t P[4]; //P[0] is along the wire, P[1] is transverse dir, P is coord sys of wire (origin=center of wire)
+    Double_t P[5]; //P[0] is along the wire, P[1] is transverse dir, P is coord sys of wire (origin=center of wire)
     TransformCoord(par, P, i);
     for (UInt_t n=200; n<610; n++) { //n is time sample
       Double_t t = n*.04; //each point in channel waveform separated by 40 ns
-      delta = ((hist[i]->GetBinContent(n) - OnePCD(&t, P)))/error;
+      delta = ((hist[i]->GetBinContent(n) - OnePCD(&t, P)))/RMS_noise;
       chisq += delta*delta/410.0/60.0;//chisq per deg of freedom
      } 
   }
@@ -281,43 +301,50 @@ Double_t ralphWF() {
   vector<vector<double> > *ChannelWaveform=0; //defines pointer to vector of vectors
   cout << "n entries: " << tree->GetEntries() << endl;
   tree->SetBranchAddress("ChannelWaveform", &ChannelWaveform);
-  tree->GetEntry(3);
+  tree->GetEntry(2);
 
   cout << "size of ChannelWaveform: " << (*ChannelWaveform).size() << endl; //number of channels (should be 60)
   cout << "size of ChannelWaveform[20]: " << ((*ChannelWaveform)[20]).size() << endl; //print out size of nth channel
   cout << "entry ChannelWaveform[0, 200]: " << ((*ChannelWaveform)[0])[200] << endl; //200th time sample from 0th channel
   c1 = new TCanvas("c1", "");
-  
+  TRandom3 *generator = new TRandom3(0);//random number generator initialized by TUUID object
+ 
   for (UInt_t i=0; i<60; i++) {
     ostringstream name;
-    name << "sampleHist" << i;
+    name << "Channel" << i; 
     hist[i] = new TH1D(name.str().c_str(), name.str().c_str(), 800, 0, 32);//wfm_hist in fit_wfm.py gets assigned to this
+    hist[i]->GetXaxis()->SetTitle("time (microsec)");
+    hist[i]->GetYaxis()->SetTitle("Energy of Charge Deposit (keV)");
+    hist[i]->GetXaxis()->CenterTitle();
+    hist[i]->GetYaxis()->CenterTitle();
     test[i] = new TF1("test", OnePCD, 0, 32, 4);
-    for (UInt_t n=0; n<800;  n++) {
-      Double_t ChannelWFelement = ((*ChannelWaveform)[i])[n];
-      hist[i]->SetBinContent(n+1, ChannelWFelement);
+    for (UInt_t n=0; n<800;  n++) { //800 time samples
+      Double_t noise = generator->Gaus(0, RMS_noise); 
+      Double_t ChannelWFelement = (((*ChannelWaveform)[i])[n])*0.022004; //convert to keV
+      ChannelWFelement += noise;
+      hist[i]->SetBinContent(n+1, ChannelWFelement); //plots charge deposit energy in keV CHECK UNIT CONVERSION FOR NOISE      
      }
 //    cout << "contents of bin " << hist[0]->GetBinContent(100) << endl;
     }
  
   cout << "Hists filled" << endl; 
 
-  TMinuit *gMinuit = new TMinuit(4);  //initialize TMinuit with a maximum of 4 params
+  TMinuit *gMinuit = new TMinuit(5);  //initialize TMinuit with a maximum of 4 params CHANGED FROM 4
   gMinuit->SetFCN(fcn); 
 
 //  Int_t nvpar, nparx, icstat;
 //  if (icstat < 3 ) { //repeat TMinuit multiple times in loop
 
   cout << "TMinuit has begun" << endl; 
-  Double_t arglist[4];
+  Double_t arglist[5]; //CHANGED FROM 4
   Int_t ierflg = 0;
   arglist[0] = 1;
   gMinuit->mnexcm("SET ERR", arglist ,1,ierflg);
-  gMinuit->mnparm(0, "x", 1.5, 3, 0, 0, ierflg);//mm
-  gMinuit->mnparm(1, "y", 0, 3, 0, 0, ierflg);//mm
-  gMinuit->mnparm(2, "z", 10, 3, 0, 0, ierflg);//mm
-  gMinuit->mnparm(3, "q", 35000, 5000, 0, 0, ierflg);
-  
+  gMinuit->mnparm(0, "x", 5, 3, 0, 0, ierflg);//mm
+  gMinuit->mnparm(1, "y", 3, 3, 0, 0, ierflg);//mm
+  gMinuit->mnparm(2, "z", 18, 3, 0, 0, ierflg);//mm
+  gMinuit->mnparm(3, "q", 1000, 500, 0, 0, ierflg);
+  gMinuit->mnparm(4, "w", TMath::Pi(), 0.125*TMath::Pi(), 0, 0, ierflg);
   cout << "Parameters set, Minimization starting" << endl;
 
   arglist[0] = 10000; //this is somehow related to number of calls
@@ -350,15 +377,24 @@ Double_t ralphWF() {
   Int_t ivarbl3;
   TString chnam3;
   gMinuit->mnpout(num3, chnam3, val3, error3, bnd13, bnd23, ivarbl3);
-  cout << "q: " << num3 << " chnam3 " << chnam3 << " value3 " << val3  << endl;
+  cout << "q: " <<  " value3 " << val3  << endl;
+
+  Double_t val4, error4, bnd14, bnd24;
+  Int_t num4=4;
+  Int_t ivarbl4;
+  TString chnam4;
+  gMinuit->mnpout(num4, chnam4, val4, error4, bnd14, bnd24, ivarbl4);
+  cout << "w: " <<  " value4 " << val4  << endl;
+ 
 
   Int_t pause;
   cin >> pause;
-  Double_t par[4];
+  Double_t par[5];
   par[0] = val0;
   par[1] = val1;
   par[2] = val2;
   par[3] = val3;
+  par[4] = val4;
   draw(par);
 
   cout << "Printing out results: " << endl; 
