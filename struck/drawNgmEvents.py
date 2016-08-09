@@ -3,7 +3,7 @@
 """
 This script draws events from NGM root file(s). 
 
-arguments [NGM root files of events: HitOut*.root]
+arguments [NGM root files of events: tier1_SIS3316Raw_*.root]
 """
 
 import os
@@ -13,7 +13,7 @@ import commands
 from scipy.fftpack import fft
 
 import ROOT
-ROOT.gROOT.SetBatch(True) # uncomment to draw multi-page PDF
+#ROOT.gROOT.SetBatch(True) # uncomment to draw multi-page PDF
 
 import struck_analysis_parameters
 # doesn't work? :
@@ -44,7 +44,7 @@ def process_file(filename=None, n_plots_total=0):
 
     units_to_use = 0 # 0=keV, 1=ADC units, 2=mV
 
-    do_fft = True
+    do_fft = False
     do_fit = False #fit sine to sum wfm
 
     #------------------------------------------------------
@@ -73,7 +73,7 @@ def process_file(filename=None, n_plots_total=0):
     #If input filename is null assume we want to examine the most recent file
     if(filename == None):
         # example name: SIS3316Raw_20160712204526_1.bin
-        output  = commands.getstatusoutput("ls -rt Hit*.root | tail -n1")
+        output  = commands.getstatusoutput("ls -rt tier1_SIS3316Raw_*.root | tail -n1")
         filename = output[1]
         print "--> using most recent NGM file, ", filename
 
@@ -177,13 +177,16 @@ def process_file(filename=None, n_plots_total=0):
     i_entry = 0
     n_plots = 0
     y_max_old = y_max
+    y_min_old = y_min
     # use while loop instead of for loop so we can modify i_entry if needed
     while i_entry < n_entries:
 
         canvas.SetLogy(0)
         canvas.SetLogx(0)
 
-        y_max = y_max_old # reset at start of each event
+        # reset at start of each event
+        y_max = y_max_old 
+        y_min = y_min_old
        
         chargeEnergy = 0.0
 
@@ -264,6 +267,9 @@ def process_file(filename=None, n_plots_total=0):
             for i_point in xrange(graph.GetN()):
                 x = graph.GetX()[i_point]
                 y = graph.GetY()[i_point]
+                if y > y_max: y_max = y
+                if y < y_min: y_min = y
+
                 graph.SetPoint(i_point, x/sampling_freq_Hz*1e6, y)
 
             graph.SetLineWidth(2)
@@ -470,7 +476,7 @@ def process_file(filename=None, n_plots_total=0):
 
 if __name__ == "__main__":
 
-    n_plots_total = 1
+    n_plots_total = 10
     n_plots_so_far = 0
     if len(sys.argv) > 1:
         for filename in sys.argv[1:]:
