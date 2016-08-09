@@ -185,8 +185,9 @@ Double_t OnePCDWithOptions(
 
   if (t < triggerTime) { return 0.0; } // wfm is 0 for times before drift starts
   
+  //w = TMath::Pi(); 
   Double_t weight_center = 0.5*q*(1+sin(w));
-  Double_t weight_outer = (1 - 0.5*q*(1+sin(w)))/4;
+  Double_t weight_outer = (q*(1 - 0.5*(1+sin(w))))/4;
   Double_t Q0 = x + 0.3;
   Double_t R1 = y - 0.3;
   Double_t S0 = x - 0.3;
