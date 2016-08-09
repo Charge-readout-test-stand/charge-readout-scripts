@@ -186,8 +186,8 @@ Double_t OnePCDWithOptions(
   if (t < triggerTime) { return 0.0; } // wfm is 0 for times before drift starts
   
   //w = TMath::Pi(); 
-  Double_t weight_center = 0.5*q*(1+sin(w));
-  Double_t weight_outer = (q*(1 - 0.5*(1+sin(w))))/4;
+  Double_t weight_center = 0.5*q*(1.0+sin(w));
+  Double_t weight_outer = (q*(1.0 - 0.5*(1.0+sin(w))))/4;
   Double_t Q0 = x + 0.3;
   Double_t R1 = y - 0.3;
   Double_t S0 = x - 0.3;
@@ -230,7 +230,7 @@ TH1D *hist[60];
 TF1 *test[60]; 
 TCanvas *c1;
 UInt_t ncalls = 0;
-Double_t RMS_noise = 20.44;
+Double_t RMS_noise = 1; //20.44;
 
 
 //Model cloud of charge: P = center, Q = right, R-S-T clockwise
@@ -320,7 +320,13 @@ Double_t ralphWF() {
     hist[i]->GetYaxis()->CenterTitle();
     test[i] = new TF1("test", OnePCD, 0, 32, 4);
     for (UInt_t n=0; n<800;  n++) { //800 time samples
-      Double_t noise = generator->Gaus(0, RMS_noise); 
+      Double_t noise = generator->Gaus(0, RMS_noise);
+     /* Double_t Q = 0.0;
+      for (n=600; n<800; n++) {
+        Q += (((*ChannelWaveform)[i])[n])*0.022004;
+        }
+      Double_t AveQ = Q/200;
+      cout << "ave q: " << AveQ << endl; */
       Double_t ChannelWFelement = (((*ChannelWaveform)[i])[n])*0.022004; //convert to keV
       ChannelWFelement += noise;
       hist[i]->SetBinContent(n+1, ChannelWFelement); //plots charge deposit energy in keV CHECK UNIT CONVERSION FOR NOISE      
@@ -344,7 +350,7 @@ Double_t ralphWF() {
   gMinuit->mnparm(0, "x", 5, 3, 0, 0, ierflg);//mm
   gMinuit->mnparm(1, "y", 3, 3, 0, 0, ierflg);//mm
   gMinuit->mnparm(2, "z", 18, 3, 0, 0, ierflg);//mm
-  gMinuit->mnparm(3, "q", 1000, 500, 0, 0, ierflg);
+  gMinuit->mnparm(3, "q", 980, 100, 0, 0, ierflg); //16: 720; 46: 260
   gMinuit->mnparm(4, "w", TMath::Pi(), 0.125*TMath::Pi(), 0, 0, ierflg);
   cout << "Parameters set, Minimization starting" << endl;
 
