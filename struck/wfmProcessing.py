@@ -296,7 +296,7 @@ def do_risetime_calc(rise_time_calculator, threshold_percent, wfm, max_val, peri
 
 
 
-def get_risetimes(exo_wfm, wfm_length, sampling_freq_Hz):
+def get_risetimes(exo_wfm, wfm_length, sampling_freq_Hz, skip_short_risetimes=True):
     exo_wfm.SetSamplingFreq(sampling_freq_Hz/second)
     new_wfm = EXODoubleWaveform(exo_wfm)
     maw_wfm = EXODoubleWaveform(exo_wfm)
@@ -339,14 +339,46 @@ def get_risetimes(exo_wfm, wfm_length, sampling_freq_Hz):
 
     # rise time calculator thresholds are called percentage, but they
     # are really fractions...
-    rise_time_stop10 = do_risetime_calc(rise_time_calculator, 0.10, exo_wfm, max_val, period)
-    rise_time_stop20 = do_risetime_calc(rise_time_calculator, 0.20, exo_wfm, max_val, period)
-    rise_time_stop30 = do_risetime_calc(rise_time_calculator, 0.30, exo_wfm, max_val, period)
-    rise_time_stop40 = do_risetime_calc(rise_time_calculator, 0.40, exo_wfm, max_val, period)
-    rise_time_stop50 = do_risetime_calc(rise_time_calculator, 0.50, exo_wfm, max_val, period)
-    rise_time_stop60 = do_risetime_calc(rise_time_calculator, 0.60, exo_wfm, max_val, period)
-    rise_time_stop70 = do_risetime_calc(rise_time_calculator, 0.70, exo_wfm, max_val, period)
-    rise_time_stop80 = do_risetime_calc(rise_time_calculator, 0.80, exo_wfm, max_val, period)
+    if skip_short_risetimes:
+        rise_time_stop10 = 0.0
+    else:
+        rise_time_stop10 = do_risetime_calc(rise_time_calculator, 0.10, exo_wfm, max_val, period)
+
+    if skip_short_risetimes:
+        rise_time_stop20 = 0.0
+    else:
+        rise_time_stop20 = do_risetime_calc(rise_time_calculator, 0.20, exo_wfm, max_val, period)
+
+    if skip_short_risetimes:
+        rise_time_stop30 = 0.0
+    else:
+        rise_time_stop30 = do_risetime_calc(rise_time_calculator, 0.30, exo_wfm, max_val, period)
+
+    if skip_short_risetimes:
+        rise_time_stop40 = 0.0
+    else:
+        rise_time_stop40 = do_risetime_calc(rise_time_calculator, 0.40, exo_wfm, max_val, period)
+
+    if skip_short_risetimes:
+        rise_time_stop50 = 0.0
+    else:
+        rise_time_stop50 = do_risetime_calc(rise_time_calculator, 0.50, exo_wfm, max_val, period)
+
+    if skip_short_risetimes:
+        rise_time_stop60 = 0.0
+    else:
+        rise_time_stop60 = do_risetime_calc(rise_time_calculator, 0.60, exo_wfm, max_val, period)
+
+    if skip_short_risetimes:
+        rise_time_stop70 = 0.0
+    else:
+        rise_time_stop70 = do_risetime_calc(rise_time_calculator, 0.70, exo_wfm, max_val, period)
+
+    if skip_short_risetimes:
+        rise_time_stop80 = 0.0
+    else:
+        rise_time_stop80 = do_risetime_calc(rise_time_calculator, 0.80, exo_wfm, max_val, period)
+
     rise_time_stop90 = do_risetime_calc(rise_time_calculator, 0.90, exo_wfm, max_val, period)
     rise_time_stop95 = do_risetime_calc(rise_time_calculator, 0.95, exo_wfm, max_val, period)
     rise_time_stop99 = do_risetime_calc(rise_time_calculator, 0.99, exo_wfm, max_val, period)
