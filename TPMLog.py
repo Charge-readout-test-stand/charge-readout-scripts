@@ -46,6 +46,8 @@ Plot names = DataType_Date_Index*.jpeg
 import os
 import sys
 import datetime
+import matplotlib
+matplotlib.use('Agg') # batch mode
 import matplotlib.pyplot as plt
 import numpy as np
 from optparse import OptionParser
