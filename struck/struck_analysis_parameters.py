@@ -13,9 +13,10 @@ notes:
 """
 
 # options
-is_6th_LXe = False
-is_7th_LXe = True
-is_8th_LXe = False
+is_6th_LXe = False 
+is_7th_LXe = True # March 2016
+is_8th_LXe = False # August 2016
+
 if False: # testing 8th LXe
     is_7th_LXe = False
     is_8th_LXe = True
@@ -121,7 +122,42 @@ if is_7th_LXe:
     channel_map[7] = "Y19"
 if is_8th_LXe: # FIXME with real values for 8th LXe
     for i_channel in xrange(n_chargechannels):
-        channel_map[i_channel] = "X%i" % i_channel
+
+        # S/N 97, slot 0, Y channels
+        channel_map[0] = "Y1-10"
+        channel_map[1] = "Y11"
+        channel_map[2] = "Y12"
+        channel_map[3] = "Y13"
+        channel_map[4] = "Y14"
+        channel_map[5] = "Y15"
+        channel_map[6] = "Y16"
+        channel_map[7] = "Y17"
+        channel_map[8] = "Y18"
+        channel_map[9] = "Y19"
+        channel_map[10] = "Y20"
+        channel_map[11] = "Y21/22"
+        channel_map[12] = "Y23/24"
+        channel_map[13] = "Y25/26"
+        channel_map[14] = "Y27/28"
+        channel_map[15] = "Y29/30"
+
+        # S/N 98, slot 1, X channels+PMT
+        channel_map[16] = "X1-12"
+        channel_map[17] = "X13"
+        channel_map[18] = "X14"
+        channel_map[19] = "X15"
+        channel_map[20] = "X16"
+        channel_map[21] = "X17"
+        channel_map[22] = "X18"
+        channel_map[23] = "X19"
+        channel_map[24] = "X20"
+        channel_map[25] = "X21"
+        channel_map[26] = "X22"
+        channel_map[27] = "X23/24"
+        channel_map[28] = "X25/26"
+        channel_map[29] = "X27/28"
+        channel_map[30] = "X29/30"
+        channel_map[pmt_channel] = "PMT"
 
 #MC Channels index starts at 0 so X26 = 25
 #Y  Channles are offset by 30
@@ -137,7 +173,10 @@ for struck_channel, label in channel_map.items():
     if "Y" in label:
         is_y = True
     elif "PMT" in label: continue
-    mc_channel = int(label[1:]) -1
+    if is_8th_LXe:
+        mc_channel = struck_channel # FIXME?
+    else:
+        mc_channel = int(label[1:]) -1
     if is_y: mc_channel += 30
     #print "channel %s: struck=%i | mc=%i" % (label, struck_channel, mc_channel)
     struck_to_mc_channel_map[struck_channel] = mc_channel

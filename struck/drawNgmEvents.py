@@ -281,17 +281,19 @@ def process_file(filename=None, n_plots_total=0):
                 print "offset is %s -- this will affect the sum wfms!!" % offset
             for i_point in xrange(tree.HitTree.GetNSamples()):
                 y = graph.GetY()[i_point]
-                sum_wfm[i_point] = sum_wfm[i_point] + y - offset
-                if slot == 0:
-                    sum_wfm0[i_point] = sum_wfm0[i_point] + y - offset
-                if slot == 1:
-                    sum_wfm1[i_point] = sum_wfm1[i_point] + y - offset
-                
+                if channel != pmt_channel:
+                    sum_wfm[i_point] = sum_wfm[i_point] + y - offset
+
+                    if slot == 0:
+                        sum_wfm0[i_point] = sum_wfm0[i_point] + y - offset
+                    if slot == 1:
+                        sum_wfm1[i_point] = sum_wfm1[i_point] + y - offset
+                    
             # legend uses hists for color/fill info
             legend_entries[channel] = "%s %.1f" % (
                 channel_map[channel], 
-                #energy,
-                rms_noise,
+                energy,
+                #rms_noise,
             ) 
 
             # end loop over channels
@@ -366,8 +368,8 @@ def process_file(filename=None, n_plots_total=0):
             legend.AddEntry( hists[i], legend_entries[i], "f")
 
         legend.AddEntry(sum_graph, "sum %.1f" % rms_noise,"l")
-        legend.AddEntry(sum_graph0, "sum slot 0","l")
-        legend.AddEntry(sum_graph1, "sum slot 1","l")
+        legend.AddEntry(sum_graph0, "Y sum slot 0","l")
+        legend.AddEntry(sum_graph1, "X sum slot 1","l")
 
         # line to show trigger time
         line = ROOT.TLine(trigger_time, y_min, trigger_time,y_max)
@@ -462,7 +464,7 @@ def process_file(filename=None, n_plots_total=0):
             # end test of do_fft
 
 
-        if n_plots >= n_plots_total: # end multi-page pdf file
+        if ROOT.gROOT.IsBatch() and n_plots >= n_plots_total: # end multi-page pdf file
             canvas.Print("%s]" % plot_name)
 
         if n_plots >= n_plots_total:
