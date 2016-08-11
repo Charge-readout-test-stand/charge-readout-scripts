@@ -11,7 +11,6 @@
 #include "TF1.h"
 #include "TMath.h"
 #include "TCanvas.h"
-#include "TStyle.h"
 #include "TLegend.h"
 #include "TH1D.h"
 #include "TH2D.h"
@@ -292,7 +291,7 @@ void draw(Double_t *par)
     test[i]->SetParameter(1,P[1]); // y
     test[i]->SetParameter(2, par[2]); // z
     test[i]->SetParameter(3, par[3]); // q  
-    test[i]->SetParameter(4, par[4]);
+    test[i]->SetParameter(4, par[4]); // w
  
     Double_t Chisq_per_channel = ChisqFit(par, i);
 
@@ -312,7 +311,7 @@ void draw(Double_t *par)
   cout << tree->GetEntries() << endl;
   Int_t nbins = 21.2/0.53;//x vs y binning
   cout << nbins << endl;
- // TH2D *eCloud_point_hist = new TH2D("eCloud_point_hist", "eCloud-PointCharge Comparison", nbins, 0, 8, nbins, 0, 5);//x z
+//  TH2D *eCloud_point_hist = new TH2D("eCloud_point_hist", "eCloud-PointCharge Comparison", nbins, 0, 8, nbins, 0, 5);//x z
   TH2D *eCloud_point_hist = new TH2D("eCloud_point_hist", "eCloud-PointCharge Comparison", nbins, 0, 8, nbins, -15, 8);//x y
  
   TH2D *point_charge = new TH2D("point_charge", "", 200, 0, 8, 200, -15, 8);
@@ -351,13 +350,15 @@ Double_t ralphWF() {
   TFile *inputroot = TFile::Open("~/../manisha2/MC/e1MeV_dcoeff50/digitization_dcoeff50/digi1_e1MeV_dcoef50.root");
   TTree *tree = (TTree*) inputroot->Get("evtTree");
   vector<vector<double> > *ChannelWaveform=0; //defines pointer to vector of vectors
-  cout << "n entries: " << tree->GetEntries() << endl;
+  cout << "number of events: " << tree->GetEntries() << endl;
   tree->SetBranchAddress("ChannelWaveform", &ChannelWaveform);
-  tree->GetEntry(7); //event 
 
-  cout << "size of ChannelWaveform: " << (*ChannelWaveform).size() << endl; //number of channels (should be 60)
-  cout << "size of ChannelWaveform[20]: " << ((*ChannelWaveform)[20]).size() << endl; //print out size of nth channel
-  cout << "entry ChannelWaveform[0, 200]: " << ((*ChannelWaveform)[0])[200] << endl; //200th time sample from 0th channel
+//  for (UInt_t a=0; a<tree->GetEntries(); a++) {
+  tree->GetEntry(7); //EVENT NUMBER
+
+  //cout << "size of ChannelWaveform: " << (*ChannelWaveform).size() << endl; //number of channels (should be 60)
+  //cout << "size of ChannelWaveform[20]: " << ((*ChannelWaveform)[20]).size() << endl; //print out size of nth channel
+  //cout << "entry ChannelWaveform[0, 200]: " << ((*ChannelWaveform)[0])[200] << endl; //200th time sample from 0th channel
   c1 = new TCanvas("c1", "");
   TRandom3 *generator = new TRandom3(0);//random number generator initialized by TUUID object
  
@@ -369,7 +370,7 @@ Double_t ralphWF() {
     hist[i]->GetYaxis()->SetTitle("Energy of Charge Deposit (keV)");
     hist[i]->GetXaxis()->CenterTitle();
     hist[i]->GetYaxis()->CenterTitle();
-    test[i] = new TF1("test", OnePCD, 0, 32, 5);
+    test[i] = new TF1("test", OnePCD, 0, 32, 5); //5 is # of params
     for (UInt_t n=0; n<800;  n++) { //800 time samples
       Double_t noise = generator->Gaus(0, RMS_noise);
      /* Double_t Q = 0.0;
@@ -380,29 +381,29 @@ Double_t ralphWF() {
       cout << "ave q: " << AveQ << endl; */
       Double_t ChannelWFelement = (((*ChannelWaveform)[i])[n])*0.022004; //convert to keV
       ChannelWFelement += noise;
-      hist[i]->SetBinContent(n+1, ChannelWFelement); //plots charge deposit energy in keV CHECK UNIT CONVERSION FOR NOISE      
+      hist[i]->SetBinContent(n+1, ChannelWFelement); //plots charge deposit energy in keV
      }
 //    cout << "contents of bin " << hist[0]->GetBinContent(100) << endl;
     }
  
-  cout << "Hists filled" << endl; 
+//  cout << "Hists filled" << endl; 
 
-  TMinuit *gMinuit = new TMinuit(5);  //initialize TMinuit with a maximum of 4 params CHANGED FROM 4
+  TMinuit *gMinuit = new TMinuit(5);  //initialize TMinuit with a maximum of 5 params 
   gMinuit->SetFCN(fcn); 
 
 //  Int_t nvpar, nparx, icstat;
 //  if (icstat < 3 ) { //repeat TMinuit multiple times in loop
 
   cout << "TMinuit has begun" << endl; 
-  Double_t arglist[5]; //CHANGED FROM 4
+  Double_t arglist[5]; //# of params
   Int_t ierflg = 0;
   arglist[0] = 1;
   gMinuit->mnexcm("SET ERR", arglist ,1,ierflg);
   gMinuit->mnparm(0, "x", 4.5, 1, 0, 0, ierflg);//mm
   gMinuit->mnparm(1, "y", 4.5, 1, 0, 0, ierflg);//mm
   gMinuit->mnparm(2, "z", 10, 1, 0, 0, ierflg);//mm
-  gMinuit->mnparm(3, "q", 1000, 100, 0, 0, ierflg); 
-  gMinuit->mnparm(4, "w", TMath::Pi(), 0.125*TMath::Pi(), 0, 0, ierflg);
+  gMinuit->mnparm(3, "q", 1000, 100, 0, 0, ierflg); //keV
+  gMinuit->mnparm(4, "w", TMath::Pi(), 0.125*TMath::Pi(), 0, 0, ierflg); //radians
   cout << "Parameters set, Minimization starting" << endl;
 
   arglist[0] = 10000; //this is somehow related to number of calls
