@@ -1,3 +1,4 @@
+
 // This macro constructs a function from Ralph's analytical expression for the
 // charge signal. 
 // This is a ROOT macro so that it can be used by ROOT for fitting, like by
@@ -10,8 +11,10 @@
 #include "TF1.h"
 #include "TMath.h"
 #include "TCanvas.h"
+#include "TStyle.h"
 #include "TLegend.h"
 #include "TH1D.h"
+#include "TH2D.h"
 #include "TTree.h"
 #include "TFile.h"
 #include "TMinuit.h"
@@ -187,17 +190,29 @@ Double_t OnePCDWithOptions(
   
   //w = TMath::Pi(); 
   Double_t weight_center = 0.5*q*(1.0+sin(w));
-  Double_t weight_outer = (q*(1.0 - 0.5*(1.0+sin(w))))/4;
-  Double_t Q0 = x + 0.3;
-  Double_t R1 = y - 0.3;
-  Double_t S0 = x - 0.3;
-  Double_t T1 = y + 0.3;
-  
+  Double_t weight_outer = (q*(1.0 - 0.5*(1.0+sin(w))))/8;
+  Double_t Q0 = x + 1.0;
+  Double_t R1 = y - 1.0;
+  Double_t S0 = x - 1.0;
+  Double_t T1 = y + 1.0;
+  Double_t V0 = x + 0.707;
+  Double_t V1 = y - 0.707;
+  Double_t W0 = x - 0.707;
+  Double_t W1 = V1;
+  Double_t X0 = W0;
+  Double_t X1 = y + 0.707;
+  Double_t U0 = V0;
+  Double_t U1 = X1;
+
   Double_t amplitude = weight_center*OneStripWithIonAndCathode(x, y, z, z0, doDebug);
   amplitude += weight_outer*OneStripWithIonAndCathode(Q0, y, z, z0, doDebug);
   amplitude += weight_outer*OneStripWithIonAndCathode(x, R1, z, z0, doDebug);
   amplitude += weight_outer*OneStripWithIonAndCathode(S0, y, z, z0, doDebug);
   amplitude += weight_outer*OneStripWithIonAndCathode(x, T1, z, z0, doDebug);
+  amplitude += weight_outer*OneStripWithIonAndCathode(U0, U1, z, z0, doDebug);
+  amplitude += weight_outer*OneStripWithIonAndCathode(V0, V1, z, z0, doDebug);
+  amplitude += weight_outer*OneStripWithIonAndCathode(W0, W1, z, z0, doDebug);
+  amplitude += weight_outer*OneStripWithIonAndCathode(X0, X1, z, z0, doDebug);
   
   return amplitude; 
 }
@@ -230,8 +245,7 @@ TH1D *hist[60];
 TF1 *test[60]; 
 TCanvas *c1;
 UInt_t ncalls = 0;
-Double_t RMS_noise = 1; //20.44;
-
+Double_t RMS_noise = 20.44; 
 
 //Model cloud of charge: P = center, Q = right, R-S-T clockwise
 void TransformCoord (Double_t *par, Double_t *P, UInt_t i)
@@ -250,11 +264,28 @@ void TransformCoord (Double_t *par, Double_t *P, UInt_t i)
   P[4] = par[4];
 }
 
+Double_t ChisqFit(Double_t *par, UInt_t i)   
+{
+    Double_t delta;
+    Double_t NumberOfSamples = 0;
+    Double_t chisq_per_channel = 0;
+    Double_t P[5]; //P[0] is along the wire, P[1] is transverse dir, P is coord sys of wire (origin=center of wire)
+    TransformCoord(par, P, i);
+    for (UInt_t n=200; n<450; n++) { //n is time sample; 200 - 450 is 8 - 18 ms
+      NumberOfSamples += 1;
+      Double_t t = n*.04; //each point in channel waveform separated by 40 ns
+      delta = ((hist[i]->GetBinContent(n) - OnePCD(&t, P)))/RMS_noise;
+      chisq_per_channel += delta*delta;
+    } 
+  return chisq_per_channel/NumberOfSamples;//chisq per deg of freedom
+}
+
 void draw(Double_t *par)
 {
   c1->SetGrid();
-  c1->Print("chisqfits_entry2.pdf[");
-  for (UInt_t i=0; i<60;  i++) { 
+  c1->Print("Event7.pdf[");
+  
+   for (UInt_t i=0; i<60;  i++) { 
     Double_t P[5]; //P[0] is along the wire, P[1] is transverse dir, P is coord sys of wire (origin=center of wire)
     TransformCoord(par, P, i);
     test[i]->SetParameter(0,P[0]); // x
@@ -262,47 +293,67 @@ void draw(Double_t *par)
     test[i]->SetParameter(2, par[2]); // z
     test[i]->SetParameter(3, par[3]); // q  
     test[i]->SetParameter(4, par[4]);
-    
+ 
+    Double_t Chisq_per_channel = ChisqFit(par, i);
+
     hist[i]->Draw();
+    ostringstream name;
+    name << "Channel " << i << "  x=" << par[0] << "  y=" << par[1] << "  z=" << par[2] << "  q=" << par[3] << "  w=" << par[4] << "  chisq per chan=" << Chisq_per_channel; 
+    hist[i]->SetTitle(name.str().c_str());
     test[i]->Draw("same"); 
     test[i]->SetLineColor(kRed);
     test[i]->SetLineStyle(7);
     c1->Update();
-    c1->Print("chisqfits_entry2.pdf");
-  }
-    c1->Print("chisqfits_entry2.pdf]");
-    cout << "Hists and fits drawn" << endl;
-    Int_t pause;
-    cin >> pause; 
+    c1->Print("Event7.pdf");
+    }
+
+  TFile *inputroot = TFile::Open("~/../manisha2/MC/e1MeV_dcoeff50/digitization_dcoeff50/digi1_e1MeV_dcoef50.root");
+  TTree *tree = (TTree*) inputroot->Get("evtTree");
+  cout << tree->GetEntries() << endl;
+  Int_t nbins = 21.2/0.53;//x vs y binning
+  cout << nbins << endl;
+ // TH2D *eCloud_point_hist = new TH2D("eCloud_point_hist", "eCloud-PointCharge Comparison", nbins, 0, 8, nbins, 0, 5);//x z
+  TH2D *eCloud_point_hist = new TH2D("eCloud_point_hist", "eCloud-PointCharge Comparison", nbins, 0, 8, nbins, -15, 8);//x y
+ 
+  TH2D *point_charge = new TH2D("point_charge", "", 200, 0, 8, 200, -15, 8);
+  point_charge->Fill(par[0], par[1], par[3]); 
+  tree->Draw("PCDy:PCDx >> eCloud_point_hist", "(Entry$==7)*PCDq*0.02204");//why do we multiply PCDq by event?
+  eCloud_point_hist->Draw("colz");
+  point_charge->Draw("same");
+
+  eCloud_point_hist->GetXaxis()->SetTitle("X");
+  eCloud_point_hist->GetYaxis()->SetTitle("Y");
+  eCloud_point_hist->GetXaxis()->CenterTitle();
+  eCloud_point_hist->GetYaxis()->CenterTitle();
+//  TStyle::gStyle->SetOptStat(0);
+  c1->Update();
+  c1->Print("Event7.pdf");
+  eCloud_point_hist->Write();
+  
+  c1->Print("Event7.pdf]");
+  cout << "Hists and fits drawn" << endl;
+  Int_t pause;
+  cin >> pause; 
 }
 
 void fcn(Int_t &npar, Double_t *gin, Double_t &f, Double_t *par, Int_t iflag)
 {     
-  Double_t delta;
-  Double_t chisq = 0.0;
+  Double_t chisq = 0.0;  
   ncalls += 1;
-  for (UInt_t i=0; i<60; i++) { //i is channel #
-    Int_t nbins = hist[i]->GetNbinsX();
-    Double_t P[5]; //P[0] is along the wire, P[1] is transverse dir, P is coord sys of wire (origin=center of wire)
-    TransformCoord(par, P, i);
-    for (UInt_t n=200; n<610; n++) { //n is time sample
-      Double_t t = n*.04; //each point in channel waveform separated by 40 ns
-      delta = ((hist[i]->GetBinContent(n) - OnePCD(&t, P)))/RMS_noise;
-      chisq += delta*delta/410.0/60.0;//chisq per deg of freedom
-     } 
+  for (UInt_t i=0; i<60; i++) {
+    chisq += ChisqFit(par, i)/60;
   }
-//  cout << "ncalls " << ncalls << " chisq " << chisq << " x " << par[0] << " y " << par[1] << " z " << par[2] << " q " << par[3] << endl;
-
+  //cout << "ncalls " << ncalls << " chisq " << chisq << " x " << par[0] << " y " << par[1] << " z " << par[2] << " q " << par[3] << " w " << par[4] << endl;
   f = chisq; 
 }
 
 Double_t ralphWF() {
-  TFile *inputroot = TFile::Open("~/../manisha2/MC/e1MeV_dcoeff0/digitization_dcoeff0/digi1_e1MeV_dcoef0.root");
+  TFile *inputroot = TFile::Open("~/../manisha2/MC/e1MeV_dcoeff50/digitization_dcoeff50/digi1_e1MeV_dcoef50.root");
   TTree *tree = (TTree*) inputroot->Get("evtTree");
   vector<vector<double> > *ChannelWaveform=0; //defines pointer to vector of vectors
   cout << "n entries: " << tree->GetEntries() << endl;
   tree->SetBranchAddress("ChannelWaveform", &ChannelWaveform);
-  tree->GetEntry(2);
+  tree->GetEntry(7); //event 
 
   cout << "size of ChannelWaveform: " << (*ChannelWaveform).size() << endl; //number of channels (should be 60)
   cout << "size of ChannelWaveform[20]: " << ((*ChannelWaveform)[20]).size() << endl; //print out size of nth channel
@@ -318,7 +369,7 @@ Double_t ralphWF() {
     hist[i]->GetYaxis()->SetTitle("Energy of Charge Deposit (keV)");
     hist[i]->GetXaxis()->CenterTitle();
     hist[i]->GetYaxis()->CenterTitle();
-    test[i] = new TF1("test", OnePCD, 0, 32, 4);
+    test[i] = new TF1("test", OnePCD, 0, 32, 5);
     for (UInt_t n=0; n<800;  n++) { //800 time samples
       Double_t noise = generator->Gaus(0, RMS_noise);
      /* Double_t Q = 0.0;
@@ -347,10 +398,10 @@ Double_t ralphWF() {
   Int_t ierflg = 0;
   arglist[0] = 1;
   gMinuit->mnexcm("SET ERR", arglist ,1,ierflg);
-  gMinuit->mnparm(0, "x", 5, 3, 0, 0, ierflg);//mm
-  gMinuit->mnparm(1, "y", 3, 3, 0, 0, ierflg);//mm
-  gMinuit->mnparm(2, "z", 18, 3, 0, 0, ierflg);//mm
-  gMinuit->mnparm(3, "q", 980, 100, 0, 0, ierflg); //16: 720; 46: 260
+  gMinuit->mnparm(0, "x", 4.5, 1, 0, 0, ierflg);//mm
+  gMinuit->mnparm(1, "y", 4.5, 1, 0, 0, ierflg);//mm
+  gMinuit->mnparm(2, "z", 10, 1, 0, 0, ierflg);//mm
+  gMinuit->mnparm(3, "q", 1000, 100, 0, 0, ierflg); 
   gMinuit->mnparm(4, "w", TMath::Pi(), 0.125*TMath::Pi(), 0, 0, ierflg);
   cout << "Parameters set, Minimization starting" << endl;
 
@@ -392,10 +443,7 @@ Double_t ralphWF() {
   TString chnam4;
   gMinuit->mnpout(num4, chnam4, val4, error4, bnd14, bnd24, ivarbl4);
   cout << "w: " <<  " value4 " << val4  << endl;
- 
 
-  Int_t pause;
-  cin >> pause;
   Double_t par[5];
   par[0] = val0;
   par[1] = val1;
@@ -409,8 +457,7 @@ Double_t ralphWF() {
   Int_t nvpar, nparx, icstat;
   gMinuit->mnstat(amin, edm, errdef, nvpar, nparx, icstat);
   cout << "best function value found so far: " << amin << " vertical dist remaining to min: " << edm << " how good is fit? 0=bad, 1=approx, 2=full matrix but forced positive-definite, 3=good: " << icstat << endl;
-  
-
+   
 /*
     // a test -- just draw a sample wfm to see if things are working. 
 
