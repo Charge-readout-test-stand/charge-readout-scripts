@@ -242,9 +242,13 @@ Double_t TwoPCDsOneZ(Double_t *var, Double_t *par) {
 
 TH1D *hist[60]; 
 TF1 *test[60]; 
-TCanvas *c1;
-UInt_t ncalls = 0;
+TCanvas *ca;
+UInt_t ncalls = 0; //number of times fcn() gets called
 Double_t RMS_noise = 20.44; 
+UInt_t a;
+UInt_t draw_calls = 0; //number of times draw() gets called (this should correspond to event #)
+TFile output_file("output_file.root", "recreate"); //creates output root file
+TTree *output_tree = new TTree("output_tree", "Output of MIGRAD"); //creates output tree
 
 //Model cloud of charge: P = center, Q = right, R-S-T clockwise
 void TransformCoord (Double_t *par, Double_t *P, UInt_t i)
@@ -265,26 +269,30 @@ void TransformCoord (Double_t *par, Double_t *P, UInt_t i)
 
 Double_t ChisqFit(Double_t *par, UInt_t i)   
 {
-    Double_t delta;
-    Double_t NumberOfSamples = 0;
-    Double_t chisq_per_channel = 0;
-    Double_t P[5]; //P[0] is along the wire, P[1] is transverse dir, P is coord sys of wire (origin=center of wire)
-    TransformCoord(par, P, i);
-    for (UInt_t n=200; n<450; n++) { //n is time sample; 200 - 450 is 8 - 18 ms
-      NumberOfSamples += 1;
-      Double_t t = n*.04; //each point in channel waveform separated by 40 ns
-      delta = ((hist[i]->GetBinContent(n) - OnePCD(&t, P)))/RMS_noise;
-      chisq_per_channel += delta*delta;
-    } 
+  Double_t delta;
+  Double_t NumberOfSamples = 0;
+  Double_t chisq_per_channel = 0;
+  Double_t P[5]; //P[0] is along the wire, P[1] is transverse dir, P is coord sys of wire (origin=center of wire)
+  TransformCoord(par, P, i);
+  for (UInt_t n=200; n<450; n++) { //n is time sample; 200 - 450 is 8 - 18 ms
+    NumberOfSamples += 1;
+    Double_t t = n*.04; //each point in channel waveform separated by 40 ns
+    delta = ((hist[i]->GetBinContent(n) - OnePCD(&t, P)))/RMS_noise;
+    chisq_per_channel += delta*delta;
+  } 
   return chisq_per_channel/NumberOfSamples;//chisq per deg of freedom
 }
 
 void draw(Double_t *par)
 {
-  c1->SetGrid();
-  c1->Print("Event7.pdf[");
-  
-   for (UInt_t i=0; i<60;  i++) { 
+  ca->SetGrid();
+  ostringstream pdfnameStream;
+  pdfnameStream << "Event_" << a << ".pdf[";
+  string pdfname = pdfnameStream.str();
+  ca->Print(pdfname.c_str());
+  cout << "pdf file opened" << endl;
+
+  for (UInt_t i=0; i<60;  i++) { 
     Double_t P[5]; //P[0] is along the wire, P[1] is transverse dir, P is coord sys of wire (origin=center of wire)
     TransformCoord(par, P, i);
     test[i]->SetParameter(0,P[0]); // x
@@ -292,7 +300,7 @@ void draw(Double_t *par)
     test[i]->SetParameter(2, par[2]); // z
     test[i]->SetParameter(3, par[3]); // q  
     test[i]->SetParameter(4, par[4]); // w
- 
+
     Double_t Chisq_per_channel = ChisqFit(par, i);
 
     hist[i]->Draw();
@@ -302,37 +310,41 @@ void draw(Double_t *par)
     test[i]->Draw("same"); 
     test[i]->SetLineColor(kRed);
     test[i]->SetLineStyle(7);
-    c1->Update();
-    c1->Print("Event7.pdf");
+    ca->Update();
+    pdfnameStream << "Event_" << a << ".pdf";
+    ca->Print(pdfname.c_str());
     }
 
   TFile *inputroot = TFile::Open("~/../manisha2/MC/e1MeV_dcoeff50/digitization_dcoeff50/digi1_e1MeV_dcoef50.root");
   TTree *tree = (TTree*) inputroot->Get("evtTree");
-  cout << tree->GetEntries() << endl;
+  tree->GetEntries();
   Int_t nbins = 21.2/0.53;//x vs y binning
-  cout << nbins << endl;
 //  TH2D *eCloud_point_hist = new TH2D("eCloud_point_hist", "eCloud-PointCharge Comparison", nbins, 0, 8, nbins, 0, 5);//x z
-  TH2D *eCloud_point_hist = new TH2D("eCloud_point_hist", "eCloud-PointCharge Comparison", nbins, 0, 8, nbins, -15, 8);//x y
- 
-  TH2D *point_charge = new TH2D("point_charge", "", 200, 0, 8, 200, -15, 8);
+  TH2D *eCloud_point_hist = new TH2D("eCloud_point_hist", "eCloud-PointCharge Comparison", nbins, 0, 8, nbins, 0, 8);//x y 
+  TH2D *point_charge = new TH2D("point_charge", "", 200, 0, 8, 200, 0, 8);
   point_charge->Fill(par[0], par[1], par[3]); 
-  tree->Draw("PCDy:PCDx >> eCloud_point_hist", "(Entry$==7)*PCDq*0.02204");//why do we multiply PCDq by event?
+
+  draw_calls += 1;
+  ostringstream chargeweightStream;
+  chargeweightStream << "(Entry$==" << a << ")*PCDq*0.02204";
+  string chargeweight = chargeweightStream.str();
+
+  tree->Draw("PCDy:PCDx >> eCloud_point_hist", chargeweight.c_str());//why do we multiply PCDq by event?
   eCloud_point_hist->Draw("colz");
   point_charge->Draw("same");
-
   eCloud_point_hist->GetXaxis()->SetTitle("X");
   eCloud_point_hist->GetYaxis()->SetTitle("Y");
   eCloud_point_hist->GetXaxis()->CenterTitle();
   eCloud_point_hist->GetYaxis()->CenterTitle();
 //  TStyle::gStyle->SetOptStat(0);
-  c1->Update();
-  c1->Print("Event7.pdf");
+  ca->Update();
+  pdfnameStream << "Event_" << a << ".pdf";
+  ca->Print(pdfname.c_str());
   eCloud_point_hist->Write();
   
-  c1->Print("Event7.pdf]");
-  cout << "Hists and fits drawn" << endl;
-  Int_t pause;
-  cin >> pause; 
+  pdfnameStream << "Event_" << a << ".pdf]";
+  ca->Print(pdfname.c_str());
+  cout << "pdf file closed" << endl; 
 }
 
 void fcn(Int_t &npar, Double_t *gin, Double_t &f, Double_t *par, Int_t iflag)
@@ -353,112 +365,133 @@ Double_t ralphWF() {
   cout << "number of events: " << tree->GetEntries() << endl;
   tree->SetBranchAddress("ChannelWaveform", &ChannelWaveform);
 
-//  for (UInt_t a=0; a<tree->GetEntries(); a++) {
-  tree->GetEntry(7); //EVENT NUMBER
-
-  //cout << "size of ChannelWaveform: " << (*ChannelWaveform).size() << endl; //number of channels (should be 60)
-  //cout << "size of ChannelWaveform[20]: " << ((*ChannelWaveform)[20]).size() << endl; //print out size of nth channel
-  //cout << "entry ChannelWaveform[0, 200]: " << ((*ChannelWaveform)[0])[200] << endl; //200th time sample from 0th channel
-  c1 = new TCanvas("c1", "");
-  TRandom3 *generator = new TRandom3(0);//random number generator initialized by TUUID object
- 
-  for (UInt_t i=0; i<60; i++) {
-    ostringstream name;
-    name << "Channel" << i; 
-    hist[i] = new TH1D(name.str().c_str(), name.str().c_str(), 800, 0, 32);//wfm_hist in fit_wfm.py gets assigned to this
-    hist[i]->GetXaxis()->SetTitle("time (microsec)");
-    hist[i]->GetYaxis()->SetTitle("Energy of Charge Deposit (keV)");
-    hist[i]->GetXaxis()->CenterTitle();
-    hist[i]->GetYaxis()->CenterTitle();
-    test[i] = new TF1("test", OnePCD, 0, 32, 5); //5 is # of params
-    for (UInt_t n=0; n<800;  n++) { //800 time samples
-      Double_t noise = generator->Gaus(0, RMS_noise);
-     /* Double_t Q = 0.0;
-      for (n=600; n<800; n++) {
-        Q += (((*ChannelWaveform)[i])[n])*0.022004;
-        }
-      Double_t AveQ = Q/200;
-      cout << "ave q: " << AveQ << endl; */
-      Double_t ChannelWFelement = (((*ChannelWaveform)[i])[n])*0.022004; //convert to keV
-      ChannelWFelement += noise;
-      hist[i]->SetBinContent(n+1, ChannelWFelement); //plots charge deposit energy in keV
-     }
-//    cout << "contents of bin " << hist[0]->GetBinContent(100) << endl;
-    }
- 
-//  cout << "Hists filled" << endl; 
-
-  TMinuit *gMinuit = new TMinuit(5);  //initialize TMinuit with a maximum of 5 params 
-  gMinuit->SetFCN(fcn); 
-
-//  Int_t nvpar, nparx, icstat;
-//  if (icstat < 3 ) { //repeat TMinuit multiple times in loop
-
-  cout << "TMinuit has begun" << endl; 
-  Double_t arglist[5]; //# of params
-  Int_t ierflg = 0;
-  arglist[0] = 1;
-  gMinuit->mnexcm("SET ERR", arglist ,1,ierflg);
-  gMinuit->mnparm(0, "x", 4.5, 1, 0, 0, ierflg);//mm
-  gMinuit->mnparm(1, "y", 4.5, 1, 0, 0, ierflg);//mm
-  gMinuit->mnparm(2, "z", 10, 1, 0, 0, ierflg);//mm
-  gMinuit->mnparm(3, "q", 1000, 100, 0, 0, ierflg); //keV
-  gMinuit->mnparm(4, "w", TMath::Pi(), 0.125*TMath::Pi(), 0, 0, ierflg); //radians
-  cout << "Parameters set, Minimization starting" << endl;
-
-  arglist[0] = 10000; //this is somehow related to number of calls
-  arglist[1] = 1;
-  gMinuit->mnexcm("MIGRAD", arglist, 2, ierflg);
-  
-  Double_t val0, error0, bnd10, bnd20;
-  Int_t num0=0;
-  Int_t ivarbl0;
-  TString chnam0;
-  gMinuit->mnpout(num0, chnam0, val0, error0, bnd10, bnd20, ivarbl0);
-  cout << "x: "  << " value0 " << val0  << endl;
-  
-  Double_t val1, error1, bnd11, bnd21;
-  Int_t num1=1;
-  Int_t ivarbl1;
-  TString chnam1;
-  gMinuit->mnpout(num1, chnam1, val1, error1, bnd11, bnd21, ivarbl1);
-  cout << "y: "  << " value1 " << val1  << endl;
-  
-  Double_t val2, error2, bnd12, bnd22;
-  Int_t num2=2;
-  Int_t ivarbl2;
-  TString chnam2;
-  gMinuit->mnpout(num2, chnam2, val2, error2, bnd12, bnd22, ivarbl2);
-  cout << "z: " << " value2 " << val2  << endl;
-
-  Double_t val3, error3, bnd13, bnd23;
-  Int_t num3=3;
-  Int_t ivarbl3;
-  TString chnam3;
-  gMinuit->mnpout(num3, chnam3, val3, error3, bnd13, bnd23, ivarbl3);
-  cout << "q: " <<  " value3 " << val3  << endl;
-
-  Double_t val4, error4, bnd14, bnd24;
-  Int_t num4=4;
-  Int_t ivarbl4;
-  TString chnam4;
-  gMinuit->mnpout(num4, chnam4, val4, error4, bnd14, bnd24, ivarbl4);
-  cout << "w: " <<  " value4 " << val4  << endl;
-
-  Double_t par[5];
-  par[0] = val0;
-  par[1] = val1;
-  par[2] = val2;
-  par[3] = val3;
-  par[4] = val4;
-  draw(par);
-
-  cout << "Printing out results: " << endl; 
-  Double_t amin, edm, errdef;
-  Int_t nvpar, nparx, icstat;
-  gMinuit->mnstat(amin, edm, errdef, nvpar, nparx, icstat);
-  cout << "best function value found so far: " << amin << " vertical dist remaining to min: " << edm << " how good is fit? 0=bad, 1=approx, 2=full matrix but forced positive-definite, 3=good: " << icstat << endl;
+  for (a=0; a<2; a++)  {
+    tree->GetEntry(a); 
+    //cout << "size of ChannelWaveform: " << (*ChannelWaveform).size() << endl; //number of channels (should be 60)
+    //cout << "size of ChannelWaveform[20]: " << ((*ChannelWaveform)[20]).size() << endl; //print out size of nth channel
+    //cout << "entry ChannelWaveform[0, 200]: " << ((*ChannelWaveform)[0])[200] << endl; //200th time sample from 0th channel
+    ostringstream canvasStream;
+    canvasStream << "canvas" << a;
+    string canvas = canvasStream.str();
+    ca = new TCanvas(canvas.c_str(), "");
+    TRandom3 *generator = new TRandom3(0);//random number generator initialized by TUUID object
    
+    for (UInt_t i=0; i<60; i++) {
+      ostringstream name;
+      name << "Channel " << i; 
+      hist[i] = new TH1D(name.str().c_str(), name.str().c_str(), 800, 0, 32);//wfm_hist in fit_wfm.py gets assigned to this
+      hist[i]->GetXaxis()->SetTitle("time (microsec)");
+      hist[i]->GetYaxis()->SetTitle("Energy of Charge Deposit (keV)");
+      hist[i]->GetXaxis()->CenterTitle();
+      hist[i]->GetYaxis()->CenterTitle();
+      test[i] = new TF1("test", OnePCD, 0, 32, 5); //5 is # of params
+      for (UInt_t n=0; n<800;  n++) { //800 time samples
+        Double_t noise = generator->Gaus(0, RMS_noise);
+       /* Double_t Q = 0.0;
+        for (n=600; n<800; n++) {
+          Q += (((*ChannelWaveform)[i])[n])*0.022004;
+          }
+        Double_t AveQ = Q/200;
+        cout << "ave q: " << AveQ << endl; */
+        Double_t ChannelWFelement = (((*ChannelWaveform)[i])[n])*0.022004; //convert to keV
+        ChannelWFelement += noise;
+        hist[i]->SetBinContent(n+1, ChannelWFelement); //plots charge deposit energy in keV
+       }
+      }
+   
+    TMinuit *gMinuit = new TMinuit(5);  //initialize TMinuit with a maximum of 5 params 
+    gMinuit->SetFCN(fcn); 
+
+    cout << "TMinuit has begun" << endl; 
+    Double_t arglist[5]; //# of params
+    Int_t ierflg = 0;
+    arglist[0] = 1;
+    gMinuit->mnexcm("SET ERR", arglist ,1,ierflg);
+    gMinuit->mnparm(0, "x", 4.5, 1, 0, 0, ierflg);//mm
+    gMinuit->mnparm(1, "y", 4.5, 1, 0, 0, ierflg);//mm
+    gMinuit->mnparm(2, "z", 10, 1, 0, 0, ierflg);//mm
+    gMinuit->mnparm(3, "q", 1000, 100, 0, 0, ierflg); //keV
+    gMinuit->mnparm(4, "w", TMath::Pi(), 0.125*TMath::Pi(), 0, 0, ierflg); //radians
+    cout << "Parameters set, Minimization starting" << endl;
+
+    arglist[0] = 10000; //this is somehow related to number of calls
+    arglist[1] = 1;
+   
+    Double_t amin, edm, errdef;
+    Int_t nvpar, nparx, icstat;
+    for (int nfit=0; nfit<3; nfit++) {
+    gMinuit->mnexcm("MIGRAD", arglist, 2, ierflg);
+    gMinuit->mnstat(amin, edm, errdef, nvpar, nparx, icstat);
+    cout << "best function value found so far: " << amin << " vertical dist remaining to min: " << edm << " how good is fit? 0=bad, 1=approx, 2=full matrix but forced positive-definite, 3=good: " << icstat << endl;
+      if (icstat==3)
+        break;
+      }  
+
+    Double_t val0, error0, bnd10, bnd20;
+    Int_t num0=0;
+    Int_t ivarbl0;
+    TString chnam0;
+    gMinuit->mnpout(num0, chnam0, val0, error0, bnd10, bnd20, ivarbl0);
+    cout << "x: "  << " value0 " << val0  << endl;
+    
+    Double_t val1, error1, bnd11, bnd21;
+    Int_t num1=1;
+    Int_t ivarbl1;
+    TString chnam1;
+    gMinuit->mnpout(num1, chnam1, val1, error1, bnd11, bnd21, ivarbl1);
+    cout << "y: "  << " value1 " << val1  << endl;
+    
+    Double_t val2, error2, bnd12, bnd22;
+    Int_t num2=2;
+    Int_t ivarbl2;
+    TString chnam2;
+    gMinuit->mnpout(num2, chnam2, val2, error2, bnd12, bnd22, ivarbl2);
+    cout << "z: " << " value2 " << val2  << endl;
+
+    Double_t val3, error3, bnd13, bnd23;
+    Int_t num3=3;
+    Int_t ivarbl3;
+    TString chnam3;
+    gMinuit->mnpout(num3, chnam3, val3, error3, bnd13, bnd23, ivarbl3);
+    cout << "q: " <<  " value3 " << val3  << endl;
+
+    Double_t val4, error4, bnd14, bnd24;
+    Int_t num4=4;
+    Int_t ivarbl4;
+    TString chnam4;
+    gMinuit->mnpout(num4, chnam4, val4, error4, bnd14, bnd24, ivarbl4);
+    cout << "w: " <<  " value4 " << val4  << endl;
+
+    Double_t par[5];
+    par[0] = val0;
+    par[1] = val1;
+    par[2] = val2;
+    par[3] = val3;
+    par[4] = val4;
+    draw(par);
+
+    Int_t event = a;
+    TBranch *Event = output_tree->Branch("Event", &event, "event/i");
+    TBranch *Fit_x = output_tree->Branch("MIGRAD x", &val0, "MINUIT_x/D" ); //creates new branches for x, y, z, q, w, fcn, and icstat
+    TBranch *Fit_y = output_tree->Branch("MIGRAD y", &val1, "MINUIT_y/D"); 
+    TBranch *Fit_z = output_tree->Branch("MIGRAD z", &val2, "MINUIT_z/D"); 
+    TBranch *Fit_q = output_tree->Branch("MIGRAD q", &val3, "MINUIT_q/D"); 
+    TBranch *Fit_w = output_tree->Branch("MIGRAD w", &val4, "MINUIT_w/D"); 
+    TBranch *Min_chisq = output_tree->Branch("MIGRAD chisq", &amin, "chisquare_dof/D"); 
+    TBranch *Evaluation_of_fit = output_tree->Branch("icstat", &icstat, "icstat/I"); 
+
+    output_tree->Fill();
+    //parameters re-set to 0  
+    val0 = 0.0;
+    val1 = 0.0;
+    val2 = 0.0;
+    val3 = 0.0;
+    val4 = 0.0;
+    amin = 0.0;
+    icstat = 0.0;
+  }  
+ output_file.Write();
+  
 /*
     // a test -- just draw a sample wfm to see if things are working. 
 
@@ -520,6 +553,7 @@ Double_t ralphWF() {
     cin >> input;  
     return 0;
 */
-}
+  }
+
 
 
