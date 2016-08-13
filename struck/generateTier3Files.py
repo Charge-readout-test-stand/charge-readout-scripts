@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 
 """
-FIXME -- Jan 28, 2016 -- energy PZ values are screwed up after switching for wfmProcessing!!!
-
 Do some waveform processing to extract energies, etc. 
 
 EXO class index, with waveform transformers: 
@@ -105,11 +103,11 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
     #print "verbose:", verbose
     #print "do_overwrite:", do_overwrite
-    #return # debugging
 
     # whether to run in debug mode (draw wfms):
     do_debug = not gROOT.IsBatch()
     do_draw_extra = not gROOT.IsBatch()
+    skip_short_risetimes = True # reduce file size
     # samples at wfm start and end to use for energy calc:
     baseline_average_time_microseconds = 4.0 # 100 samples at 25 MHz
 
@@ -183,9 +181,6 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         
     basename = wfmProcessing.create_basename(filename, isMC)
 
-    if isNGM:
-        basename = os.path.splitext(filename)[0]
-
     # calculate file start time, in POSIX time, from filename suffix
     # date and time are last two parts of filename separated with "_":
     try:
@@ -198,10 +193,17 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         #print posix_start_time
         #print "this file was started at:", file_start
     except:
-        posix_start_time = 0
-
-
-
+        try:
+            file_start = "_".join(basename.split("_")[-3:-2])
+            #print file_start
+            # create datetime object from relevant parts of filename:
+            file_start  = datetime.datetime.strptime(file_start, "%Y%m%d%H%M%S")
+            # get the POSIX timestamp, in seconds:
+            posix_start_time = int(time.mktime(file_start.timetuple()))
+            #print posix_start_time
+            print "this NGM file was started at: %s GMT" % file_start
+        except: 
+            posix_start_time = 0
 
     # decide if this is a tier1 or tier2 file
     is_tier1 = False
@@ -288,12 +290,12 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     time_stampDouble = array('d', [0]) # double
     out_tree.Branch('time_stampDouble', time_stampDouble, 'time_stampDouble/D')
 
-    if isNGM: # keep time stamps for individual channels
-        time_stamp_ch = array('L', [0]*n_channels) # timestamp for each event, unsigned long
-        out_tree.Branch('time_stamp_ch', time_stamp_ch, 'time_stamp_ch[%i]/l' % n_channels)
+    if isNGM: # keep time stamp info for individual channels
+        time_stamp_diff = array('L', [0]*n_channels) # timestamp for each event, unsigned long
+        out_tree.Branch('time_stamp_diff', time_stamp_diff, 'time_stamp_diff[%i]/l' % n_channels)
 
-        time_stampDouble_ch = array('d', [0]*n_channels) # double
-        out_tree.Branch('time_stampDouble_ch', time_stampDouble_ch, 'time_stampDouble_ch[%i]/D' % n_channels)
+        time_stampDouble_diff = array('d', [0]*n_channels) # double
+        out_tree.Branch('time_stampDouble_diff', time_stampDouble_diff, 'time_stampDouble_diff[%i]/D' % n_channels)
 
     time_since_last = array('d', [0]) # double
     out_tree.Branch('time_since_last', time_since_last, 'time_since_last/D')
@@ -332,12 +334,12 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     if isMC:
         #MC is always triggered at sample 200 this is hardcoded into nEXO_Analysis
         trigger_time[0] = 200/sampling_freq_Hz*1e6
-    elif do_debug:
-        print "--> debugging -- skipping trigger_time calc"
     elif isNGM:
         ngm_config = root_file.Get("NGMSystemConfiguration")
         trigger_time[0] = ngm_config.GetSlotParameters().GetParValueO("card",0).pretriggerdelay_block[0] 
         print "NGM trigger_time [microseconds]:", trigger_time[0]/sampling_frequency_Hz[0]*1e6
+    elif do_debug:
+        print "--> debugging -- skipping trigger_time calc"
     else:
         trigger_hist = TH1D("trigger_hist","",5000,0,5000)
         selection = "channel==%i && wfm_max - wfm%i[0] > 20" % (pmt_channel, pmt_channel)
@@ -389,29 +391,38 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     calibration = array('d', [0.0]*n_channels_in_event) # double
     out_tree.Branch('calibration', calibration, 'calibration[%i]/D' % n_channels_in_event)
 
+
     rise_time_stop10 = array('d', [0]*n_channels_in_event) # double
-    out_tree.Branch('rise_time_stop10', rise_time_stop10, 'rise_time_stop10[%i]/D' % n_channels_in_event)
+    if not skip_short_risetimes:
+        out_tree.Branch('rise_time_stop10', rise_time_stop10, 'rise_time_stop10[%i]/D' % n_channels_in_event)
 
     rise_time_stop20 = array('d', [0]*n_channels_in_event) # double
-    out_tree.Branch('rise_time_stop20', rise_time_stop20, 'rise_time_stop20[%i]/D' % n_channels_in_event)
+    if not skip_short_risetimes:
+        out_tree.Branch('rise_time_stop20', rise_time_stop20, 'rise_time_stop20[%i]/D' % n_channels_in_event)
 
     rise_time_stop30 = array('d', [0]*n_channels_in_event) # double
-    out_tree.Branch('rise_time_stop30', rise_time_stop30, 'rise_time_stop30[%i]/D' % n_channels_in_event)
+    if not skip_short_risetimes:
+        out_tree.Branch('rise_time_stop30', rise_time_stop30, 'rise_time_stop30[%i]/D' % n_channels_in_event)
 
     rise_time_stop40 = array('d', [0]*n_channels_in_event) # double
-    out_tree.Branch('rise_time_stop40', rise_time_stop40, 'rise_time_stop40[%i]/D' % n_channels_in_event)
+    if not skip_short_risetimes:
+        out_tree.Branch('rise_time_stop40', rise_time_stop40, 'rise_time_stop40[%i]/D' % n_channels_in_event)
 
     rise_time_stop50 = array('d', [0]*n_channels_in_event) # double
-    out_tree.Branch('rise_time_stop50', rise_time_stop50, 'rise_time_stop50[%i]/D' % n_channels_in_event)
+    if not skip_short_risetimes:
+        out_tree.Branch('rise_time_stop50', rise_time_stop50, 'rise_time_stop50[%i]/D' % n_channels_in_event)
 
     rise_time_stop60 = array('d', [0]*n_channels_in_event) # double
-    out_tree.Branch('rise_time_stop60', rise_time_stop60, 'rise_time_stop60[%i]/D' % n_channels_in_event)
+    if not skip_short_risetimes:
+        out_tree.Branch('rise_time_stop60', rise_time_stop60, 'rise_time_stop60[%i]/D' % n_channels_in_event)
 
     rise_time_stop70 = array('d', [0]*n_channels_in_event) # double
-    out_tree.Branch('rise_time_stop70', rise_time_stop70, 'rise_time_stop70[%i]/D' % n_channels_in_event)
+    if not skip_short_risetimes:
+        out_tree.Branch('rise_time_stop70', rise_time_stop70, 'rise_time_stop70[%i]/D' % n_channels_in_event)
 
     rise_time_stop80 = array('d', [0]*n_channels_in_event) # double
-    out_tree.Branch('rise_time_stop80', rise_time_stop80, 'rise_time_stop80[%i]/D' % n_channels_in_event)
+    if not skip_short_risetimes:
+        out_tree.Branch('rise_time_stop80', rise_time_stop80, 'rise_time_stop80[%i]/D' % n_channels_in_event)
 
     rise_time_stop90 = array('d', [0]*n_channels_in_event) # double
     out_tree.Branch('rise_time_stop90', rise_time_stop90, 'rise_time_stop90[%i]/D' % n_channels_in_event)
@@ -457,25 +468,32 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     out_tree.Branch('rise_time_stop10_sum', rise_time_stop10_sum, 'rise_time_stop10_sum/D')
 
     rise_time_stop20_sum = array('d', [0.0]) # double
-    out_tree.Branch('rise_time_stop20_sum', rise_time_stop20_sum, 'rise_time_stop20_sum/D')
+    if not skip_short_risetimes:
+        out_tree.Branch('rise_time_stop20_sum', rise_time_stop20_sum, 'rise_time_stop20_sum/D')
 
     rise_time_stop30_sum = array('d', [0.0]) # double
-    out_tree.Branch('rise_time_stop30_sum', rise_time_stop30_sum, 'rise_time_stop30_sum/D')
+    if not skip_short_risetimes:
+        out_tree.Branch('rise_time_stop30_sum', rise_time_stop30_sum, 'rise_time_stop30_sum/D')
 
     rise_time_stop40_sum = array('d', [0.0]) # double
-    out_tree.Branch('rise_time_stop40_sum', rise_time_stop40_sum, 'rise_time_stop40_sum/D')
+    if not skip_short_risetimes:
+        out_tree.Branch('rise_time_stop40_sum', rise_time_stop40_sum, 'rise_time_stop40_sum/D')
 
     rise_time_stop50_sum = array('d', [0.0]) # double
-    out_tree.Branch('rise_time_stop50_sum', rise_time_stop50_sum, 'rise_time_stop50_sum/D')
+    if not skip_short_risetimes:
+        out_tree.Branch('rise_time_stop50_sum', rise_time_stop50_sum, 'rise_time_stop50_sum/D')
 
     rise_time_stop60_sum = array('d', [0.0]) # double
-    out_tree.Branch('rise_time_stop60_sum', rise_time_stop60_sum, 'rise_time_stop60_sum/D')
+    if not skip_short_risetimes:
+        out_tree.Branch('rise_time_stop60_sum', rise_time_stop60_sum, 'rise_time_stop60_sum/D')
 
     rise_time_stop70_sum = array('d', [0.0]) # double
-    out_tree.Branch('rise_time_stop70_sum', rise_time_stop70_sum, 'rise_time_stop70_sum/D')
+    if not skip_short_risetimes:
+        out_tree.Branch('rise_time_stop70_sum', rise_time_stop70_sum, 'rise_time_stop70_sum/D')
 
     rise_time_stop80_sum = array('d', [0.0]) # double
-    out_tree.Branch('rise_time_stop80_sum', rise_time_stop80_sum, 'rise_time_stop80_sum/D')
+    if not skip_short_risetimes:
+        out_tree.Branch('rise_time_stop80_sum', rise_time_stop80_sum, 'rise_time_stop80_sum/D')
 
     rise_time_stop90_sum = array('d', [0.0]) # double
     out_tree.Branch('rise_time_stop90_sum', rise_time_stop90_sum, 'rise_time_stop90_sum/D')
@@ -506,28 +524,31 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     print "calculating mean baseline & baseline RMS for each channel in this file..."
     for (i, i_channel) in enumerate(channels):
         if isMC: continue
-        if isNGM: continue #FIXME
         print "%i: ch %i" % (i, i_channel)
-        selection = "Iteration$<%i && channel==%i" % (n_baseline_samples[0], i_channel)
-
-        if do_debug: continue
+        if do_debug: 
+            print "\t skipping for debugging"
+            continue
             
         # calculate avg baseline:
         draw_command = "wfm >> hist"
+        selection = "Iteration$<%i && channel==%i" % (n_baseline_samples[0], i_channel)
         if not is_tier1:
             draw_command = "wfm%i >> hist" % i_channel
         if isMC:
             #Command that worked
             #evtTree->Draw("ChannelWaveform[12]:Iteration$","Entry$==10 && Iteration$<300")
-            draw_command = "ChannelWaveform[%i]:Iteration$" % (i_channel)
-            selection = "Entry$==0 && Iteration$<%i" % (n_baseline_samples[0])
-        tree.Draw(
+            draw_command = "ChannelWaveform[%i] >> hist" % (i_channel)
+            selection = "Iteration$<%i" % (n_baseline_samples[0])
+        if isNGM:
+            draw_command = "_waveform >> hist"
+            selection = "Iteration$<%i && _channel==%i && _slot==%i" % (n_baseline_samples[0], i_channel%16, i_channel/16)
+        n_drawn = tree.Draw(
             draw_command,
             selection,
             "goff"
         )
         baseline_mean_file[i] = hist.GetMean()
-        print "\t draw command: %s | selection %s" % (draw_command, selection)
+        print "\t draw command: %s | selection: %s | n_drawn: %.2e" % (draw_command, selection, n_drawn)
         print "\t file baseline mean:", baseline_mean_file[i]
 
         # calculate baseline RMS:
@@ -541,13 +562,15 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             #evtTree->Draw("(ChannelWaveform[12] - ChannelWaveform[12][300]):Iteration$",
             #                "Entry$==10 && Iteration$<300")
             draw_command = "(ChannelWaveform[%i] - ChannelWaveform[%i][0]):Iteration$" % (i_channel, i_channel)
-        tree.Draw(
+        if isNGM:
+            draw_command = "_waveform-_waveform[0] >> hist"
+        n_drawn = tree.Draw(
             draw_command,
             selection,
             "goff"
         )
         baseline_rms_file[i] = hist.GetRMS()
-        print "\t draw command: %s | selection %s" % (draw_command, selection)
+        print "\t draw command: %s | selection: %s | n_drawn: %.2e" % (draw_command, selection,n_drawn)
         print "\t file baseline rms:", baseline_rms_file[i]
 
     print "\t done"
@@ -615,16 +638,20 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         pmt_threshold[0] = 0.0
     elif do_debug:
         print "--> debugging -- skipping PMT threshold calc"
-    elif isNGM:
-        pmt_threshold[0] = 0.0 # FIXME
     else:
         draw_command = "wfm_max-wfm[0] >> hist"
+        selection = "channel==%i" % pmt_channel
         if not is_tier1:
             draw_command = "wfm_max-wfm%i[0] >> hist" % pmt_channel
+        if isNGM:
+            draw_command = "Max$(_waveform)-_waveform[0] >> hist"
+            selection = "_slot==%i && _channel==%i" % (pmt_channel/16, pmt_channel%16)
 
-        tree.Draw(draw_command,"channel==%i" % pmt_channel,"goff")
+        tree.Draw(draw_command,selection,"goff")
         pmt_threshold[0] = hist.GetBinLowEdge(hist.FindFirstBinAbove(0))*calibration_values[pmt_channel]
+        print "pmt threshold calc | draw_cmd: %s | selection: %s" % (draw_command, selection)
         print "pmt_threshold:", pmt_threshold[0]
+        print "pmt_threshold hist mean, rms:", hist.GetMean(), hist.GetRMS()
 
     # energy & rms before any processing
     energy = array('d', [0]*n_channels_in_event) # double
@@ -712,7 +739,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     n_channels_in_this_event = 0
     while i_entry < n_entries:
         tree.GetEntry(i_entry)
-        #if i_entry > 100000: break # debugging
+        if isNGM and i_entry > 1e3: 
+            print "<<<< DEBUGGING >>>>"
+            break # debugging
 
         # print periodic output message
         if i_entry % reporting_period == 0:
@@ -799,12 +828,11 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                     i_entry += 1
                     tree.GetEntry(i_entry)
 
-                # trying to get i -> channel -- FIXME?
                 i = tree.HitTree.GetSlot()*16 + tree.HitTree.GetChannel()
 
                 channel[i] = tree.HitTree.GetSlot()*16 + tree.HitTree.GetChannel()
-                time_stamp_ch[i] = int( tree.HitTree.GetRawClock() ) # time stamp for this channel
-                time_stampDouble_ch[i] = tree.HitTree.GetRawClock() # time stamp for this channel
+                time_stamp_diff[i] = int( tree.HitTree.GetRawClock() ) - time_stamp[0]# time stamp for this channel
+                time_stampDouble_diff[i] = tree.HitTree.GetRawClock() -time_stampDouble[0] # time stamp for this channel
 
                 if do_debug: # debugging
                     print "NGM event", n_events, \
@@ -827,13 +855,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
                 n_channels_in_this_event += 1
 
-                # OMG FIXME -- there must be a better way to do this
-                wfm = [0]*tree.HitTree.GetNSamples()
-                for i_sample in xrange(tree.HitTree.GetNSamples()):
-                  #print i_sample
-                  wfm[i_sample] = tree.HitTree.GetWaveformArray()[i_sample]
-                #print wfm
-                wfm_max_time[i] = np.argmax(wfm)
+                wfm = tree._waveform
 
             else:
                 channel[i] = tree.channel[i]
@@ -932,6 +954,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 exo_wfm, 
                 wfm_length[i], 
                 sampling_frequency_Hz[0],
+                skip_short_risetimes,
             )
 
 
@@ -1000,7 +1023,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             ) = wfmProcessing.get_risetimes(
                 sum_wfm, 
                 wfm_length[0], 
-                sampling_frequency_Hz[0]
+                sampling_frequency_Hz[0],
+                skip_short_risetimes,
             )
             
             baseline_remover = EXOBaselineRemover()
