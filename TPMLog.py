@@ -840,6 +840,9 @@ def main(
             ccg_Pressure[first_index:last_index])
             plt.setp(mfline1, color = 'b', linewidth = linewidth)
             plt.yscale('log')
+            ymin, ymax = plt.gca().get_ylim()
+            if ymax > 1e-3: ymax = 1e-3
+            plt.gca().set_ylim([ymin,ymax]) # reset axes to original
             plt.xlabel('Time [hours] %s' % time_string)
             plt.ylabel('Pressure [Torr]')
             plt.savefig(ccgpath_log)
@@ -852,6 +855,9 @@ def main(
             mfline1 = plt.plot(recent_time, ccg_Pressure[start_index_of_last_hour:])
             plt.setp(mfline1, color = 'b', linewidth = linewidth)
             plt.yscale('log')
+            ymin, ymax = plt.gca().get_ylim()
+            if ymax > 1e-3: ymax = 1e-3
+            plt.gca().set_ylim([ymin,ymax]) # reset axes to original
             plt.xlabel('Time [hours] %s' % time_string)
             plt.ylabel('Pressure [Torr]')
             plt.savefig(rccgpath_log)
