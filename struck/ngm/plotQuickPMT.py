@@ -43,10 +43,14 @@ def draw_wfms(filename):
 def draw_spectrum(filenames):
     print "---> drawing spectrum..."
 
-    hist = ROOT.TH1D("hist","", 1000,0,9000)
+    basename = os.path.commonprefix(filenames)
+
+    out_file = ROOT.TFile("hist_%s.root" % basename, "recreate")
+    hist = ROOT.TH1D("hist","", 9000,0,9000)
     #hist = ROOT.TH1D("hist","", 1000,0,3000)
     hist.SetXTitle("wfm max - baseline [ADC units]")
     hist.SetYTitle("Counts / %i ADC units" % hist.GetBinWidth(1))
+    hist.SetLineColor(ROOT.kBlue+1)
 
     # form the draw command:
     n_points = 100
@@ -60,32 +64,47 @@ def draw_spectrum(filenames):
     for i, filename in enumerate(filenames):
         print "--> processing file %i of %i" % (i+1, len(filenames))
         tfile = ROOT.TFile(filename)
-        tree = tfile.Get("HitTree")
+        try:
+            tree = tfile.Get("HitTree")
+            n_entries = tree.GetEntries()
 
-        hist.GetDirectory().cd()
-        n_drawn = tree.Draw(
-            "Max$(_waveform)-%s >> +hist" % baseline,
-            "_channel==15 && _slot==1",
-            "goff"
-        )
-        print "\t %i entries | %i drawn | %i in hist" % (tree.GetEntries(), n_drawn, hist.GetEntries())
+            hist.GetDirectory().cd()
+            n_drawn = tree.Draw(
+                "Max$(_waveform)-%s >> +hist" % baseline,
+                "_channel==15 && _slot==1",
+                "goff"
+            )
+            print "\t %i entries | %i drawn | %i in hist" % (tree.GetEntries(), n_drawn, hist.GetEntries())
+        except:
+            print "\t skipping this tree"
 
-    basename = os.path.commonprefix(filenames)
+
+    rebinned_hist = hist.Clone("rebinned_hist")
+    rebinned_hist.Rebin(10) # rebin
+    rebinned_hist.SetYTitle("Counts / %i ADC units" % rebinned_hist.GetBinWidth(1))
 
     canvas = ROOT.TCanvas("canvas","")
     canvas.SetGrid()
     canvas.SetLogy(0)
-    hist.Draw()
+    rebinned_hist.Draw()
     canvas.Update()
 
     canvas.Print("lin_spectrum_%s.pdf" % basename)
     canvas.SetLogy(1)
     canvas.Print("log_spectrum_%s.pdf" % basename)
 
+    canvas.SetLogy(0)
+    rebinned_hist.SetAxisRange(0, 2000)
+    canvas.Print("lin_zoom_spectrum_%s.pdf" % basename)
+    canvas.SetLogy(1)
+    canvas.Print("log_zoom_spectrum_%s.pdf" % basename)
+
     if not ROOT.gROOT.IsBatch():
         val = raw_input("enter to continue (p to print) ")
-        if val == 'p': canvas.Print("spectrum.pdf")
+        if val == 'p': canvas.Print("spectrumi_%s.pdf" % basename)
 
+    hist.Write()
+    rebinned_hist.Write()
 
 filenames = sys.argv[1:]
 
