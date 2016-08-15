@@ -429,9 +429,9 @@ Double_t ralphWF() {
     Double_t  edm, errdef; //amin was here
     Int_t nvpar, nparx; //icstat was here
     for (int nfit=0; nfit<3; nfit++) {
-    gMinuit->mnexcm("MIGRAD", arglist, 2, ierflg);
-    gMinuit->mnstat(amin, edm, errdef, nvpar, nparx, icstat);
-    cout << "best function value found so far: " << amin << " vertical dist remaining to min: " << edm << " how good is fit? 0=bad, 1=approx, 2=full matrix but forced positive-definite, 3=good: " << icstat << endl;
+      gMinuit->mnexcm("MIGRAD", arglist, 2, ierflg);
+      gMinuit->mnstat(amin, edm, errdef, nvpar, nparx, icstat);
+      cout << "best function value found so far: " << amin << " vertical dist remaining to min: " << edm << " how good is fit? 0=bad, 1=approx, 2=full matrix but forced positive-definite, 3=good: " << icstat << endl;
       if (icstat==3)
         break;
       }  
