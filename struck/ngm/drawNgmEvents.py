@@ -15,10 +15,7 @@ from scipy.fftpack import fft
 import ROOT
 #ROOT.gROOT.SetBatch(True) # uncomment to draw multi-page PDF
 
-import struck_analysis_parameters
-# doesn't work? :
-#struck_analysis_parameters.is_8th_LXe = True
-#struck_analysis_parameters.is_7th_LXe = False
+from struck import struck_analysis_parameters
 
 # set the ROOT style
 ROOT.gROOT.SetStyle("Plain")     
