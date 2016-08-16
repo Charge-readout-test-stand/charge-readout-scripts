@@ -6,9 +6,9 @@ import toRoot
 
 def process_files(filenames):
 
-    for filename in filenames:
+    for i, filename in enumerate(filenames):
         
-        print "--> processing", filename
+        print "--> processing file %i of %i: %s", (i, len(filenames), filename)
 
         basename = os.path.basename(filename) # drop the directory structure
         basename = os.path.splitext(basename)[0] # drop the extension

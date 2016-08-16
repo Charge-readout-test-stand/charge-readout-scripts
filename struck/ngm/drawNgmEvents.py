@@ -39,7 +39,7 @@ def process_file(filename=None, n_plots_total=0):
     #threshold = 570 # keV, for generating multi-page PDF
     #threshold = 50 # ok for unshaped, unamplified data
 
-    units_to_use = 0 # 0=keV, 1=ADC units, 2=mV
+    units_to_use = 1 # 0=keV, 1=ADC units, 2=mV
 
     do_fft = False
     do_fit = False #fit sine to sum wfm
@@ -209,6 +209,7 @@ def process_file(filename=None, n_plots_total=0):
             card = sys_config.GetSlotParameters().GetParValueO("card",slot)
 
             gain = card.gain[card_channel]
+            # gain: 1 = 2V; 0 = 5V
             voltage_range_mV = struck_analysis_parameters.get_voltage_range_mV_ngm(gain)
 
             try:
@@ -287,10 +288,10 @@ def process_file(filename=None, n_plots_total=0):
                         sum_wfm1[i_point] = sum_wfm1[i_point] + y - offset
                     
             # legend uses hists for color/fill info
-            legend_entries[channel] = "%s %.1f" % (
+            legend_entries[channel] = "%s  %.1f" % (
                 channel_map[channel], 
-                energy,
-                #rms_noise,
+                #energy,
+                rms_noise,
             ) 
 
             # end loop over channels
@@ -339,14 +340,13 @@ def process_file(filename=None, n_plots_total=0):
         if do_fit: # do the fit
             fit_result = sum_graph.Fit(fit_fcn, "SRM")
             print "freq: ", fit_fcn.GetParameter(2)
-
-        #sum_graph.SetLineWidth(3)
+        """
         sum_graph.Draw("xl")
-        #fit_fcn.Draw("same")
         sum_graph0.SetLineColor(ROOT.kBlue)
         sum_graph0.Draw("xl")
         sum_graph1.SetLineColor(ROOT.kRed)
         sum_graph1.Draw("xl")
+        """
 
         pave_text.Clear()
         pave_text.AddText("page %i, event %i" % (n_plots+1, i_entry/32))

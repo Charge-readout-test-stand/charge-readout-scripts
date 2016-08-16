@@ -99,12 +99,12 @@ def draw_spectrum(filenames):
     canvas.SetLogy(1)
     canvas.Print("log_zoom_spectrum_%s.pdf" % basename)
 
+    hist.Write()
+    rebinned_hist.Write()
+
     if not ROOT.gROOT.IsBatch():
         val = raw_input("enter to continue (p to print) ")
         if val == 'p': canvas.Print("spectrumi_%s.pdf" % basename)
-
-    hist.Write()
-    rebinned_hist.Write()
 
 filenames = sys.argv[1:]
 

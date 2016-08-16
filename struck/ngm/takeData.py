@@ -13,14 +13,14 @@ def takeData(doLoop=False, n_hours=10.0):
   # ---------------------------------------------------------------------------
 
   #file_suffix = "_test" # this gets appended to the file name
-  file_suffix = "_8thLXe_30mvDT_filling" # this gets appended to the file name
+  file_suffix = "_8thLXe_126mvDT_cell_full_cath_1700V_100cg_overnight_" # this gets appended to the file name
   runDuration = 2*60 # seconds
   #runDuration = 10 # seconds -- debugging! FIXME
   #A 60s run is 720 MB with 4ms veto
 
   # settings
   threshold = 0
-  gain = 0 # default = 1 1 = 2V; 0 = 5V, use 1 for LXe runs, 0 for testing warm
+  gain = 1 # default = 1 1 = 2V; 0 = 5V, use 1 for LXe runs, 0 for testing warm
   #termination = 1 # 1 = 50 ohm?
   nimtriginput = 0x10 # Bit0 Enable : Bit1 Invert , we use 0x10 (from struck root gui)
   trigconf = 0x8 # default = 0x5, we use 0x8 Bit0:Invert, Bit1:InternalBlockSum, Bit2:Internal, Bit3:External                       
@@ -105,7 +105,12 @@ def takeData(doLoop=False, n_hours=10.0):
     for i in xrange(16):  # loop over each channel
 
       #sis0.firthresh[i] = threshold # set threshold
-      sis0.gain[i] = gain # set gain
+
+      if icard == 1 and i == 15: 
+          sis0.gain[i] = 0 # 5V for PMT
+      else:
+          sis0.gain[i] = gain # set gain
+
       #sis0.termination[i] = termination # set termination
       sis0.trigconf[i] = trigconf # set trigger conf
 
