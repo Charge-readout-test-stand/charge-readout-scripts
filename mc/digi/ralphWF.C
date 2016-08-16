@@ -187,7 +187,6 @@ Double_t OnePCDWithOptions(
 
   if (t < triggerTime) { return 0.0; } // wfm is 0 for times before drift starts
   
-  //w = TMath::Pi(); 
   Double_t weight_center = 0.5*q*(1.0+sin(w));
   Double_t weight_outer = (q*(1.0 - 0.5*(1.0+sin(w))))/8;
   Double_t Q0 = x + 1.0;
@@ -250,7 +249,6 @@ UInt_t draw_calls = 0; //number of times draw() gets called (this should corresp
 TFile output_file("output_file.root", "recreate"); //creates output root file
 TTree *output_tree = new TTree("output_tree", "Output of MIGRAD"); //creates output tree
 
-//Model cloud of charge: P = center, Q = right, R-S-T clockwise
 void TransformCoord (Double_t *par, Double_t *P, UInt_t i)
 {
   if (i<30) { //X channels (0-29)
@@ -287,9 +285,8 @@ void draw(Double_t *par)
 {
   ca->SetGrid();
   ostringstream pdfnameStream;
-  pdfnameStream << "Event_" << a << ".pdf[";
-  string pdfname = pdfnameStream.str();
-  ca->Print(pdfname.c_str());
+  pdfnameStream << "Event_" << a << ".pdf"; //a is event number from loop in ralphWF()
+  ca->Print((pdfnameStream.str()+"[").c_str());
   cout << "pdf file opened" << endl;
 
   for (UInt_t i=0; i<60;  i++) { 
@@ -311,8 +308,7 @@ void draw(Double_t *par)
     test[i]->SetLineColor(kRed);
     test[i]->SetLineStyle(7);
     ca->Update();
-    pdfnameStream << "Event_" << a << ".pdf";
-    ca->Print(pdfname.c_str());
+    ca->Print((pdfnameStream.str()).c_str());
     }
 
   TFile *inputroot = TFile::Open("~/../manisha2/MC/e1MeV_dcoeff50/digitization_dcoeff50/digi1_e1MeV_dcoef50.root");
@@ -324,7 +320,7 @@ void draw(Double_t *par)
   TH2D *point_charge = new TH2D("point_charge", "", 200, 0, 8, 200, 0, 8);
   point_charge->Fill(par[0], par[1], par[3]); 
 
-  draw_calls += 1;
+//  draw_calls += 1;
   ostringstream chargeweightStream;
   chargeweightStream << "(Entry$==" << a << ")*PCDq*0.02204";
   string chargeweight = chargeweightStream.str();
@@ -338,12 +334,9 @@ void draw(Double_t *par)
   eCloud_point_hist->GetYaxis()->CenterTitle();
 //  TStyle::gStyle->SetOptStat(0);
   ca->Update();
-  pdfnameStream << "Event_" << a << ".pdf";
-  ca->Print(pdfname.c_str());
-  eCloud_point_hist->Write();
-  
-  pdfnameStream << "Event_" << a << ".pdf]";
-  ca->Print(pdfname.c_str());
+  ca->Print((pdfnameStream.str()).c_str());
+ 
+  ca->Print((pdfnameStream.str()+"]").c_str());
   cout << "pdf file closed" << endl; 
 }
 
@@ -354,7 +347,7 @@ void fcn(Int_t &npar, Double_t *gin, Double_t &f, Double_t *par, Int_t iflag)
   for (UInt_t i=0; i<60; i++) {
     chisq += ChisqFit(par, i)/60;
   }
-  //cout << "ncalls " << ncalls << " chisq " << chisq << " x " << par[0] << " y " << par[1] << " z " << par[2] << " q " << par[3] << " w " << par[4] << endl;
+  //cout << "ncalls " << ncalls << " chisq " << chisq << " x " << par[0] << " y " << par[1] << " z " << par[2] << " q " << par[3] << " w " << par[4] << endl; //test
   f = chisq; 
 }
 
@@ -364,6 +357,22 @@ Double_t ralphWF() {
   vector<vector<double> > *ChannelWaveform=0; //defines pointer to vector of vectors
   cout << "number of events: " << tree->GetEntries() << endl;
   tree->SetBranchAddress("ChannelWaveform", &ChannelWaveform);
+
+  Double_t val0;
+  Double_t val1;
+  Double_t val2;
+  Double_t val3;
+  Double_t val4;
+  Double_t amin;
+  Int_t icstat;
+
+  TBranch *Fit_x = output_tree->Branch("MIGRAD x", &val0, "MINUIT_x/D" ); //creates new branches for x, y, z, q, w, fcn, and icstat
+  TBranch *Fit_y = output_tree->Branch("MIGRAD y", &val1, "MINUIT_y/D"); 
+  TBranch *Fit_z = output_tree->Branch("MIGRAD z", &val2, "MINUIT_z/D"); 
+  TBranch *Fit_q = output_tree->Branch("MIGRAD q", &val3, "MINUIT_q/D"); 
+  TBranch *Fit_w = output_tree->Branch("MIGRAD w", &val4, "MINUIT_w/D"); 
+  TBranch *Min_chisq = output_tree->Branch("MIGRAD chisq", &amin, "chisquare_dof/D"); 
+  TBranch *Evaluation_of_fit = output_tree->Branch("icstat", &icstat, "icstat/I"); 
 
   for (a=0; a<2; a++)  {
     tree->GetEntry(a); 
@@ -398,7 +407,7 @@ Double_t ralphWF() {
         hist[i]->SetBinContent(n+1, ChannelWFelement); //plots charge deposit energy in keV
        }
       }
-   
+
     TMinuit *gMinuit = new TMinuit(5);  //initialize TMinuit with a maximum of 5 params 
     gMinuit->SetFCN(fcn); 
 
@@ -417,45 +426,45 @@ Double_t ralphWF() {
     arglist[0] = 10000; //this is somehow related to number of calls
     arglist[1] = 1;
    
-    Double_t amin, edm, errdef;
-    Int_t nvpar, nparx, icstat;
+    Double_t  edm, errdef; //amin was here
+    Int_t nvpar, nparx; //icstat was here
     for (int nfit=0; nfit<3; nfit++) {
-    gMinuit->mnexcm("MIGRAD", arglist, 2, ierflg);
-    gMinuit->mnstat(amin, edm, errdef, nvpar, nparx, icstat);
-    cout << "best function value found so far: " << amin << " vertical dist remaining to min: " << edm << " how good is fit? 0=bad, 1=approx, 2=full matrix but forced positive-definite, 3=good: " << icstat << endl;
+      gMinuit->mnexcm("MIGRAD", arglist, 2, ierflg);
+      gMinuit->mnstat(amin, edm, errdef, nvpar, nparx, icstat);
+      cout << "best function value found so far: " << amin << " vertical dist remaining to min: " << edm << " how good is fit? 0=bad, 1=approx, 2=full matrix but forced positive-definite, 3=good: " << icstat << endl;
       if (icstat==3)
         break;
       }  
 
-    Double_t val0, error0, bnd10, bnd20;
+    Double_t  error0, bnd10, bnd20;
     Int_t num0=0;
     Int_t ivarbl0;
     TString chnam0;
     gMinuit->mnpout(num0, chnam0, val0, error0, bnd10, bnd20, ivarbl0);
     cout << "x: "  << " value0 " << val0  << endl;
     
-    Double_t val1, error1, bnd11, bnd21;
+    Double_t error1, bnd11, bnd21;
     Int_t num1=1;
     Int_t ivarbl1;
     TString chnam1;
     gMinuit->mnpout(num1, chnam1, val1, error1, bnd11, bnd21, ivarbl1);
     cout << "y: "  << " value1 " << val1  << endl;
     
-    Double_t val2, error2, bnd12, bnd22;
+    Double_t  error2, bnd12, bnd22;
     Int_t num2=2;
     Int_t ivarbl2;
     TString chnam2;
     gMinuit->mnpout(num2, chnam2, val2, error2, bnd12, bnd22, ivarbl2);
     cout << "z: " << " value2 " << val2  << endl;
 
-    Double_t val3, error3, bnd13, bnd23;
+    Double_t  error3, bnd13, bnd23;
     Int_t num3=3;
     Int_t ivarbl3;
     TString chnam3;
     gMinuit->mnpout(num3, chnam3, val3, error3, bnd13, bnd23, ivarbl3);
     cout << "q: " <<  " value3 " << val3  << endl;
 
-    Double_t val4, error4, bnd14, bnd24;
+    Double_t  error4, bnd14, bnd24;
     Int_t num4=4;
     Int_t ivarbl4;
     TString chnam4;
@@ -469,17 +478,10 @@ Double_t ralphWF() {
     par[3] = val3;
     par[4] = val4;
     draw(par);
-
-    Int_t event = a;
-    TBranch *Event = output_tree->Branch("Event", &event, "event/i");
-    TBranch *Fit_x = output_tree->Branch("MIGRAD x", &val0, "MINUIT_x/D" ); //creates new branches for x, y, z, q, w, fcn, and icstat
-    TBranch *Fit_y = output_tree->Branch("MIGRAD y", &val1, "MINUIT_y/D"); 
-    TBranch *Fit_z = output_tree->Branch("MIGRAD z", &val2, "MINUIT_z/D"); 
-    TBranch *Fit_q = output_tree->Branch("MIGRAD q", &val3, "MINUIT_q/D"); 
-    TBranch *Fit_w = output_tree->Branch("MIGRAD w", &val4, "MINUIT_w/D"); 
-    TBranch *Min_chisq = output_tree->Branch("MIGRAD chisq", &amin, "chisquare_dof/D"); 
-    TBranch *Evaluation_of_fit = output_tree->Branch("icstat", &icstat, "icstat/I"); 
-
+     
+    //UInt_t event = a;
+    //TBranch *Event = output_tree->Branch("Event", &event, "event/i");
+    
     output_tree->Fill();
     //parameters re-set to 0  
     val0 = 0.0;
@@ -488,10 +490,11 @@ Double_t ralphWF() {
     val3 = 0.0;
     val4 = 0.0;
     amin = 0.0;
-    icstat = 0.0;
-  }  
- output_file.Write();
+    icstat = 0.0; 
+   }  
   
+  output_file.Write();
+ 
 /*
     // a test -- just draw a sample wfm to see if things are working. 
 
