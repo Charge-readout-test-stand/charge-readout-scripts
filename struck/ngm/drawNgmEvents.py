@@ -27,7 +27,7 @@ ROOT.gStyle.SetTitleBorderSize(0)
 # set up a canvas
 canvas = ROOT.TCanvas("canvas","", 1000, 800)
 canvas.SetGrid(1,1)
-#canvas.SetLeftMargin(0.15)
+canvas.SetLeftMargin(0.15)
 canvas.SetTopMargin(0.15)
 canvas.SetBottomMargin(0.12)
 
@@ -61,7 +61,7 @@ def process_file(filename=None, n_plots_total=0):
     elif units_to_use == 2:
         y_min = -5 # mV
 
-    y_max = 1400 # keV
+    y_max = 31000 # keV
     if units_to_use == 1:
         y_max = 200 # ADC units
     elif units_to_use == 2:
@@ -135,7 +135,7 @@ def process_file(filename=None, n_plots_total=0):
         frame_hist.SetYTitle("mV")
         sum_offset = 10
 
-    frame_hist.GetYaxis().SetTitleOffset(1.3)
+    frame_hist.GetYaxis().SetTitleOffset(1.6)
 
     pave_text = ROOT.TPaveText(0.01, 0.01, 0.75, 0.07, "NDC")
     pave_text.SetTextAlign(11)
@@ -153,7 +153,7 @@ def process_file(filename=None, n_plots_total=0):
     pave_text2.SetFillStyle(0)
     pave_text2.SetBorderSize(0)
 
-    legend = ROOT.TLegend(0.1, 0.86, 0.9, 0.99)
+    legend = ROOT.TLegend(0.15, 0.86, 0.9, 0.99)
     legend.SetNColumns(7)
 
     # set up some placeholder hists for the legend
@@ -199,6 +199,7 @@ def process_file(filename=None, n_plots_total=0):
         legend_entries = [""]*32
 
         # loop over all channels in the event:
+        sum_energy = 0.0
         for i in xrange(len(channels)):
 
             tree.GetEntry(i_entry)
@@ -225,7 +226,7 @@ def process_file(filename=None, n_plots_total=0):
             elif units_to_use == 0 and channel == pmt_channel: # keV
                 # for digitizer testing, using a typical chanrge-channel energy
                 # conversion, even for PMT channel!!! FIXME
-                multiplier = calibration_values[0]
+                #multiplier = calibration_values[0]
                 print "*** WARNING -- setting pmt calibration to calibration_values[0] for digitizer tests!!"
 
 
@@ -246,6 +247,8 @@ def process_file(filename=None, n_plots_total=0):
                 baseline += graph.GetY()[i_sample] / n_samples_to_avg
                 energy += graph.GetY()[graph.GetN() - i_sample - 1] / n_samples_to_avg
             energy = (energy - baseline)*multiplier
+            if channel != pmt_channel:
+                sum_energy += energy
 
             rms_noise = 0.0
             for i_sample in xrange(n_samples_to_avg):
@@ -254,7 +257,7 @@ def process_file(filename=None, n_plots_total=0):
                 
 
             # add an offset so the channels are draw at different levels
-            offset = 0
+            offset = channel*1000
 
             graph.SetLineColor(color)
             fcn_string = "(y - %s)*%s + %s" % ( baseline, multiplier, offset)
@@ -275,8 +278,6 @@ def process_file(filename=None, n_plots_total=0):
             #print "\t entry %i, ch %i, slot %i" % ( i_entry-1, channel, slot,)
 
             # construct sum wfm
-            if offset !=0: 
-                print "offset is %s -- this will affect the sum wfms!!" % offset
             for i_point in xrange(tree.HitTree.GetNSamples()):
                 y = graph.GetY()[i_point]
                 if channel != pmt_channel:
@@ -290,8 +291,8 @@ def process_file(filename=None, n_plots_total=0):
             # legend uses hists for color/fill info
             legend_entries[channel] = "%s  %.1f" % (
                 channel_map[channel], 
-                #energy,
-                rms_noise,
+                energy,
+                #rms_noise,
             ) 
 
             # end loop over channels
@@ -358,13 +359,16 @@ def process_file(filename=None, n_plots_total=0):
         pave_text2.AddText("t=%.4fs" % (tree.HitTree.GetRawClock()/sampling_freq_Hz))
         #pave_text2.Draw()
 
+        if units_to_use == 0: y_max += 100
+
         frame_hist.SetMinimum(y_min)
         frame_hist.SetMaximum(y_max)
 
         for i in xrange(len(channels)):
             legend.AddEntry( hists[i], legend_entries[i], "f")
 
-        legend.AddEntry(sum_graph, "sum %.1f" % rms_noise,"l")
+        #legend.AddEntry(sum_graph, "sum %.1f" % rms_noise,"l")
+        legend.AddEntry(sum_graph, "sum %.1f" % sum_energy,"l")
         legend.AddEntry(sum_graph0, "Y sum slot 0","l")
         legend.AddEntry(sum_graph1, "X sum slot 1","l")
 
@@ -373,6 +377,12 @@ def process_file(filename=None, n_plots_total=0):
         line.SetLineWidth(2)
         line.SetLineStyle(7)
         line.Draw()
+
+        line1 = ROOT.TLine(trigger_time+9.09, y_min, trigger_time+9.09,y_max)
+        line1.SetLineWidth(2)
+        line1.SetLineStyle(7)
+        line1.Draw()
+
         legend.Draw()
         canvas.Update()
         n_plots += 1
@@ -475,7 +485,7 @@ def process_file(filename=None, n_plots_total=0):
 
 if __name__ == "__main__":
 
-    n_plots_total = 10
+    n_plots_total = 200
     n_plots_so_far = 0
     if len(sys.argv) > 1:
         for filename in sys.argv[1:]:
