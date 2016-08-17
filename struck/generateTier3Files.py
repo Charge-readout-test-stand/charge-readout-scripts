@@ -128,7 +128,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     print "processing file: ", filename
 
     # keep track of how long it takes to process file:
-    start_time = time.clock()
+    start_time = time.time()
     last_time = start_time
     prev_time_stamp = 0.0
 
@@ -524,6 +524,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     print "calculating mean baseline & baseline RMS for each channel in this file..."
     for (i, i_channel) in enumerate(channels):
         if isMC: continue
+        if isNGM: 
+            print "skipping RMS & baseline calcs for NGM while we look for memory leak... "
+            continue # FIXME -- skipping during 8th LXe run
         print "%i: ch %i" % (i, i_channel)
         if do_debug: 
             print "\t skipping for debugging"
@@ -739,13 +742,13 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     n_channels_in_this_event = 0
     while i_entry < n_entries:
         tree.GetEntry(i_entry)
-        if isNGM and i_entry > 1e3: 
-            print "<<<< DEBUGGING >>>>"
-            break # debugging
+        #if isNGM and i_entry > 1e6: 
+        #    print "<<<< DEBUGGING >>>>"
+        #    break # debugging
 
         # print periodic output message
         if i_entry % reporting_period == 0:
-            now = time.clock()
+            now = time.time()
             print "----> entry %i of %i: %.2f percent done in %.1f seconds | %i entries in %.1f seconds (%.2f Hz)" % (
                 i_entry, 
                 n_entries, 
@@ -1049,7 +1052,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     
     run_tree.Write()
 
-    print "done processing %i events in %.1e seconds" % (out_tree.GetEntries(), time.clock()-start_time)
+    print "done processing %i events in %.1e seconds" % (
+        out_tree.GetEntries(), 
+        time.time()-start_time)
     print "writing", out_filename
     out_tree.Write()
 
