@@ -4,14 +4,16 @@ A quick and dirty spectrum from NGM files
 import os
 import sys
 import ROOT
-import struck_analysis_parameters
+from struck import struck_analysis_parameters
 ROOT.gROOT.SetBatch(True)
 
 
 
-filename = sys.argv[1]
-tfile = ROOT.TFile(filename)
-tree = tfile.Get("HitTree")
+filenames = sys.argv[1:]
+tree = ROOT.TChain("HitTree")
+for filename in filenames:
+    print "--> adding %s to chain" % filename
+    tree.Add(filename)
 #tree.Show(0,32) # debugging
 n_entries = tree.GetEntries()
 
@@ -38,7 +40,7 @@ for channel in xrange(32):
     color = struck_analysis_parameters.get_colors()[channel]
     label = struck_analysis_parameters.channel_map[channel]
 
-    hist = ROOT.TH1D("hist%i" % channel, "",300,0,3000)
+    hist = ROOT.TH1D("hist%i" % channel, "",120,0,1800)
     hist.SetLineColor(color)
     hist.SetLineWidth(2)
     hist.SetMarkerColor(color)
@@ -77,8 +79,8 @@ canvas.SetTopMargin(0.15)
 canvas.SetLeftMargin(0.12)
 canvas.SetGrid()
 
-hists[0].SetMaximum(y_max*1.1)
-hists[0].SetAxisRange(0, mean_max*10.0)
+hists[0].SetMaximum(y_max*1.12)
+#hists[0].SetAxisRange(0, mean_max*8.0)
 hists[0].Draw()
 for hist in hists:
     hist.Draw("same")
