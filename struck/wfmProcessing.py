@@ -267,8 +267,11 @@ def get_wfmparams(
             extra_wfm2=pz_wfm,
             vlines=[index_of_max*exo_wfm.GetSamplingPeriod()/microsecond],
         )
+        pz_wfm.IsA().Destructor(pz_wfm)
+        trap_wfm.IsA().Destructor(trap_wfm)
 
-
+    energy_wfm.IsA().Destructor(energy_wfm)
+    
     return (
         baseline_mean, 
         baseline_rms,
@@ -297,6 +300,7 @@ def do_risetime_calc(rise_time_calculator, threshold_percent, wfm, max_val, peri
 
 
 def get_risetimes(exo_wfm, wfm_length, sampling_freq_Hz, skip_short_risetimes=True):
+
     exo_wfm.SetSamplingFreq(sampling_freq_Hz/second)
     new_wfm = EXODoubleWaveform(exo_wfm)
     maw_wfm = EXODoubleWaveform(exo_wfm)
@@ -383,6 +387,7 @@ def get_risetimes(exo_wfm, wfm_length, sampling_freq_Hz, skip_short_risetimes=Tr
     rise_time_stop95 = do_risetime_calc(rise_time_calculator, 0.95, exo_wfm, max_val, period)
     rise_time_stop99 = do_risetime_calc(rise_time_calculator, 0.99, exo_wfm, max_val, period)
 
+
     if not gROOT.IsBatch():
         print "rise times:"
         print "\tmax_val:", max_val
@@ -398,22 +403,25 @@ def get_risetimes(exo_wfm, wfm_length, sampling_freq_Hz, skip_short_risetimes=Tr
         print "\trise_time_stop95:", rise_time_stop95
         print "\trise_time_stop99:", rise_time_stop99
 
-    do_draw(exo_wfm, "after smoothing", new_wfm, maw_wfm, vlines=[
-        rise_time_stop10,
-        rise_time_stop20,
-        rise_time_stop30,
-        rise_time_stop40,
-        rise_time_stop50,
-        rise_time_stop60,
-        rise_time_stop70,
-        rise_time_stop80,
-        rise_time_stop90,
-        rise_time_stop95,
-        rise_time_stop99,
-    ])
+    #do_draw(exo_wfm, "after smoothing", new_wfm, maw_wfm, vlines=[
+    #    rise_time_stop10,
+    #    rise_time_stop20,
+    #    rise_time_stop30,
+    #    rise_time_stop40,
+    #    rise_time_stop50,
+    #    rise_time_stop60,
+    #    rise_time_stop70,
+    #    rise_time_stop80,
+    #    rise_time_stop90,
+    #    rise_time_stop95,
+    #    rise_time_stop99,
+    #])
+    
+    maw_wfm.IsA().Destructor(maw_wfm)
+    new_wfm.IsA().Destructor(new_wfm)
 
-    return (smoothed_max, rise_time_stop10, rise_time_stop20, rise_time_stop30,
+    return [smoothed_max, rise_time_stop10, rise_time_stop20, rise_time_stop30,
             rise_time_stop40, rise_time_stop50, rise_time_stop60, rise_time_stop70,
-            rise_time_stop80, rise_time_stop90, rise_time_stop95, rise_time_stop99)
-
+            rise_time_stop80, rise_time_stop90, rise_time_stop95,
+            rise_time_stop99]
 
