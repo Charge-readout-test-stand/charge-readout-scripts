@@ -1003,6 +1003,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 if val == 'b': gROOT.SetBatch(True)
                 if val == 'p': canvas.Print("entry_%i_proc_wfm_%s.png" % (i_entry, basename,))
                 
+            exo_wfm.IsA().Destructor(exo_wfm)      
+            calibrated_wfm.IsA().Destructor(calibrated_wfm)
             # end loop over channels
 
 
@@ -1036,6 +1038,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             baseline_remover.Transform(sum_wfm)
             energy_sum[0] = baseline_remover.GetBaselineMean()
             energy_rms_sum[0] = baseline_remover.GetBaselineRMS()
+            sum_wfm.IsA().Destructor(sum_wfm)
 
         #raw_input("Press Enter...")
 
