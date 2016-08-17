@@ -18,32 +18,25 @@ import os
 import sys
 import math
 
-from ROOT import gROOT
-gROOT.SetBatch(True) # comment this out to run interactively
-from ROOT import TH1D
-from ROOT import TFile
-from ROOT import TCanvas
-from ROOT import TColor
-from ROOT import TLegend
-from ROOT import gStyle
-from ROOT import TLine
+import ROOT
+ROOT.gROOT.SetBatch(True) # comment this out to run interactively
 
 import struck_analysis_parameters
 import struck_analysis_cuts
 
-gROOT.SetStyle("Plain")     
-gStyle.SetOptStat(0)        
-gStyle.SetPalette(1)        
-gStyle.SetTitleStyle(0)     
-gStyle.SetTitleBorderSize(0)       
+ROOT.gROOT.SetStyle("Plain")     
+ROOT.gStyle.SetOptStat(0)        
+ROOT.gStyle.SetPalette(1)        
+ROOT.gStyle.SetTitleStyle(0)     
+ROOT.gStyle.SetTitleBorderSize(0)       
 
 
 
 def setup_hist(hist, color, xtitle, xUnits):
     """ Set color, line and marker style of hist """
     hist.SetLineColor(color)
-    hist.SetMarkerStyle(8)
-    hist.SetMarkerSize(1.5)
+    hist.SetMarkerStyle(21)
+    hist.SetMarkerSize(0.8)
     hist.SetMarkerColor(color)
     hist.SetLineWidth(2)
     hist.SetXTitle("%s [%s]" % (xtitle, xUnits))
@@ -79,10 +72,11 @@ def process_files(filenames):
 
     if do_draw_energy:
         print "---> drawing energies... "
-        draw_command = "energy1_pz"
+        #draw_command = "energy1_pz"
+        draw_command = "energy1"
         min_bin = 0
-        max_bin = 2010
-        bin_width = 15
+        max_bin = 2000
+        bin_width = 20
 
         xUnits = "keV"
         xtitle = "Energy"
@@ -187,13 +181,13 @@ def process_files(filenames):
     basename += "_".join(xtitle.split())
 
     # set up a canvas
-    canvas = TCanvas("canvas","")
+    canvas = ROOT.TCanvas("canvas","")
     canvas.SetLogy(1)
     canvas.SetGrid(1,1)
     #canvas.SetLeftMargin(0.15)
 
-    legend = TLegend(0.1, 0.91, 0.9, 0.99)
-    legend.SetNColumns(len(channels))
+    legend = ROOT.TLegend(0.1, 0.91, 0.9, 0.99)
+    legend.SetNColumns(10)
 
     # set up some hists to hold TTree::Draw results
     hists = []
@@ -211,7 +205,7 @@ def process_files(filenames):
         #"channel!=5", # ortec channel
     #]
 
-    frame_hist = TH1D("frame_hist","",n_bins,min_bin,max_bin)
+    frame_hist = ROOT.TH1D("frame_hist","",n_bins,min_bin,max_bin)
     frame_hist.SetLineWidth(2)
     frame_hist.SetMinimum(1.0)
     #tree.Draw("")
@@ -222,14 +216,14 @@ def process_files(filenames):
     for (channel, value) in enumerate(struck_analysis_parameters.charge_channels_to_use):
         if not value:
             continue
-        hist = TH1D("hist%i" % channel,"",n_bins,min_bin,max_bin)
+        hist = ROOT.TH1D("hist%i" % channel,"",n_bins,min_bin,max_bin)
         try:
             color = colors[i_channel]
         except IndexError:
-            color = TColor.kBlack
+            color = ROOT.kBlack
         setup_hist(hist, color, xtitle, xUnits)
         hists.append(hist)
-        legend.AddEntry(hist, struck_analysis_parameters.channel_map[channel],"pl")
+        legend.AddEntry(hist, struck_analysis_parameters.channel_map[channel],"p")
         i_channel+=1
 
 
@@ -237,7 +231,7 @@ def process_files(filenames):
 
         # open the root file and grab the tree
         print "--> processing",filename
-        root_file = TFile(filename)
+        root_file = ROOT.TFile(filename)
         tree = root_file.Get("tree")
         try:
             n_entries = tree.GetEntries()
@@ -272,15 +266,22 @@ def process_files(filenames):
             if do_draw_energy:
                 selection = " && ".join(selections)
                 print "sum selection:", selection
-                print "%i entries in sum hist" % tree.Draw("chargeEnergy >>+ frame_hist", selection, "goff")
+                #energy_cmd = "chargeEnergy"
+                energy_cmd = struck_analysis_cuts.get_few_channels_cmd(energy_var="energy1")
+                print "sum energy cmd:"
+                print energy_cmd
+                print "%i entries in sum hist" % tree.Draw(
+                    "%s >>+ frame_hist" % energy_cmd, 
+                    selection, 
+                    "goff"
+                    )
             else:
                 selection = " && ".join(selections + [struck_analysis_cuts.get_channel_selection(isMC)])
                 print "selection:", selection
                 print "sum draw_command:", draw_command
                 print "sum selection:", selection
                 print "%i entries in sum hist" % tree.Draw("%s >>+ frame_hist" % draw_command, selection, "goff")
-            setup_hist(frame_hist, TColor.kBlack, xtitle, xUnits)
-            legend.AddEntry(frame_hist, "sum","lp")
+            setup_hist(frame_hist, ROOT.kBlack, xtitle, xUnits)
 
 
         y_max = 0
@@ -330,6 +331,9 @@ def process_files(filenames):
 
     if do_draw_sum:
         frame_hist.Draw()
+        legend.AddEntry(frame_hist, "sum","p")
+        if y_max < frame_hist.GetMaximum(): y_max = frame_hist.GetMaximum()
+        frame_hist.SetMaximum(y_max*1.2)
     else:
         hists[0].SetMaximum(y_max*1.2)
         hists[0].Draw()
@@ -343,14 +347,14 @@ def process_files(filenames):
     if do_draw_energy and False:
         line_energy = 570
         print "==> drawing line at %i %s" % (line_energy, xUnits)
-        line = TLine(line_energy, frame_hist.GetMinimum(), line_energy, frame_hist.GetMaximum())
+        line = ROOT.TLine(line_energy, frame_hist.GetMinimum(), line_energy, frame_hist.GetMaximum())
         line.SetLineStyle(2)
         line.Draw()
 
     canvas.Update()
     #canvas.Print("%s_log.png" % (basename))
     canvas.Print("%s_log.pdf" % (basename))
-    if not gROOT.IsBatch():
+    if not ROOT.gROOT.IsBatch():
         val = raw_input("--> enter to continue ")
 
     canvas.SetLogy(0)
@@ -365,7 +369,7 @@ def process_files(filenames):
         frame_hist.SetMaximum(12000)
     #canvas.Print("%s_lin.png" % (basename))
     canvas.Print("%s_lin.pdf" % (basename))
-    if not gROOT.IsBatch():
+    if not ROOT.gROOT.IsBatch():
         val = raw_input("--> enter to continue ")
 
 
