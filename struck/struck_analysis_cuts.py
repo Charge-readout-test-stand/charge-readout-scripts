@@ -216,14 +216,17 @@ def get_single_strip_cut(energy_threshold=10.0, isMC=False):
 
 def get_few_channels_cmd(
     energy_threshold=10.0,
+    energy_var="energy1_pz",
 ):
     """ A draw command for total energy, only including  events above threshold """
     draw_cmd = []
     for channel, value  in enumerate(struck_analysis_parameters.charge_channels_to_use): 
         if value:
-            part = "(energy1_pz[%i]>%s)*energy1_pz[%i]" % (
+            part = "(%s[%i]>%s)*%s[%i]" % (
+                energy_var,
                 channel, 
                 energy_threshold,
+                energy_var,
                 channel,
             )
             #print part
