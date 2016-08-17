@@ -415,6 +415,10 @@ def main(
             if time_stamp >= 3539732526:
                 mass_flow_rate_offset = 100.0/15.0/60.0 # 100 grams in 15 hours
 
+            if time_stamp >= 3554119175.:
+                print "during/after 8th LXe"
+                mass_flow_rate_offset = 170.0/15.0/60.0 # 100 grams in 15 hours
+
             print "mass_flow_rate_offset: [grams/minute]", mass_flow_rate_offset
 
         # handling for changes to LabView...
