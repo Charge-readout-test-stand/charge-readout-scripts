@@ -18,6 +18,7 @@
 #include "TFile.h"
 #include "TMinuit.h"
 #include "TRandom3.h"
+#include "TStopwatch.h"
 #include <iostream>
 #include <vector>
 #include <sstream>
@@ -316,10 +317,9 @@ void draw(Double_t *par)
   TTree *tree = (TTree*) inputroot->Get("evtTree");
   tree->GetEntries();
   Int_t nbins = 21.2/0.53;//x vs y binning
-//  TH2D *eCloud_point_hist = new TH2D("eCloud_point_hist", "eCloud-PointCharge Comparison", nbins, 0, 8, nbins, 0, 5);//x z
-  TH2D *eCloud_point_hist = new TH2D("eCloud_point_hist", "eCloud-PointCharge Comparison", nbins, 0, 8, nbins, 0, 8);//x y 
+  TH2D *eCloud_point_hist = new TH2D("eCloud_point_hist", "Charge Deposit", nbins, 0, 8, nbins, 0, 8);//x y 
   TH2D *point_charge = new TH2D("point_charge", "", 200, 0, 8, 200, 0, 8);
-  point_charge->Fill(par[0], par[1], par[3]); 
+  point_charge->Fill(par[0], par[1], par[3]); //x, y, q
 
 //  draw_calls += 1;
   ostringstream chargeweightStream;
@@ -336,7 +336,19 @@ void draw(Double_t *par)
 //  TStyle::gStyle->SetOptStat(0);
   ca->Update();
   ca->Print((pdfnameStream.str()).c_str());
- 
+  
+  TH2D *eCloud_point_hist2 = new TH2D("eCloud_point_hist2", "Charge Deposit", nbins, 0, 8, nbins, 0, 18);//x z
+  TH2D *point_charge2->Fill(par[0], par[2], par[3]);
+  tree->Draw("PCDz:PCDx >> eCloud_point_hist2", chargeweight.c_str());
+  eCloud_point_hist->Draw("colz");
+  point_charge2->Draw("same"); //x, z, q
+  eCloud_point_hist2->GetXaxis()->SetTitle("X");
+  eCloud_point_hist2->GetYaxis()->SetTitle("Z");
+  eCloud_point_hist2->GetXaxis()->CenterTitle();
+  eCloud_point_hist2->GetYaxis()->CenterTitle();
+  ca->Update();
+  ca->Print((pdfnameStream.str()).c_str());
+
   ca->Print((pdfnameStream.str()+"]").c_str());
   cout << "pdf file closed" << endl; 
 }
@@ -392,9 +404,15 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
     ca = new TCanvas(canvas.c_str(), "");
     TRandom3 *generator = new TRandom3(0);//random number generator initialized by TUUID object
     
-    UInt_t ChannelHit1=0;
-    UInt_t ChannelHit2=0;
-    UInt_t ChannelIncrement=0;
+    UInt_t XChannelHit1=0;
+    UInt_t XChannelHit2=0;
+    UInt_t YChannelHit1=0;
+    UInt_t YChannelHit2=0;
+    Double_t XChannelPos=0.0;
+//    Double_t YChannelPos=0.0;
+    UInt_t XChannelIncrement=0;
+    UInt_t YChannelIncrement=0;
+    Double_t EnergyOfDeposit=0.0;
     for (UInt_t i=0; i<60; i++) {
       ostringstream name;
       name << "Channel " << i; 
@@ -416,24 +434,42 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
         ChannelWFelement += noise;
         hist[i]->SetBinContent(n+1, ChannelWFelement); //plots charge deposit energy in keV
       }
-      if ((((*ChannelWaveform)[i])[625])*0.022004 > 50) {
+      EnergyOfDeposit += (((*ChannelWaveform)[i])[625])*0.022004; //Total energy of the event in keV
+      cout << "Energy of Channel " << i  << (((*ChannelWaveform)[i])[625])*0.022004 << endl;
+      if (i<30) {
+        if ((((*ChannelWaveform)[i])[625])*0.022004 > 5) {
           cout << "Hit Channel " << i << endl;
-          ChannelIncrement += 1;
-          if (ChannelIncrement == 1) {
-            ChannelHit1 = i;
-            cout << ChannelHit1 << endl;
+          XChannelIncrement += 1;
+          if (XChannelIncrement == 1) {
+            XChannelHit1 = i;
+            cout << XChannelHit1 << endl;
             }
-          if (ChannelIncrement == 2) {
-            ChannelHit2 = i;
-            cout << ChannelHit2 << endl;
+          if (XChannelIncrement == 2) {
+            XChannelHit2 = i;
+            cout << XChannelHit2 << endl;
             }
-        }     
-      }  
+         }     
+        }
+      if (i>=30 && i<60) {
+        if ((((*ChannelWaveform)[i])[625])*0.022004 > 5) {
+          cout << "Hit Channel " << i << endl;
+          YChannelIncrement += 1;
+          if (YChannelIncrement == 1) {
+            YChannelHit1 = i;
+            cout << YChannelHit1 << endl;
+            }
+          if (YChannelIncrement == 2) {
+            YChannelHit2 = i;
+            cout << YChannelHit2 << endl;
+            }
+        }    
+      }
+    }
     
     TMinuit *gMinuit = new TMinuit(5);  //initialize TMinuit with a maximum of 5 params 
     gMinuit->SetFCN(fcn); 
 //Maybe say something like for channels (i) that have energy deposit (ChannelWaveform) greater than 200keV (10,000), these channels get fed into what's below
-    Double_t First1=0.0;
+/*    Double_t First1=0.0;
     Double_t First2=0.0;
     Double_t Last1=0.0;
     Double_t Last2=0.0;
@@ -443,7 +479,7 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
     }
     Double_t First_TwoHundred1 = First1/200;
     Double_t First_TwoHundred2 = First2/200;
-    for (UInt_t c=600; c<801; c++) {
+    for (UInt_t c=600; c<800; c++) {
       Last1 += (((*ChannelWaveform)[ChannelHit1])[c])*0.022004;
       Last2 += (((*ChannelWaveform)[ChannelHit2])[c])*0.022004;
     }
@@ -454,11 +490,19 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
     Double_t EnergyOfDeposit2 = (Last_TwoHundred2 - First_TwoHundred2);
     Double_t EnergyOfDeposit = (EnergyOfDeposit1 + EnergyOfDeposit2);
     cout << "Energy of Deposit (keV): " << EnergyOfDeposit << endl;
-
-    Double_t XChannelPos = -43.5 + 3*ChannelHit1; //16 replaced with X Channel
-    Double_t YChannelPos = -43.5 + 3*(ChannelHit2-30); // 47 replaced with Y Channel
+*/
+    cout << "Total Energy of deposits at 25 ms: " << EnergyOfDeposit << endl;
+    if ((((*ChannelWaveform)[XChannelHit1])[625]) > (((*ChannelWaveform)[XChannelHit2])[625])) {  
+      XChannelPos = -43.5 + 3*XChannelHit1; 
+    }
+    else {
+      XChannelPos = -43.5 + 3*XChannelHit2;
+    }
+    
+    Double_t YChannelPos = -43.5 + 3*(YChannelHit1-30); // 47 replaced with Y Channel
     cout << "XChannelPos " << XChannelPos << " YChannelPos " << YChannelPos << endl;
-
+    Int_t pause;
+    cin >> pause;
     cout << "TMinuit has begun" << endl; 
     Double_t arglist[5]; //# of params
     Int_t ierflg = 0;
@@ -468,7 +512,7 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
     gMinuit->mnparm(1, "y", YChannelPos, 1, 0, 0, ierflg);//mm
     gMinuit->mnparm(2, "z", 17, 1, 0, 0, ierflg);//mm
     gMinuit->mnparm(3, "q", EnergyOfDeposit, 100, 0, 0, ierflg); //keV
-    gMinuit->mnparm(4, "w", TMath::Pi(), 0.125*TMath::Pi(), 0, 0, ierflg); //radians
+    gMinuit->mnparm(4, "w", TMath::Pi(), 0.125*TMath::Pi(), 0, 2*TMath::Pi(), ierflg); //radians
     cout << "Parameters set, Minimization starting" << endl;
 
     arglist[0] = 10000; //this is somehow related to number of calls
@@ -477,11 +521,15 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
     Double_t edm, errdef; //amin was here
     Int_t nvpar, nparx; //icstat was here
     for (int nfit=0; nfit<4; nfit++) {
+      //TStopwatch t;
+      //t->Start(Bool_t reset=kTrue);
       gMinuit->mnexcm("MIGRAD", arglist, 2, ierflg);
       gMinuit->mnstat(amin, edm, errdef, nvpar, nparx, icstat);
       cout << "best function value found so far: " << amin << " vertical dist remaining to min: " << edm << " how good is fit? 0=bad, 1=approx, 2=full matrix but forced positive-definite, 3=good: " << icstat << endl;
       //if (edm<0.0001)
       //  break;
+      //t->Stop();
+      //cout << "time: " << t << endl;
       }  
 
     Double_t  error0, bnd10, bnd20;
