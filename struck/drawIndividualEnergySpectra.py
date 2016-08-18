@@ -21,14 +21,12 @@ ROOT.gStyle.SetTitleStyle(0)
 ROOT.gStyle.SetTitleBorderSize(0)       
 
 
-
-
 def process_files(filenames):
     
     # options
     energy_var = "energy1"
-    do_debug = False
-    #do_debug = True
+    #do_debug = False
+    do_debug = True
     plot_name = "individual_channels2.pdf"
     energy_max = 3500
     n_bins = int(energy_max/20)
@@ -41,7 +39,7 @@ def process_files(filenames):
     print "--> adding %i files to chain" % len(filenames)
     for i_file, filename in enumerate(filenames):
         tree.Add(filename)
-        if do_debug and i_file > 200: 
+        if do_debug and i_file > 100: 
             print "==> debugging -- only using %i files" % i_file
             break # debugging
 
@@ -49,27 +47,35 @@ def process_files(filenames):
     multiplier = [1.0]*32
 
     # define recalibration 
-    multiplier[1] = 0.5
-    multiplier[2] = 0.5
-    multiplier[3] = 0.5
-    multiplier[4] = 2.0
-    multiplier[8] = 0.5
-    multiplier[9] = 0.5
-    multiplier[10] = 0.5
-    multiplier[11] = 0.5
-    multiplier[12] = 0.5
-    multiplier[13] = 0.5
-    multiplier[14] = 0.5
-    multiplier[15] = 0.5
-    multiplier[16] = 0.5
-    multiplier[17] = 0.5
-    multiplier[18] = 0.5
-    multiplier[19] = 0.5
-    multiplier[24] = 0.5
-    multiplier[25] = 0.5
-    multiplier[26] = 0.5
-    multiplier[28] = 0.5
-    multiplier[29] = 0.5
+    multiplier[1] = 0.5*0.81428571428571
+    multiplier[2] = 0.5*0.80281690140845
+    multiplier[3] = 0.5*0.82608695652174
+    multiplier[4] = 2.0*0.82608695652174
+    multiplier[5] = 0.81428571428571
+    multiplier[6] = 570.0/700.0
+    multiplier[7] = 570.0/750.0
+    multiplier[8] = 0.5*570.0/700.0
+    multiplier[9] = 0.5*570.0/710.0
+    multiplier[10] = 0.5*570.0/700.0
+    multiplier[11] = 0.5*570.0/700.0
+    multiplier[12] = 0.5*570.0/650.0
+    multiplier[13] = 0.5*570.0/700.0
+    multiplier[14] = 0.5*570.0/650.0
+    multiplier[15] = 0.5*570.0/700.0
+    multiplier[16] = 0.5*570.0/610.0
+    multiplier[17] = 0.5*570.0/700.0
+    multiplier[18] = 0.5*570.0/700.0
+    multiplier[19] = 0.5*570.0/700.0
+    multiplier[20] = 570.0/740.0
+    multiplier[21] = 570.0/700.0
+    multiplier[22] = 570.0/700.0
+    multiplier[23] = 570.0/650.0
+    multiplier[24] = 0.5*570.0/730.0
+    multiplier[25] = 0.5*570.0/700.0
+    multiplier[26] = 0.5*570.0/650.0
+    multiplier[28] = 0.5*570.0/650.0
+    multiplier[29] = 0.5*570.0/700.0
+    multiplier[30] = 570.0/700.0
 
     tree.GetEntry(0)
     calibration = array('d',tree.calibration)
@@ -85,8 +91,6 @@ def process_files(filenames):
     hists = []
 
     for (channel, value) in enumerate(struck_analysis_parameters.charge_channels_to_use):
-        continue # debugging
-        #print "channel %i" % channel
         if not value:
             continue
         
@@ -113,16 +117,24 @@ def process_files(filenames):
         print title
         hist.SetTitle(title)
 
+        line = ROOT.TLine(570, hist.GetMinimum(), 570, hist.GetMaximum())
+        line.SetLineWidth(2)
+        line.SetLineStyle(7)
+        line.Draw()
+
         canvas.SetLogy(0)
         canvas.Update()
         canvas.Print("%s" % plot_name)
 
-        
         canvas.SetLogy(1)
         canvas.Update()
         canvas.Print("%s" % plot_name)
 
         hist.SetAxisRange(200, 2000)
+        line = ROOT.TLine(570, hist.GetMinimum(), 570, hist.GetMaximum())
+        line.SetLineWidth(2)
+        line.SetLineStyle(7)
+        line.Draw()
         canvas.Update()
         canvas.Print("%s" % plot_name)
 
@@ -183,6 +195,11 @@ def process_files(filenames):
     hist.SetMarkerStyle(21)
     hist.SetMarkerSize(0.8)
 
+    line = ROOT.TLine(570, hist.GetMinimum(), 570, hist.GetMaximum())
+    line.SetLineWidth(2)
+    line.SetLineStyle(7)
+    line.Draw()
+
     n_drawn = tree.Draw("%s >> %s" % (few_channels_cmd, hist.GetName()), "")
     print "%i drawn from few channels" % n_drawn
     hist.SetTitle("%.3e counts" % n_drawn)
@@ -194,6 +211,9 @@ def process_files(filenames):
     y_max = hist.GetBinContent(hist.FindBin(200.0)) # get height at 200 keV
     hist.SetMaximum(y_max*1.2)
     canvas.SetLogy(0)
+    hist.SetAxisRange(0, 2000)
+    y_max = hist.GetBinContent(hist.FindBin(200.0)) # get height at 200 keV
+    hist.SetMaximum(y_max*1.2)
     canvas.Update()
     canvas.Print("%s" % plot_name)
 
