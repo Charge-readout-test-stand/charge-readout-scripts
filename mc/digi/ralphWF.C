@@ -272,7 +272,7 @@ Double_t ChisqFit(Double_t *par, UInt_t i)
   Double_t chisq_per_channel = 0;
   Double_t P[5]; //P[0] is along the wire, P[1] is transverse dir, P is coord sys of wire (origin=center of wire)
   TransformCoord(par, P, i);
-  for (UInt_t n=200; n<450; n++) { //n is time sample; 200 - 450 is 8 - 18 ms
+  for (UInt_t n=200; n<750; n++) { //n is time sample; 200 - 600 is 8 - 24 ms (200*0.04=8)
     NumberOfSamples += 1;
     Double_t t = n*.04; //each point in channel waveform separated by 40 ns
     delta = ((hist[i]->GetBinContent(n) - OnePCD(&t, P)))/RMS_noise;
@@ -311,7 +311,8 @@ void draw(Double_t *par)
     ca->Print((pdfnameStream.str()).c_str());
     }
 
-  TFile *inputroot = TFile::Open("~/../manisha2/MC/e1MeV_dcoeff50/digitization_dcoeff50/digi1_e1MeV_dcoef50.root");
+//  TFile *inputroot = TFile::Open("~/../manisha2/MC/e1MeV_dcoeff50/digitization_dcoeff50/digi1_e1MeV_dcoef50.root");
+  TFile *inputroot = TFile::Open("/nfs/slac/g/exo_data4/users/manisha2/MC/Bi207_Full_Ralph_dcoeff50_Qidong_Efieldhist/digitization_dcoeff50/digi1750_Bi207_Full_Ralph_dcoef50.root");
   TTree *tree = (TTree*) inputroot->Get("evtTree");
   tree->GetEntries();
   Int_t nbins = 21.2/0.53;//x vs y binning
@@ -351,8 +352,9 @@ void fcn(Int_t &npar, Double_t *gin, Double_t &f, Double_t *par, Int_t iflag)
   f = chisq; 
 }
 
-Double_t ralphWF() {
-  TFile *inputroot = TFile::Open("~/../manisha2/MC/e1MeV_dcoeff50/digitization_dcoeff50/digi1_e1MeV_dcoef50.root");
+Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command line: root "ralphWF.C+(0,1)" where first_event=0 & last_event=1
+  //TFile *inputroot = TFile::Open("~/../manisha2/MC/e1MeV_dcoeff50/digitization_dcoeff50/digi1_e1MeV_dcoef50.root");
+  TFile *inputroot = TFile::Open("/nfs/slac/g/exo_data4/users/manisha2/MC/Bi207_Full_Ralph_dcoeff50_Qidong_Efieldhist/digitization_dcoeff50/digi1750_Bi207_Full_Ralph_dcoef50.root");
   TTree *tree = (TTree*) inputroot->Get("evtTree");
   vector<vector<double> > *ChannelWaveform=0; //defines pointer to vector of vectors
   cout << "number of events: " << tree->GetEntries() << endl;
@@ -366,6 +368,8 @@ Double_t ralphWF() {
   Double_t amin;
   Int_t icstat;
 
+  UInt_t event = a;
+  TBranch *Event = output_tree->Branch("Event", &event, "event/i");
   TBranch *Fit_x = output_tree->Branch("MIGRAD x", &val0, "MINUIT_x/D" ); //creates new branches for x, y, z, q, w, fcn, and icstat
   TBranch *Fit_y = output_tree->Branch("MIGRAD y", &val1, "MINUIT_y/D"); 
   TBranch *Fit_z = output_tree->Branch("MIGRAD z", &val2, "MINUIT_z/D"); 
@@ -373,12 +377,15 @@ Double_t ralphWF() {
   TBranch *Fit_w = output_tree->Branch("MIGRAD w", &val4, "MINUIT_w/D"); 
   TBranch *Min_chisq = output_tree->Branch("MIGRAD chisq", &amin, "chisquare_dof/D"); 
   TBranch *Evaluation_of_fit = output_tree->Branch("icstat", &icstat, "icstat/I"); 
-
-  for (a=0; a<2; a++)  {
-    tree->GetEntry(a); 
+  
+  for (a=first_event; a<(last_event); a++)  {
+    tree->GetEntry(a);
+    cout << a << endl;
     //cout << "size of ChannelWaveform: " << (*ChannelWaveform).size() << endl; //number of channels (should be 60)
     //cout << "size of ChannelWaveform[20]: " << ((*ChannelWaveform)[20]).size() << endl; //print out size of nth channel
     //cout << "entry ChannelWaveform[0, 200]: " << ((*ChannelWaveform)[0])[200] << endl; //200th time sample from 0th channel
+    //if (val3<200) //NOTE: THIS SHOULDN'T BE VAL3, IT SHOULD BE PCD Q FROM INPUT ROOT FILE
+    //  break;
     ostringstream canvasStream;
     canvasStream << "canvas" << a;
     string canvas = canvasStream.str();
@@ -407,7 +414,15 @@ Double_t ralphWF() {
         hist[i]->SetBinContent(n+1, ChannelWFelement); //plots charge deposit energy in keV
        }
       }
-
+/*
+    Double_t par[5];
+    par[0] = val0;
+    par[1] = val1;
+    par[2] = val2;
+    par[3] = val3;
+    par[4] = val4;
+    draw(par); 
+*/    
     TMinuit *gMinuit = new TMinuit(5);  //initialize TMinuit with a maximum of 5 params 
     gMinuit->SetFCN(fcn); 
 
@@ -416,24 +431,24 @@ Double_t ralphWF() {
     Int_t ierflg = 0;
     arglist[0] = 1;
     gMinuit->mnexcm("SET ERR", arglist ,1,ierflg);
-    gMinuit->mnparm(0, "x", 4.5, 1, 0, 0, ierflg);//mm
-    gMinuit->mnparm(1, "y", 4.5, 1, 0, 0, ierflg);//mm
-    gMinuit->mnparm(2, "z", 10, 1, 0, 0, ierflg);//mm
-    gMinuit->mnparm(3, "q", 1000, 100, 0, 0, ierflg); //keV
+    gMinuit->mnparm(0, "x", 5.5, 1, 0, 0, ierflg);//mm
+    gMinuit->mnparm(1, "y", 6.9, 1, 0, 0, ierflg);//mm
+    gMinuit->mnparm(2, "z", 17, 1, 0, 0, ierflg);//mm
+    gMinuit->mnparm(3, "q", 400, 100, 0, 0, ierflg); //keV
     gMinuit->mnparm(4, "w", TMath::Pi(), 0.125*TMath::Pi(), 0, 0, ierflg); //radians
     cout << "Parameters set, Minimization starting" << endl;
 
     arglist[0] = 10000; //this is somehow related to number of calls
     arglist[1] = 1;
    
-    Double_t  edm, errdef; //amin was here
+    Double_t edm, errdef; //amin was here
     Int_t nvpar, nparx; //icstat was here
-    for (int nfit=0; nfit<3; nfit++) {
+    for (int nfit=0; nfit<20; nfit++) {
       gMinuit->mnexcm("MIGRAD", arglist, 2, ierflg);
       gMinuit->mnstat(amin, edm, errdef, nvpar, nparx, icstat);
       cout << "best function value found so far: " << amin << " vertical dist remaining to min: " << edm << " how good is fit? 0=bad, 1=approx, 2=full matrix but forced positive-definite, 3=good: " << icstat << endl;
-      if (icstat==3)
-        break;
+      //if (edm<0.0001)
+      //  break;
       }  
 
     Double_t  error0, bnd10, bnd20;
@@ -477,11 +492,9 @@ Double_t ralphWF() {
     par[2] = val2;
     par[3] = val3;
     par[4] = val4;
+    cout << "draw is being executed" << endl;
     draw(par);
      
-    //UInt_t event = a;
-    //TBranch *Event = output_tree->Branch("Event", &event, "event/i");
-    
     output_tree->Fill();
     //parameters re-set to 0  
     val0 = 0.0;
@@ -557,6 +570,5 @@ Double_t ralphWF() {
     return 0;
 */
   }
-
 
 
