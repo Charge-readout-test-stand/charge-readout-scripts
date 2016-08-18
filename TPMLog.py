@@ -415,6 +415,10 @@ def main(
             if time_stamp >= 3539732526:
                 mass_flow_rate_offset = 100.0/15.0/60.0 # 100 grams in 15 hours
 
+            if time_stamp >= 3554119175.:
+                print "during/after 8th LXe"
+                mass_flow_rate_offset = 170.0/15.0/60.0 # 100 grams in 15 hours
+
             print "mass_flow_rate_offset: [grams/minute]", mass_flow_rate_offset
 
         # handling for changes to LabView...
@@ -460,6 +464,11 @@ def main(
             full_capacitance = 34.9
             empty_bottle_mass = 88.35 # not really empty, but when the cell is full
             full_mass_integral = 6437.6 # when cell is "full"
+
+
+        if time_stamp >= 3554119175:
+            empty_capacitance = 23.7
+            full_capacitance = 34.0
 
         TC0.append(float(split_line[1]))
         TC1.append(float(split_line[2]))
@@ -1003,7 +1012,7 @@ def main(
         ymin, ymax = plt.gca().get_ylim()
         plt.axhline(y=full_capacitance, color='black', linestyle="--")
         plt.axhline(y=empty_capacitance, color='black', linestyle="--")
-        if capacitance_max > 24.0: ymin = 24.0
+        if capacitance_max > 23.0: ymin = 23.0
         plt.gca().set_ylim([ymin,ymax]) # reset axes to original max, a reasonable min
 
         # draw LXe fill box:
