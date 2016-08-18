@@ -17,7 +17,7 @@ is_6th_LXe = False
 is_7th_LXe = True # March 2016
 is_8th_LXe = False # August 2016
 
-if False: # testing 8th LXe
+if True: # testing 8th LXe
     is_7th_LXe = False
     is_8th_LXe = True
 
@@ -83,6 +83,8 @@ elif is_8th_LXe:
         channels.append(i_channel)
         charge_channels_to_use[i_channel] = 1
     charge_channels_to_use[pmt_channel] = 0
+    charge_channels_to_use[0] = 0 # Y1-10 is dead
+    charge_channels_to_use[27] = 0 # X23/24 is dead
 else:
     # channels for 5th LXe
     channels = [0,1,2,3,4,8]
@@ -311,7 +313,7 @@ if is_7th_LXe:
 
 if is_8th_LXe: # FIXME with real values
     for i_channel in xrange(len(channels)):
-        calibration_values[i_channel] = 5.0
+        calibration_values[i_channel] = 2.5
 
 
 # PMT calibration is from PMT-triggered data
