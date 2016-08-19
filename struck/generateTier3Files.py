@@ -524,9 +524,6 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     print "calculating mean baseline & baseline RMS for each channel in this file..."
     for (i, i_channel) in enumerate(channels):
         if isMC: continue
-        if isNGM: 
-            print "skipping RMS & baseline calcs for NGM while we look for memory leak... "
-            continue # FIXME -- skipping during 8th LXe run
         print "%i: ch %i" % (i, i_channel)
         if do_debug: 
             print "\t skipping for debugging"
