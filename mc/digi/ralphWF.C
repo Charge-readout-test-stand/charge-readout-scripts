@@ -329,8 +329,8 @@ void draw(Double_t *par)
   tree->Draw("PCDy:PCDx >> eCloud_point_hist", chargeweight.c_str());//why do we multiply PCDq by event?
   eCloud_point_hist->Draw("colz");
   point_charge->Draw("same");
-  eCloud_point_hist->GetXaxis()->SetTitle("X");
-  eCloud_point_hist->GetYaxis()->SetTitle("Y");
+  eCloud_point_hist->GetXaxis()->SetTitle("X (mm)");
+  eCloud_point_hist->GetYaxis()->SetTitle("Y (mm)");
   eCloud_point_hist->GetXaxis()->CenterTitle();
   eCloud_point_hist->GetYaxis()->CenterTitle();
 //  TStyle::gStyle->SetOptStat(0);
@@ -338,12 +338,13 @@ void draw(Double_t *par)
   ca->Print((pdfnameStream.str()).c_str());
   
   TH2D *eCloud_point_hist2 = new TH2D("eCloud_point_hist2", "Charge Deposit", nbins, 0, 8, nbins, 0, 18);//x z
-  TH2D *point_charge2->Fill(par[0], par[2], par[3]);
+  TH2D *point_charge2 = new TH2D("point_charge", "", 200, 0, 8, 450, 0, 18);
+  point_charge2->Fill(par[0], par[2], par[3]);
   tree->Draw("PCDz:PCDx >> eCloud_point_hist2", chargeweight.c_str());
   eCloud_point_hist->Draw("colz");
   point_charge2->Draw("same"); //x, z, q
-  eCloud_point_hist2->GetXaxis()->SetTitle("X");
-  eCloud_point_hist2->GetYaxis()->SetTitle("Z");
+  eCloud_point_hist2->GetXaxis()->SetTitle("X (mm)");
+  eCloud_point_hist2->GetYaxis()->SetTitle("Z (mm)");
   eCloud_point_hist2->GetXaxis()->CenterTitle();
   eCloud_point_hist2->GetYaxis()->CenterTitle();
   ca->Update();
@@ -380,8 +381,7 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
   Double_t amin;
   Int_t icstat;
 
-  UInt_t event = a;
-  TBranch *Event = output_tree->Branch("Event", &event, "event/i");
+  TBranch *Event = output_tree->Branch("Event", &a, "event/i");
   TBranch *Fit_x = output_tree->Branch("MIGRAD x", &val0, "MINUIT_x/D" ); //creates new branches for x, y, z, q, w, fcn, and icstat
   TBranch *Fit_y = output_tree->Branch("MIGRAD y", &val1, "MINUIT_y/D"); 
   TBranch *Fit_z = output_tree->Branch("MIGRAD z", &val2, "MINUIT_z/D"); 
@@ -501,8 +501,6 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
     
     Double_t YChannelPos = -43.5 + 3*(YChannelHit1-30); // 47 replaced with Y Channel
     cout << "XChannelPos " << XChannelPos << " YChannelPos " << YChannelPos << endl;
-    Int_t pause;
-    cin >> pause;
     cout << "TMinuit has begun" << endl; 
     Double_t arglist[5]; //# of params
     Int_t ierflg = 0;
