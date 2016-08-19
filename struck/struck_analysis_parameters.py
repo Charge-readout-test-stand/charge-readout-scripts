@@ -17,7 +17,7 @@ is_6th_LXe = False
 is_7th_LXe = True # March 2016
 is_8th_LXe = False # August 2016
 
-if True: # testing 8th LXe
+if False: # testing 8th LXe
     is_7th_LXe = False
     is_8th_LXe = True
 
