@@ -19,6 +19,7 @@
 #include "TMinuit.h"
 #include "TRandom3.h"
 #include "TStopwatch.h"
+#include "TStyle.h"
 #include <iostream>
 #include <vector>
 #include <sstream>
@@ -308,6 +309,7 @@ void draw(Double_t *par)
     test[i]->Draw("same"); 
     test[i]->SetLineColor(kRed);
     test[i]->SetLineStyle(7);
+    gStyle->SetOptStat(0);
     ca->Update();
     ca->Print((pdfnameStream.str()).c_str());
     }
@@ -333,15 +335,14 @@ void draw(Double_t *par)
   eCloud_point_hist->GetYaxis()->SetTitle("Y (mm)");
   eCloud_point_hist->GetXaxis()->CenterTitle();
   eCloud_point_hist->GetYaxis()->CenterTitle();
-//  TStyle::gStyle->SetOptStat(0);
   ca->Update();
   ca->Print((pdfnameStream.str()).c_str());
   
   TH2D *eCloud_point_hist2 = new TH2D("eCloud_point_hist2", "Charge Deposit", nbins, 0, 8, nbins, 0, 18);//x z
-  TH2D *point_charge2 = new TH2D("point_charge", "", 200, 0, 8, 450, 0, 18);
+  TH2D *point_charge2 = new TH2D("point_charge2", "", 200, 0, 8, 450, 0, 18);
   point_charge2->Fill(par[0], par[2], par[3]);
   tree->Draw("PCDz:PCDx >> eCloud_point_hist2", chargeweight.c_str());
-  eCloud_point_hist->Draw("colz");
+  eCloud_point_hist2->Draw("colz");
   point_charge2->Draw("same"); //x, z, q
   eCloud_point_hist2->GetXaxis()->SetTitle("X (mm)");
   eCloud_point_hist2->GetYaxis()->SetTitle("Z (mm)");
@@ -352,6 +353,9 @@ void draw(Double_t *par)
 
   ca->Print((pdfnameStream.str()+"]").c_str());
   cout << "pdf file closed" << endl; 
+  
+  Int_t pause;
+  cin >> pause;
 }
 
 void fcn(Int_t &npar, Double_t *gin, Double_t &f, Double_t *par, Int_t iflag)
@@ -380,6 +384,17 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
   Double_t val4;
   Double_t amin;
   Int_t icstat;
+
+
+    Double_t par[5];
+    par[0] = val0;
+    par[1] = val1;
+    par[2] = val2;
+    par[3] = val3;
+    par[4] = val4;
+    cout << "draw is being executed" << endl;
+    draw(par);
+ 
 
   TBranch *Event = output_tree->Branch("Event", &a, "event/i");
   TBranch *Fit_x = output_tree->Branch("MIGRAD x", &val0, "MINUIT_x/D" ); //creates new branches for x, y, z, q, w, fcn, and icstat
@@ -564,7 +579,7 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
     TString chnam4;
     gMinuit->mnpout(num4, chnam4, val4, error4, bnd14, bnd24, ivarbl4);
     cout << "w: " <<  " value4 " << val4  << endl;
-
+/*
     Double_t par[5];
     par[0] = val0;
     par[1] = val1;
@@ -573,7 +588,7 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
     par[4] = val4;
     cout << "draw is being executed" << endl;
     draw(par);
-     
+*/     
     output_tree->Fill();
     //parameters re-set to 0  
     val0 = 0.0;
