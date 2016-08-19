@@ -313,7 +313,37 @@ if is_7th_LXe:
 
 if is_8th_LXe: # FIXME with real values
     for i_channel in xrange(len(channels)):
-        calibration_values[i_channel] = 2.5
+        calibration_values[i_channel] = 2.5 # initial guess
+
+    calibration_values[1] = 1.017857
+    calibration_values[2] = 1.003521
+    calibration_values[3] = 1.032609
+    calibration_values[4] = 4.130435
+    calibration_values[5] = 2.035714
+    calibration_values[6] = 2.035714
+    calibration_values[7] = 1.900000
+    calibration_values[8] = 1.017857
+    calibration_values[9] = 1.003521
+    calibration_values[10] = 1.017857
+    calibration_values[11] = 1.017857
+    calibration_values[12] = 1.096154
+    calibration_values[13] = 1.017857
+    calibration_values[14] = 1.096154
+    calibration_values[15] = 1.017857
+    calibration_values[16] = 1.168033
+    calibration_values[17] = 1.017857
+    calibration_values[18] = 1.017857
+    calibration_values[19] = 1.017857
+    calibration_values[20] = 1.925676
+    calibration_values[21] = 2.035714
+    calibration_values[22] = 2.035714
+    calibration_values[23] = 2.192308
+    calibration_values[24] = 0.976027
+    calibration_values[25] = 1.017857
+    calibration_values[26] = 1.096154
+    calibration_values[28] = 1.096154
+    calibration_values[29] = 1.017857
+    calibration_values[30] = 2.035714
 
 
 # PMT calibration is from PMT-triggered data
