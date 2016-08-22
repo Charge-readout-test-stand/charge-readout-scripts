@@ -336,8 +336,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         trigger_time[0] = 200/sampling_freq_Hz*1e6
     elif isNGM:
         ngm_config = root_file.Get("NGMSystemConfiguration")
-        trigger_time[0] = ngm_config.GetSlotParameters().GetParValueO("card",0).pretriggerdelay_block[0] 
-        print "NGM trigger_time [microseconds]:", trigger_time[0]/sampling_frequency_Hz[0]*1e6
+        trigger_time[0] = ngm_config.GetSlotParameters().GetParValueO("card",0).pretriggerdelay_block[0]/sampling_freq_Hz*1e6 
+        print "NGM trigger_time [microseconds]:", trigger_time[0]
     elif do_debug:
         print "--> debugging -- skipping trigger_time calc"
     else:
