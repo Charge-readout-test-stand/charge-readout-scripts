@@ -315,35 +315,39 @@ if is_8th_LXe: # FIXME with real values
     for i_channel in xrange(len(channels)):
         calibration_values[i_channel] = 2.5 # initial guess
 
-    calibration_values[1] = 1.017857
-    calibration_values[2] = 1.003521
-    calibration_values[3] = 1.032609
-    calibration_values[4] = 4.130435
-    calibration_values[5] = 2.035714
-    calibration_values[6] = 2.035714
-    calibration_values[7] = 1.900000
-    calibration_values[8] = 1.017857
-    calibration_values[9] = 1.003521
-    calibration_values[10] = 1.017857
-    calibration_values[11] = 1.017857
-    calibration_values[12] = 1.096154
-    calibration_values[13] = 1.017857
-    calibration_values[14] = 1.096154
-    calibration_values[15] = 1.017857
-    calibration_values[16] = 1.168033
-    calibration_values[17] = 1.017857
-    calibration_values[18] = 1.017857
-    calibration_values[19] = 1.017857
-    calibration_values[20] = 1.925676
-    calibration_values[21] = 2.035714
-    calibration_values[22] = 2.035714
-    calibration_values[23] = 2.192308
-    calibration_values[24] = 0.976027
-    calibration_values[25] = 1.017857
-    calibration_values[26] = 1.096154
-    calibration_values[28] = 1.096154
-    calibration_values[29] = 1.017857
-    calibration_values[30] = 2.035714
+    # values from fit_peak.py on  entire overnight data set, no rise time cuts, 19 Aug 2016
+    calibration_values[1] = 1.043621 # +/- 0.005085
+    calibration_values[2] = 1.005564 # +/- 0.005645
+    calibration_values[3] = 1.088347 # +/- 0.004442
+    calibration_values[4] = 4.350042 # +/- 0.016480
+    calibration_values[5] = 2.099275 # +/- 0.006437
+    calibration_values[6] = 1.978627 # +/- 0.004707
+    #calibration_values[7] = 1.698476 # +/- 0.005793 # negative amplitude!
+    calibration_values[7] = 1.3586 # guess
+    calibration_values[8] = 1.058732 # +/- 0.002546
+    calibration_values[9] = 1.019176 # +/- 0.002679
+    calibration_values[10] = 1.043697 # +/- 0.003326
+    calibration_values[11] = 1.066561 # +/- 0.003339
+    calibration_values[12] = 1.138123 # +/- 0.003317
+    calibration_values[13] = 1.089059 # +/- 0.005196
+    calibration_values[14] = 1.115444 # +/- 0.007123
+    #calibration_values[15] = 0.836906 # +/- 0.012443 # negative amplitude fit
+    calibration_values[15] = 0.7002 # guess
+    calibration_values[16] = 1.347580 # +/- 0.062605
+    calibration_values[17] = 1.062948 # +/- 0.004804
+    calibration_values[18] = 1.031382 # +/- 0.003551
+    calibration_values[19] = 1.047734 # +/- 0.003124
+    calibration_values[20] = 1.992676 # +/- 0.004752
+    calibration_values[21] = 2.088570 # +/- 0.005890
+    calibration_values[22] = 2.078620 # +/- 0.004823
+    calibration_values[23] = 2.240022 # +/- 0.006585
+    calibration_values[24] = 0.994845 # +/- 0.003679
+    calibration_values[25] = 1.037283 # +/- 0.003869
+    calibration_values[26] = 1.084141 # +/- 0.004972
+    calibration_values[28] = 1.146285 # +/- 0.003838
+    calibration_values[29] = 1.074212 # +/- 0.004115
+    calibration_values[30] = 2.156112 # +/- 0.009296p
+
 
 
 # PMT calibration is from PMT-triggered data
