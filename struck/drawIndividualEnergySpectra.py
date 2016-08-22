@@ -80,6 +80,14 @@ def process_files(filenames):
     tree.GetEntry(0)
     calibration = array('d',tree.calibration)
 
+    # print modified calibration values
+    for (channel, value) in enumerate(struck_analysis_parameters.charge_channels_to_use):
+        if not value: continue
+        print "calibration_values[%i] = %.6f" % (
+            channel,
+            calibration[channel]*multiplier[channel]
+        )
+
     canvas = ROOT.TCanvas()
     canvas.SetTopMargin(0.15)
     canvas.SetGrid()
@@ -89,6 +97,8 @@ def process_files(filenames):
     legend.SetNColumns(8)
 
     hists = []
+
+    print struck_analysis_cuts.get_drift_time_cut(is_single_channel=True)
 
     for (channel, value) in enumerate(struck_analysis_parameters.charge_channels_to_use):
         if not value:
@@ -106,10 +116,12 @@ def process_files(filenames):
         hist.SetMarkerSize(0.8)
 
         draw_cmd = "%s*%.4f >> %s" % (energy_var, multiplier[channel], hist.GetName())
-        selection = "%s*%.4f>200.0 && channel==%i" % (energy_var, multiplier[channel], channel)
+        selection = "%s*%.4f>200.0 && channel==%i" % (
+            energy_var, multiplier[channel], channel)
+        #selection = "%s && %s" % (selection, struck_analysis_cuts.get_drift_time_cut(is_single_channel=True))
         n_drawn = tree.Draw(draw_cmd, selection)
-        #print draw_cmd
-        #print selection
+        print "draw_cmd:", draw_cmd
+        print "selection:", selection
 
         label = struck_analysis_parameters.channel_map[channel]
         #print "channel %i | %s | %i entries drawn" % (channel, label, n_drawn)
