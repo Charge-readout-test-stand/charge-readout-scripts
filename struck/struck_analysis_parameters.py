@@ -315,41 +315,39 @@ if is_8th_LXe: # FIXME with real values
     for i_channel in xrange(len(channels)):
         calibration_values[i_channel] = 2.5 # initial guess
 
-    # values from fit_peak.py on  entire overnight data set, no rise time cuts, 19 Aug 2016
-    calibration_values[1] = 1.043621 # +/- 0.005085
-    calibration_values[2] = 1.005564 # +/- 0.005645
-    calibration_values[3] = 1.088347 # +/- 0.004442
+    # values from fit_peak.py on  entire overnight data set, no rise time cuts, 22 Aug 2016
+
+    calibration_values[1] = 1.042325 # +/- 0.005438
+    calibration_values[2] = 1.006970 # +/- 0.005695
+    calibration_values[3] = 1.087762 # +/- 0.004540
 
     # channels 4, 5, 6, 7 are old preamps
-    calibration_values[4] = 4.350042 # +/- 0.016480
-    calibration_values[5] = 2.099275 # +/- 0.006437
-    calibration_values[6] = 1.978627 # +/- 0.004707
-    #calibration_values[7] = 1.698476 # +/- 0.005793 # negative amplitude!
-    calibration_values[7] = 2.0 # guess
-
-    calibration_values[8] = 1.058732 # +/- 0.002546
-    calibration_values[9] = 1.019176 # +/- 0.002679
-    calibration_values[10] = 1.043697 # +/- 0.003326
-    calibration_values[11] = 1.066561 # +/- 0.003339
-    calibration_values[12] = 1.138123 # +/- 0.003317
-    calibration_values[13] = 1.089059 # +/- 0.005196
-    calibration_values[14] = 1.115444 # +/- 0.007123
-    #calibration_values[15] = 0.836906 # +/- 0.012443 # negative amplitude fit
-    calibration_values[15] = 1.3*570.0/750.0 # guess
-    calibration_values[16] = 1.347580 # +/- 0.062605
-    calibration_values[17] = 1.062948 # +/- 0.004804
-    calibration_values[18] = 1.031382 # +/- 0.003551
-    calibration_values[19] = 1.047734 # +/- 0.003124
-    calibration_values[20] = 1.992676 # +/- 0.004752
-    calibration_values[21] = 2.088570 # +/- 0.005890
-    calibration_values[22] = 2.078620 # +/- 0.004823
-    calibration_values[23] = 2.240022 # +/- 0.006585
-    calibration_values[24] = 0.994845 # +/- 0.003679
-    calibration_values[25] = 1.037283 # +/- 0.003869
-    calibration_values[26] = 1.084141 # +/- 0.004972
-    calibration_values[28] = 1.146285 # +/- 0.003838
-    calibration_values[29] = 1.074212 # +/- 0.004115
-    calibration_values[30] = 2.156112 # +/- 0.009296p
+    calibration_values[4] = 4.339931 # +/- 0.016867
+    calibration_values[5] = 2.096126 # +/- 0.006621
+    calibration_values[6] = 1.980758 # +/- 0.004600
+    calibration_values[7] = 2.094804 # +/- 0.005325
+    calibration_values[8] = 1.059041 # +/- 0.002523
+    calibration_values[9] = 1.018659 # +/- 0.002737
+    calibration_values[10] = 1.042217 # +/- 0.003316
+    calibration_values[11] = 1.063546 # +/- 0.003257
+    calibration_values[12] = 1.137803 # +/- 0.003278
+    calibration_values[13] = 1.086306 # +/- 0.005576
+    calibration_values[14] = 1.113041 # +/- 0.007296
+    calibration_values[15] = 1.030522 # +/- 0.010307
+    calibration_values[16] = 1.292259 # +/- 0.118818
+    calibration_values[17] = 1.059656 # +/- 0.004708
+    calibration_values[18] = 1.031070 # +/- 0.003737
+    calibration_values[19] = 1.046553 # +/- 0.003188
+    calibration_values[20] = 1.991732 # +/- 0.004795
+    calibration_values[21] = 2.089875 # +/- 0.006012
+    calibration_values[22] = 2.078199 # +/- 0.004894
+    calibration_values[23] = 2.243561 # +/- 0.006557
+    calibration_values[24] = 0.994050 # +/- 0.003728
+    calibration_values[25] = 1.036946 # +/- 0.003930
+    calibration_values[26] = 1.082139 # +/- 0.004585
+    calibration_values[28] = 1.141378 # +/- 0.003802
+    calibration_values[29] = 1.074286 # +/- 0.004627
+    calibration_values[30] = 2.146018 # +/- 0.009083
 
 
 
