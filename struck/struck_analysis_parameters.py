@@ -319,11 +319,14 @@ if is_8th_LXe: # FIXME with real values
     calibration_values[1] = 1.043621 # +/- 0.005085
     calibration_values[2] = 1.005564 # +/- 0.005645
     calibration_values[3] = 1.088347 # +/- 0.004442
+
+    # channels 4, 5, 6, 7 are old preamps
     calibration_values[4] = 4.350042 # +/- 0.016480
     calibration_values[5] = 2.099275 # +/- 0.006437
     calibration_values[6] = 1.978627 # +/- 0.004707
     #calibration_values[7] = 1.698476 # +/- 0.005793 # negative amplitude!
-    calibration_values[7] = 1.3586 # guess
+    calibration_values[7] = 2.0 # guess
+
     calibration_values[8] = 1.058732 # +/- 0.002546
     calibration_values[9] = 1.019176 # +/- 0.002679
     calibration_values[10] = 1.043697 # +/- 0.003326
@@ -332,7 +335,7 @@ if is_8th_LXe: # FIXME with real values
     calibration_values[13] = 1.089059 # +/- 0.005196
     calibration_values[14] = 1.115444 # +/- 0.007123
     #calibration_values[15] = 0.836906 # +/- 0.012443 # negative amplitude fit
-    calibration_values[15] = 0.7002 # guess
+    calibration_values[15] = 1.3*570.0/750.0 # guess
     calibration_values[16] = 1.347580 # +/- 0.062605
     calibration_values[17] = 1.062948 # +/- 0.004804
     calibration_values[18] = 1.031382 # +/- 0.003551
