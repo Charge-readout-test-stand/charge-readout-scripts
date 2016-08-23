@@ -21,7 +21,7 @@ import math
 import datetime
 
 import ROOT
-#ROOT.gROOT.SetBatch(True) # run in batch mode
+ROOT.gROOT.SetBatch(True) # run in batch mode
 
 import struck_analysis_parameters
 import struck_analysis_cuts
