@@ -319,7 +319,7 @@ Double_t ChisqFit2(Double_t *par, UInt_t i)
   Double_t delta;
   Double_t NumberOfSamples = 0;
   Double_t chisq_per_channel = 0;
-  Double_t P[9]; //P[0] is along the wire, P[1] is transverse dir, P is coord sys of wire (origin=center of wire)
+  Double_t P[10]; //P[0] is along the wire, P[1] is transverse dir, P is coord sys of wire (origin=center of wire)
   TransformCoord2(par, P, i);
   for (UInt_t n=200; n<750; n++) { //n is time sample; 200 - 600 is 8 - 24 ms (200*0.04=8)
     NumberOfSamples += 1;
@@ -415,7 +415,7 @@ void draw2(Double_t *par)
   cout << "pdf file opened" << endl;
 
   for (UInt_t i=0; i<60;  i++) { 
-    Double_t P[9]; //P[0] is along the wire, P[1] is transverse dir, P is coord sys of wire (origin=center of wire)
+    Double_t P[10]; //P[0] is along the wire, P[1] is transverse dir, P is coord sys of wire (origin=center of wire)
     TransformCoord(par, P, i);
     test[i]->SetParameter(0,P[0]); // x
     test[i]->SetParameter(1,P[1]); // y
@@ -631,7 +631,7 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
   {
     cout << "USING TWO PCDs FIT" << endl;
 
-    TMinuit *gMinuit = new TMinuit(9);  //initialize TMinuit with a maximum of 5 params 
+    TMinuit *gMinuit = new TMinuit(10);  //initialize TMinuit with a maximum of 10 params 
     gMinuit->SetFCN(fcn2); 
     
     if ((((*ChannelWaveform)[XChannelHit1])[625]) > (((*ChannelWaveform)[XChannelHit2])[625])) {  
@@ -643,7 +643,7 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
       XChannelPos2 = -43.5 + 3*XChannelHit1;
     }
 
- if ((((*ChannelWaveform)[YChannelHit3])[625]) > (((*ChannelWaveform)[YChannelHit2])[625]) && (((*ChannelWaveform)[YChannelHit3])[625]) > (((*ChannelWaveform)[YChannelHit1])[625]))  
+  if ((((*ChannelWaveform)[YChannelHit3])[625]) > (((*ChannelWaveform)[YChannelHit2])[625]) && (((*ChannelWaveform)[YChannelHit3])[625]) > (((*ChannelWaveform)[YChannelHit1])[625]))  
     {  
       YChannelPos2 = -43.5 + 3*(YChannelHit3-30); 
       YChannelPos = -43.5 + 3*(YChannelHit1-30);
@@ -653,10 +653,10 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
       YChannelPos = -43.5 + 3*(YChannelHit3-30);
     }
 
-    cout << "XChannelPos: " << XChannelPos << " XChannelPos2: " << XChannelPos2 << " YChannelPos: " << YChannelPos << " YChannelPos2: " << YChannelPos2 << endl;
+    cout << "XChannelPos: " << XChannelPos << " YChannelPos: " << YChannelPos << " XChannelPos2: " << XChannelPos2 << " YChannelPos2: " << YChannelPos2 << endl;
     cout << "TMinuit has begun" << endl; 
 
-    Double_t arglist[9]; //# of params
+    Double_t arglist[10]; //# of params
     Int_t ierflg = 0;
     arglist[0] = 1;
     gMinuit->mnexcm("SET ERR", arglist ,1,ierflg);
