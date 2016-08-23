@@ -53,8 +53,9 @@ def main(python_script, filenames, options="", verbose=True):
         batch_script_name = "script_%s.sh" % basename
         batch_script = open(batch_script_name,'w')
         batch_script.write("#!/bin/bash \n")
+        batch_script.write('source ~/.bash_profile \n') # works for Alexis
         batch_script.write('printenv \n')
-        batch_script.write('python %(python_script)s %(options)s %(filename)s \n' % {
+        batch_script.write('time python %(python_script)s %(options)s %(filename)s \n' % {
           "python_script": python_script,
           "options": options,
           "filename": filename,
@@ -72,7 +73,7 @@ def main(python_script, filenames, options="", verbose=True):
       -o out_%(base)s.out \\
       -j oe \\
       -q %(queue)s \\
-      -l walltime=%(hours)02i:%(minutes)02i \\
+      -l walltime=%(hours)02i:%(minutes)02i:00 \\
       -l ttc=1 \\
       '%(batch_script_name)s'
     """ % {
@@ -85,8 +86,6 @@ def main(python_script, filenames, options="", verbose=True):
           "filename": filename,
           "batch_script_name":batch_script_name,
         }
-       #'printenv; python %(python_script)s %(options)s %(filename)s'
-
 
         if verbose:
             print script
