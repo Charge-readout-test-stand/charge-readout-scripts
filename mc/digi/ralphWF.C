@@ -25,6 +25,10 @@
 #include <sstream>
 using namespace std;
 
+void style() {
+  gStyle->SetOptStat(0);
+} 
+
 // options:
 //Double_t diagonal = 3.0; // mm
 
@@ -140,9 +144,9 @@ Double_t FinalAmplitude(
 Double_t OnePCDWithOptions(
   Double_t *var, 
   Double_t *par,
-  Int_t iPCD=0, 
-  Bool_t useSameZ = false,
-  Bool_t doDebug = false
+  Int_t iPCD, 
+  Bool_t useSameZ, 
+  Bool_t doDebug=false 
 ) {
   // reponse of the strip (30 pads in x direction) to one ionization of
   // magnitude q, starting from location x,y,z
@@ -162,24 +166,24 @@ Double_t OnePCDWithOptions(
   
   if (doDebug){ cout << "PCD: " << iPCD << " useSameZ: " << useSameZ << endl; }
 
-  size_t xIndex = 0 + iPCD*4;
+  size_t xIndex = 0 + iPCD*5; //4
   Double_t x = par[xIndex];
   if (doDebug){ cout << "\txIndex: " << xIndex << " x: " << x << endl; }
 
-  size_t yIndex = 1 + iPCD*4;
+  size_t yIndex = 1 + iPCD*5;//4
   Double_t y = par[yIndex];
   if (doDebug){ cout << "\tyIndex: " << yIndex << " y: " << y << endl; }
 
-  size_t zIndex = 2 + iPCD*4;
+  size_t zIndex = 2 + iPCD*5;//4
   if (useSameZ){ zIndex=2; }
   Double_t z0 = par[zIndex];
   if (doDebug){ cout << "\tzIndex: " << zIndex << " z0: " << z0 << endl; }
 
-  size_t qIndex = 3 + iPCD*3 + (!useSameZ)*iPCD;
+  size_t qIndex = 3 + iPCD*4 + (!useSameZ)*iPCD;//3
   Double_t q = par[qIndex]; 
   if (doDebug){ cout << "\tqIndex: " << qIndex << " q: " << q << endl; }
 
-  size_t wIndex = 4 + iPCD*4; //what is iPCD*4? 
+  size_t wIndex = 4 + iPCD*5; 
   Double_t w = par[wIndex];
   if (doDebug){ cout << "\twIndex: " << wIndex << " weight: " << w << endl; }
 
@@ -190,6 +194,7 @@ Double_t OnePCDWithOptions(
   if (t < triggerTime) { return 0.0; } // wfm is 0 for times before drift starts
   
   Double_t weight_center = 0.5*q*(1.0+sin(w));
+
   Double_t weight_outer = (q*(1.0 - 0.5*(1.0+sin(w))))/8;
   Double_t Q0 = x + 1.0;
   Double_t R1 = y - 1.0;
@@ -220,7 +225,7 @@ Double_t OnePCDWithOptions(
 Double_t OnePCD(Double_t *var, Double_t *par) {
     // We need this function, with the correct arguments, to use when making a
     // TF1
-    return OnePCDWithOptions(var, par);
+    return OnePCDWithOptions(var, par, 0, false);
 }
 
 Double_t TwoPCDsOneZ(Double_t *var, Double_t *par) {
@@ -232,9 +237,12 @@ Double_t TwoPCDsOneZ(Double_t *var, Double_t *par) {
   //    1: y for PCD 0
   //    2: z for PCDs 0 and 1
   //    3: q for PCD 0
-  //    4: x for PCD 1
-  //    5: y for PCD 1
-  //    6: q for PCD 1
+  //    4: w for PCD 1
+  //    5: x for PCD 1
+  //    6: y for PCD 1
+  //    7: z for PCD 1
+  //    8: q for PCD 1
+  //    9: w for PCD 1
 
   Double_t amplitude = OnePCDWithOptions(var, par, 0, false) + OnePCDWithOptions(var, par, 1, true); 
   return amplitude; 
@@ -254,17 +262,40 @@ TTree *output_tree = new TTree("output_tree", "Output of MIGRAD"); //creates out
 void TransformCoord (Double_t *par, Double_t *P, UInt_t i)
 {
   if (i<30) { //X channels (0-29)
-    P[0] = par[1];   //center x
-    P[1] = -43.5 + (3*i) - par[0]; //center y
+    P[0] = par[1];   //center x PCD 0
+    P[1] = -43.5 + (3*i) - par[0]; //center y PCD 0
   }
   else { //Y channels (30-59)
     P[0] = par[0];
     P[1] = par[1] - (-43.5+(3*(i-30)));
   }
 
-  P[2] = par[2]; //center z
-  P[3] = par[3]; //center q
-  P[4] = par[4];
+  P[2] = par[2]; //center z PCD 0
+  P[3] = par[3]; //center q PCD 0
+  P[4] = par[4]; // w PCD 0
+}
+
+void TransformCoord2 (Double_t *par, Double_t *P, UInt_t i)
+{
+  if (i<30) { //X channels (0-29)
+    P[0] = par[1];   //center x PCD 0
+    P[1] = -43.5 + (3*i) - par[0]; //center y PCD 0
+    P[5] = par[6]; //center x PCD 1
+    P[6] = -43.5 + (3*i) - par[5]; //center y PCD 1
+  }
+  else { //Y channels (30-59)
+    P[0] = par[0];
+    P[1] = par[1] - (-43.5+(3*(i-30)));
+    P[5] = par[5];
+    P[6] = par[6] - (-43.5+(3*(i-30)));
+  }
+
+  P[2] = par[2]; //center z PCD 0
+  P[3] = par[3]; //center q PCD 0
+  P[4] = par[4]; // w PCD 0
+  P[7] = par[7]; //center z PCD 1
+  P[8] = par[8]; //center q PCD 1
+  P[9] = par[9]; // w PCD 1
 }
 
 Double_t ChisqFit(Double_t *par, UInt_t i)   
@@ -283,11 +314,25 @@ Double_t ChisqFit(Double_t *par, UInt_t i)
   return chisq_per_channel/NumberOfSamples;//chisq per deg of freedom
 }
 
-void style() {
-  gStyle->SetOptStat(0);
-}  
+Double_t ChisqFit2(Double_t *par, UInt_t i)   
+{
+  Double_t delta;
+  Double_t NumberOfSamples = 0;
+  Double_t chisq_per_channel = 0;
+  Double_t P[9]; //P[0] is along the wire, P[1] is transverse dir, P is coord sys of wire (origin=center of wire)
+  TransformCoord2(par, P, i);
+  for (UInt_t n=200; n<750; n++) { //n is time sample; 200 - 600 is 8 - 24 ms (200*0.04=8)
+    NumberOfSamples += 1;
+    Double_t t = n*.04; //each point in channel waveform separated by 40 ns
+    delta = ((hist[i]->GetBinContent(n) - TwoPCDsOneZ(&t, P)))/RMS_noise;
+    chisq_per_channel += delta*delta;
+  } 
+  return chisq_per_channel/NumberOfSamples;//chisq per deg of freedom
+}
+ 
 void draw(Double_t *par)
 {
+  cout << "USING DRAW 1" << endl;
   ca->SetGrid();
   ostringstream pdfnameStream;
   pdfnameStream << "Event_" << a << ".pdf"; //a is event number from loop in ralphWF()
@@ -343,7 +388,7 @@ void draw(Double_t *par)
   ca->Print((pdfnameStream.str()).c_str());
   
   TH2D *eCloud_point_hist2 = new TH2D("eCloud_point_hist2", "Charge Deposit", nbins, 0, 8, nbins, 16, 20);//x z
-  TH2D *point_charge2 = new TH2D("point_charge2", "", 200, 0, 8, 450, 0, 18);
+  TH2D *point_charge2 = new TH2D("point_charge2", "", 200, 0, 8, 550, 0, 22);
   point_charge2->Fill(par[0], par[2], par[3]);
   tree->Draw("(18.16-PCDz):PCDx >> eCloud_point_hist2", chargeweight.c_str());
   eCloud_point_hist2->Draw("colz");
@@ -358,13 +403,80 @@ void draw(Double_t *par)
 
   ca->Print((pdfnameStream.str()+"]").c_str());
   cout << "pdf file closed" << endl; 
-  
-  Int_t pause;
-  cin >> pause;
 }
 
+void draw2(Double_t *par)
+{
+  cout << "USING DRAW2" << endl;
+  ca->SetGrid();
+  ostringstream pdfnameStream;
+  pdfnameStream << "Event_" << a << ".pdf"; //a is event number from loop in ralphWF()
+  ca->Print((pdfnameStream.str()+"[").c_str());
+  cout << "pdf file opened" << endl;
+
+  for (UInt_t i=0; i<60;  i++) { 
+    Double_t P[9]; //P[0] is along the wire, P[1] is transverse dir, P is coord sys of wire (origin=center of wire)
+    TransformCoord(par, P, i);
+    test[i]->SetParameter(0,P[0]); // x
+    test[i]->SetParameter(1,P[1]); // y
+    test[i]->SetParameter(2, par[2]); // z
+    test[i]->SetParameter(3, par[3]); // q  
+    test[i]->SetParameter(4, par[4]); // w
+    test[i]->SetParameter(5, par[5]); // x 1
+    test[i]->SetParameter(6, par[6]); // y 1
+    test[i]->SetParameter(7, par[7]); // z 1
+    test[i]->SetParameter(8, par[8]); // q 1
+    test[i]->SetParameter(9, par[9]); // w 1
+
+    Double_t Chisq_per_channel = ChisqFit(par, i);
+
+    hist[i]->Draw();
+    ostringstream name;
+    name << "Channel " << i << "  x=" << par[0] << "  y=" << par[1] << "  z=" << par[2] << "  q=" << par[3] << "  w=" << par[4] << "  chisq per chan=" << Chisq_per_channel; 
+    hist[i]->SetTitle(name.str().c_str());
+    test[i]->Draw("same"); 
+    test[i]->SetLineColor(kRed);
+    test[i]->SetLineStyle(7);
+    style();
+    ca->Update();
+    ca->Print((pdfnameStream.str()).c_str());
+    }
+
+//  TFile *inputroot = TFile::Open("~/../manisha2/MC/e1MeV_dcoeff50/digitization_dcoeff50/digi1_e1MeV_dcoef50.root");
+  TFile *inputroot = TFile::Open("/nfs/slac/g/exo_data4/users/manisha2/MC/Bi207_Full_Ralph_dcoeff50_Qidong_Efieldhist/digitization_dcoeff50/digi1750_Bi207_Full_Ralph_dcoef50.root");
+  TTree *tree = (TTree*) inputroot->Get("evtTree");
+  tree->GetEntries();
+  Int_t nbins = 21.2/0.53;//x vs y binning
+  TH2D *eCloud_point_hist = new TH2D("eCloud_point_hist", "Charge Deposit", nbins, 0, 8, nbins, 0, 8);//x y 
+  TH2D *point_charge = new TH2D("point_charge", "", 200, 0, 8, 200, 0, 8);
+  TH2D *point_charge2 = new TH2D("point_charge2", "", 200, 0, 8, 200, 0, 8);
+ 
+  point_charge->Fill(par[0], par[1], par[3]); //x, y, q
+  point_charge2->Fill(par[5], par[6], par[8]);
+//  draw_calls += 1;
+  ostringstream chargeweightStream;
+  chargeweightStream << "(Entry$==" << a << ")*PCDq*0.02204";
+  string chargeweight = chargeweightStream.str();
+
+  tree->Draw("PCDy:PCDx >> eCloud_point_hist", chargeweight.c_str());//why do we multiply PCDq by event?
+  eCloud_point_hist->Draw("colz");
+  point_charge->Draw("same");
+  point_charge2->Draw("same");
+  eCloud_point_hist->GetXaxis()->SetTitle("X (mm)");
+  eCloud_point_hist->GetYaxis()->SetTitle("Y (mm)");
+  eCloud_point_hist->GetXaxis()->CenterTitle();
+  eCloud_point_hist->GetYaxis()->CenterTitle();
+  style();
+  ca->Update();
+  ca->Print((pdfnameStream.str()).c_str());
+  
+  ca->Print((pdfnameStream.str()+"]").c_str());
+  cout << "pdf file closed" << endl;   
+}
+
+
 void fcn(Int_t &npar, Double_t *gin, Double_t &f, Double_t *par, Int_t iflag)
-{     
+{ 
   Double_t chisq = 0.0;  
   ncalls += 1;
   for (UInt_t i=0; i<60; i++) {
@@ -372,6 +484,15 @@ void fcn(Int_t &npar, Double_t *gin, Double_t &f, Double_t *par, Int_t iflag)
   }
   //cout << "ncalls " << ncalls << " chisq " << chisq << " x " << par[0] << " y " << par[1] << " z " << par[2] << " q " << par[3] << " w " << par[4] << endl; //test
   f = chisq; 
+}
+
+void fcn2(Int_t &npar, Double_t *gin, Double_t &f2, Double_t *par, Int_t iflag)
+{
+  Double_t chisq2 = 0.0;
+  for (UInt_t i=0; i<60; i++) {
+    chisq2 += ChisqFit2(par, i)/60;
+  }
+  f2 = chisq2;
 }
 
 Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command line: root "ralphWF.C+(0,2)" where first_event=0 & last_event=1
@@ -387,6 +508,11 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
   Double_t val2;
   Double_t val3;
   Double_t val4;
+  Double_t val5;
+  Double_t val6;
+  Double_t val7;
+  Double_t val8;
+  Double_t val9;
   Double_t amin;
   Int_t icstat;
   
@@ -415,9 +541,16 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
     
     UInt_t XChannelHit1=0;
     UInt_t XChannelHit2=0;
+    UInt_t XChannelHit3=0;
+    UInt_t XChannelHit4=0;
     UInt_t YChannelHit1=0;
     UInt_t YChannelHit2=0;
+    UInt_t YChannelHit3=0;
+    UInt_t YChannelHit4=0;
     Double_t XChannelPos=0.0;
+    Double_t XChannelPos2=0.0;
+    Double_t YChannelPos=0.0;
+    Double_t YChannelPos2=0.0;
 //    Double_t YChannelPos=0.0;
     UInt_t XChannelIncrement=0;
     UInt_t YChannelIncrement=0;
@@ -444,7 +577,7 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
         hist[i]->SetBinContent(n+1, ChannelWFelement); //plots charge deposit energy in keV
       }
       EnergyOfDeposit += (((*ChannelWaveform)[i])[625])*0.022004; //Total energy of the event in keV
-      cout << "Energy of Channel " << i  << (((*ChannelWaveform)[i])[625])*0.022004 << endl;
+      cout << "Energy of Channel " << i  << ": " << (((*ChannelWaveform)[i])[625])*0.022004 << endl;
       if (i<30) {
         if ((((*ChannelWaveform)[i])[625])*0.022004 > 5) {
           cout << "Hit Channel " << i << endl;
@@ -457,7 +590,15 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
             XChannelHit2 = i;
             cout << XChannelHit2 << endl;
             }
-         }     
+          if (XChannelIncrement == 3) {
+            XChannelHit3 = i;
+            cout << XChannelHit3 << endl;
+            }
+          if (XChannelIncrement == 4) {
+            XChannelHit4 = i;
+            cout << XChannelHit4 << endl;
+            }
+          }     
         }
       if (i>=30 && i<60) {
         if ((((*ChannelWaveform)[i])[625])*0.022004 > 5) {
@@ -471,36 +612,186 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
             YChannelHit2 = i;
             cout << YChannelHit2 << endl;
             }
-        }    
+          if (YChannelIncrement == 3) {
+            YChannelHit3 = i;
+            cout << YChannelHit3 << endl;
+            }
+          if (YChannelIncrement == 4) {
+            YChannelHit4 = i;
+            cout << YChannelHit4 << endl;
+            }
+          }    
+        }
       }
+
+    cout << "Total Energy of deposits at 25 ms: " << EnergyOfDeposit << endl;
+  
+//Two options: if X Channel hits are 2 or more channels apart, uses fcn2 (TwoPCDsOneZ). If not, uses fcn (OnePCDWithOptions)
+  if (XChannelIncrement >= 2 && (XChannelHit2-XChannelHit1) >= 2)
+  {
+    cout << "USING TWO PCDs FIT" << endl;
+
+    TMinuit *gMinuit = new TMinuit(9);  //initialize TMinuit with a maximum of 5 params 
+    gMinuit->SetFCN(fcn2); 
+    
+    if ((((*ChannelWaveform)[XChannelHit1])[625]) > (((*ChannelWaveform)[XChannelHit2])[625])) {  
+      XChannelPos = -43.5 + 3*XChannelHit1; 
+      XChannelPos2 = -43.5 + 3*XChannelHit2;
     }
+    else {
+      XChannelPos = -43.5 + 3*XChannelHit2;
+      XChannelPos2 = -43.5 + 3*XChannelHit1;
+    }
+
+ if ((((*ChannelWaveform)[YChannelHit3])[625]) > (((*ChannelWaveform)[YChannelHit2])[625]) && (((*ChannelWaveform)[YChannelHit3])[625]) > (((*ChannelWaveform)[YChannelHit1])[625]))  
+    {  
+      YChannelPos2 = -43.5 + 3*(YChannelHit3-30); 
+      YChannelPos = -43.5 + 3*(YChannelHit1-30);
+    }
+    else {
+      YChannelPos2 = -43.5 + 3*(YChannelHit1-30);
+      YChannelPos = -43.5 + 3*(YChannelHit3-30);
+    }
+
+    cout << "XChannelPos: " << XChannelPos << " XChannelPos2: " << XChannelPos2 << " YChannelPos: " << YChannelPos << " YChannelPos2: " << YChannelPos2 << endl;
+    cout << "TMinuit has begun" << endl; 
+
+    Double_t arglist[9]; //# of params
+    Int_t ierflg = 0;
+    arglist[0] = 1;
+    gMinuit->mnexcm("SET ERR", arglist ,1,ierflg);
+    gMinuit->mnparm(0, "x0", XChannelPos, 1, 0, 0, ierflg);//mm
+    gMinuit->mnparm(1, "y0", YChannelPos, 1, 0, 0, ierflg);//mm
+    gMinuit->mnparm(2, "z0", 17, 1, 0, 0, ierflg);//mm
+    gMinuit->mnparm(3, "q0", EnergyOfDeposit/2, 100, 0, 0, ierflg); //keV
+    gMinuit->mnparm(4, "w0", TMath::Pi(), 0.125*TMath::Pi(), 0, 2*TMath::Pi(), ierflg); //radians
+    gMinuit->mnparm(5, "x1", XChannelPos2, 1, 0, 0, ierflg);//mm
+    gMinuit->mnparm(6, "y1", YChannelPos2, 1, 0, 0, ierflg);//mm
+    gMinuit->mnparm(7, "z1", 17, 1, 0, 0, ierflg);//mm
+    gMinuit->mnparm(8, "q1", EnergyOfDeposit/2, 100, 0, 0, ierflg); //keV
+    gMinuit->mnparm(9, "w1", TMath::Pi(), 0.125*TMath::Pi(), 0, 2*TMath::Pi(), ierflg); //radians
+
+    cout << "Parameters set, Minimization starting" << endl;
+
+    arglist[0] = 10000; //this is somehow related to number of calls
+    arglist[1] = 1;
+   
+    Double_t edm, errdef;
+    Int_t nvpar, nparx; 
+    Int_t nfit=0;
+    for (nfit=0; nfit<4; nfit++) {
+      gMinuit->mnexcm("MIGRAD", arglist, 2, ierflg);
+      gMinuit->mnstat(amin, edm, errdef, nvpar, nparx, icstat);
+      cout << "best function value found so far: " << amin << " vertical dist remaining to min: " << edm << " how good is fit? 0=bad, 1=approx, 2=full matrix but forced positive-definite, 3=good: " << icstat << endl;
+    }  
+
+    Double_t  error0, bnd10, bnd20;
+    Int_t num0=0;
+    Int_t ivarbl0;
+    TString chnam0;
+    gMinuit->mnpout(num0, chnam0, val0, error0, bnd10, bnd20, ivarbl0);
+    cout << "x: "  << " value0 " << val0  << endl;
+
+    Double_t error1, bnd11, bnd21;
+    Int_t num1=1;
+    Int_t ivarbl1;
+    TString chnam1;
+    gMinuit->mnpout(num1, chnam1, val1, error1, bnd11, bnd21, ivarbl1);
+    cout << "y: "  << " value1 " << val1  << endl;
+    
+    Double_t  error2, bnd12, bnd22;
+    Int_t num2=2;
+    Int_t ivarbl2;
+    TString chnam2;
+    gMinuit->mnpout(num2, chnam2, val2, error2, bnd12, bnd22, ivarbl2);
+    cout << "z: " << " value2 " << val2  << endl;
+
+    Double_t  error3, bnd13, bnd23;
+    Int_t num3=3;
+    Int_t ivarbl3;
+    TString chnam3;
+    gMinuit->mnpout(num3, chnam3, val3, error3, bnd13, bnd23, ivarbl3);
+    cout << "q: " <<  " value3 " << val3  << endl;
+
+    Double_t  error4, bnd14, bnd24;
+    Int_t num4=4;
+    Int_t ivarbl4;
+    TString chnam4;
+    gMinuit->mnpout(num4, chnam4, val4, error4, bnd14, bnd24, ivarbl4);
+    cout << "w: " <<  " value4 " << val4  << endl;
+
+    Double_t  error5, bnd15, bnd25;
+    Int_t num5=5;
+    Int_t ivarbl5;
+    TString chnam5;
+    gMinuit->mnpout(num5, chnam5, val5, error5, bnd15, bnd25, ivarbl5);
+    cout << "x 1: "  << val5  << endl;
+
+    Double_t error6, bnd16, bnd26;
+    Int_t num6=6;
+    Int_t ivarbl6;
+    TString chnam6;
+    gMinuit->mnpout(num6, chnam6, val6, error6, bnd16, bnd26, ivarbl6);
+    cout << "y 1: "  <<  val6  << endl;
+    
+    Double_t error7, bnd17, bnd27;
+    Int_t num7=7;
+    Int_t ivarbl7;
+    TString chnam7;
+    gMinuit->mnpout(num7, chnam7, val7, error7, bnd17, bnd27, ivarbl7);
+    cout << "z 1: " << val7 << endl;
+
+    Double_t error8, bnd18, bnd28;
+    Int_t num8=8;
+    Int_t ivarbl8;
+    TString chnam8;
+    gMinuit->mnpout(num8, chnam8, val8, error8, bnd18, bnd28, ivarbl8);
+    cout << "q 1: " << val8 << endl;
+
+    Double_t error9, bnd19, bnd29;
+    Int_t num9=9;
+    Int_t ivarbl9;
+    TString chnam9;
+    gMinuit->mnpout(num9, chnam9, val9, error9, bnd19, bnd29, ivarbl9);
+    cout << "w 1: " << val9 << endl;
+
+    Double_t par[9];
+    par[0] = val0;
+    par[1] = val1;
+    par[2] = val2;
+    par[3] = val3;
+    par[4] = val4;
+    par[5] = val5;
+    par[6] = val6;
+    par[7] = val7;
+    par[8] = val8;
+    par[9] = val9;
+    cout << "draw is being executed" << endl;
+    draw2(par);
+     
+    output_tree->Fill();
+    //parameters re-set to 0  
+    val0 = 0.0;
+    val1 = 0.0;
+    val2 = 0.0;
+    val3 = 0.0;
+    val4 = 0.0;
+    val5 = 0.0;
+    val6 = 0.0; 
+    val7 = 0.0;
+    val8 = 0.0;
+    val9 = 0.0;
+    amin = 0.0;
+    icstat = 0.0; 
+   } 
+
+  else 
+  {
+    cout << "USING ONE PCD FIT" << endl;
     
     TMinuit *gMinuit = new TMinuit(5);  //initialize TMinuit with a maximum of 5 params 
     gMinuit->SetFCN(fcn); 
-//Maybe say something like for channels (i) that have energy deposit (ChannelWaveform) greater than 200keV (10,000), these channels get fed into what's below
-/*    Double_t First1=0.0;
-    Double_t First2=0.0;
-    Double_t Last1=0.0;
-    Double_t Last2=0.0;
-    for (UInt_t c=0; c<201; c++) {
-      First1 += (((*ChannelWaveform)[ChannelHit1])[c])*0.022004;
-      First2 += (((*ChannelWaveform)[ChannelHit2])[c])*0.022004;
-    }
-    Double_t First_TwoHundred1 = First1/200;
-    Double_t First_TwoHundred2 = First2/200;
-    for (UInt_t c=600; c<800; c++) {
-      Last1 += (((*ChannelWaveform)[ChannelHit1])[c])*0.022004;
-      Last2 += (((*ChannelWaveform)[ChannelHit2])[c])*0.022004;
-    }
-    Double_t Last_TwoHundred1 = Last1/200;
-    Double_t Last_TwoHundred2 = Last2/200;
-
-    Double_t EnergyOfDeposit1 = (Last_TwoHundred1 - First_TwoHundred1);
-    Double_t EnergyOfDeposit2 = (Last_TwoHundred2 - First_TwoHundred2);
-    Double_t EnergyOfDeposit = (EnergyOfDeposit1 + EnergyOfDeposit2);
-    cout << "Energy of Deposit (keV): " << EnergyOfDeposit << endl;
-*/
-    cout << "Total Energy of deposits at 25 ms: " << EnergyOfDeposit << endl;
+    
     if ((((*ChannelWaveform)[XChannelHit1])[625]) > (((*ChannelWaveform)[XChannelHit2])[625])) {  
       XChannelPos = -43.5 + 3*XChannelHit1; 
     }
@@ -508,7 +799,7 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
       XChannelPos = -43.5 + 3*XChannelHit2;
     }
     
-    Double_t YChannelPos = -43.5 + 3*(YChannelHit1-30); // 47 replaced with Y Channel
+    Double_t YChannelPos = -43.5 + 3*(YChannelHit1-30);
     cout << "XChannelPos " << XChannelPos << " YChannelPos " << YChannelPos << endl;
     cout << "TMinuit has begun" << endl; 
     Double_t arglist[5]; //# of params
@@ -525,19 +816,14 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
     arglist[0] = 10000; //this is somehow related to number of calls
     arglist[1] = 1;
    
-    Double_t edm, errdef; //amin was here
-    Int_t nvpar, nparx; //icstat was here
-    for (int nfit=0; nfit<4; nfit++) {
-      //TStopwatch t;
-      //t->Start(Bool_t reset=kTrue);
+    Double_t edm, errdef;
+    Int_t nvpar, nparx; 
+    Int_t nfit=0;
+    for (nfit=0; nfit<4; nfit++) {
       gMinuit->mnexcm("MIGRAD", arglist, 2, ierflg);
       gMinuit->mnstat(amin, edm, errdef, nvpar, nparx, icstat);
       cout << "best function value found so far: " << amin << " vertical dist remaining to min: " << edm << " how good is fit? 0=bad, 1=approx, 2=full matrix but forced positive-definite, 3=good: " << icstat << endl;
-      //if (edm<0.0001)
-      //  break;
-      //t->Stop();
-      //cout << "time: " << t << endl;
-      }  
+    }  
 
     Double_t  error0, bnd10, bnd20;
     Int_t num0=0;
@@ -591,11 +877,12 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
     val3 = 0.0;
     val4 = 0.0;
     amin = 0.0;
-    icstat = 0.0; 
+    icstat = 0.0;  
    }  
-  
+ } 
   output_file.Write();
- 
+}
+  
 /*
     // a test -- just draw a sample wfm to see if things are working. 
 
@@ -657,6 +944,6 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
     cin >> input;  
     return 0;
 */
-  }
+  
 
 
