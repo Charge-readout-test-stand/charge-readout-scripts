@@ -179,7 +179,7 @@ Double_t OnePCDWithOptions(
   Double_t z0 = par[zIndex];
   if (doDebug){ cout << "\tzIndex: " << zIndex << " z0: " << z0 << endl; }
 
-  size_t qIndex = 3 + iPCD*4 + (!useSameZ)*iPCD;//3
+  size_t qIndex = 3 + iPCD*5; //+ (!useSameZ)*iPCD;//3
   Double_t q = par[qIndex]; 
   if (doDebug){ cout << "\tqIndex: " << qIndex << " q: " << q << endl; }
 
@@ -244,7 +244,7 @@ Double_t TwoPCDsOneZ(Double_t *var, Double_t *par) {
   //    8: q for PCD 1
   //    9: w for PCD 1
 
-  Double_t amplitude = OnePCDWithOptions(var, par, 0, false) + OnePCDWithOptions(var, par, 1, true); 
+  Double_t amplitude = OnePCDWithOptions(var, par, 0, false) + OnePCDWithOptions(var, par, 1, false); 
   return amplitude; 
 
 }
@@ -432,7 +432,7 @@ void draw2(Double_t *par)
 
     hist[i]->Draw();
     ostringstream name;
-    name << "Channel " << i << "  x=" << par[0] << "  y=" << par[1] << "  z=" << par[2] << "  q=" << par[3] << "  w=" << par[4] << "  chisq per chan=" << Chisq_per_channel; 
+    name << "Channel " << i << "  x0=" << par[0] << "  y0=" << par[1] << "  z0=" << par[2] << "  q0=" << par[3] << " x1=" << par[5] << " y1=" << par[6] << " z1=" << par[7] << " q1=" << par[8] <<  " chisq per chan=" << Chisq_per_channel; 
     hist[i]->SetTitle(name.str().c_str());
     test[i]->Draw("same"); 
     test[i]->SetLineColor(kRed);
@@ -447,9 +447,9 @@ void draw2(Double_t *par)
   TTree *tree = (TTree*) inputroot->Get("evtTree");
   tree->GetEntries();
   Int_t nbins = 21.2/0.53;//x vs y binning
-  TH2D *eCloud_point_hist = new TH2D("eCloud_point_hist", "Charge Deposit", nbins, 0, 8, nbins, 0, 8);//x y 
-  TH2D *point_charge = new TH2D("point_charge", "", 200, 0, 8, 200, 0, 8);
-  TH2D *point_charge2 = new TH2D("point_charge2", "", 200, 0, 8, 200, 0, 8);
+  TH2D *eCloud_point_hist = new TH2D("eCloud_point_hist", "Charge Deposit", nbins, -14, 4, nbins, 16, 30);//x y 
+  TH2D *point_charge = new TH2D("point_charge", "", 450, -14, 4, 350, 16, 30);
+  TH2D *point_charge2 = new TH2D("point_charge2", "", 200, -14, 4, 350, 16, 30);
  
   point_charge->Fill(par[0], par[1], par[3]); //x, y, q
   point_charge2->Fill(par[5], par[6], par[8]);
@@ -473,7 +473,6 @@ void draw2(Double_t *par)
   ca->Print((pdfnameStream.str()+"]").c_str());
   cout << "pdf file closed" << endl;   
 }
-
 
 void fcn(Int_t &npar, Double_t *gin, Double_t &f, Double_t *par, Int_t iflag)
 { 
@@ -671,7 +670,7 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
     gMinuit->mnparm(8, "q1", EnergyOfDeposit/2, 100, 0, 0, ierflg); //keV
     gMinuit->mnparm(9, "w1", TMath::Pi(), 0.125*TMath::Pi(), 0, 2*TMath::Pi(), ierflg); //radians
 
-    cout << "Parameters set, Minimization starting" << endl;
+    cout << "Parameters initialized, Minimization starting" << endl;
 
     arglist[0] = 10000; //this is somehow related to number of calls
     arglist[1] = 1;
@@ -680,13 +679,13 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
     Double_t edm, errdef;
     Int_t nvpar, nparx; 
     Int_t nfit=0;
-    for (nfit=0; nfit<4; nfit++) {
-      cout << "entered loop" << endl;
+    for (nfit=0; nfit<8; nfit++) {
       gMinuit->mnexcm("MIGRAD", arglist, 2, ierflg);
-      cout << "mnexcm" << endl;
       gMinuit->mnstat(amin, edm, errdef, nvpar, nparx, icstat);
-      cout << "mnstat" << endl;
       cout << "best function value found so far: " << amin << " vertical dist remaining to min: " << edm << " how good is fit? 0=bad, 1=approx, 2=full matrix but forced positive-definite, 3=good: " << icstat << endl;
+      if (icstat==3) {
+        break;
+      }
     }  
 
     Double_t  error0, bnd10, bnd20;
