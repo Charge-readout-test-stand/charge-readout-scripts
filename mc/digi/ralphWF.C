@@ -653,7 +653,7 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
       YChannelPos = -43.5 + 3*(YChannelHit3-30);
     }
 
-    cout << "XChannelPos: " << XChannelPos << " YChannelPos: " << YChannelPos << " XChannelPos2: " << XChannelPos2 << " YChannelPos2: " << YChannelPos2 << endl;
+    cout << "XChannelPos: " << XChannelPos << " YChannelPos: " << YChannelPos << "   XChannelPos2: " << XChannelPos2 << " YChannelPos2: " << YChannelPos2 << endl;
     cout << "TMinuit has begun" << endl; 
 
     Double_t arglist[10]; //# of params
@@ -675,13 +675,17 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
 
     arglist[0] = 10000; //this is somehow related to number of calls
     arglist[1] = 1;
-   
+    cout << "arglist set" << endl;
+
     Double_t edm, errdef;
     Int_t nvpar, nparx; 
     Int_t nfit=0;
     for (nfit=0; nfit<4; nfit++) {
+      cout << "entered loop" << endl;
       gMinuit->mnexcm("MIGRAD", arglist, 2, ierflg);
+      cout << "mnexcm" << endl;
       gMinuit->mnstat(amin, edm, errdef, nvpar, nparx, icstat);
+      cout << "mnstat" << endl;
       cout << "best function value found so far: " << amin << " vertical dist remaining to min: " << edm << " how good is fit? 0=bad, 1=approx, 2=full matrix but forced positive-definite, 3=good: " << icstat << endl;
     }  
 
@@ -799,7 +803,7 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
       XChannelPos = -43.5 + 3*XChannelHit2;
     }
     
-    Double_t YChannelPos = -43.5 + 3*(YChannelHit1-30);
+    YChannelPos = -43.5 + 3*(YChannelHit1-30);
     cout << "XChannelPos " << XChannelPos << " YChannelPos " << YChannelPos << endl;
     cout << "TMinuit has begun" << endl; 
     Double_t arglist[5]; //# of params
