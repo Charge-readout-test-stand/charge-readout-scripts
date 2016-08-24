@@ -230,14 +230,14 @@ Double_t OnePCD(Double_t *var, Double_t *par) {
 
 Double_t TwoPCDsOneZ(Double_t *var, Double_t *par) {
   // reponse of the strip (30 pads in x direction) to two ionizations 
-  // with the same z, different q, x, y. 
+  // with different q, x, y, z, w. 
   // 1 variable: t=time in microseconds
   // 7 parameters:
   //    0: x for PCD 0
   //    1: y for PCD 0
-  //    2: z for PCDs 0 and 1
+  //    2: z for PCD 0
   //    3: q for PCD 0
-  //    4: w for PCD 1
+  //    4: w for PCD 0
   //    5: x for PCD 1
   //    6: y for PCD 1
   //    7: z for PCD 1
