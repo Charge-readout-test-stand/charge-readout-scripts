@@ -473,7 +473,8 @@ void draw2(Double_t *par)
   ca->Print((pdfnameStream.str()).c_str());
  
   TH2D *eCloud_point_hist2 = new TH2D("eCloud_point_hist2", "Charge Deposit", nbins, 0, 8, nbins, 16, 20);//x z
-  TH2D *point_charge2 = new TH2D("point_charge2", "", 200, 0, 8, 550, 0, 22);
+  TH2D *point_charge3 = new TH2D("point_charge3", "", 200, 0, 8, 550, 0, 22);
+  TH2D *point_charge4 = new TH2D("point_charge4", "", 200, 0, 8, 550, 0, 22);
   point_charge3->Fill(par[0], par[2], par[3]);
   point_charge4->Fill(par[5], par[7], par[8]);
   tree->Draw("(18.16-PCDz):PCDx >> eCloud_point_hist2", chargeweight.c_str());
@@ -539,12 +540,12 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
   TBranch *Fit_z = output_tree->Branch("MIGRAD z", &val2, "MINUIT_z/D"); 
   TBranch *Fit_q = output_tree->Branch("MIGRAD q", &val3, "MINUIT_q/D"); 
   TBranch *Fit_w = output_tree->Branch("MIGRAD w", &val4, "MINUIT_w/D");
-  /*TBranch *Fit_w = output_tree->Branch("MIGRAD x1", &val5, "MINUIT_x1/D"); 
-  TBranch *Fit_w = output_tree->Branch("MIGRAD y1", &val6, "MINUIT_y1/D"); 
-  TBranch *Fit_w = output_tree->Branch("MIGRAD z1", &val7, "MINUIT_z1/D"); 
-  TBranch *Fit_w = output_tree->Branch("MIGRAD q1", &val8, "MINUIT_q1/D"); 
-  TBranch *Fit_w = output_tree->Branch("MIGRAD w1", &val9, "MINUIT_w1/D"); 
-  */
+  TBranch *Fit_x1 = output_tree->Branch("MIGRAD x1", &val5, "MINUIT_x1/D"); 
+  TBranch *Fit_y1 = output_tree->Branch("MIGRAD y1", &val6, "MINUIT_y1/D"); 
+  TBranch *Fit_z1 = output_tree->Branch("MIGRAD z1", &val7, "MINUIT_z1/D"); 
+  TBranch *Fit_q1 = output_tree->Branch("MIGRAD q1", &val8, "MINUIT_q1/D"); 
+  TBranch *Fit_w1 = output_tree->Branch("MIGRAD w1", &val9, "MINUIT_w1/D"); 
+  
   TBranch *Min_chisq = output_tree->Branch("MIGRAD chisq", &amin, "chisquare_dof/D"); 
   TBranch *Evaluation_of_fit = output_tree->Branch("icstat", &icstat, "icstat/I"); 
 
@@ -588,7 +589,7 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
       hist[i]->GetYaxis()->CenterTitle();
       //test[i] = new TF1("test", OnePCD, 0, 32, 5); //5 is # of params
       for (UInt_t n=0; n<800;  n++) { //800 time samples
-        Double_t noise = generator->Gaus(0, RMS_noise);
+        Double_t noise = generator->Gaus(0, RMS_noise); //mean=0, std dev (variation)=20
        /* Double_t Q = 0.0;
         for (n=600; n<800; n++) {
           Q += (((*ChannelWaveform)[i])[n])*0.022004;
@@ -599,12 +600,13 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
         ChannelWFelement += noise;
         hist[i]->SetBinContent(n+1, ChannelWFelement); //plots charge deposit energy in keV
       }
-      EnergyOfDeposit += (((*ChannelWaveform)[i])[625])*0.022004; //Total energy of the event in keV
+//      EnergyOfDeposit += (((*ChannelWaveform)[i])[625])*0.022004; //Total energy of the event in keV
       cout << "Energy of Channel " << i  << ": " << (((*ChannelWaveform)[i])[625])*0.022004 << endl;
       if (i<30) {
         if ((((*ChannelWaveform)[i])[625])*0.022004 > 5) {
           cout << "Hit Channel " << i << endl;
           XChannelIncrement += 1;
+          EnergyOfDeposit += (((*ChannelWaveform)[i])[625])*0.022004; //Total energy of the event in keV
           if (XChannelIncrement == 1) {
             XChannelHit1 = i;
             cout << XChannelHit1 << endl;
@@ -627,17 +629,15 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
         if ((((*ChannelWaveform)[i])[625])*0.022004 > 5) {
           cout << "Hit Channel " << i << endl;
           YChannelIncrement += 1;
+          EnergyOfDeposit += (((*ChannelWaveform)[i])[625])*0.022004; //Total energy of the event in keV
           if (YChannelIncrement == 1) {
             YChannelHit1 = i;
-            cout << YChannelHit1 << endl;
             }
           if (YChannelIncrement == 2) {
             YChannelHit2 = i;
-            cout << YChannelHit2 << endl;
             }
           if (YChannelIncrement == 3) {
             YChannelHit3 = i;
-            cout << YChannelHit3 << endl;
             }
           if (YChannelIncrement == 4) {
             YChannelHit4 = i;
@@ -647,36 +647,63 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
         }
       }
 
+    cout << "YChannelHit1 " << YChannelHit1 << endl;
+    cout << "YChannelHit2 " << YChannelHit2 << endl;
+    cout << "YChannelHit3 " << YChannelHit3 << endl;
+
     cout << "Total Energy of deposits at 25 ms: " << EnergyOfDeposit << endl;
   
 //Two options: if X Channel hits are 2 or more channels apart, uses fcn2 (TwoPCDsOneZ). If not, uses fcn (OnePCDWithOptions)
-  if (XChannelIncrement >= 2 && (XChannelHit2-XChannelHit1) >= 2)
+  if (XChannelIncrement >= 2 && (((XChannelHit2-XChannelHit1)) >= 2 || ((XChannelHit3-XChannelHit1) >= 2) || ((XChannelHit3-XChannelHit2) >= 2)))
   {
     cout << "USING TWO PCDs FIT" << endl;
 
     TMinuit *gMinuit = new TMinuit(10);  //initialize TMinuit with a maximum of 10 params 
     gMinuit->SetFCN(fcn2); 
     
-    if ((((*ChannelWaveform)[XChannelHit1])[625]) > (((*ChannelWaveform)[XChannelHit2])[625])) {  
-      XChannelPos = -43.5 + 3*XChannelHit1; 
+    if ((((*ChannelWaveform)[XChannelHit1])[625]) > (((*ChannelWaveform)[XChannelHit2])[625]) && (((*ChannelWaveform)[XChannelHit1])[625]) > (((*ChannelWaveform)[XChannelHit3])[625]) && (((*ChannelWaveform)[XChannelHit2])[625]) > (((*ChannelWaveform)[XChannelHit3])[625])) {  
+      XChannelPos = -43.5 + 3*XChannelHit1;
       XChannelPos2 = -43.5 + 3*XChannelHit2;
     }
-    else {
-      XChannelPos = -43.5 + 3*XChannelHit2;
-      XChannelPos2 = -43.5 + 3*XChannelHit1;
+    if ((((*ChannelWaveform)[XChannelHit2])[625]) > (((*ChannelWaveform)[XChannelHit1])[625]) && (((*ChannelWaveform)[XChannelHit2])[625]) > (((*ChannelWaveform)[XChannelHit3])[625]) && (((*ChannelWaveform)[XChannelHit1])[625]) > (((*ChannelWaveform)[XChannelHit3])[625])) {
+    cout << "using this option" << endl;
+    XChannelPos = -43.5 + 3*XChannelHit1;
+    XChannelPos2 = -43.5 + 3*XChannelHit2;
+    }
+    if ((((*ChannelWaveform)[XChannelHit3])[625]) > (((*ChannelWaveform)[XChannelHit1])[625]) && (((*ChannelWaveform)[XChannelHit3])[625]) > (((*ChannelWaveform)[XChannelHit2])[625]) && (((*ChannelWaveform)[XChannelHit1])[625]) > (((*ChannelWaveform)[XChannelHit2])[625])) {
+    XChannelPos = -43.5 + 3*XChannelHit1;
+    XChannelPos2 = -43.5 + 3*XChannelHit3;
+    }
+    if ((((*ChannelWaveform)[XChannelHit3])[625]) > (((*ChannelWaveform)[XChannelHit1])[625]) && (((*ChannelWaveform)[XChannelHit3])[625]) > (((*ChannelWaveform)[XChannelHit2])[625]) && (((*ChannelWaveform)[XChannelHit2])[625]) > (((*ChannelWaveform)[XChannelHit1])[625])) {
+    XChannelPos = -43.5 + 3*XChannelHit2;
+    XChannelPos2 = -43.5 + 3*XChannelHit3;
     }
 
-  if ((((*ChannelWaveform)[YChannelHit3])[625]) > (((*ChannelWaveform)[YChannelHit2])[625]) && (((*ChannelWaveform)[YChannelHit3])[625]) > (((*ChannelWaveform)[YChannelHit1])[625]))  
-    {  
-      YChannelPos2 = -43.5 + 3*(YChannelHit3-30); 
-      YChannelPos = -43.5 + 3*(YChannelHit1-30);
+    if ((((*ChannelWaveform)[YChannelHit1])[625]) > (((*ChannelWaveform)[YChannelHit2])[625]) && (((*ChannelWaveform)[YChannelHit1])[625]) > (((*ChannelWaveform)[YChannelHit3])[625]) && (((*ChannelWaveform)[YChannelHit2])[625]) > (((*ChannelWaveform)[YChannelHit3])[625])) {    
+    YChannelPos = -43.5 + 3*(YChannelHit1-30); 
+    YChannelPos2 = -43.5 + 3*(YChannelHit2-30);
     }
-    else {
-      YChannelPos2 = -43.5 + 3*(YChannelHit1-30);
-      YChannelPos = -43.5 + 3*(YChannelHit3-30);
+    if ((((*ChannelWaveform)[YChannelHit2])[625]) > (((*ChannelWaveform)[YChannelHit1])[625]) && (((*ChannelWaveform)[YChannelHit2])[625]) > (((*ChannelWaveform)[YChannelHit3])[625]) && (((*ChannelWaveform)[YChannelHit1])[625]) > (((*ChannelWaveform)[YChannelHit3])[625])) {
+    YChannelPos = -43.5 + 3*(YChannelHit1-30);
+    YChannelPos2 = -43.5 + 3*(YChannelHit2-30);
+    }
+    if ((((*ChannelWaveform)[YChannelHit3])[625]) > (((*ChannelWaveform)[YChannelHit1])[625]) && (((*ChannelWaveform)[YChannelHit3])[625]) > (((*ChannelWaveform)[YChannelHit2])[625]) && (((*ChannelWaveform)[YChannelHit1])[625]) > (((*ChannelWaveform)[YChannelHit2])[625])) {
+    YChannelPos = -43.5 + 3*(YChannelHit1-30);
+    YChannelPos2 = -43.5 + 3*(YChannelHit3-30);
+    }
+    if ((((*ChannelWaveform)[YChannelHit3])[625]) > (((*ChannelWaveform)[YChannelHit1])[625]) && (((*ChannelWaveform)[YChannelHit3])[625]) > (((*ChannelWaveform)[YChannelHit2])[625]) && (((*ChannelWaveform)[YChannelHit2])[625]) > (((*ChannelWaveform)[YChannelHit1])[625])) {
+    YChannelPos = -43.5 + 3*(YChannelHit2-30);
+    YChannelPos2 = -43.5 + 3*(YChannelHit3-30);
+    }
+    if ((((*ChannelWaveform)[YChannelHit1])[625]) > (((*ChannelWaveform)[YChannelHit2])[625]) && (((*ChannelWaveform)[YChannelHit1])[625]) > (((*ChannelWaveform)[YChannelHit3])[625]) && (((*ChannelWaveform)[YChannelHit2])[625]) == (((*ChannelWaveform)[YChannelHit3])[625])) {
+    YChannelPos = -43.5 + 3*(YChannelHit1-30);
+    YChannelPos2 = 0.0;
     }
 
     cout << "XChannelPos: " << XChannelPos << " YChannelPos: " << YChannelPos << "   XChannelPos2: " << XChannelPos2 << " YChannelPos2: " << YChannelPos2 << endl;
+    Int_t pause;
+    cin >> pause;
+
     cout << "TMinuit has begun" << endl; 
 
     Double_t arglist[10]; //# of params
@@ -717,35 +744,35 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
     Int_t ivarbl0;
     TString chnam0;
     gMinuit->mnpout(num0, chnam0, val0, error0, bnd10, bnd20, ivarbl0);
-    cout << "x: "  << " value0 " << val0  << endl;
+    cout << "x 0: " << val0  << endl;
 
     Double_t error1, bnd11, bnd21;
     Int_t num1=1;
     Int_t ivarbl1;
     TString chnam1;
     gMinuit->mnpout(num1, chnam1, val1, error1, bnd11, bnd21, ivarbl1);
-    cout << "y: "  << " value1 " << val1  << endl;
+    cout << "y 0: " << val1  << endl;
     
     Double_t  error2, bnd12, bnd22;
     Int_t num2=2;
     Int_t ivarbl2;
     TString chnam2;
     gMinuit->mnpout(num2, chnam2, val2, error2, bnd12, bnd22, ivarbl2);
-    cout << "z: " << " value2 " << val2  << endl;
+    cout << "z 0: " << val2  << endl;
 
     Double_t  error3, bnd13, bnd23;
     Int_t num3=3;
     Int_t ivarbl3;
     TString chnam3;
     gMinuit->mnpout(num3, chnam3, val3, error3, bnd13, bnd23, ivarbl3);
-    cout << "q: " <<  " value3 " << val3  << endl;
+    cout << "q 0: " << val3  << endl;
 
     Double_t  error4, bnd14, bnd24;
     Int_t num4=4;
     Int_t ivarbl4;
     TString chnam4;
     gMinuit->mnpout(num4, chnam4, val4, error4, bnd14, bnd24, ivarbl4);
-    cout << "w: " <<  " value4 " << val4  << endl;
+    cout << "w 0: " << val4 << endl;
 
     Double_t  error5, bnd15, bnd25;
     Int_t num5=5;
@@ -793,22 +820,8 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
     par[7] = val7;
     par[8] = val8;
     par[9] = val9;
-    
-    
-    /*
-    Double_t par[10];
-    par[0] = -9.91401;
-    par[1] = 20.5;
-    par[2] = 17.9357;
-    par[3] = 236.802;
-    par[4] = 3.14159;
-    par[5] = -1.13685;
-    par[6] = 25.4538;
-    par[7] = 15.6677;
-    par[8] = 241.802;
-    par[9] = 3.14159;
-    */
-    cout << "draw is being executed" << endl;
+   
+    cout << "draw2 is being executed" << endl;
     draw2(par);
      
     output_tree->Fill();
@@ -826,7 +839,7 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
     amin = 0.0;
     icstat = 0.0; 
   
-   } 
+  } 
 
   else 
   {
@@ -843,7 +856,7 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
     }
     
     YChannelPos = -43.5 + 3*(YChannelHit1-30);
-    cout << "XChannelPos " << XChannelPos << " YChannelPos " << YChannelPos << endl;
+    cout << "XChannelPos: " << XChannelPos << " YChannelPos: " << YChannelPos << endl;
     cout << "TMinuit has begun" << endl; 
     Double_t arglist[5]; //# of params
     Int_t ierflg = 0;
@@ -873,35 +886,35 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
     Int_t ivarbl0;
     TString chnam0;
     gMinuit->mnpout(num0, chnam0, val0, error0, bnd10, bnd20, ivarbl0);
-    cout << "x: "  << " value0 " << val0  << endl;
+    cout << "x: "  << val0  << endl;
     
     Double_t error1, bnd11, bnd21;
     Int_t num1=1;
     Int_t ivarbl1;
     TString chnam1;
     gMinuit->mnpout(num1, chnam1, val1, error1, bnd11, bnd21, ivarbl1);
-    cout << "y: "  << " value1 " << val1  << endl;
+    cout << "y: "  << val1 << endl;
     
     Double_t  error2, bnd12, bnd22;
     Int_t num2=2;
     Int_t ivarbl2;
     TString chnam2;
     gMinuit->mnpout(num2, chnam2, val2, error2, bnd12, bnd22, ivarbl2);
-    cout << "z: " << " value2 " << val2  << endl;
+    cout << "z: " << val2 << endl;
 
     Double_t  error3, bnd13, bnd23;
     Int_t num3=3;
     Int_t ivarbl3;
     TString chnam3;
     gMinuit->mnpout(num3, chnam3, val3, error3, bnd13, bnd23, ivarbl3);
-    cout << "q: " <<  " value3 " << val3  << endl;
+    cout << "q: " << val3 << endl;
 
     Double_t  error4, bnd14, bnd24;
     Int_t num4=4;
     Int_t ivarbl4;
     TString chnam4;
     gMinuit->mnpout(num4, chnam4, val4, error4, bnd14, bnd24, ivarbl4);
-    cout << "w: " <<  " value4 " << val4  << endl;
+    cout << "w: " << val4 << endl;
 
     Double_t par[5];
     par[0] = val0;
