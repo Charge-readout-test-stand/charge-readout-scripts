@@ -351,7 +351,42 @@ if is_7th_LXe:
 
 if is_8th_LXe: # FIXME with real values
     for i_channel in xrange(len(channels)):
-        calibration_values[i_channel] = 2.5
+        calibration_values[i_channel] = 2.5 # initial guess
+
+    # values from fit_peak.py on  entire overnight data set, no rise time cuts, 22 Aug 2016
+
+    calibration_values[1] = 1.042325 # +/- 0.005438
+    calibration_values[2] = 1.006970 # +/- 0.005695
+    calibration_values[3] = 1.087762 # +/- 0.004540
+
+    # channels 4, 5, 6, 7 are old preamps
+    calibration_values[4] = 4.339931 # +/- 0.016867
+    calibration_values[5] = 2.096126 # +/- 0.006621
+    calibration_values[6] = 1.980758 # +/- 0.004600
+    calibration_values[7] = 2.094804 # +/- 0.005325
+    calibration_values[8] = 1.059041 # +/- 0.002523
+    calibration_values[9] = 1.018659 # +/- 0.002737
+    calibration_values[10] = 1.042217 # +/- 0.003316
+    calibration_values[11] = 1.063546 # +/- 0.003257
+    calibration_values[12] = 1.137803 # +/- 0.003278
+    calibration_values[13] = 1.086306 # +/- 0.005576
+    calibration_values[14] = 1.113041 # +/- 0.007296
+    calibration_values[15] = 1.030522 # +/- 0.010307
+    calibration_values[16] = 1.292259 # +/- 0.118818
+    calibration_values[17] = 1.059656 # +/- 0.004708
+    calibration_values[18] = 1.031070 # +/- 0.003737
+    calibration_values[19] = 1.046553 # +/- 0.003188
+    calibration_values[20] = 1.991732 # +/- 0.004795
+    calibration_values[21] = 2.089875 # +/- 0.006012
+    calibration_values[22] = 2.078199 # +/- 0.004894
+    calibration_values[23] = 2.243561 # +/- 0.006557
+    calibration_values[24] = 0.994050 # +/- 0.003728
+    calibration_values[25] = 1.036946 # +/- 0.003930
+    calibration_values[26] = 1.082139 # +/- 0.004585
+    calibration_values[28] = 1.141378 # +/- 0.003802
+    calibration_values[29] = 1.074286 # +/- 0.004627
+    calibration_values[30] = 2.146018 # +/- 0.009083
+
 
 
 # PMT calibration is from PMT-triggered data

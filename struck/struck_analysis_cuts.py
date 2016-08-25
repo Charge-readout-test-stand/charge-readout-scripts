@@ -57,10 +57,12 @@ def get_drift_time_selection(
     """
 
     if is_single_channel:
-        selection = "((rise_time_stop95-trigger_time>%s)&&(rise_time_stop95-trigger_time<%s))" % (
-            drift_time_low,
-            drift_time_high,
-        )
+        selection = []
+        if drift_time_low != None:
+            selection.append("(rise_time_stop95-trigger_time>%s)" % drift_time_low)
+        if drift_time_high != None:
+            selection.append("(rise_time_stop95-trigger_time<%s)" % drift_time_high)
+        sleection = " && ".join(selection)
         return selection
 
 
@@ -129,12 +131,13 @@ def get_drift_time_cut(
     """
 
     if is_single_channel:
-        selection = "((rise_time_stop95-trigger_time>%s)&&(rise_time_stop95-trigger_time<%s))" % (
-            drift_time_low,
-            drift_time_high,
-        )
+        selection = []
+        if drift_time_low != None:
+            selection.append("!(rise_time_stop95-trigger_time<%s)" % drift_time_low)
+        if drift_time_high != None:
+            selection.append("!(rise_time_stop95-trigger_time>%s)" % drift_time_high)
+        selection = " && ".join(selection)
         return selection
-
 
     selection = []
     if isMC:
@@ -364,5 +367,7 @@ if __name__ == "__main__":
     print "\n"+ get_drift_time_cut(drift_time_low=8.0,drift_time_high=10.0)
 
     print "\n" + get_few_channels_cmd()
+
+    print "get_drift_time_cut:", get_drift_time_cut(is_single_channel=True)
 
 

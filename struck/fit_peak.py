@@ -20,20 +20,8 @@ import json
 import math
 import datetime
 
-
-from ROOT import gROOT
-#gROOT.SetBatch(True) # run in batch mode
-from ROOT import TFile
-from ROOT import TTree
-from ROOT import TCanvas
-from ROOT import TColor
-from ROOT import TLegend
-from ROOT import TH1D
-from ROOT import TF1
-from ROOT import TGraph
-from ROOT import gSystem
-from ROOT import TPaveText
-from ROOT import Math
+import ROOT
+ROOT.gROOT.SetBatch(True) # run in batch mode
 
 import struck_analysis_parameters
 import struck_analysis_cuts
@@ -53,19 +41,19 @@ def fit_channel(
     fit_half_width=250,
     #fit_half_width=170,
     do_use_exp=True,
+    energy_var = "energy1_pz",
 ):
 
     #-------------------------------------------------------------------------------
     # options
     #-------------------------------------------------------------------------------
 
-    energy_var = "energy1_pz"
 
     do_debug = True
     do_individual_channels = True
 
     # defaults for 570-keV
-    bin_width = 5
+    bin_width = 15
     #line_energy = 620
     sigma_guess = 40
 
@@ -97,7 +85,7 @@ def fit_channel(
     else:
         selection_list = []
         selection_list.append("(channel==%i)" % channel)
-        selection_list.append(channel_selection)
+        if channel_selection != None: selection_list.append(channel_selection)
         selection = " && ".join(selection_list)
 
     fit_start_energy = line_energy - fit_half_width
@@ -115,7 +103,7 @@ def fit_channel(
 
     print "====> fitting channel:", channel
 
-    canvas = TCanvas("canvas","", 700, 800)
+    canvas = ROOT.TCanvas("canvas","", 700, 800)
     canvas.Divide(1,2)
     pad1 = canvas.cd(1)
     #canvas.SetLeftMargin(0.12)
@@ -129,7 +117,7 @@ def fit_channel(
         channel_name = "all"
         hist_title = "all channels"
 
-    hist = TH1D("fit_hist", hist_title, n_bins, min_bin, max_bin)
+    hist = ROOT.TH1D("fit_hist", hist_title, n_bins, min_bin, max_bin)
     bin_width = hist.GetBinWidth(1)
     hist.SetXTitle("Energy [keV]")
     hist.GetYaxis().SetTitleOffset(1.2)
@@ -141,7 +129,11 @@ def fit_channel(
     resid_hist.SetMarkerStyle(8)
     resid_hist.SetMarkerSize(0.8)
 
-    draw_cmd = "%s >> fit_hist" % energy_var
+    draw_cmd = "%s*%s/calibration >> fit_hist" % (
+        energy_var,
+        struck_analysis_parameters.calibration_values[channel], 
+    )
+
     print "draw command:", draw_cmd
     print "selection:"
     print "\t" + "\n\t||".join(selection.split("||"))
@@ -154,8 +146,8 @@ def fit_channel(
 
 
     # setup the fit function, assuming things are already close to calibrated:
-    testfit = TF1("testfit", fit_formula, fit_start_energy, fit_stop_energy)
-    testfit.SetLineColor(TColor.kBlue)
+    testfit = ROOT.TF1("testfit", fit_formula, fit_start_energy, fit_stop_energy)
+    testfit.SetLineColor(ROOT.kBlue)
     fit_start_height = hist.GetBinContent(hist.FindBin(fit_start_energy))
     fit_stop_height = hist.GetBinContent(hist.FindBin(fit_stop_energy))
     print "\tfit_stop_height", fit_stop_height
@@ -209,23 +201,23 @@ def fit_channel(
     if do_debug:
 
         if do_use_exp:
-            bestfit_exp = TF1("bestfite","[0]*TMath::Exp(-[1]*x) + [2]", fit_start_energy, fit_stop_energy)
+            bestfit_exp = ROOT.TF1("bestfite","[0]*TMath::Exp(-[1]*x) + [2]", fit_start_energy, fit_stop_energy)
             bestfit_exp.SetParameters(testfit.GetParameter(3), testfit.GetParameter(4), testfit.GetParameter(5))
         else:
-            bestfit_exp = TF1("bestfite","pol1(0)", fit_start_energy, fit_stop_energy)
+            bestfit_exp = ROOT.TF1("bestfite","pol1(0)", fit_start_energy, fit_stop_energy)
             bestfit_exp.SetParameters(testfit.GetParameter(3), testfit.GetParameter(4))
-        bestfit_exp.SetLineColor(TColor.kBlack)
+        bestfit_exp.SetLineColor(ROOT.kBlack)
 
-        bestfit_gaus = TF1("bestfitg", "gausn(0)", fit_start_energy, fit_stop_energy)
+        bestfit_gaus = ROOT.TF1("bestfitg", "gausn(0)", fit_start_energy, fit_stop_energy)
         bestfit_gaus.SetParameters(testfit.GetParameter(0),
             testfit.GetParameter(1), testfit.GetParameter(2))
-        bestfit_gaus.SetLineColor(TColor.kRed)
+        bestfit_gaus.SetLineColor(ROOT.kRed)
 
         if do_use_step:
-            bestfit_step = TF1("bestfits", "[0]*TMath::Erfc((x-[1])/sqrt(2)/[2])", fit_start_energy, fit_stop_energy)
+            bestfit_step = ROOT.TF1("bestfits", "[0]*TMath::Erfc((x-[1])/sqrt(2)/[2])", fit_start_energy, fit_stop_energy)
             bestfit_step.SetParameters(testfit.GetParameter(6), 
                 testfit.GetParameter(1), testfit.GetParameter(2))
-            bestfit_step.SetLineColor(TColor.kGreen+2)
+            bestfit_step.SetLineColor(ROOT.kGreen+2)
 
         pad1 = canvas.cd(1)
         pad1.SetGrid(1,1)
@@ -244,7 +236,7 @@ def fit_channel(
 
 
 
-        leg = TLegend(0.49, 0.7, 0.99, 0.9)
+        leg = ROOT.TLegend(0.49, 0.7, 0.99, 0.9)
         leg.AddEntry(hist, "Data")
         leg.AddEntry(testfit, "Total Fit fcn before fit","l")
         leg.AddEntry(bestfit_gaus, "Gaus Peak", "l")
@@ -259,24 +251,24 @@ def fit_channel(
         canvas.Update()
 
 
-        if not gROOT.IsBatch():
+        if not ROOT.gROOT.IsBatch():
             value = raw_input("any key to continue (b = batch, q to quit) ")
             if value == 'q':
                 sys.exit()
             if value == 'b':
-                gROOT.SetBatch(True)
+                ROOT.gROOT.SetBatch(True)
 
 
 
     # do the fit
-    Math.MinimizerOptions.SetDefaultMaxFunctionCalls(50000)
+    ROOT.Math.MinimizerOptions.SetDefaultMaxFunctionCalls(50000)
     fit_result = hist.Fit(testfit,"NIRLS")
     prob = fit_result.Prob()
     chi2 = fit_result.Chi2()
     ndf = fit_result.Ndf()
     fit_status = fit_result.Status()
 
-    resid_graph = TGraph()
+    resid_graph = ROOT.TGraph()
     resid_graph.SetMarkerSize(0.8)
     resid_graph.SetMarkerStyle(8)
 
@@ -328,22 +320,22 @@ def fit_channel(
     n_peak_counts = testfit.GetParameter(0)/bin_width
 
     if do_use_exp:
-        bestfit_exp = TF1("bestfite","[0]*TMath::Exp(-[1]*x) + [2]", fit_start_energy, fit_stop_energy)
+        bestfit_exp = ROOT.TF1("bestfite","[0]*TMath::Exp(-[1]*x) + [2]", fit_start_energy, fit_stop_energy)
         bestfit_exp.SetParameters(testfit.GetParameter(3), testfit.GetParameter(4), testfit.GetParameter(5))
     else:
-        bestfit_exp = TF1("bestfite","pol1(0)", fit_start_energy, fit_stop_energy)
+        bestfit_exp = ROOT.TF1("bestfite","pol1(0)", fit_start_energy, fit_stop_energy)
         bestfit_exp.SetParameters(testfit.GetParameter(3), testfit.GetParameter(4))
-    bestfit_exp.SetLineColor(TColor.kBlack)
+    bestfit_exp.SetLineColor(ROOT.kBlack)
 
 
-    bestfit_gaus = TF1("bestfitg", "gausn(0)", fit_start_energy, fit_stop_energy)
+    bestfit_gaus = ROOT.TF1("bestfitg", "gausn(0)", fit_start_energy, fit_stop_energy)
     bestfit_gaus.SetParameters(testfit.GetParameter(0), centroid, sigma)
-    bestfit_gaus.SetLineColor(TColor.kRed)
+    bestfit_gaus.SetLineColor(ROOT.kRed)
 
     if do_use_step:
-        bestfit_step = TF1("bestfits", "[0]*TMath::Erfc((x-[1])/sqrt(2)/[2])", fit_start_energy, fit_stop_energy)
+        bestfit_step = ROOT.TF1("bestfits", "[0]*TMath::Erfc((x-[1])/sqrt(2)/[2])", fit_start_energy, fit_stop_energy)
         bestfit_step.SetParameters(testfit.GetParameter(6), centroid, sigma)
-        bestfit_step.SetLineColor(TColor.kGreen+2)
+        bestfit_step.SetLineColor(ROOT.kGreen+2)
 
     if channel != None:
         if isMC:
@@ -373,7 +365,7 @@ def fit_channel(
 
 
 
-    leg = TLegend(0.49, 0.7, 0.99, 0.9)
+    leg = ROOT.TLegend(0.49, 0.7, 0.99, 0.9)
     leg.AddEntry(hist, "Data")
     leg.AddEntry(testfit, "Total Fit: #chi^{2}/DOF = %.1f/%i, P-val = %.1E" % (chi2, ndf, prob),"l")
     leg.AddEntry(bestfit_gaus, "Gaus Peak: #sigma = %.1f #pm %.1f keV, %.1E #pm %.1E cts" % ( 
@@ -405,13 +397,17 @@ def fit_channel(
     #canvas.Print("%s_log.pdf" % plot_name)
 
     pad1.cd()
-    cuts_label = struck_analysis_cuts.get_cuts_label(draw_cmd, selection) 
-    pave_text = TPaveText(0.01, 0.01, 0.2, 0.05, "NDC")
+    pave_text = ROOT.TPaveText(0.01, 0.01, 0.2, 0.05, "NDC")
     pave_text.SetFillColor(0)
     pave_text.SetFillStyle(0)
     pave_text.SetBorderSize(0)
     pave_text.SetTextAlign(11)
-    pave_text.AddText(cuts_label)
+    try:
+        cuts_label = struck_analysis_cuts.get_cuts_label(draw_cmd, selection) 
+        pave_text.AddText(cuts_label)
+    except:
+        print "==> No cuts label"
+        cuts_label = ""
 
 
     # lin scale
@@ -472,12 +468,12 @@ def fit_channel(
         )
 
 
-    if not gROOT.IsBatch():
+    if not ROOT.gROOT.IsBatch():
         value = raw_input("any key to continue (b = batch, q to quit) ")
         if value == 'q':
             sys.exit()
         if value == 'b':
-            gROOT.SetBatch(True)
+            ROOT.gROOT.SetBatch(True)
 
 
     return result
@@ -490,7 +486,8 @@ def process_file(
     all_energy_var="chargeEnergy",
     selection="",
     channel_selection="",
-    do_use_step=True
+    do_use_step=True,
+    energy_var="energy1_pz",
 ):
 
     print "--> processing", filename
@@ -500,9 +497,10 @@ def process_file(
     #basename = "step" + basename
 
     # cuts label prefix:
-    cuts_label = struck_analysis_cuts.get_cuts_label(all_energy_var, selection) 
-    cuts_label = "_".join(cuts_label.split("+"))
-    basename = cuts_label + "_" + basename
+    if all_energy_var!= None:
+        cuts_label = struck_analysis_cuts.get_cuts_label(all_energy_var, selection) 
+        cuts_label = "_".join(cuts_label.split("+"))
+        basename = cuts_label + "_" + basename
 
     # prepend line energy to baseline
     if do_1064_fit:
@@ -516,7 +514,7 @@ def process_file(
 
     print basename
 
-    root_file = TFile(filename)
+    root_file = ROOT.TFile(filename)
     tree = root_file.Get("tree")
     try:
         n_entries = tree.GetEntries()
@@ -525,8 +523,9 @@ def process_file(
         print "could not get entries from tree"
 
     all_results = {}
-    result = fit_channel(tree, None, basename, do_1064_fit, all_energy_var, selection, do_use_step)
-    all_results["all"] = result
+    if all_energy_var != None:
+        result = fit_channel(tree, None, basename, do_1064_fit, all_energy_var, selection, do_use_step)
+        all_results["all"] = result
 
     isMC = struck_analysis_parameters.is_tree_MC(tree)
 
@@ -537,7 +536,7 @@ def process_file(
 
     for channel, value in enumerate(charge_channels_to_use):
         if value:
-            result = fit_channel(tree, channel, basename, do_1064_fit, all_energy_var, channel_selection, do_use_step)
+            result = fit_channel(tree, channel, basename, do_1064_fit, all_energy_var, channel_selection, do_use_step, energy_var=energy_var)
             if result:
                 all_results["channel %i" % channel] = result
 
@@ -549,7 +548,6 @@ def process_file(
 if __name__ == "__main__":
     
 
-    
     if len(sys.argv) < 2:
         print "argument: [sis tier 3 root file]"
         sys.exit(1)
@@ -562,8 +560,6 @@ if __name__ == "__main__":
     sc = struck_analysis_cuts.get_drift_time_cut()
     lc = struck_analysis_cuts.get_drift_time_cut(drift_time_low=None,
         drift_time_high=drift_time_high, isMC=isMC)
-    channel_selection = struck_analysis_cuts.get_drift_time_cut(
-        is_single_channel=True, drift_time_high=drift_time_high)
     dc = struck_analysis_cuts.get_drift_time_cut(drift_time_high=drift_time_high, isMC=isMC)
     selections = []
     #selections.append([lc])
@@ -578,6 +574,9 @@ if __name__ == "__main__":
     #selections.append([dc])
     selections.append([dc])
 
+    #channel_selection = struck_analysis_cuts.get_drift_time_cut(is_single_channel=True, drift_time_high=drift_time_high)
+    channel_selection = None
+
     # loop over all selections
     for i,selection in enumerate(selections):
 
@@ -591,8 +590,11 @@ if __name__ == "__main__":
         # do 570-keV and 1064-keV fits, for chargeEnergy and for
         # get_few_channels_cmd:
 
-        all_energy_var = "chargeEnergy"
-        process_file(sys.argv[1], False, all_energy_var, selection, channel_selection, do_use_step=False)
+        #all_energy_var = "chargeEnergy"
+        #all_energy_var = struck_analysis_cuts.get_few_channels_cmd(energy_var="energy1")
+        all_energy_var = None # skipp fit to all channels
+
+        process_file(sys.argv[1], False, all_energy_var, selection, channel_selection, do_use_step=False, energy_var="energy1")
         #process_file(sys.argv[1], True, all_energy_var, selection, channel_selection)
 
         # cuts need more work to be used with this "few channels" draw command 

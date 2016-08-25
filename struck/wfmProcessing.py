@@ -156,6 +156,7 @@ def get_wfmparams(
     baseline_remover.SetBaselineSamples(n_baseline_samples)
     baseline_remover.SetStartSample(0)
     baseline_remover.Transform(exo_wfm)
+    baseline_mean = baseline_remover.GetBaselineMean()
     #do_draw(energy_wfm, "after baseline_remover")
 
     # measure energy before PZ correction -- use baseline_remover for this
@@ -168,7 +169,6 @@ def get_wfmparams(
     baseline_remover.SetBaselineSamples(2*n_baseline_samples)
     baseline_remover.SetStartSample(0)
     baseline_remover.Transform(exo_wfm)
-    baseline_mean = baseline_remover.GetBaselineMean()
     baseline_rms = baseline_remover.GetBaselineRMS()
 
     # measure energy before PZ correction, use 2x n_baseline_samples
