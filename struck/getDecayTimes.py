@@ -20,9 +20,12 @@ def getDecayTimes():
     
     decay_log = open('/home/teststand/2016_08_15_8th_LXe_overnight/DecayTimes/Testing/decay_log.txt', 'w')
 
+    decay_log.write("# Fits are in %s \n" % plot_name)
     for (channel, value) in enumerate(struck_analysis_parameters.charge_channels_to_use):
         
         if not value:
+            log_out =  "decay_time_values[%i] =  %f*microsecond # %s  \n" %(channel, 1.0e10, "Not Used")
+            decay_log.write(log_out)
             continue
 
         hist = ROOT.TH1D("hist_%i" % channel,"",n_bins,0, decay_max)
