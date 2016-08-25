@@ -270,9 +270,46 @@ if is_7th_LXe:
     decay_time_values[7] = 448.86*microsecond # +/- 2.91 
     decay_time_values[9] = 1.5*microsecond 
 
+
+decay_start_time = 20 #sample 500
+decay_end_time = 32   #sample 800
+decay_tau_guess = 200 #us
+
 if is_8th_LXe: # FIXME with real values
-    for i_channel in xrange(len(channels)):
-        decay_time_values[i_channel] = 400.0
+    #decay_time_values[i_channel] = 400.0
+    decay_time_values[0] =  10000000000.000000*microsecond # Not Used
+    decay_time_values[1] =  320.360331*microsecond # +/- 0.465237
+    decay_time_values[2] =  339.897228*microsecond # +/- 0.418899
+    decay_time_values[3] =  353.919547*microsecond # +/- 0.458101
+    decay_time_values[4] =  338.589580*microsecond # +/- 0.372839
+    decay_time_values[5] =  426.998773*microsecond # +/- 0.410735
+    decay_time_values[6] =  396.597333*microsecond # +/- 0.184746
+    decay_time_values[7] =  345.851315*microsecond # +/- 0.045632
+    decay_time_values[8] =  319.276194*microsecond # +/- 0.090235
+    decay_time_values[9] =  287.563948*microsecond # +/- 0.117011
+    decay_time_values[10] =  316.431902*microsecond # +/- 0.179577
+    decay_time_values[11] =  323.614588*microsecond # +/- 0.135862
+    decay_time_values[12] =  321.055835*microsecond # +/- 0.080225
+    decay_time_values[13] =  305.575836*microsecond # +/- 0.206716
+    decay_time_values[14] =  333.068070*microsecond # +/- 0.449653
+    decay_time_values[15] =  271.529300*microsecond # +/- 0.928347
+    decay_time_values[16] =  210.630904*microsecond # +/- 0.351404
+    decay_time_values[17] =  390.493199*microsecond # +/- 0.588650
+    decay_time_values[18] =  376.382536*microsecond # +/- 0.568273
+    decay_time_values[19] =  405.903742*microsecond # +/- 0.374340
+    decay_time_values[20] =  420.609430*microsecond # +/- 0.344073
+    decay_time_values[21] =  481.202071*microsecond # +/- 0.172892
+    decay_time_values[22] =  439.828089*microsecond # +/- 0.265421
+    decay_time_values[23] =  445.449339*microsecond # +/- 0.528471
+    decay_time_values[24] =  424.413066*microsecond # +/- 0.491970
+    decay_time_values[25] =  376.175312*microsecond # +/- 0.397313
+    decay_time_values[26] =  396.422580*microsecond # +/- 0.580643
+    decay_time_values[27] =  10000000000.000000*microsecond # Not Used
+    decay_time_values[28] =  381.161856*microsecond # +/- 0.331977
+    decay_time_values[29] =  383.438277*microsecond # +/- 0.183253
+    decay_time_values[30] =  364.702498*microsecond # +/- 0.406951
+    decay_time_values[31] =  1.5*microsecond # PMT
+
 
 
 # charge calbration from these files for 5th LXe:
