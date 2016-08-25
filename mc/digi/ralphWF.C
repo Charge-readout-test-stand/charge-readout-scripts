@@ -340,13 +340,14 @@ void draw(Double_t *par)
   cout << "pdf file opened" << endl;
 
   for (UInt_t i=0; i<60;  i++) { 
+    TF1 test("test", OnePCD, 0, 32, 5); 
     Double_t P[5]; //P[0] is along the wire, P[1] is transverse dir, P is coord sys of wire (origin=center of wire)
     TransformCoord(par, P, i);
-    test[i]->SetParameter(0,P[0]); // x
-    test[i]->SetParameter(1,P[1]); // y
-    test[i]->SetParameter(2, par[2]); // z
-    test[i]->SetParameter(3, par[3]); // q  
-    test[i]->SetParameter(4, par[4]); // w
+    test.SetParameter(0, P[0]); // x
+    test.SetParameter(1, P[1]); // y
+    test.SetParameter(2, P[2]); // z
+    test.SetParameter(3, P[3]); // q  
+    test.SetParameter(4, P[4]); // w
 
     Double_t Chisq_per_channel = ChisqFit(par, i);
 
@@ -354,9 +355,9 @@ void draw(Double_t *par)
     ostringstream name;
     name << "Channel " << i << "  x=" << par[0] << "  y=" << par[1] << "  z=" << par[2] << "  q=" << par[3] << "  w=" << par[4] << "  chisq per chan=" << Chisq_per_channel; 
     hist[i]->SetTitle(name.str().c_str());
-    test[i]->Draw("same"); 
-    test[i]->SetLineColor(kRed);
-    test[i]->SetLineStyle(7);
+    test.Draw("same"); 
+    test.SetLineColor(kRed);
+    test.SetLineStyle(7);
     style();
     ca->Update();
     ca->Print((pdfnameStream.str()).c_str());
@@ -415,18 +416,19 @@ void draw2(Double_t *par)
   cout << "pdf file opened" << endl;
 
   for (UInt_t i=0; i<60;  i++) { 
+    TF1 test("test", TwoPCDsOneZ, 0, 32, 10); 
     Double_t P[10]; //P[0] is along the wire, P[1] is transverse dir, P is coord sys of wire (origin=center of wire)
-    TransformCoord(par, P, i);
-    test[i]->SetParameter(0,P[0]); // x
-    test[i]->SetParameter(1,P[1]); // y
-    test[i]->SetParameter(2, par[2]); // z
-    test[i]->SetParameter(3, par[3]); // q  
-    test[i]->SetParameter(4, par[4]); // w
-    test[i]->SetParameter(5, par[5]); // x 1
-    test[i]->SetParameter(6, par[6]); // y 1
-    test[i]->SetParameter(7, par[7]); // z 1
-    test[i]->SetParameter(8, par[8]); // q 1
-    test[i]->SetParameter(9, par[9]); // w 1
+    TransformCoord2(par, P, i);
+    test.SetParameter(0, P[0]); // x
+    test.SetParameter(1, P[1]); // y
+    test.SetParameter(2, P[2]); // z
+    test.SetParameter(3, P[3]); // q  
+    test.SetParameter(4, P[4]); // w
+    test.SetParameter(5, P[5]); // x 1
+    test.SetParameter(6, P[6]); // y 1
+    test.SetParameter(7, P[7]); // z 1
+    test.SetParameter(8, P[8]); // q 1
+    test.SetParameter(9, P[9]); // w 1
 
     Double_t Chisq_per_channel = ChisqFit(par, i);
 
@@ -434,9 +436,9 @@ void draw2(Double_t *par)
     ostringstream name;
     name << "Channel " << i << "  x0=" << par[0] << "  y0=" << par[1] << "  z0=" << par[2] << "  q0=" << par[3] << " x1=" << par[5] << " y1=" << par[6] << " z1=" << par[7] << " q1=" << par[8] <<  " chisq per chan=" << Chisq_per_channel; 
     hist[i]->SetTitle(name.str().c_str());
-    test[i]->Draw("same"); 
-    test[i]->SetLineColor(kRed);
-    test[i]->SetLineStyle(7);
+    test.Draw("same"); 
+    test.SetLineColor(kRed);
+    test.SetLineStyle(7);
     style();
     ca->Update();
     ca->Print((pdfnameStream.str()).c_str());
@@ -520,7 +522,13 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
   TBranch *Fit_y = output_tree->Branch("MIGRAD y", &val1, "MINUIT_y/D"); 
   TBranch *Fit_z = output_tree->Branch("MIGRAD z", &val2, "MINUIT_z/D"); 
   TBranch *Fit_q = output_tree->Branch("MIGRAD q", &val3, "MINUIT_q/D"); 
-  TBranch *Fit_w = output_tree->Branch("MIGRAD w", &val4, "MINUIT_w/D"); 
+  TBranch *Fit_w = output_tree->Branch("MIGRAD w", &val4, "MINUIT_w/D");
+  /*TBranch *Fit_w = output_tree->Branch("MIGRAD x1", &val5, "MINUIT_x1/D"); 
+  TBranch *Fit_w = output_tree->Branch("MIGRAD y1", &val6, "MINUIT_y1/D"); 
+  TBranch *Fit_w = output_tree->Branch("MIGRAD z1", &val7, "MINUIT_z1/D"); 
+  TBranch *Fit_w = output_tree->Branch("MIGRAD q1", &val8, "MINUIT_q1/D"); 
+  TBranch *Fit_w = output_tree->Branch("MIGRAD w1", &val9, "MINUIT_w1/D"); 
+  */
   TBranch *Min_chisq = output_tree->Branch("MIGRAD chisq", &amin, "chisquare_dof/D"); 
   TBranch *Evaluation_of_fit = output_tree->Branch("icstat", &icstat, "icstat/I"); 
 
@@ -562,7 +570,7 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
       hist[i]->GetYaxis()->SetTitle("Energy of Charge Deposit (keV)");
       hist[i]->GetXaxis()->CenterTitle();
       hist[i]->GetYaxis()->CenterTitle();
-      test[i] = new TF1("test", OnePCD, 0, 32, 5); //5 is # of params
+      //test[i] = new TF1("test", OnePCD, 0, 32, 5); //5 is # of params
       for (UInt_t n=0; n<800;  n++) { //800 time samples
         Double_t noise = generator->Gaus(0, RMS_noise);
        /* Double_t Q = 0.0;
@@ -758,7 +766,7 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
     gMinuit->mnpout(num9, chnam9, val9, error9, bnd19, bnd29, ivarbl9);
     cout << "w 1: " << val9 << endl;
 
-    Double_t par[9];
+    Double_t par[10]; 
     par[0] = val0;
     par[1] = val1;
     par[2] = val2;
@@ -769,6 +777,21 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
     par[7] = val7;
     par[8] = val8;
     par[9] = val9;
+    
+    
+    /*
+    Double_t par[10];
+    par[0] = -9.91401;
+    par[1] = 20.5;
+    par[2] = 17.9357;
+    par[3] = 236.802;
+    par[4] = 3.14159;
+    par[5] = -1.13685;
+    par[6] = 25.4538;
+    par[7] = 15.6677;
+    par[8] = 241.802;
+    par[9] = 3.14159;
+    */
     cout << "draw is being executed" << endl;
     draw2(par);
      
@@ -786,6 +809,7 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
     val9 = 0.0;
     amin = 0.0;
     icstat = 0.0; 
+  
    } 
 
   else 
@@ -883,6 +907,7 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
     icstat = 0.0;  
    }  
  } 
+ 
   output_file.Write();
 }
   
