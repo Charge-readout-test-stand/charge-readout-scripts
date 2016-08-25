@@ -524,7 +524,7 @@ void draw2(Double_t *par)
   style();
   ca->Update();
   ca->Print((pdfnameStream.str()).c_str());
-/*
+
   for (UInt_t i=0; i<60;  i++) { 
     TF1 test("test", TwoPCDsOneZ, 0, 32, 10); 
     Double_t P[10]; //P[0] is along the wire, P[1] is transverse dir, P is coord sys of wire (origin=center of wire)
@@ -553,7 +553,7 @@ void draw2(Double_t *par)
     ca->Update();
     ca->Print((pdfnameStream.str()).c_str());
     }
- */ 
+  
   ca->Print((pdfnameStream.str()+"]").c_str());
   cout << "pdf file closed" << endl;   
 }
@@ -722,7 +722,7 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
   if (XChannelIncrement >= 2 && (((XChannelHit2-XChannelHit1)) >= 2 || ((XChannelHit3-XChannelHit1) >= 2) || ((XChannelHit3-XChannelHit2) >= 2)))
   {
     cout << "USING TWO PCDs FIT" << endl;
-/*
+
     TMinuit *gMinuit = new TMinuit(10);  //initialize TMinuit with a maximum of 10 params 
     gMinuit->SetFCN(fcn2); 
     
@@ -883,8 +883,8 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
     par[7] = val7;
     par[8] = val8;
     par[9] = val9;
-*/
-/*
+
+/* //91
     Double_t par[10];
     par[0] = -10.4654;
     par[1] = 20.5324;
@@ -896,7 +896,7 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
     par[7] = 15.6776;
     par[8] = 239.937;
     par[9] = 3.15867;
-*/
+    //2
     Double_t par[10];
     par[0] = 4.58294;
     par[1] = 4.62669;
@@ -908,10 +908,9 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
     par[7] = 4.75984;
     par[8] = 289.789;
     par[9] = 6.14544;
-
+*/
     cout << "draw2 is being executed" << endl;
-    draw2(par);
-     
+    draw2(par); 
     output_tree->Fill();
     //parameters re-set to 0  
     val0 = 0.0;
@@ -926,7 +925,6 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
     val9 = 0.0;
     amin = 0.0;
     icstat = 0.0; 
-  
   } 
 
   else 
