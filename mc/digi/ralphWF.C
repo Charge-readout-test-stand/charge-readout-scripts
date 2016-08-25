@@ -363,13 +363,34 @@ void draw(Double_t *par)
     ca->Print((pdfnameStream.str()).c_str());
     }
 
+  Double_t x_low=0.0;
+  Double_t x_high=0.0;
+  Double_t y_low=0.0;
+  Double_t y_high=0.0;
+  Double_t z_low=0.0;
+  Double_t z_high=0.0;
+  
+  x_low = round(par[0]) - 4;
+  x_high = round(par[0]) + 4;
+  y_low = round(par[1]) - 4;
+  y_high = round(par[1]) + 4;
+  z_low = round(par[2]) - 4;
+  z_high = round(par[2]) + 4;
+
+  Double_t xbins = (x_high - x_low)/0.04;
+  Double_t ybins = (y_high - y_low)/0.04;
+  Double_t zbins = (z_high - z_low)/0.04;
+  cout << xbins << endl;
+  cout << ybins << endl;
+  cout << zbins << endl;
+
 //  TFile *inputroot = TFile::Open("~/../manisha2/MC/e1MeV_dcoeff50/digitization_dcoeff50/digi1_e1MeV_dcoef50.root");
   TFile *inputroot = TFile::Open("/nfs/slac/g/exo_data4/users/manisha2/MC/Bi207_Full_Ralph_dcoeff50_Qidong_Efieldhist/digitization_dcoeff50/digi1750_Bi207_Full_Ralph_dcoef50.root");
   TTree *tree = (TTree*) inputroot->Get("evtTree");
   tree->GetEntries();
   Int_t nbins = 21.2/0.53;//x vs y binning
-  TH2D *eCloud_point_hist = new TH2D("eCloud_point_hist", "Charge Deposit", nbins, 0, 8, nbins, 0, 8);//x y 
-  TH2D *point_charge = new TH2D("point_charge", "", 200, 0, 8, 200, 0, 8);
+  TH2D *eCloud_point_hist = new TH2D("eCloud_point_hist", "Charge Deposit", nbins, x_low, x_high, nbins, y_low, y_high);//x y 
+  TH2D *point_charge = new TH2D("point_charge", "", xbins, x_low, x_high, ybins, y_low, y_high);
   point_charge->Fill(par[0], par[1], par[3]); //x, y, q
 
 //  draw_calls += 1;
@@ -388,8 +409,8 @@ void draw(Double_t *par)
   ca->Update();
   ca->Print((pdfnameStream.str()).c_str());
   
-  TH2D *eCloud_point_hist2 = new TH2D("eCloud_point_hist2", "Charge Deposit", nbins, 0, 8, nbins, 16, 20);//x z
-  TH2D *point_charge2 = new TH2D("point_charge2", "", 200, 0, 8, 550, 0, 22);
+  TH2D *eCloud_point_hist2 = new TH2D("eCloud_point_hist2", "Charge Deposit", nbins, x_low, x_high, nbins, z_low, z_high);//x z
+  TH2D *point_charge2 = new TH2D("point_charge2", "", xbins, x_low, x_high, zbins, z_low, z_high);
   point_charge2->Fill(par[0], par[2], par[3]);
   tree->Draw("(18.16-PCDz):PCDx >> eCloud_point_hist2", chargeweight.c_str());
   eCloud_point_hist2->Draw("colz");
