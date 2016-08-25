@@ -62,7 +62,7 @@ gStyle.SetTitleBorderSize(0)
 #-----------------------------Constants to use-------------------------------------------
 debug = True
 debug = False
-gROOT.SetBatch(True)
+gROOT.SetBatch(debug)
 
 #plot_name = "DecayTimeHist.pdf"
 
@@ -71,6 +71,8 @@ sampling_period = (1/struck_analysis_parameters.sampling_freq_Hz)*second #ns
 #Get sample for fit (20us to 32us (32 is the end))
 fitstart = int(20.0/(sampling_period/microsecond)) #sample
 fitstop = int(32.0/(sampling_period/microsecond))  #sample
+
+print fitstart, fitstop
 
 reporting_period = 1000
 
@@ -107,7 +109,7 @@ def diff(value, fit, rms):
     diff = (value-fit)/rms # approx RMS noise
     return diff
 
-def WasSignal(ch, max_val, baseline):
+def WasSignal(ch, max_val, baseline, rms):
     #Determine if there was a signal on the channel
     #Check if above threshold.  Max is average of last 200 samples
     #so should filter induction signals.
@@ -117,7 +119,8 @@ def WasSignal(ch, max_val, baseline):
     
     isSig = False
 
-    if (max_val - baseline) > threshold:
+    #if (max_val - baseline) > threshold:
+    if (max_val - baseline) > 10*rms:
         isSig = True
     
     #Only for Charge Channels
@@ -132,12 +135,15 @@ def KillBaseline(wfgraph, baseline):
 
 def DoFit(wfgraph, max_val):
     exp_decay.SetParameters(max_val, tguess)
-    wfgraph.Fit("exp_decay","IQR")
-    amp = exp_decay.GetParameter(0)
+    fit_result = wfgraph.Fit("exp_decay","QWBRS")
     
+    amp = exp_decay.GetParameter(0)
     tau = (exp_decay.GetParameter(1)*sampling_period/microsecond)
     chi2 = exp_decay.GetChisquare()/exp_decay.GetNDF()
     
+    if debug:
+        print "Error in decay:", tau, "+/-", exp_decay.GetParError(1)*sampling_period/microsecond
+
     return amp, tau, chi2
 
 def process_files(filenames, check_channel):
@@ -185,7 +191,7 @@ def process_files(filenames, check_channel):
 
         KillBaseline(wfgraph, baseline)
 
-        if not WasSignal(channel, max_val, baseline): continue      
+        if not WasSignal(channel, max_val, baseline, rms): continue      
 
         #Fit the Waveform
         amp, tau, chi2 = DoFit(wfgraph, max_val)
@@ -206,7 +212,7 @@ def process_files(filenames, check_channel):
         
         wfgraph.IsA().Destructor(wfgraph)
 
-    plot_name = "~/2016_08_15_8th_LXe_overnight/DecayTimes/DecayTimeHist_ch%i.pdf" % int(check_channel)
+    plot_name = "~/2016_08_15_8th_LXe_overnight/DecayTimes/Testing/DecayTimeHist_ch%i.pdf" % int(check_channel)
     
     canvas.Print("%s[" % plot_name)
     
@@ -215,9 +221,9 @@ def process_files(filenames, check_channel):
         landau.SetParameter(1, fithist.GetBinCenter(fithist.GetMaximumBin()))
         landau.SetParameter(2, 100) 
         landau.SetParameter(0, fithist.GetMaximum()) 
-        fithist.Fit("landau", "IQR")
-        print "Fit = ", landau.GetParameter(1), "Entries = ", fithist.GetEntries()
-        fithist.SetTitle(fithist.GetTitle()+ " tau = %f, ents = %f" % (landau.GetParameter(1), fithist.GetEntries()))
+        fit_result = fithist.Fit("landau", "QWBRS")
+        print "Fit = ", landau.GetParameter(1), "+/-", landau.GetParError(1), "Entries = ", fithist.GetEntries()
+        fithist.SetTitle(fithist.GetTitle()+ " tau = %f, error = %f, ents = %f" % (landau.GetParameter(1), landau.GetParError(1), fithist.GetEntries()))
         fithist.Draw()
         canvas.Update()
         #raw_input("Enter to continue.")
@@ -231,9 +237,9 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         print "arguments: [channel, tier1 root files] using default for now"
         #sys.exit(1)
-        #filenames = ["/home/teststand/2016_08_15_8th_LXe_overnight/tier1/tier1_SIS3316Raw_20160816023917_8thLXe_126mvDT_cell_full_cath_1700V_100cg_overnight__1-ngm.root"]
-        filenames = ["/home/teststand/2016_08_15_8th_LXe_overnight/tier1/tier1_SIS3316Raw_20160816025*root"]
-        ch = 12
+        filenames = ["/home/teststand/2016_08_15_8th_LXe_overnight/tier1/tier1_SIS3316Raw_20160816023917_8thLXe_126mvDT_cell_full_cath_1700V_100cg_overnight__1-ngm.root"]
+        #filenames = ["/home/teststand/2016_08_15_8th_LXe_overnight/tier1/tier1_SIS3316Raw_20160816025*root"]
+        ch = 21
         process_files(filenames, ch)
     else:
         ch = sys.argv[1]

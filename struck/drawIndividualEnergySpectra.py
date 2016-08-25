@@ -27,8 +27,8 @@ def process_files(filenames):
     
     # options
     energy_var = "energy1"
-    do_debug = False
-    #do_debug = True
+    #do_debug = False
+    do_debug = True
     plot_name = "individual_channels2.pdf"
     energy_max = 3500
     n_bins = int(energy_max/20)
@@ -85,7 +85,6 @@ def process_files(filenames):
     hists = []
 
     for (channel, value) in enumerate(struck_analysis_parameters.charge_channels_to_use):
-        continue # debugging
         #print "channel %i" % channel
         if not value:
             continue

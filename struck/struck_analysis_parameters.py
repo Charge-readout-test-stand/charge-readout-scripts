@@ -270,9 +270,47 @@ if is_7th_LXe:
     decay_time_values[7] = 448.86*microsecond # +/- 2.91 
     decay_time_values[9] = 1.5*microsecond 
 
+
+decay_start_time = 20 #sample 500
+decay_end_time = 32   #sample 800
+decay_tau_guess = 200 #us
+
 if is_8th_LXe: # FIXME with real values
-    for i_channel in xrange(len(channels)):
-        decay_time_values[i_channel] = 400.0
+    #decay_time_values[i_channel] = 400.0
+    decay_time_values[0] =  1.e9*microsecond #Dead 
+    decay_time_values[1] =  310.*microsecond 
+    decay_time_values[2] =  327.*microsecond 
+    decay_time_values[3] =  346.*microsecond 
+    decay_time_values[4] =  410.*microsecond 
+    decay_time_values[5] =  514.*microsecond 
+    decay_time_values[6] =  443.*microsecond 
+    decay_time_values[7] =  363.*microsecond 
+    decay_time_values[8] =  309.*microsecond
+    decay_time_values[9] =  275.*microsecond
+    decay_time_values[10] = 298.*microsecond
+    decay_time_values[11] = 295.*microsecond
+    decay_time_values[12] = 300.*microsecond
+    decay_time_values[13] = 271.*microsecond
+    decay_time_values[14] = 324.*microsecond
+    decay_time_values[15] = 255.*microsecond
+    decay_time_values[16] = 143.*microsecond #Hmm this one seems odd?? Two Peaks??
+    decay_time_values[17] = 373.*microsecond
+    decay_time_values[18] = 347.*microsecond
+    decay_time_values[19] = 389.*microsecond
+    decay_time_values[20] = 499.*microsecond
+    decay_time_values[21] = 556.*microsecond
+    decay_time_values[22] = 521.*microsecond
+    decay_time_values[23] = 565.*microsecond
+    decay_time_values[24] = 408.*microsecond
+    decay_time_values[25] = 356.*microsecond
+    decay_time_values[26] = 380.*microsecond
+    decay_time_values[27] = 1.e9*microsecond #Dead
+    decay_time_values[28] = 350.*microsecond
+    decay_time_values[29] = 355.*microsecond
+    decay_time_values[30] = 369.*microsecond
+    decay_time_values[31] = 1.5*microsecond #pmt so ??
+
+
 
 
 # charge calbration from these files for 5th LXe:

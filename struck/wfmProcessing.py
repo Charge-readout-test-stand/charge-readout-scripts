@@ -39,6 +39,7 @@ from ROOT import EXOSmoother
 from ROOT import EXOPoleZeroCorrection
 from ROOT import EXOExtremumFinder
 from ROOT import EXOTrapezoidalFilter
+from ROOT import EXODecayTimeFit
 
 import struck_analysis_parameters
 
@@ -175,6 +176,25 @@ def get_wfmparams(
     baseline_remover.Transform(exo_wfm, energy_wfm)
     energy1 = baseline_remover.GetBaselineMean()*calibration
     energy_rms1 = baseline_remover.GetBaselineRMS()*calibration
+    
+    #measure Decay Time for this WF
+    #Only measure if there is a signal which we defice as 10 times above the noise
+    #otherwise fill with default negative numbers
+
+    decay_fit = -999.0
+    decay_chi2 = -999.0
+    decay_error = -999.0
+    if energy1/energy_rms1 > 10.0:
+        decay_fitter = EXODecayTimeFit()
+        decay_fitter.SetStartSample(struck_analysis_parameters.decay_start_time)
+        decay_fitter.SetEndSample(struck_analysis_parameters.decay_end_time)
+        decay_fitter.SetMaxValGuess(energy1/calibration)
+        decay_fitter.SetTauGuess(struck_analysis_parameters.decay_tau_guess)
+        decay_fitter.Transform(exo_wfm, exo_wfm)
+        decay_fit = decay_fitter.GetDecayTime()
+        decay_chi2 = decay_fitter.GetDecayTimeChi2()/baseline_rms**2
+        decay_error = decay_fitter.GetDecayTimeError()
+    
 
     # correct for exponential decay
     pole_zero = EXOPoleZeroCorrection()
@@ -286,6 +306,9 @@ def get_wfmparams(
         calibrated_wfm,
         wfm_max,
         wfm_min,
+        decay_fit,
+        decay_error,
+        decay_chi2
     )
 
 def do_risetime_calc(rise_time_calculator, threshold_percent, wfm, max_val, period):
@@ -424,4 +447,6 @@ def get_risetimes(exo_wfm, wfm_length, sampling_freq_Hz, skip_short_risetimes=Tr
             rise_time_stop40, rise_time_stop50, rise_time_stop60, rise_time_stop70,
             rise_time_stop80, rise_time_stop90, rise_time_stop95,
             rise_time_stop99]
+
+
 
