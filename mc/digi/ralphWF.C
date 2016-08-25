@@ -430,7 +430,7 @@ void draw2(Double_t *par)
     test.SetParameter(8, P[8]); // q 1
     test.SetParameter(9, P[9]); // w 1
 
-    Double_t Chisq_per_channel = ChisqFit(par, i);
+    Double_t Chisq_per_channel = ChisqFit2(par, i);
 
     hist[i]->Draw();
     ostringstream name;
@@ -471,7 +471,23 @@ void draw2(Double_t *par)
   style();
   ca->Update();
   ca->Print((pdfnameStream.str()).c_str());
-  
+ 
+  TH2D *eCloud_point_hist2 = new TH2D("eCloud_point_hist2", "Charge Deposit", nbins, 0, 8, nbins, 16, 20);//x z
+  TH2D *point_charge2 = new TH2D("point_charge2", "", 200, 0, 8, 550, 0, 22);
+  point_charge3->Fill(par[0], par[2], par[3]);
+  point_charge4->Fill(par[5], par[7], par[8]);
+  tree->Draw("(18.16-PCDz):PCDx >> eCloud_point_hist2", chargeweight.c_str());
+  eCloud_point_hist2->Draw("colz");
+  point_charge3->Draw("same"); //x, z, q
+  point_charge4->Draw("same");
+  eCloud_point_hist2->GetXaxis()->SetTitle("X (mm)");
+  eCloud_point_hist2->GetYaxis()->SetTitle("Z (mm)");
+  eCloud_point_hist2->GetXaxis()->CenterTitle();
+  eCloud_point_hist2->GetYaxis()->CenterTitle();
+  style();
+  ca->Update();
+  ca->Print((pdfnameStream.str()).c_str());
+
   ca->Print((pdfnameStream.str()+"]").c_str());
   cout << "pdf file closed" << endl;   
 }
