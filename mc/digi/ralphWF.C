@@ -363,13 +363,34 @@ void draw(Double_t *par)
     ca->Print((pdfnameStream.str()).c_str());
     }
 
+  Double_t x_low=0.0;
+  Double_t x_high=0.0;
+  Double_t y_low=0.0;
+  Double_t y_high=0.0;
+  Double_t z_low=0.0;
+  Double_t z_high=0.0;
+  
+  x_low = round(par[0]) - 4;
+  x_high = round(par[0]) + 4;
+  y_low = round(par[1]) - 4;
+  y_high = round(par[1]) + 4;
+  z_low = round(par[2]) - 4;
+  z_high = round(par[2]) + 4;
+
+  Double_t xbins = (x_high - x_low)/0.04;
+  Double_t ybins = (y_high - y_low)/0.04;
+  Double_t zbins = (z_high - z_low)/0.04;
+  cout << xbins << endl;
+  cout << ybins << endl;
+  cout << zbins << endl;
+
 //  TFile *inputroot = TFile::Open("~/../manisha2/MC/e1MeV_dcoeff50/digitization_dcoeff50/digi1_e1MeV_dcoef50.root");
   TFile *inputroot = TFile::Open("/nfs/slac/g/exo_data4/users/manisha2/MC/Bi207_Full_Ralph_dcoeff50_Qidong_Efieldhist/digitization_dcoeff50/digi1750_Bi207_Full_Ralph_dcoef50.root");
   TTree *tree = (TTree*) inputroot->Get("evtTree");
   tree->GetEntries();
   Int_t nbins = 21.2/0.53;//x vs y binning
-  TH2D *eCloud_point_hist = new TH2D("eCloud_point_hist", "Charge Deposit", nbins, 0, 8, nbins, 0, 8);//x y 
-  TH2D *point_charge = new TH2D("point_charge", "", 200, 0, 8, 200, 0, 8);
+  TH2D *eCloud_point_hist = new TH2D("eCloud_point_hist", "Charge Deposit", nbins, x_low, x_high, nbins, y_low, y_high);//x y 
+  TH2D *point_charge = new TH2D("point_charge", "", xbins, x_low, x_high, ybins, y_low, y_high);
   point_charge->Fill(par[0], par[1], par[3]); //x, y, q
 
 //  draw_calls += 1;
@@ -388,8 +409,8 @@ void draw(Double_t *par)
   ca->Update();
   ca->Print((pdfnameStream.str()).c_str());
   
-  TH2D *eCloud_point_hist2 = new TH2D("eCloud_point_hist2", "Charge Deposit", nbins, 0, 8, nbins, 16, 20);//x z
-  TH2D *point_charge2 = new TH2D("point_charge2", "", 200, 0, 8, 550, 0, 22);
+  TH2D *eCloud_point_hist2 = new TH2D("eCloud_point_hist2", "Charge Deposit", nbins, x_low, x_high, nbins, z_low, z_high);//x z
+  TH2D *point_charge2 = new TH2D("point_charge2", "", xbins, x_low, x_high, zbins, z_low, z_high);
   point_charge2->Fill(par[0], par[2], par[3]);
   tree->Draw("(18.16-PCDz):PCDx >> eCloud_point_hist2", chargeweight.c_str());
   eCloud_point_hist2->Draw("colz");
@@ -414,6 +435,95 @@ void draw2(Double_t *par)
   pdfnameStream << "Event_" << a << ".pdf"; //a is event number from loop in ralphWF()
   ca->Print((pdfnameStream.str()+"[").c_str());
   cout << "pdf file opened" << endl;
+
+//  TFile *inputroot = TFile::Open("~/../manisha2/MC/e1MeV_dcoeff50/digitization_dcoeff50/digi1_e1MeV_dcoef50.root");
+  TFile *inputroot = TFile::Open("/nfs/slac/g/exo_data4/users/manisha2/MC/Bi207_Full_Ralph_dcoeff50_Qidong_Efieldhist/digitization_dcoeff50/digi1750_Bi207_Full_Ralph_dcoef50.root");
+  TTree *tree = (TTree*) inputroot->Get("evtTree");
+  tree->GetEntries();
+  Int_t nbins = 21.2/0.53;//x vs y binning
+  
+  Double_t x_low=0.0;
+  Double_t x_high=0.0;
+  Double_t y_low=0.0;
+  Double_t y_high=0.0;
+  Double_t z_low=0.0;
+  Double_t z_high=0.0;
+  
+  if (par[0] > par[5]) { //x0 x1
+    x_low = round(par[5]) - 4;
+    x_high = round(par[0]) + 4;
+  }
+  else {
+    x_low = round(par[0]) - 4;
+    x_high = round(par[5]) + 4;
+  }
+  if (par[1] > par[6]) { //y0 y1
+    y_low = round(par[6]) - 4;
+    y_high = round(par[1]) + 4;
+  }
+  else {
+    y_low = round(par[1]) - 4;
+    y_high = round(par[6]) + 4;
+  }
+  if (par[2] > par[7]) { //z0 z1
+    z_low = round(par[7]) - 4;
+    z_high = round(par[2]) + 4;
+  }
+  else {
+    z_low = round(par[2]) - 4;
+    z_high = round(par[7]) + 4;
+  }
+
+  Double_t xbins = (x_high - x_low)/0.04;
+  Double_t ybins = (y_high - y_low)/0.04;
+  Double_t zbins = (z_high - z_low)/0.04;
+  cout << xbins << endl;
+  cout << ybins << endl;
+  cout << zbins << endl;
+
+  TH2D *eCloud_point_hist = new TH2D("eCloud_point_hist", "Charge Deposit", nbins, x_low, x_high, nbins, y_low, y_high);//x y 
+  TH2D *point_charge = new TH2D("point_charge", "", xbins, x_low, x_high, ybins, y_low, y_high);
+  TH2D *point_charge2 = new TH2D("point_charge2", "", xbins, x_low, x_high, ybins, y_low, y_high);
+  point_charge->SetMarkerStyle(7);
+  point_charge2->SetMarkerStyle(7);
+ 
+  point_charge->Fill(par[0], par[1], par[3]); //x, y, q
+  point_charge2->Fill(par[5], par[6], par[8]);
+//  draw_calls += 1;
+  ostringstream chargeweightStream;
+  chargeweightStream << "(Entry$==" << a << ")*PCDq*0.02204";
+  string chargeweight = chargeweightStream.str();
+
+  tree->Draw("PCDy:PCDx >> eCloud_point_hist", chargeweight.c_str());//why do we multiply PCDq by event?
+  eCloud_point_hist->Draw("colz");
+  point_charge->Draw("same");
+  point_charge2->Draw("same");
+  eCloud_point_hist->GetXaxis()->SetTitle("X (mm)");
+  eCloud_point_hist->GetYaxis()->SetTitle("Y (mm)");
+  eCloud_point_hist->GetXaxis()->CenterTitle();
+  eCloud_point_hist->GetYaxis()->CenterTitle();
+  style();
+  ca->Update();
+  ca->Print((pdfnameStream.str()).c_str());
+ 
+  TH2D *eCloud_point_hist2 = new TH2D("eCloud_point_hist2", "Charge Deposit", nbins, x_low, x_high, nbins, z_low, z_high);//x z
+  TH2D *point_charge3 = new TH2D("point_charge3", "", xbins, x_low, x_high, zbins, z_low, z_high);
+  TH2D *point_charge4 = new TH2D("point_charge4", "", xbins, x_low, x_high, zbins, z_low, z_high);
+  point_charge3->SetMarkerStyle(7);
+  point_charge4->SetMarkerStyle(7);
+  point_charge3->Fill(par[0], par[2], par[3]);
+  point_charge4->Fill(par[5], par[7], par[8]);
+  tree->Draw("(18.16-PCDz):PCDx >> eCloud_point_hist2", chargeweight.c_str());
+  eCloud_point_hist2->Draw("colz");
+  point_charge3->Draw("same"); //x, z, q
+  point_charge4->Draw("same");
+  eCloud_point_hist2->GetXaxis()->SetTitle("X (mm)");
+  eCloud_point_hist2->GetYaxis()->SetTitle("Z (mm)");
+  eCloud_point_hist2->GetXaxis()->CenterTitle();
+  eCloud_point_hist2->GetYaxis()->CenterTitle();
+  style();
+  ca->Update();
+  ca->Print((pdfnameStream.str()).c_str());
 
   for (UInt_t i=0; i<60;  i++) { 
     TF1 test("test", TwoPCDsOneZ, 0, 32, 10); 
@@ -443,52 +553,7 @@ void draw2(Double_t *par)
     ca->Update();
     ca->Print((pdfnameStream.str()).c_str());
     }
-
-//  TFile *inputroot = TFile::Open("~/../manisha2/MC/e1MeV_dcoeff50/digitization_dcoeff50/digi1_e1MeV_dcoef50.root");
-  TFile *inputroot = TFile::Open("/nfs/slac/g/exo_data4/users/manisha2/MC/Bi207_Full_Ralph_dcoeff50_Qidong_Efieldhist/digitization_dcoeff50/digi1750_Bi207_Full_Ralph_dcoef50.root");
-  TTree *tree = (TTree*) inputroot->Get("evtTree");
-  tree->GetEntries();
-  Int_t nbins = 21.2/0.53;//x vs y binning
-  TH2D *eCloud_point_hist = new TH2D("eCloud_point_hist", "Charge Deposit", nbins, -14, 4, nbins, 16, 30);//x y 
-  TH2D *point_charge = new TH2D("point_charge", "", 450, -14, 4, 350, 16, 30);
-  TH2D *point_charge2 = new TH2D("point_charge2", "", 200, -14, 4, 350, 16, 30);
- 
-  point_charge->Fill(par[0], par[1], par[3]); //x, y, q
-  point_charge2->Fill(par[5], par[6], par[8]);
-//  draw_calls += 1;
-  ostringstream chargeweightStream;
-  chargeweightStream << "(Entry$==" << a << ")*PCDq*0.02204";
-  string chargeweight = chargeweightStream.str();
-
-  tree->Draw("PCDy:PCDx >> eCloud_point_hist", chargeweight.c_str());//why do we multiply PCDq by event?
-  eCloud_point_hist->Draw("colz");
-  point_charge->Draw("same");
-  point_charge2->Draw("same");
-  eCloud_point_hist->GetXaxis()->SetTitle("X (mm)");
-  eCloud_point_hist->GetYaxis()->SetTitle("Y (mm)");
-  eCloud_point_hist->GetXaxis()->CenterTitle();
-  eCloud_point_hist->GetYaxis()->CenterTitle();
-  style();
-  ca->Update();
-  ca->Print((pdfnameStream.str()).c_str());
- 
-  TH2D *eCloud_point_hist2 = new TH2D("eCloud_point_hist2", "Charge Deposit", nbins, 0, 8, nbins, 16, 20);//x z
-  TH2D *point_charge3 = new TH2D("point_charge3", "", 200, 0, 8, 550, 0, 22);
-  TH2D *point_charge4 = new TH2D("point_charge4", "", 200, 0, 8, 550, 0, 22);
-  point_charge3->Fill(par[0], par[2], par[3]);
-  point_charge4->Fill(par[5], par[7], par[8]);
-  tree->Draw("(18.16-PCDz):PCDx >> eCloud_point_hist2", chargeweight.c_str());
-  eCloud_point_hist2->Draw("colz");
-  point_charge3->Draw("same"); //x, z, q
-  point_charge4->Draw("same");
-  eCloud_point_hist2->GetXaxis()->SetTitle("X (mm)");
-  eCloud_point_hist2->GetYaxis()->SetTitle("Z (mm)");
-  eCloud_point_hist2->GetXaxis()->CenterTitle();
-  eCloud_point_hist2->GetYaxis()->CenterTitle();
-  style();
-  ca->Update();
-  ca->Print((pdfnameStream.str()).c_str());
-
+  
   ca->Print((pdfnameStream.str()+"]").c_str());
   cout << "pdf file closed" << endl;   
 }
@@ -701,8 +766,6 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
     }
 
     cout << "XChannelPos: " << XChannelPos << " YChannelPos: " << YChannelPos << "   XChannelPos2: " << XChannelPos2 << " YChannelPos2: " << YChannelPos2 << endl;
-    Int_t pause;
-    cin >> pause;
 
     cout << "TMinuit has begun" << endl; 
 
@@ -820,10 +883,34 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
     par[7] = val7;
     par[8] = val8;
     par[9] = val9;
-   
+
+/* //91
+    Double_t par[10];
+    par[0] = -10.4654;
+    par[1] = 20.5324;
+    par[2] = 18.0631;
+    par[3] = 232.542;
+    par[4] = 2.44687;
+    par[5] = -0.853463;
+    par[6] = 25.643;
+    par[7] = 15.6776;
+    par[8] = 239.937;
+    par[9] = 3.15867;
+    //2
+    Double_t par[10];
+    par[0] = 4.58294;
+    par[1] = 4.62669;
+    par[2] = 17.3169;
+    par[3] = 71.6108;
+    par[4] = 3.43869;
+    par[5] = 16.4235;
+    par[6] = 0.00947614;
+    par[7] = 4.75984;
+    par[8] = 289.789;
+    par[9] = 6.14544;
+*/
     cout << "draw2 is being executed" << endl;
-    draw2(par);
-     
+    draw2(par); 
     output_tree->Fill();
     //parameters re-set to 0  
     val0 = 0.0;
@@ -838,7 +925,6 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
     val9 = 0.0;
     amin = 0.0;
     icstat = 0.0; 
-  
   } 
 
   else 
@@ -923,7 +1009,7 @@ Double_t ralphWF(UInt_t first_event, UInt_t last_event) { //to run from command 
     par[3] = val3;
     par[4] = val4;
     cout << "draw is being executed" << endl;
-    draw(par);
+    //draw(par);
      
     output_tree->Fill();
     //parameters re-set to 0  
