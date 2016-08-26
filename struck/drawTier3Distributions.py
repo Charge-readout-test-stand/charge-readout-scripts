@@ -53,10 +53,10 @@ def process_files(filenames):
     # options
 
     # choose one:
-    do_draw_energy = 1
+    do_draw_energy = 0 #1
     do_draw_drift_times = 0
     do_draw_rms = 0
-    do_draw_rms_keV = 0
+    do_draw_rms_keV = 1
     do_draw_rms_mV = 0
     do_draw_ADC_units = 0
     do_draw_mV = 0
