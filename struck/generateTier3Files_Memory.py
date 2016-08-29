@@ -51,8 +51,10 @@ import time
 import math
 import datetime
 import numpy as np
+import resource
+import gc
 from optparse import OptionParser
-
+from sys import getsizeof
 
 from ROOT import gROOT
 gROOT.SetBatch(True) # run in batch mode:
@@ -94,6 +96,22 @@ from array import array
 import struck_analysis_parameters
 import wfmProcessing
 
+import psutil
+
+def memory_usage_psutil():
+  # return the memory usage in MB
+  process = psutil.Process(os.getpid())
+  mem = process.memory_info()[0] / float(2 ** 20)
+  return mem, process.memory_percent()
+
+def memory_usage_resource():
+    rusage_denom = 1024.
+    if sys.platform == 'darwin':
+        # ... it seems that in OSX the output is different units ...
+        rusage_denom = rusage_denom * rusage_denom
+    mem = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / rusage_denom
+    return mem
+
 
 def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=False):
 
@@ -128,7 +146,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     print "processing file: ", filename
 
     # keep track of how long it takes to process file:
-    start_time = time.time()
+    start_time = time.clock()
     last_time = start_time
     prev_time_stamp = 0.0
 
@@ -336,8 +354,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         trigger_time[0] = 200/sampling_freq_Hz*1e6
     elif isNGM:
         ngm_config = root_file.Get("NGMSystemConfiguration")
-        trigger_time[0] = ngm_config.GetSlotParameters().GetParValueO("card",0).pretriggerdelay_block[0]/sampling_freq_Hz*1e6 
-        print "NGM trigger_time [microseconds]:", trigger_time[0]
+        trigger_time[0] = ngm_config.GetSlotParameters().GetParValueO("card",0).pretriggerdelay_block[0] 
+        print "NGM trigger_time [microseconds]:", trigger_time[0]/sampling_frequency_Hz[0]*1e6
     elif do_debug:
         print "--> debugging -- skipping trigger_time calc"
     else:
@@ -524,6 +542,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     print "calculating mean baseline & baseline RMS for each channel in this file..."
     for (i, i_channel) in enumerate(channels):
         if isMC: continue
+        if isNGM: 
+            print "skipping RMS & baseline calcs for NGM while we look for memory leak... "
+            continue # FIXME -- skipping during 8th LXe run
         print "%i: ch %i" % (i, i_channel)
         if do_debug: 
             print "\t skipping for debugging"
@@ -718,14 +739,6 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     energy_rms1_pz = array('d', [0]*n_channels_in_event) # double
     out_tree.Branch('energy_rms1_pz', energy_rms1_pz, 'energy_rms1_pz[%i]/D' % n_channels_in_event)
     
-    #Decay Constat Fit in WFM Processing
-    decay_fit = array('d', [0]*n_channels_in_event) # double
-    out_tree.Branch('decay_fit', decay_fit, 'decay_fit[%i]/D' % n_channels_in_event)
-    decay_error = array('d', [0]*n_channels_in_event) # double
-    out_tree.Branch('decay_error', decay_error, 'decay_error[%i]/D' % n_channels_in_event)
-    decay_chi2 = array('d', [0]*n_channels_in_event) # double
-    out_tree.Branch('decay_chi2', decay_chi2, 'decay_chi2[%i]/D' % n_channels_in_event)
-
     fname = TObjString(os.path.abspath(filename))
     out_tree.Branch("filename",fname)
     run_tree.Branch("filename",fname)
@@ -745,15 +758,25 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     # loop over all entries in tree
     i_entry = 0
     n_channels_in_this_event = 0
+    
+    print "Current Memory Before Loop", memory_usage_resource(), memory_usage_psutil()
+
     while i_entry < n_entries:
+        print "Current Memory Before Iter", memory_usage_resource(), memory_usage_psutil()
+        #print len(globals()), len(locals())
+        #print locals()
+        #raw_input()
+        #print globals()
+        #raw_input()
+
         tree.GetEntry(i_entry)
-        #if isNGM and i_entry > 1e6: 
-        #    print "<<<< DEBUGGING >>>>"
-        #    break # debugging
+        if isNGM and i_entry > 1e6: 
+            print "<<<< DEBUGGING >>>>"
+            break # debugging
 
         # print periodic output message
         if i_entry % reporting_period == 0:
-            now = time.time()
+            now = time.clock()
             print "----> entry %i of %i: %.2f percent done in %.1f seconds | %i entries in %.1f seconds (%.2f Hz)" % (
                 i_entry, 
                 n_entries, 
@@ -793,7 +816,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         else:
             time_stamp[0] = tree.time_stamp
             time_stampDouble[0] = tree.time_stampDouble
-
+        
+        print "    Time Stamp Memory",  memory_usage_resource(), memory_usage_psutil()
         # calculate time since previous event
         if prev_time_stamp > 0:
             time_since_last[0] = time_stampDouble[0] - prev_time_stamp
@@ -818,6 +842,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 PdgCode[i_primary] = tree.PdgCode[i_primary]
                 KineticEnergy[i_primary] = tree.KineticEnergy[i_primary]
 
+
+        print "    Initialize Memory", memory_usage_resource(), memory_usage_psutil()
         sum_wfm = None
         for i in xrange(n_channels_in_event):
 
@@ -830,7 +856,6 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 wfm = [wfmp for wfmp in tree.ChannelWaveform[i]]
                 channel[i] = i
                 wfm_max_time[i] = np.argmax(wfm)
-
             elif isNGM:
                 if n_channels_in_this_event > 0: # For NGM, each wfm is its own tree entry
                     i_entry += 1
@@ -883,6 +908,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                     wfm = tree.wfm8
                 wfm_max_time[i] = tree.wfm_max_time[i]
 
+            print "    WF Got Memory", memory_usage_resource(), memory_usage_psutil()
+
             wfm_length[i] = len(wfm)
 
             # add noise to MC
@@ -898,11 +925,13 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
             exo_wfm = EXODoubleWaveform(array('d',wfm), wfm_length[i])
 
+            print "    Convert EXOWF Memory", memory_usage_resource(), memory_usage_psutil()
+
             if do_debug:
                 # a copy of the un-transformed wfm, for debugging
                 copy_wfm = EXODoubleWaveform(exo_wfm)
 
-            # use wfmProcessing to get most wfm parameters
+            #use wfmProcessing to get most wfm parameters
             (
                 baseline_mean[i], 
                 baseline_rms[i], 
@@ -917,9 +946,6 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 calibrated_wfm,
                 wfm_max[i],
                 wfm_min[i],
-                decay_fit[i],
-                decay_error[i],
-                decay_chi2[i]
             ) = wfmProcessing.get_wfmparams(
                 exo_wfm=exo_wfm, 
                 wfm_length=wfm_length[i], 
@@ -929,7 +955,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 decay_time=decay_time[i], 
                 is_pmtchannel=channel[i]==pmt_channel,
             )
-            
+            print "    WF Parameters Memory", memory_usage_resource(), memory_usage_psutil()
             
             if channel[i] == pmt_channel:
                 lightEnergy[0] = energy[i]
@@ -968,7 +994,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 skip_short_risetimes,
             )
 
-
+            print "    Sum Active Memory", memory_usage_resource(), memory_usage_psutil() 
             # pause & draw
             #if not gROOT.IsBatch() and channel[i] == 4:
             #if not gROOT.IsBatch() and smoothed_max[i] > 60 and channel[i] != pmt_channel:
@@ -1010,11 +1036,11 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 if (val == 'q' or val == 'Q'): sys.exit(1) 
                 if val == 'b': gROOT.SetBatch(True)
                 if val == 'p': canvas.Print("entry_%i_proc_wfm_%s.png" % (i_entry, basename,))
-                
             exo_wfm.IsA().Destructor(exo_wfm)      
             calibrated_wfm.IsA().Destructor(calibrated_wfm)
             # end loop over channels
-
+      
+        print "    Done Sum Memory", memory_usage_resource(), memory_usage_psutil()
 
         ##### processing sum waveform
         if sum_wfm == None:
@@ -1047,7 +1073,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             energy_sum[0] = baseline_remover.GetBaselineMean()
             energy_rms_sum[0] = baseline_remover.GetBaselineRMS()
             sum_wfm.IsA().Destructor(sum_wfm)
-
+        
         #raw_input("Press Enter...")
 
         if isNGM: # check that event contains all channels:
@@ -1061,11 +1087,10 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         i_entry += 1
         # end loop over tree entries
     
+    print "Size of tree", getsizeof(run_tree), getsizeof(out_tree)
     run_tree.Write()
 
-    print "done processing %i events in %.1e seconds" % (
-        out_tree.GetEntries(), 
-        time.time()-start_time)
+    print "done processing %i events in %.1e seconds" % (out_tree.GetEntries(), time.clock()-start_time)
     print "writing", out_filename
     out_tree.Write()
 

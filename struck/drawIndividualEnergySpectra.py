@@ -72,6 +72,7 @@ def process_files(filenames):
     print "single-channel rise-time cut:", struck_analysis_cuts.get_drift_time_cut(is_single_channel=True)
 
     for (channel, value) in enumerate(struck_analysis_parameters.charge_channels_to_use):
+        
         if not value: continue
         #if channel is not 7 and channel is not 15: continue # testing channels with poor fits
         print "---> channel %i" % channel

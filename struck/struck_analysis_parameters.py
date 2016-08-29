@@ -270,9 +270,46 @@ if is_7th_LXe:
     decay_time_values[7] = 448.86*microsecond # +/- 2.91 
     decay_time_values[9] = 1.5*microsecond 
 
+
+decay_start_time = 20 #sample 500
+decay_end_time = 32   #sample 800
+decay_tau_guess = 200 #us
+
 if is_8th_LXe: # FIXME with real values
-    for i_channel in xrange(len(channels)):
-        decay_time_values[i_channel] = 400.0
+    #decay_time_values[i_channel] = 400.0
+    decay_time_values[0] =  10000000000.000000*microsecond # Not Used
+    decay_time_values[1] =  320.360331*microsecond # +/- 0.465237
+    decay_time_values[2] =  339.897228*microsecond # +/- 0.418899
+    decay_time_values[3] =  353.919547*microsecond # +/- 0.458101
+    decay_time_values[4] =  338.589580*microsecond # +/- 0.372839
+    decay_time_values[5] =  426.998773*microsecond # +/- 0.410735
+    decay_time_values[6] =  396.597333*microsecond # +/- 0.184746
+    decay_time_values[7] =  345.851315*microsecond # +/- 0.045632
+    decay_time_values[8] =  319.276194*microsecond # +/- 0.090235
+    decay_time_values[9] =  287.563948*microsecond # +/- 0.117011
+    decay_time_values[10] =  316.431902*microsecond # +/- 0.179577
+    decay_time_values[11] =  323.614588*microsecond # +/- 0.135862
+    decay_time_values[12] =  321.055835*microsecond # +/- 0.080225
+    decay_time_values[13] =  305.575836*microsecond # +/- 0.206716
+    decay_time_values[14] =  333.068070*microsecond # +/- 0.449653
+    decay_time_values[15] =  271.529300*microsecond # +/- 0.928347
+    decay_time_values[16] =  210.630904*microsecond # +/- 0.351404
+    decay_time_values[17] =  390.493199*microsecond # +/- 0.588650
+    decay_time_values[18] =  376.382536*microsecond # +/- 0.568273
+    decay_time_values[19] =  405.903742*microsecond # +/- 0.374340
+    decay_time_values[20] =  420.609430*microsecond # +/- 0.344073
+    decay_time_values[21] =  481.202071*microsecond # +/- 0.172892
+    decay_time_values[22] =  439.828089*microsecond # +/- 0.265421
+    decay_time_values[23] =  445.449339*microsecond # +/- 0.528471
+    decay_time_values[24] =  424.413066*microsecond # +/- 0.491970
+    decay_time_values[25] =  376.175312*microsecond # +/- 0.397313
+    decay_time_values[26] =  396.422580*microsecond # +/- 0.580643
+    decay_time_values[27] =  10000000000.000000*microsecond # Not Used
+    decay_time_values[28] =  381.161856*microsecond # +/- 0.331977
+    decay_time_values[29] =  383.438277*microsecond # +/- 0.183253
+    decay_time_values[30] =  364.702498*microsecond # +/- 0.406951
+    decay_time_values[31] =  1.5*microsecond # PMT
+
 
 
 # charge calbration from these files for 5th LXe:
@@ -462,7 +499,41 @@ if is_7th_LXe:
 
 if is_8th_LXe: # FIXME with real values
     for i_channel in xrange(len(channels)):
-        rms_keV[i_channel] = 20.0
+        # Fits are in /home/teststand/2016_08_15_8th_LXe_overnight/tier3_llnl/RMSNoise.pdf
+        rms_keV[0] = 0.000000 # Not Used
+        rms_keV[1] = 21.884211  # +/- 0.000404
+        rms_keV[2] = 22.046994  # +/- 0.000402
+        rms_keV[3] = 22.851264  # +/- 0.000434
+        rms_keV[4] = 24.093610  # +/- 0.000459
+        rms_keV[5] = 18.453813  # +/- 0.000359
+        rms_keV[6] = 18.597299  # +/- 0.000348
+        rms_keV[7] = 18.139466  # +/- 0.000391
+        rms_keV[8] = 23.391371  # +/- 0.000451
+        rms_keV[9] = 22.090947  # +/- 0.000418
+        rms_keV[10] = 22.909268  # +/- 0.000418
+        rms_keV[11] = 27.065265  # +/- 0.000520
+        rms_keV[12] = 27.555379  # +/- 0.000540
+        rms_keV[13] = 26.697423  # +/- 0.000513
+        rms_keV[14] = 27.013082  # +/- 0.000510
+        rms_keV[15] = 23.729536  # +/- 0.000731
+        rms_keV[16] = 55.623759  # +/- 0.001411
+        rms_keV[17] = 22.557860  # +/- 0.000409
+        rms_keV[18] = 22.090909  # +/- 0.000411
+        rms_keV[19] = 20.764772  # +/- 0.000388
+        rms_keV[20] = 18.041777  # +/- 0.000346
+        rms_keV[21] = 18.708775  # +/- 0.000365
+        rms_keV[22] = 18.779505  # +/- 0.000366
+        rms_keV[23] = 17.235608  # +/- 0.000354
+        rms_keV[24] = 20.251229  # +/- 0.000369
+        rms_keV[25] = 21.805247  # +/- 0.000394
+        rms_keV[26] = 24.312676  # +/- 0.000443
+        rms_keV[27] = 0.000000 # Not Used
+        rms_keV[28] = 27.744116  # +/- 0.000555
+        rms_keV[29] = 26.978450  # +/- 0.000536
+        rms_keV[30] = 31.734798  # +/- 0.000780
+        rms_keV[31] = 0.000000 # PMT
+
+
 
 avg_rms_keV = sum(rms_keV.values())/len(rms_keV)
 
