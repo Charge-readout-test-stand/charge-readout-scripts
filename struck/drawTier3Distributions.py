@@ -53,8 +53,8 @@ def process_files(filenames):
     # options
 
     # choose one:
-    do_draw_energy = 1
-    do_draw_drift_times = 0
+    do_draw_energy = 0
+    do_draw_drift_times = 1
     do_draw_rms = 0
     do_draw_rms_keV = 0
     do_draw_rms_mV = 0
@@ -100,7 +100,7 @@ def process_files(filenames):
         bin_width = 0.04
         xUnits = "#mus"
         xtitle = "Drift time"
-        selections.append("energy1_pz>700")
+        selections.append("energy1>200")
         do_draw_sum=True
 
     elif do_draw_rms_keV:
@@ -208,7 +208,6 @@ def process_files(filenames):
     frame_hist = ROOT.TH1D("frame_hist","",n_bins,min_bin,max_bin)
     frame_hist.SetLineWidth(2)
     frame_hist.SetMinimum(1.0)
-    #tree.Draw("")
     selection = " && ".join(selections)
 
     # setup hists:
@@ -280,9 +279,15 @@ def process_files(filenames):
                 print "selection:", selection
                 print "sum draw_command:", draw_command
                 print "sum selection:", selection
-                print "%i entries in sum hist" % tree.Draw("%s >>+ frame_hist" % draw_command, selection, "goff")
+                print "%i entries in sum hist" % tree.Draw("%s >>+ frame_hist" % draw_command, selection)
             setup_hist(frame_hist, ROOT.kBlack, xtitle, xUnits)
 
+            canvas.SetLogy(0)
+            canvas.Update()
+            canvas.Print("%s_lin_sum.pdf" % basename)
+            canvas.SetLogy(1)
+            canvas.Update()
+            canvas.Print("%s_log_sum.pdf" % basename)
 
         y_max = 0
 
@@ -308,7 +313,17 @@ def process_files(filenames):
             ]
             selection = " && ".join(selections + extra_selections)
 
-            n_entries = tree.Draw(draw_cmd, selection, "goff")
+            n_entries = tree.Draw(draw_cmd, selection)
+
+            title = "ch %i: %s {%s}" % (channel, channel_map[channel], selection)
+            hist.SetTitle(title)
+            canvas.SetLogy(0)
+            canvas.Update()
+            canvas.Print("%s_lin_ch%i.pdf" % (basename, channel))
+            canvas.SetLogy(1)
+            canvas.Update()
+            canvas.Print("%s_log_ch%i.pdf" % (basename, channel))
+            hist.SetTitle("")
 
             hist_mean = hist.GetMean()
             hist_rms = hist.GetRMS()
