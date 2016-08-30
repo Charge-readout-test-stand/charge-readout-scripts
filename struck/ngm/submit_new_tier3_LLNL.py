@@ -64,6 +64,7 @@ def process_files(filenames):
             #    print output[1]
             ## this still leaks memory
             ##generateTier3Files.process_file(filename) # do tier1 conversion
+    print "====> %i jobs submitted" % n_submitted
             
 
 if __name__ == "__main__":
