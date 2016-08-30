@@ -184,7 +184,7 @@ def get_wfmparams(
     decay_fit = -999.0
     decay_chi2 = -999.0
     decay_error = -999.0
-    if energy1/energy_rms1 > 10.0:
+    if energy_rms1 > 0.0 and energy1/energy_rms1 > 10.0:
         decay_fitter = EXODecayTimeFit()
         decay_fitter.SetStartSample(struck_analysis_parameters.decay_start_time)
         decay_fitter.SetEndSample(struck_analysis_parameters.decay_end_time)
