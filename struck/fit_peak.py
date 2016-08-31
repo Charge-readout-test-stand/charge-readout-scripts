@@ -62,7 +62,8 @@ def fit_channel(
     # defaults for 570-keV
     bin_width = 15
     #line_energy = 620
-    sigma_guess = struck_analysis_parameters.rms_keV[channel]
+    #sigma_guess = 40
+    sigma_guess = (struck_analysis_parameters.rms_keV[channel]**2 + struck_analysis_parameters.resolution_guess)**0.5
 
     # gaus + exponential
     if do_use_exp:

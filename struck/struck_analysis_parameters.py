@@ -386,7 +386,7 @@ if is_8th_LXe: # FIXME with real values
     calibration_values[29] = 1.074286 # +/- 0.004627
     calibration_values[30] = 2.146018 # +/- 0.009083
 
-
+resolution_guess = 0.06*570.0 #Instrinsic Charge Resolution at the 570 guess for fitting peak
 
 # PMT calibration is from PMT-triggered data
 # EMI 9531QB, 1200V PMT bias, 1700V cathode bias

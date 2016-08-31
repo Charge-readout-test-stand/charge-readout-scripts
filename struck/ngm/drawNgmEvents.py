@@ -23,23 +23,34 @@ ROOT.gStyle.SetOptStat(0)
 ROOT.gStyle.SetPalette(1)        
 ROOT.gStyle.SetTitleStyle(0)     
 ROOT.gStyle.SetTitleBorderSize(0)       
+print "title align:", ROOT.gStyle.GetTitleAlign() 
+ROOT.gStyle.SetTitleX(.5)
+# default: 13
+ROOT.gStyle.SetTitleAlign(23) 
 
 # set up a canvas
 canvas = ROOT.TCanvas("canvas","", 1000, 800)
 canvas.SetGrid(1,1)
-canvas.SetLeftMargin(0.15)
+canvas.SetLeftMargin(0.12)
 canvas.SetTopMargin(0.15)
 canvas.SetBottomMargin(0.12)
+
+# for RHS legend:
+canvas.SetTopMargin(0.05)
+canvas.SetBottomMargin(0.1)
+canvas.SetRightMargin(0.12)
+
+ROOT.gStyle.SetTitleFontSize(0.04)
 
 
 def process_file(filename=None, n_plots_total=0):
 
     # options ------------------------------------------
-    threshold = 0 # keV
+    threshold = 1250 # keV
     #threshold = 570 # keV, for generating multi-page PDF
     #threshold = 50 # ok for unshaped, unamplified data
 
-    units_to_use = 1 # 0=keV, 1=ADC units, 2=mV
+    units_to_use = 0 # 0=keV, 1=ADC units, 2=mV
 
     do_fft = False
     do_fit = False #fit sine to sum wfm
@@ -55,13 +66,14 @@ def process_file(filename=None, n_plots_total=0):
 
 
     # y axis limits:
-    y_min = -200 # keV
+    y_min = -250 # keV
     if units_to_use == 1:
         y_min = -50 # ADC units
     elif units_to_use == 2:
         y_min = -5 # mV
 
-    y_max = 31000 # keV
+    y_max = 31500 # keV
+    y_max = 31*500+250 # keV
     if units_to_use == 1:
         y_max = 200 # ADC units
     elif units_to_use == 2:
@@ -85,7 +97,8 @@ def process_file(filename=None, n_plots_total=0):
     channels = []
     for (channel, value) in enumerate(charge_channels_to_use):
         #print channel, value
-        if value is not 0: channels.append(channel)
+        #if value is not 0: channels.append(channel)
+        channels.append(channel)
     print "there are %i charge channels" % len(channels)
     channels.append(pmt_channel)
     n_channels = len(channels)
@@ -124,7 +137,8 @@ def process_file(filename=None, n_plots_total=0):
     trigger_time = card0.pretriggerdelay_block[0]/sampling_freq_Hz*1e6
     print "trigger time: [microseconds]", trigger_time
 
-    frame_hist = ROOT.TH1D("hist", "", int(tree.HitTree.GetNSamples()*33.0/32.0), 0, trace_length_us+1)
+    #frame_hist = ROOT.TH1D("hist", "", int(tree.HitTree.GetNSamples()*33.0/32.0), 0, trace_length_us+1)
+    frame_hist = ROOT.TH1D("hist", "", int(tree.HitTree.GetNSamples()*33.0/32.0), 0, 25.0)
     frame_hist.SetXTitle("Time [#mus]")
     sum_offset = 400
     frame_hist.SetYTitle("Energy (with arbitrary offsets) [keV]")
@@ -153,8 +167,15 @@ def process_file(filename=None, n_plots_total=0):
     pave_text2.SetFillStyle(0)
     pave_text2.SetBorderSize(0)
 
-    legend = ROOT.TLegend(0.15, 0.86, 0.9, 0.99)
-    legend.SetNColumns(7)
+    #legend = ROOT.TLegend(0.15, 0.86, 0.9, 0.99)
+    legend = ROOT.TLegend(
+        1.005 - canvas.GetRightMargin(), 
+        canvas.GetBottomMargin(), 
+        0.99, 
+        1.0-canvas.GetTopMargin()
+    )
+    #legend.SetNColumns(7)
+    #legend.SetBorderSize(0)
 
     # set up some placeholder hists for the legend
     hists = []
@@ -200,7 +221,7 @@ def process_file(filename=None, n_plots_total=0):
 
         # loop over all channels in the event:
         sum_energy = 0.0
-        for i in xrange(len(channels)):
+        for i in xrange(32):
 
             tree.GetEntry(i_entry)
             i_entry += 1
@@ -226,8 +247,8 @@ def process_file(filename=None, n_plots_total=0):
             elif units_to_use == 0 and channel == pmt_channel: # keV
                 # for digitizer testing, using a typical chanrge-channel energy
                 # conversion, even for PMT channel!!! FIXME
-                #multiplier = calibration_values[0]
-                print "*** WARNING -- setting pmt calibration to calibration_values[0] for digitizer tests!!"
+                multiplier = calibration_values[0]/20.0
+                print "*** WARNING -- setting pmt calibration to calibration_values[0]/10 for digitizer tests!!"
 
 
             if False: # print debug output
@@ -257,7 +278,7 @@ def process_file(filename=None, n_plots_total=0):
                 
 
             # add an offset so the channels are draw at different levels
-            offset = channel*1000
+            offset = channel*500
 
             graph.SetLineColor(color)
             fcn_string = "(y - %s)*%s + %s" % ( baseline, multiplier, offset)
@@ -296,6 +317,8 @@ def process_file(filename=None, n_plots_total=0):
             ) 
 
             # end loop over channels
+
+        if sum_energy < threshold: continue
 
         # create sum graphs; add offsets & set x-coords
         sum_graph = ROOT.TGraphErrors()
@@ -352,7 +375,7 @@ def process_file(filename=None, n_plots_total=0):
         pave_text.Clear()
         pave_text.AddText("page %i, event %i" % (n_plots+1, i_entry/32))
         pave_text.AddText("%s" % basename)
-        pave_text.Draw()
+        #pave_text.Draw()
 
         pave_text2.Clear()
         pave_text2.AddText("#SigmaE_{C} = %i" % chargeEnergy)
@@ -363,14 +386,18 @@ def process_file(filename=None, n_plots_total=0):
 
         frame_hist.SetMinimum(y_min)
         frame_hist.SetMaximum(y_max)
+        frame_hist.SetTitle("Sum Ionization Energy: %.1f keV" % sum_energy)
+        frame_hist.SetTitleSize(0.2, "t")
 
-        for i in xrange(len(channels)):
-            legend.AddEntry( hists[i], legend_entries[i], "f")
+        for i in xrange(32):
+            index = 31 - i # fill from top down
+            if legend_entries[index] != "":
+                legend.AddEntry( hists[index], legend_entries[index], "f")
 
         #legend.AddEntry(sum_graph, "sum %.1f" % rms_noise,"l")
-        legend.AddEntry(sum_graph, "sum %.1f" % sum_energy,"l")
-        legend.AddEntry(sum_graph0, "Y sum slot 0","l")
-        legend.AddEntry(sum_graph1, "X sum slot 1","l")
+        #legend.AddEntry(sum_graph, "sum %.1f" % sum_energy,"p")
+        #legend.AddEntry(sum_graph0, "Y sum slot 0","l")
+        #legend.AddEntry(sum_graph1, "X sum slot 1","l")
 
         # line to show trigger time
         line = ROOT.TLine(trigger_time, y_min, trigger_time,y_max)
@@ -384,6 +411,7 @@ def process_file(filename=None, n_plots_total=0):
         line1.Draw()
 
         legend.Draw()
+        frame_hist.SetTitleSize(0.02, "t")
         canvas.Update()
         n_plots += 1
         print "--> %i of %i plots so far" % (n_plots, n_plots_total)
