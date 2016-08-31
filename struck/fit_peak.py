@@ -26,6 +26,13 @@ ROOT.gROOT.SetBatch(True) # run in batch mode
 import struck_analysis_parameters
 import struck_analysis_cuts
 
+# set ROOT style:
+ROOT.gROOT.SetStyle("Plain")     
+ROOT.gStyle.SetOptStat(0)        
+ROOT.gStyle.SetPalette(1)        
+ROOT.gStyle.SetTitleStyle(0)     
+ROOT.gStyle.SetTitleBorderSize(0)       
+
 
 def fit_channel(
     tree, 
@@ -575,8 +582,8 @@ if __name__ == "__main__":
     #selections.append([dc])
     selections.append([dc])
 
-    #channel_selection = struck_analysis_cuts.get_drift_time_cut(is_single_channel=True, drift_time_high=drift_time_high)
-    channel_selection = None
+    channel_selection = struck_analysis_cuts.get_drift_time_cut(is_single_channel=True, drift_time_high=drift_time_high)
+    #channel_selection = None
 
     # loop over all selections
     for i,selection in enumerate(selections):

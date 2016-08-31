@@ -35,7 +35,12 @@ def main(python_script, filenames, options="", verbose=True):
         print 'python_script:', python_script
 
 
-    for filename in filenames:
+    # per 
+
+    print "===> submitting up to 200 of %i files" % len(filenames)
+
+
+    for filename in filenames[:200]:
 
         if verbose:
             print "--> processing:", filename
