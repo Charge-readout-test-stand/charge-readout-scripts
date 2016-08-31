@@ -85,6 +85,11 @@ def fit_channel(
         # http://radware.phy.ornl.gov/gf3/gf3.html#Fig.2.
         fit_formula += " + [6]*TMath::Erfc((x-[1])/sqrt(2)/[2])"
             
+    if channel != None:
+        plot_name = "fit_ch%i_%s" % (channel, basename)
+    else:
+        plot_name = "fit_all_%s" % basename
+
 
     n_bins = int((max_bin-min_bin)/bin_width)
 
@@ -137,9 +142,13 @@ def fit_channel(
     resid_hist.SetMarkerStyle(8)
     resid_hist.SetMarkerSize(0.8)
 
-    draw_cmd = "%s*%s/calibration >> fit_hist" % (
+    #draw_cmd = "%s*%s/calibration >> fit_hist" % (
+    #    energy_var,
+    #    struck_analysis_parameters.calibration_values[channel], 
+    #)
+
+    draw_cmd = "%s >> fit_hist" % (
         energy_var,
-        struck_analysis_parameters.calibration_values[channel], 
     )
 
     print "draw command:", draw_cmd
@@ -257,6 +266,7 @@ def fit_channel(
         leg.SetFillColor(0)
         leg.Draw()
         canvas.Update()
+        canvas.Print("%s_pre_lin.pdf" % plot_name)
 
 
         if not ROOT.gROOT.IsBatch():
@@ -393,11 +403,6 @@ def fit_channel(
     resid_hist.Draw("")
     resid_graph.Draw("p")
     pad2.SetGrid(1,1)
-
-    if channel != None:
-        plot_name = "fit_ch%i_%s" % (channel, basename)
-    else:
-        plot_name = "fit_all_%s" % basename
 
     # log scale
     #pad1.SetLogy(1)
