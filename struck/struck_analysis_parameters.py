@@ -352,39 +352,41 @@ if is_8th_LXe: # FIXME with real values
     for i_channel in xrange(len(channels)):
         calibration_values[i_channel] = 2.5 # initial guess
 
-    # values from fit_peak.py on  entire overnight data set, no rise time cuts, 22 Aug 2016
+    # can 7 (channels 4, 5, 6, 7 = Y14, Y15, Y16, Y17) is old preamps
+    # can 2 (channels 20, 21, 22, 23 = X16, X17, X18, X19) is old preamps
+    # calibration values from fit_peak.py 
+    # on entire overnight data set, with rise time cuts, 31 Aug 2016
+    # from new_calib_570_overnight8thLXe_v22016_08_31_15_40_48_.txt
 
-    calibration_values[1] = 1.042325 # +/- 0.005438
-    calibration_values[2] = 1.006970 # +/- 0.005695
-    calibration_values[3] = 1.087762 # +/- 0.004540
-
-    # channels 4, 5, 6, 7 are old preamps
-    calibration_values[4] = 4.339931 # +/- 0.016867
-    calibration_values[5] = 2.096126 # +/- 0.006621
-    calibration_values[6] = 1.980758 # +/- 0.004600
-    calibration_values[7] = 2.094804 # +/- 0.005325
-    calibration_values[8] = 1.059041 # +/- 0.002523
-    calibration_values[9] = 1.018659 # +/- 0.002737
-    calibration_values[10] = 1.042217 # +/- 0.003316
-    calibration_values[11] = 1.063546 # +/- 0.003257
-    calibration_values[12] = 1.137803 # +/- 0.003278
-    calibration_values[13] = 1.086306 # +/- 0.005576
-    calibration_values[14] = 1.113041 # +/- 0.007296
-    calibration_values[15] = 1.030522 # +/- 0.010307
-    calibration_values[16] = 1.292259 # +/- 0.118818
-    calibration_values[17] = 1.059656 # +/- 0.004708
-    calibration_values[18] = 1.031070 # +/- 0.003737
-    calibration_values[19] = 1.046553 # +/- 0.003188
-    calibration_values[20] = 1.991732 # +/- 0.004795
-    calibration_values[21] = 2.089875 # +/- 0.006012
-    calibration_values[22] = 2.078199 # +/- 0.004894
-    calibration_values[23] = 2.243561 # +/- 0.006557
-    calibration_values[24] = 0.994050 # +/- 0.003728
-    calibration_values[25] = 1.036946 # +/- 0.003930
-    calibration_values[26] = 1.082139 # +/- 0.004585
-    calibration_values[28] = 1.141378 # +/- 0.003802
-    calibration_values[29] = 1.074286 # +/- 0.004627
-    calibration_values[30] = 2.146018 # +/- 0.009083
+    calibration_values[1] = 0.988282 # +/- 0.010689
+    calibration_values[2] = 0.934251 # +/- 0.008747
+    calibration_values[3] = 1.029508 # +/- 0.007743
+    calibration_values[4] = 4.115042 # +/- 0.024005
+    calibration_values[5] = 2.000537 # +/- 0.010008
+    calibration_values[6] = 1.898302 # +/- 0.005793
+    calibration_values[7] = 2.006565 # +/- 0.006655
+    calibration_values[8] = 1.003114 # +/- 0.003175
+    calibration_values[9] = 0.959238 # +/- 0.003735
+    calibration_values[10] = 0.987396 # +/- 0.005569
+    calibration_values[11] = 0.993208 # +/- 0.003732
+    calibration_values[12] = 1.064447 # +/- 0.003568
+    calibration_values[13] = 0.999448 # +/- 0.006207
+    calibration_values[14] = 1.047485 # +/- 0.011405
+    calibration_values[15] = 0.936932 # +/- 0.017607
+    calibration_values[16] = 1.063177 # +/- 0.011334
+    calibration_values[17] = 0.999421 # +/- 0.009077
+    calibration_values[18] = 0.981359 # +/- 0.004873
+    calibration_values[19] = 0.998568 # +/- 0.004620
+    calibration_values[20] = 1.909665 # +/- 0.005864
+    calibration_values[21] = 2.011594 # +/- 0.008318
+    calibration_values[22] = 1.993124 # +/- 0.006252
+    calibration_values[23] = 2.153462 # +/- 0.009576
+    calibration_values[24] = 0.937444 # +/- 0.006026
+    calibration_values[25] = 0.985128 # +/- 0.006098
+    calibration_values[26] = 1.029753 # +/- 0.008611
+    calibration_values[28] = 1.069116 # +/- 0.004836
+    calibration_values[29] = 1.005360 # +/- 0.004647
+    calibration_values[30] = 1.991535 # +/- 0.009357
 
 resolution_guess = 0.06*570.0 #Instrinsic Charge Resolution at the 570 guess for fitting peak
 
