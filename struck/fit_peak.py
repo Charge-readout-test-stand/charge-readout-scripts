@@ -601,7 +601,7 @@ if __name__ == "__main__":
         #all_energy_var = struck_analysis_cuts.get_few_channels_cmd(energy_var="energy1")
         all_energy_var = None # skipp fit to all channels
 
-        process_file(sys.argv[1], False, all_energy_var, selection, channel_selection, do_use_step=False, energy_var="energy1")
+        process_file(sys.argv[1], False, all_energy_var, selection, channel_selection, do_use_step=False, energy_var="energy1_pz")
         #process_file(sys.argv[1], True, all_energy_var, selection, channel_selection)
 
         # cuts need more work to be used with this "few channels" draw command 
