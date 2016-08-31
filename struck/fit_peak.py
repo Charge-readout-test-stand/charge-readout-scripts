@@ -63,7 +63,7 @@ def fit_channel(
     bin_width = 15
     #line_energy = 620
     #sigma_guess = 40
-    sigma_guess = (struck_analysis_parameters.rms_keV[channel]**2 + struck_analysis_parameters.resolution_guess)**0.5
+    sigma_guess = ((struck_analysis_parameters.rms_keV[channel]*math.sqrt(2.0/n_baseline_samples))**2 + struck_analysis_parameters.resolution_guess)**0.5
 
     # gaus + exponential
     if do_use_exp:
@@ -190,6 +190,7 @@ def fit_channel(
     gaus_integral_guess = gaus_height_guess*math.sqrt(2*math.pi)*sigma_guess
     print "\tgaus_height_guess:", gaus_height_guess
     print "\tgaus_integral_guess:", gaus_integral_guess
+    print "\tsigma_guess:", sigma_guess
 
     if do_use_exp:
         testfit.SetParameters(
