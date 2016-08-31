@@ -1,12 +1,18 @@
+import os
 import ROOT
 import struck_analysis_parameters
 
 def getRMS():
 
+    filename = "/home/teststand/2016_08_15_8th_LXe_overnight/tier3_added/overnight8thLXe_v2.root"
     tree = ROOT.TChain("tree")
-    tree.Add("/home/teststand/2016_08_15_8th_LXe_overnight/tier3_llnl/overnight8thLXe.root")
+    tree.Add(filename)
 
-    plot_name = "/home/teststand/2016_08_15_8th_LXe_overnight/tier3_llnl/RMSNoise.pdf"
+    basename = os.path.splitext(os.path.basename(filename))[0]
+    print "basename:", basename
+
+
+    plot_name = "/home/teststand/2016_08_15_8th_LXe_overnight/tier3_added/RMSNoise_%s.pdf" % basename
     
     canvas = ROOT.TCanvas("canvas")
     canvas.SetTopMargin(0.15)
@@ -67,7 +73,7 @@ def getRMS():
         log.write(log_out)
 
         label = struck_analysis_parameters.channel_map[channel]
-        title = "ch %i: %s | %.2e counts | %s | #tau = %f #pm %f" % (channel, label, n_drawn, selection, mean, mean_error)
+        title = "ch %i: %s | %.2e counts | RMS = %f #pm %f" % (channel, label, n_drawn, mean, mean_error)
         hist.SetTitle(title)
 
         canvas.SetLogy(0)
