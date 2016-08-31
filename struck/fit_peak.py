@@ -63,7 +63,10 @@ def fit_channel(
     bin_width = 15
     #line_energy = 620
     #sigma_guess = 40
-    sigma_guess = ((struck_analysis_parameters.rms_keV[channel]*math.sqrt(2.0/n_baseline_samples))**2 + struck_analysis_parameters.resolution_guess**2)**0.5
+    sigma_guess = (
+        (struck_analysis_parameters.rms_keV[channel]*math.sqrt(2.0/struck_analysis_parameters.n_baseline_samples))**2 + \
+        struck_analysis_parameters.resolution_guess**2
+    )**0.5
 
     # gaus + exponential
     if do_use_exp:
@@ -188,14 +191,19 @@ def fit_channel(
     print "\tbackground height under peak:", bkg_height
     gaus_height_guess = hist.GetBinContent(hist.FindBin(line_energy)) - bkg_height
     gaus_integral_guess = gaus_height_guess*math.sqrt(2*math.pi)*sigma_guess
+    if gaus_integral_guess < 0:
+        print "\t gaus_integral_guess was less than 0:", gaus_integral_guess
+        gaus_integral_guess = 300.0
     print "\tgaus_height_guess:", gaus_height_guess
     print "\tgaus_integral_guess:", gaus_integral_guess
     print "\tsigma_guess:", sigma_guess
+    centroid_guess = line_energy # + 30.0
+    print "\tcentroid_guess:", centroid_guess
 
     if do_use_exp:
         testfit.SetParameters(
             gaus_integral_guess,   # peak counts
-            line_energy,    # peak centroid
+            centroid_guess,    # peak centroid
             sigma_guess,     # peak resolution
             exp_height_guess,    # exp decay height at zero energy
             decay_const_guess,   # exp decay constant
@@ -204,7 +212,7 @@ def fit_channel(
     else:
         testfit.SetParameters(
             gaus_integral_guess,   # peak counts
-            line_energy,    # peak centroid
+            centroid_guess,    # peak centroid
             sigma_guess,     # peak resolution
             const_guess,    # a0
             slope_guess,   # a1
@@ -257,7 +265,14 @@ def fit_channel(
         leg = ROOT.TLegend(0.49, 0.7, 0.99, 0.9)
         leg.AddEntry(hist, "Data")
         leg.AddEntry(testfit, "Total Fit fcn before fit","l")
-        leg.AddEntry(bestfit_gaus, "Gaus Peak", "l")
+        leg.AddEntry(bestfit_gaus, 
+            "Gaus Peak: #sigma=%.1f, centroid = %.1f" % (
+                testfit.GetParameter(2),
+                testfit.GetParameter(1),
+            ),
+            "l"
+        )
+
         if do_use_exp:
             leg.AddEntry(bestfit_exp,  "Exp + const", "l")
         else:
@@ -338,6 +353,7 @@ def fit_channel(
     sigma = testfit.GetParameter(2) # *calibration_ratio
     sigma_err = testfit.GetParError(2) # *calibration_ratio
     n_peak_counts = testfit.GetParameter(0)/bin_width
+    n_peak_counts_err = testfit.GetParError(0)/bin_width
 
     if do_use_exp:
         bestfit_exp = ROOT.TF1("bestfite","[0]*TMath::Exp(-[1]*x) + [2]", fit_start_energy, fit_stop_energy)
@@ -389,7 +405,7 @@ def fit_channel(
     leg.AddEntry(hist, "Data")
     leg.AddEntry(testfit, "Total Fit: #chi^{2}/DOF = %.1f/%i, P-val = %.1E" % (chi2, ndf, prob),"l")
     leg.AddEntry(bestfit_gaus, "Gaus Peak: #sigma = %.1f #pm %.1f keV, %.1E #pm %.1E cts" % ( 
-        sigma, sigma_err, n_peak_counts, testfit.GetParError(0)), "l")
+        sigma, sigma_err, n_peak_counts, n_peak_counts_err), "l")
     leg.AddEntry(bestfit_gaus, "centroid = %.1f #pm %.1f keV | status=%i" % (centroid, centroid_err, fit_status), "")
     leg.AddEntry(bestfit_exp,  "Exp + const", "l")
     if do_use_step: 
@@ -441,7 +457,7 @@ def fit_channel(
     result["channel"] = channel
     result["calibration_value"] = "%.6e" % new_calibration_value
     result["peak_counts"] = "%.2f" % n_peak_counts
-    result["peak_counts_err"] = "%.2f" % (testfit.GetParError(0)/bin_width)
+    result["peak_counts_err"] = "%.2f" % n_peak_counts_err
     result["integral_counts"] = hist.Integral(hist.FindBin(fit_start_energy), hist.FindBin(fit_stop_energy))
     result["centroid"] = "%.2f" % centroid
     result["centroid_err"] = "%.2f" % centroid_err
