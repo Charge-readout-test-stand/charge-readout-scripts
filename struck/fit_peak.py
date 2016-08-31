@@ -265,6 +265,7 @@ def fit_channel(
             leg.AddEntry(bestfit_step, "Erfc step: height = %.1E #pm %.1E" % (testfit.GetParameter(6), testfit.GetParError(6)), "l")
         leg.SetFillColor(0)
         leg.Draw()
+        hist.SetMinimum(0)
         canvas.Update()
         canvas.Print("%s_pre_lin.pdf" % plot_name)
 
@@ -474,11 +475,15 @@ def fit_channel(
         
 
     if channel != None:
-        print "calibration_values[%i] = %.6f # +/- %.6f" % (
+        new_calibration = "calibration_values[%i] = %.6f # +/- %.6f" % (
             channel, 
             new_calibration_value,
             new_calibration_value_err,
         )
+        print new_calibration
+        new_calib_file = file("new_calib_%s.txt" % basename,"a")
+        new_calib_file.write(new_calibration + "\n")
+        new_calib_file.close()
 
 
     if not ROOT.gROOT.IsBatch():
