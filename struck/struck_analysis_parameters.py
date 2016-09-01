@@ -49,6 +49,7 @@ sampling_freq_Hz = 25.0e6 # digitizer sampling frequency, Hz
 #FIXME--will be saved in trees so no longer needed
 
 charge_channels_to_use = [0]*16
+single_strip_channels = [0]*32
 if is_8th_LXe:
     charge_channels_to_use = [0]*32
 
@@ -123,43 +124,64 @@ if is_7th_LXe:
     channel_map[6] = "Y18"
     channel_map[7] = "Y19"
 if is_8th_LXe: # FIXME with real values for 8th LXe
-    for i_channel in xrange(n_chargechannels):
 
-        # S/N 97, slot 0, Y channels
-        channel_map[0] = "Y1-10"
-        channel_map[1] = "Y11"
-        channel_map[2] = "Y12"
-        channel_map[3] = "Y13"
-        channel_map[4] = "Y14"
-        channel_map[5] = "Y15"
-        channel_map[6] = "Y16"
-        channel_map[7] = "Y17"
-        channel_map[8] = "Y18"
-        channel_map[9] = "Y19"
-        channel_map[10] = "Y20"
-        channel_map[11] = "Y21/22"
-        channel_map[12] = "Y23/24"
-        channel_map[13] = "Y25/26"
-        channel_map[14] = "Y27/28"
-        channel_map[15] = "Y29/30"
+    single_strip_channels[1] = 1
+    single_strip_channels[2] = 1
+    single_strip_channels[3] = 1
+    single_strip_channels[4] = 1
+    single_strip_channels[5] = 1
+    single_strip_channels[6] = 1
+    single_strip_channels[7] = 1
+    single_strip_channels[8] = 1
+    single_strip_channels[9] = 1
+    single_strip_channels[10] = 1
 
-        # S/N 98, slot 1, X channels+PMT
-        channel_map[16] = "X1-12"
-        channel_map[17] = "X13"
-        channel_map[18] = "X14"
-        channel_map[19] = "X15"
-        channel_map[20] = "X16"
-        channel_map[21] = "X17"
-        channel_map[22] = "X18"
-        channel_map[23] = "X19"
-        channel_map[24] = "X20"
-        channel_map[25] = "X21"
-        channel_map[26] = "X22"
-        channel_map[27] = "X23/24"
-        channel_map[28] = "X25/26"
-        channel_map[29] = "X27/28"
-        channel_map[30] = "X29/30"
-        channel_map[pmt_channel] = "PMT"
+    single_strip_channels[17] = 1
+    single_strip_channels[18] = 1
+    single_strip_channels[19] = 1
+    single_strip_channels[20] = 1
+    single_strip_channels[21] = 1
+    single_strip_channels[22] = 1
+    single_strip_channels[23] = 1
+    single_strip_channels[24] = 1
+    single_strip_channels[25] = 1
+    single_strip_channels[26] = 1
+
+    # S/N 97, slot 0, Y channels
+    channel_map[0] = "Y1-10"
+    channel_map[1] = "Y11"
+    channel_map[2] = "Y12"
+    channel_map[3] = "Y13"
+    channel_map[4] = "Y14"
+    channel_map[5] = "Y15"
+    channel_map[6] = "Y16"
+    channel_map[7] = "Y17"
+    channel_map[8] = "Y18"
+    channel_map[9] = "Y19"
+    channel_map[10] = "Y20"
+    channel_map[11] = "Y21/22"
+    channel_map[12] = "Y23/24"
+    channel_map[13] = "Y25/26"
+    channel_map[14] = "Y27/28"
+    channel_map[15] = "Y29/30"
+
+    # S/N 98, slot 1, X channels+PMT
+    channel_map[16] = "X1-12"
+    channel_map[17] = "X13"
+    channel_map[18] = "X14"
+    channel_map[19] = "X15"
+    channel_map[20] = "X16"
+    channel_map[21] = "X17"
+    channel_map[22] = "X18"
+    channel_map[23] = "X19"
+    channel_map[24] = "X20"
+    channel_map[25] = "X21"
+    channel_map[26] = "X22"
+    channel_map[27] = "X23/24"
+    channel_map[28] = "X25/26"
+    channel_map[29] = "X27/28"
+    channel_map[30] = "X29/30"
+    channel_map[pmt_channel] = "PMT"
 
 #MC Channels index starts at 0 so X26 = 25
 #Y  Channles are offset by 30
@@ -594,15 +616,16 @@ if __name__ == "__main__":
 
     print "\npmt channel:", pmt_channel
 
-    print "\ncharge channels to use:"
     print "n_chargechannels:", n_chargechannels
-    for channel, value  in enumerate(charge_channels_to_use):
-        if value:
-            print "\t channel %i" % channel
 
-    print "\nchannel names:"
+    print "\nchannel | label | use | is single strip:"
     for (channel, name) in channel_map.items():
-        print "\t channel %i: %s" % (channel, name)
+        print "\t %2i | %-6s | %i  | %i" % (
+            channel, 
+            name,
+            charge_channels_to_use[channel],
+            single_strip_channels[channel],
+        )
 
     print "\nMC channel names:"
     for (channel, name) in mc_channel_map.items():
@@ -619,22 +642,24 @@ if __name__ == "__main__":
     print "\nRMS noise (keV):"
     for (channel, value) in rms_keV.items():
         print "\t RMS ch %i %s: %.2f | contribution to energy1_pz: %.2f" % (channel, channel_map[channel], value, value*math.sqrt(2.0/n_baseline_samples))
-    print "average RMS noise: %.2f" % avg_rms_keV
-    print "RMS contribution to chargeEnergy, chargeEnergy_rms_keV: %.4f" % chargeEnergy_rms_keV
-    print "chargeEnergy_rms_keV/570  [%]:","%.2f" % (chargeEnergy_rms_keV/570.0*100)
-    print "chargeEnergy_rms_keV/1064 [%]:","%.2f" % (chargeEnergy_rms_keV/1064.0*100)
-    print "chargeEnergy_rms_keV/1164 [%]:","%.2f" % (chargeEnergy_rms_keV/1164.0*100)
-    print "RMS contribution to energy1_pz, energy1_pz_rms_keV: %.2f" % energy1_pz_rms_keV 
-    print "digitization noise contribution to energy1_pz, energy1_pz_digitization_noise_keV %.2f" % energy1_pz_digitization_noise_keV
-    print "intrinsic resolution of 570 keV, from NEST [%]:", "%.2f" % (nest_resolution_570*100.0)
+
+    print "\nMore noise info:"
+    print "\taverage RMS noise: %.2f" % avg_rms_keV
+    print "\tRMS contribution to chargeEnergy, chargeEnergy_rms_keV: %.4f" % chargeEnergy_rms_keV
+    print "\tchargeEnergy_rms_keV/570  [%]:","%.2f" % (chargeEnergy_rms_keV/570.0*100)
+    print "\tchargeEnergy_rms_keV/1064 [%]:","%.2f" % (chargeEnergy_rms_keV/1064.0*100)
+    print "\tchargeEnergy_rms_keV/1164 [%]:","%.2f" % (chargeEnergy_rms_keV/1164.0*100)
+    print "\tRMS contribution to energy1_pz, energy1_pz_rms_keV: %.2f" % energy1_pz_rms_keV 
+    print "\tdigitization noise contribution to energy1_pz, energy1_pz_digitization_noise_keV %.2f" % energy1_pz_digitization_noise_keV
+    print "\tintrinsic resolution of 570 keV, from NEST [%]:", "%.2f" % (nest_resolution_570*100.0)
     expected_resolution_570 = math.sqrt( \
         (nest_resolution_570*570.0)**2 \
         + energy1_pz_digitization_noise_keV**2 \
         + energy1_pz_rms_keV**2 \
         + (570*0.01)**2 # 1% broadening after z cut
     )
-    print "expected resolution of energy1_pz @ 570 keV [keV]: %.2f" % expected_resolution_570
-    print "expected resolution of energy1_pz @ 570 keV [%]:","%.2f" % (expected_resolution_570/570.0*100.0)
+    print "\texpected resolution of energy1_pz @ 570 keV [keV]: %.2f" % expected_resolution_570
+    print "\texpected resolution of energy1_pz @ 570 keV [%]:","%.2f" % (expected_resolution_570/570.0*100.0)
 
     #colors = get_colors()
     #print "\ncolors:"
