@@ -6,12 +6,12 @@ Draw multiplicity plot
 import os
 import sys
 
+import ROOT
 from ROOT import gROOT
 #gROOT.SetBatch(True)
 from ROOT import TH1D
 from ROOT import TFile
 from ROOT import TCanvas
-from ROOT import TColor
 from ROOT import TLegend
 from ROOT import gStyle
 
@@ -22,27 +22,36 @@ gStyle.SetPalette(1)
 gStyle.SetTitleStyle(0)     
 gStyle.SetTitleBorderSize(0)       
 
+import struck_analysis_cuts
+import struck_analysis_parameters
 
 def process_files(filenames):
 
     hists = []
+    ch_hists = []
 
     colors = [
-        TColor.kBlue,
-        TColor.kRed,
-        TColor.kGreen+2,
-        TColor.kViolet,
+        ROOT.kBlue,
+        ROOT.kRed,
+        ROOT.kGreen+2,
+        ROOT.kViolet,
     ]
     legend = TLegend(0.1, 0.91, 0.9, 0.99)
     legend.SetNColumns(2)
+    threshold = 10
 
+    # set up a canvas
+    canvas = TCanvas("canvas","")
+    canvas.SetLogy(1)
+    canvas.SetGrid(1,1)
 
-    for filename in filenames:
+    for (i, filename) in enumerate(filenames):
         
         basename = os.path.basename(filename)
         basename = os.path.splitext(basename)[0]
+        print "processing file: ", filename
 
-        hist = TH1D("hist%i" % len(hists), basename,7, -0.5, 6.5)
+        hist = TH1D("hist%i" % len(hists), basename,32, -0.5, 31.5)
         print "hist:", hist.GetName()
         color = colors[len(hists)]
         hist.SetLineColor(color)
@@ -51,14 +60,9 @@ def process_files(filenames):
         hist.SetMarkerColor(color)
         hist.SetMarkerStyle(21)
         hist.SetMarkerSize(1.5)
-        hist.SetXTitle("Multiplicity [channels above 100 keV]")
+        hist.SetXTitle("Multiplicity [channels above %.1f keV]" % threshold)
         hists.append(hist)
 
-
-
-    for (i, filename) in enumerate(filenames):
-
-        print "processing file: ", filename
         # open the root file and grab the tree
         root_file = TFile(filename)
         tree = root_file.Get("tree")
@@ -75,38 +79,33 @@ def process_files(filenames):
             is_MC = False
         print "is_MC:", is_MC
 
-        threshold = 100
-        selection = "chargeEnergy>1000 & chargeEnergy<1200"
-        title = selection
-
-        draw_cmd = [
-            "(energy1_pz[0]>%.1f)" % threshold,
-            "(energy1_pz[1]>%.1f)" % threshold,
-            "(energy1_pz[2]>%.1f)" % threshold,
-            "(energy1_pz[3]>%.1f)" % threshold,
-            "(energy1_pz[4]>%.1f)" % threshold,
-        ]
-
+        multiplier = 1.0
         if is_MC:
-            # MC uses different channels and different energy calibration than
-            # data
+            multiplier = 1.15
 
-            multiplier = 1.15 # fix MC energy calibration
-            threshold /= multiplier
-            selection = "chargeEnergy*%s>1000 & chargeEnergy*%s<1200" % (
-                multiplier,
-                multiplier,
-            )
-            draw_cmd = [
-                "(energy1_pz[25]>%.1f)" % threshold,
-                "(energy1_pz[26]>%.1f)" % threshold,
-                "(energy1_pz[28]>%.1f)" % threshold,
-                "(energy1_pz[52]>%.1f)" % threshold,
-                "(energy1_pz[53]>%.1f)" % threshold,
-            ]
+        # draw channels hit:    
+        ch_hist = TH1D("ch_hist%i" % len(hists), basename,32, -0.5, 31.5)
+        ch_hist.SetLineColor(color)
+        ch_hist.SetLineWidth(2)
+        ch_hist.SetXTitle("Channel hit [above %.1f keV]" % threshold)
+        selection = "energy1_pz>%s" % (threshold/multiplier)
+        n_drawn = tree.Draw("channel >> %s" % ch_hist.GetName(), selection)
+        canvas.Update()
+        canvas.Print("hitChannels.pdf")
+        ch_hists.append(ch_hist)
+        raw_input("any key to continue  ")
 
 
-        draw_cmd = " + ".join(draw_cmd) + " >> %s" % hist.GetName()
+
+        selection = "chargeEnergy*%s>1000 & chargeEnergy*%s<1200" % (
+            multiplier,
+            multiplier,
+        )
+        selection = ""
+        title = selection
+        draw_cmd = struck_analysis_cuts.get_multiplicity_cmd(energy_threshold=threshold/multiplier, isMC=is_MC)
+        draw_cmd = "%s >> %s" % (draw_cmd, hist.GetName())
+
         print "draw_cmd:", draw_cmd
         print "selection", selection
 
@@ -127,11 +126,6 @@ def process_files(filenames):
         legend.AddEntry(hist, hist.GetTitle(), "p")
 
 
-    # set up a canvas
-    canvas = TCanvas("canvas","")
-    canvas.SetLogy(1)
-    canvas.SetGrid(1,1)
-
     hists[0].SetTitle("")
     hists[0].Draw()
     for hist in hists:
@@ -147,11 +141,16 @@ if __name__ == "__main__":
 
 
     # data and MC after 6th LXe
+    #filenames = [
+    #"/nfs/slac/g/exo_data4/users/alexis4/test-stand/2015_12_07_6thLXe/tier3_from_tier2/tier2to3_overnight.root",
+    #"/nfs/slac/g/exo_data4/users/mjewell/nEXO_MC/digitization/gamma_1MeV_Ralph/Tier3/all_tier3_gamma_1MeV_Ralph_dcoef0.root",
+    #"/nfs/slac/g/exo_data4/users/mjewell/nEXO_MC/digitization_NEW/Bi207_Full_Ralph/combined/all_tier3_Bi207_Full_Ralph_dcoef0.root",
+    #"/nfs/slac/g/exo_data4/users/mjewell/nEXO_MC/digitization/electron_1MeV_Ralph/Tier3/all_tier3_electron_1MeV_Ralph_dcoef0.root",
+    #]
+
+    # 8th LXe
     filenames = [
-    "/nfs/slac/g/exo_data4/users/alexis4/test-stand/2015_12_07_6thLXe/tier3_from_tier2/tier2to3_overnight.root",
-    "/nfs/slac/g/exo_data4/users/mjewell/nEXO_MC/digitization/gamma_1MeV_Ralph/Tier3/all_tier3_gamma_1MeV_Ralph_dcoef0.root",
-    "/nfs/slac/g/exo_data4/users/mjewell/nEXO_MC/digitization_NEW/Bi207_Full_Ralph/combined/all_tier3_Bi207_Full_Ralph_dcoef0.root",
-    "/nfs/slac/g/exo_data4/users/mjewell/nEXO_MC/digitization/electron_1MeV_Ralph/Tier3/all_tier3_electron_1MeV_Ralph_dcoef0.root",
+        "~/2016_08_15_8th_LXe_overnight/tier3_added/overnight8thLXe_v2.root", # ubuntu DAQ
     ]
 
     process_files(filenames)

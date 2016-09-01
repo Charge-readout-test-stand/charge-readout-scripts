@@ -618,7 +618,7 @@ if __name__ == "__main__":
 
     print "\nRMS noise (keV):"
     for (channel, value) in rms_keV.items():
-        print "\t RMS channel %i: %.2f | contribution to energy1_pz: %.2f" % (channel, value, value*math.sqrt(2.0/100))
+        print "\t RMS ch %i %s: %.2f | contribution to energy1_pz: %.2f" % (channel, channel_map[channel], value, value*math.sqrt(2.0/n_baseline_samples))
     print "average RMS noise: %.2f" % avg_rms_keV
     print "RMS contribution to chargeEnergy, chargeEnergy_rms_keV: %.4f" % chargeEnergy_rms_keV
     print "chargeEnergy_rms_keV/570  [%]:","%.2f" % (chargeEnergy_rms_keV/570.0*100)
