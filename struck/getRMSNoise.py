@@ -4,9 +4,10 @@ import struck_analysis_parameters
 def getRMS():
 
     tree = ROOT.TChain("tree")
-    tree.Add("/home/teststand/2016_08_15_8th_LXe_overnight/tier3_llnl/overnight8thLXe.root")
+    #tree.Add("/p/lscratchd/alexiss/2016_08_15_8th_LXe_overnight/tier3_added/overnight8thLXe_v2.root")
+    tree.Add("/p/lscratchd/alexiss/2016_08_15_8th_LXe_overnight/tier3/tier3_SIS3316Raw_20160816085*root")
 
-    plot_name = "/home/teststand/2016_08_15_8th_LXe_overnight/tier3_llnl/RMSNoise.pdf"
+    plot_name = "RMSNoise.pdf"
     
     canvas = ROOT.TCanvas("canvas")
     canvas.SetTopMargin(0.15)
@@ -16,12 +17,15 @@ def getRMS():
     n_bins = 500
     energy_max = 200.0
 
-    log = open('/home/teststand/2016_08_15_8th_LXe_overnight/tier3_llnl/log_RMSNoise.txt', 'w')
+    log = open('log_RMSNoise.txt', 'w')
 
     log.write("# Fits are in %s \n" % plot_name)
     
     mygaus   = ROOT.TF1("mygaus", "[0]*TMath::Exp(-0.5*((x-[1])/[2])^2)", 0, energy_max)
+    legend = ROOT.TLegend(0.1, 0.85, 0.9, 0.99)
+    legend.SetNColumns(8)
 
+    hist_list = []
     for (channel, value) in enumerate(struck_analysis_parameters.charge_channels_to_use):
         
         if not value:
@@ -50,8 +54,8 @@ def getRMS():
         n_drawn = tree.Draw(draw_cmd, selection)
         
         canvas.Update()
-        #raw_input("Pause before fit")
 
+        #raw_input("Pause before fit")
         #mygaus.SetParameter(1, hist.GetBinCenter(hist.GetMaximumBin())) #mean
         #mygaus.SetParameter(0, hist.GetMaximum()) #amplitude
         #mygaus.SetParameter(2, 40) #sigma
@@ -69,6 +73,8 @@ def getRMS():
         label = struck_analysis_parameters.channel_map[channel]
         title = "ch %i: %s | %.2e counts | %s | #tau = %f #pm %f" % (channel, label, n_drawn, selection, mean, mean_error)
         hist.SetTitle(title)
+        legend.AddEntry(hist, label, "p")
+        hist_list.append(hist)
 
         canvas.SetLogy(0)
         canvas.Update()
@@ -79,6 +85,17 @@ def getRMS():
         canvas.Update()
         canvas.Print("%s" % plot_name)
         #raw_input()
+
+    #Draw total Hist
+    hist_list[0].SetTitle("")
+    hist_list[0].Draw()
+    for hist in hist_list:
+        hist.Draw("SAME")
+    
+    legend.Draw()
+    raw_input()
+    canvas.Print("%s" % plot_name)
+
 
     canvas.Print("%s]" % plot_name) # close multi-page canvas
 
