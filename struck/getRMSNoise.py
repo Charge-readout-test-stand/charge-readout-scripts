@@ -22,11 +22,12 @@ def getRMS():
     n_bins = 500
     energy_max = 200.0
 
-    log = open('/home/teststand/2016_08_15_8th_LXe_overnight/tier3_llnl/log_RMSNoise.txt', 'w')
+    log = open('/home/teststand/2016_08_15_8th_LXe_overnight/tier3_added/log_RMSNoise.txt', 'w')
 
     log.write("# Fits are in %s \n" % plot_name)
     
     mygaus   = ROOT.TF1("mygaus", "[0]*TMath::Exp(-0.5*((x-[1])/[2])^2)", 0, energy_max)
+    calibration_values = struck_analysis_parameters.calibration_values
 
     for (channel, value) in enumerate(struck_analysis_parameters.charge_channels_to_use):
         
@@ -37,7 +38,7 @@ def getRMS():
             continue
 
         hist = ROOT.TH1D("hist_%i" % channel,"",n_bins,0, energy_max)
-        hist.SetXTitle("RMS Noise [keV]")
+        hist.SetXTitle("RMS Noise [ADC units]")
         hist.SetYTitle("Counts")
         hist.GetYaxis().SetTitleOffset(1.2)
         hist.SetLineWidth(3)
@@ -50,7 +51,15 @@ def getRMS():
         #draw_cmd = "baseline_rms*calibration >> %s" % (hist.GetName())
         #selection = "channel==%i"%channel
 
-        draw_cmd = "baseline_rms[%i]*calibration[%i] >> %s" % (channel, channel, hist.GetName())
+        # use calibration from the tier3 file:
+        #draw_cmd = "baseline_rms[%i]*calibration[%i] >> %s" % (channel, channel, hist.GetName())
+
+        # use calibration from struck_analysis_parameters:
+        #draw_cmd = "baseline_rms[%i]*%s >> %s" % (channel, calibration_values[channel], hist.GetName())
+
+        # use ADC units:
+        draw_cmd = "baseline_rms[%i] >> %s" % (channel, hist.GetName())
+
         selection = ""
 
         n_drawn = tree.Draw(draw_cmd, selection)
@@ -67,7 +76,7 @@ def getRMS():
         
         mean = hist.GetMean()
         mean_error = hist.GetMeanError()
-        log_out =  "rms_keV[%i] = %f  # +/- %f  \n" %(channel, mean, mean_error)
+        log_out =  "rms_keV[%i] = %f*calibration_values[%i]  # +/- %f  \n" %(channel, mean, channel, mean_error)
         
         print log_out
         log.write(log_out)
