@@ -265,6 +265,31 @@ def get_few_channels_cmd_rms_keV(
     draw_cmd = " + ".join(draw_cmd)
     return draw_cmd
 
+def get_few_channels_cmd_baseline_rms(
+    n_sigma=5.0,
+    energy_var="energy1_pz",
+):
+    """ A draw command for total energy, only including  events above threshold """
+    draw_cmd = []
+    for channel, value  in enumerate(struck_analysis_parameters.charge_channels_to_use): 
+        if value:
+            part = "(%s[%i]>%s*baseline_rms[%i]*calibration[%i]*%f)*%s[%i]" % (
+                energy_var,
+                channel, 
+                n_sigma,
+                channel, 
+                channel, 
+                math.sqrt(2.0/struck_analysis_parameters.n_baseline_samples),
+                energy_var,
+                channel,
+            )
+            #print part
+            draw_cmd.append(part)
+    # join each channel requirement with or
+    draw_cmd = " + ".join(draw_cmd)
+    return draw_cmd
+
+
 
 def get_fiducial_cut(energy_threshold=100):
     selection = []
