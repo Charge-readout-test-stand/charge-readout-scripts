@@ -1,13 +1,18 @@
+import os
 import ROOT
 import struck_analysis_parameters
 
 def getRMS():
 
+    filename = "/home/teststand/2016_08_15_8th_LXe_overnight/tier3_added/overnight8thLXe_v2.root"
     tree = ROOT.TChain("tree")
-    #tree.Add("/p/lscratchd/alexiss/2016_08_15_8th_LXe_overnight/tier3_added/overnight8thLXe_v2.root")
-    tree.Add("/p/lscratchd/alexiss/2016_08_15_8th_LXe_overnight/tier3/tier3_SIS3316Raw_20160816085*root")
+    tree.Add(filename)
 
-    plot_name = "RMSNoise.pdf"
+    basename = os.path.splitext(os.path.basename(filename))[0]
+    print "basename:", basename
+
+
+    plot_name = "/home/teststand/2016_08_15_8th_LXe_overnight/tier3_added/RMSNoise_%s.pdf" % basename
     
     canvas = ROOT.TCanvas("canvas")
     canvas.SetTopMargin(0.15)
@@ -24,6 +29,7 @@ def getRMS():
     mygaus   = ROOT.TF1("mygaus", "[0]*TMath::Exp(-0.5*((x-[1])/[2])^2)", 0, energy_max)
     legend = ROOT.TLegend(0.1, 0.85, 0.9, 0.99)
     legend.SetNColumns(8)
+    calibration_values = struck_analysis_parameters.calibration_values
 
     hist_list = []
     for (channel, value) in enumerate(struck_analysis_parameters.charge_channels_to_use):
@@ -35,7 +41,7 @@ def getRMS():
             continue
 
         hist = ROOT.TH1D("hist_%i" % channel,"",n_bins,0, energy_max)
-        hist.SetXTitle("RMS Noise [keV]")
+        hist.SetXTitle("RMS Noise [ADC units]")
         hist.SetYTitle("Counts")
         hist.GetYaxis().SetTitleOffset(1.2)
         hist.SetLineWidth(3)
@@ -48,7 +54,15 @@ def getRMS():
         #draw_cmd = "baseline_rms*calibration >> %s" % (hist.GetName())
         #selection = "channel==%i"%channel
 
-        draw_cmd = "baseline_rms[%i]*calibration[%i] >> %s" % (channel, channel, hist.GetName())
+        # use calibration from the tier3 file:
+        #draw_cmd = "baseline_rms[%i]*calibration[%i] >> %s" % (channel, channel, hist.GetName())
+
+        # use calibration from struck_analysis_parameters:
+        #draw_cmd = "baseline_rms[%i]*%s >> %s" % (channel, calibration_values[channel], hist.GetName())
+
+        # use ADC units:
+        draw_cmd = "baseline_rms[%i] >> %s" % (channel, hist.GetName())
+
         selection = ""
 
         n_drawn = tree.Draw(draw_cmd, selection)
@@ -65,13 +79,13 @@ def getRMS():
         
         mean = hist.GetMean()
         mean_error = hist.GetMeanError()
-        log_out =  "rms_keV[%i] = %f  # +/- %f  \n" %(channel, mean, mean_error)
+        log_out =  "rms_keV[%i] = %f*calibration_values[%i]  # +/- %f  \n" %(channel, mean, channel, mean_error)
         
         print log_out
         log.write(log_out)
 
         label = struck_analysis_parameters.channel_map[channel]
-        title = "ch %i: %s | %.2e counts | %s | #tau = %f #pm %f" % (channel, label, n_drawn, selection, mean, mean_error)
+        title = "ch %i: %s | %.2e counts | RMS = %f #pm %f" % (channel, label, n_drawn, mean, mean_error)
         hist.SetTitle(title)
         legend.AddEntry(hist, label, "p")
         hist_list.append(hist)

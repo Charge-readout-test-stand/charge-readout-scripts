@@ -62,7 +62,11 @@ def fit_channel(
     # defaults for 570-keV
     bin_width = 15
     #line_energy = 620
-    sigma_guess = struck_analysis_parameters.rms_keV[channel]
+    #sigma_guess = 40
+    sigma_guess = (
+        (struck_analysis_parameters.rms_keV[channel]*math.sqrt(2.0/struck_analysis_parameters.n_baseline_samples))**2 + \
+        struck_analysis_parameters.resolution_guess**2
+    )**0.5
 
     # gaus + exponential
     if do_use_exp:
@@ -84,6 +88,11 @@ def fit_channel(
         # http://radware.phy.ornl.gov/gf3/gf3.html#Fig.2.
         fit_formula += " + [6]*TMath::Erfc((x-[1])/sqrt(2)/[2])"
             
+    if channel != None:
+        plot_name = "fit_ch%i_%s" % (channel, basename)
+    else:
+        plot_name = "fit_all_%s" % basename
+
 
     n_bins = int((max_bin-min_bin)/bin_width)
 
@@ -136,9 +145,13 @@ def fit_channel(
     resid_hist.SetMarkerStyle(8)
     resid_hist.SetMarkerSize(0.8)
 
-    draw_cmd = "%s*%s/calibration >> fit_hist" % (
+    #draw_cmd = "%s*%s/calibration >> fit_hist" % (
+    #    energy_var,
+    #    struck_analysis_parameters.calibration_values[channel], 
+    #)
+
+    draw_cmd = "%s >> fit_hist" % (
         energy_var,
-        struck_analysis_parameters.calibration_values[channel], 
     )
 
     print "draw command:", draw_cmd
@@ -178,13 +191,19 @@ def fit_channel(
     print "\tbackground height under peak:", bkg_height
     gaus_height_guess = hist.GetBinContent(hist.FindBin(line_energy)) - bkg_height
     gaus_integral_guess = gaus_height_guess*math.sqrt(2*math.pi)*sigma_guess
+    if gaus_integral_guess < 0:
+        print "\t gaus_integral_guess was less than 0:", gaus_integral_guess
+        gaus_integral_guess = 300.0
     print "\tgaus_height_guess:", gaus_height_guess
     print "\tgaus_integral_guess:", gaus_integral_guess
+    print "\tsigma_guess:", sigma_guess
+    centroid_guess = line_energy # + 30.0
+    print "\tcentroid_guess:", centroid_guess
 
     if do_use_exp:
         testfit.SetParameters(
             gaus_integral_guess,   # peak counts
-            line_energy,    # peak centroid
+            centroid_guess,    # peak centroid
             sigma_guess,     # peak resolution
             exp_height_guess,    # exp decay height at zero energy
             decay_const_guess,   # exp decay constant
@@ -193,7 +212,7 @@ def fit_channel(
     else:
         testfit.SetParameters(
             gaus_integral_guess,   # peak counts
-            line_energy,    # peak centroid
+            centroid_guess,    # peak centroid
             sigma_guess,     # peak resolution
             const_guess,    # a0
             slope_guess,   # a1
@@ -246,7 +265,14 @@ def fit_channel(
         leg = ROOT.TLegend(0.49, 0.7, 0.99, 0.9)
         leg.AddEntry(hist, "Data")
         leg.AddEntry(testfit, "Total Fit fcn before fit","l")
-        leg.AddEntry(bestfit_gaus, "Gaus Peak", "l")
+        leg.AddEntry(bestfit_gaus, 
+            "Gaus Peak: #sigma=%.1f, centroid = %.1f" % (
+                testfit.GetParameter(2),
+                testfit.GetParameter(1),
+            ),
+            "l"
+        )
+
         if do_use_exp:
             leg.AddEntry(bestfit_exp,  "Exp + const", "l")
         else:
@@ -255,7 +281,9 @@ def fit_channel(
             leg.AddEntry(bestfit_step, "Erfc step: height = %.1E #pm %.1E" % (testfit.GetParameter(6), testfit.GetParError(6)), "l")
         leg.SetFillColor(0)
         leg.Draw()
+        hist.SetMinimum(0)
         canvas.Update()
+        canvas.Print("%s_pre_lin.pdf" % plot_name)
 
 
         if not ROOT.gROOT.IsBatch():
@@ -325,6 +353,7 @@ def fit_channel(
     sigma = testfit.GetParameter(2) # *calibration_ratio
     sigma_err = testfit.GetParError(2) # *calibration_ratio
     n_peak_counts = testfit.GetParameter(0)/bin_width
+    n_peak_counts_err = testfit.GetParError(0)/bin_width
 
     if do_use_exp:
         bestfit_exp = ROOT.TF1("bestfite","[0]*TMath::Exp(-[1]*x) + [2]", fit_start_energy, fit_stop_energy)
@@ -376,7 +405,7 @@ def fit_channel(
     leg.AddEntry(hist, "Data")
     leg.AddEntry(testfit, "Total Fit: #chi^{2}/DOF = %.1f/%i, P-val = %.1E" % (chi2, ndf, prob),"l")
     leg.AddEntry(bestfit_gaus, "Gaus Peak: #sigma = %.1f #pm %.1f keV, %.1E #pm %.1E cts" % ( 
-        sigma, sigma_err, n_peak_counts, testfit.GetParError(0)), "l")
+        sigma, sigma_err, n_peak_counts, n_peak_counts_err), "l")
     leg.AddEntry(bestfit_gaus, "centroid = %.1f #pm %.1f keV | status=%i" % (centroid, centroid_err, fit_status), "")
     leg.AddEntry(bestfit_exp,  "Exp + const", "l")
     if do_use_step: 
@@ -392,11 +421,6 @@ def fit_channel(
     resid_hist.Draw("")
     resid_graph.Draw("p")
     pad2.SetGrid(1,1)
-
-    if channel != None:
-        plot_name = "fit_ch%i_%s" % (channel, basename)
-    else:
-        plot_name = "fit_all_%s" % basename
 
     # log scale
     #pad1.SetLogy(1)
@@ -433,7 +457,7 @@ def fit_channel(
     result["channel"] = channel
     result["calibration_value"] = "%.6e" % new_calibration_value
     result["peak_counts"] = "%.2f" % n_peak_counts
-    result["peak_counts_err"] = "%.2f" % (testfit.GetParError(0)/bin_width)
+    result["peak_counts_err"] = "%.2f" % n_peak_counts_err
     result["integral_counts"] = hist.Integral(hist.FindBin(fit_start_energy), hist.FindBin(fit_stop_energy))
     result["centroid"] = "%.2f" % centroid
     result["centroid_err"] = "%.2f" % centroid_err
@@ -468,11 +492,15 @@ def fit_channel(
         
 
     if channel != None:
-        print "calibration_values[%i] = %.6f # +/- %.6f" % (
+        new_calibration = "calibration_values[%i] = %.6f # +/- %.6f" % (
             channel, 
             new_calibration_value,
             new_calibration_value_err,
         )
+        print new_calibration
+        new_calib_file = file("new_calib_%s.txt" % basename,"a")
+        new_calib_file.write(new_calibration + "\n")
+        new_calib_file.close()
 
 
     if not ROOT.gROOT.IsBatch():
@@ -601,7 +629,7 @@ if __name__ == "__main__":
         #all_energy_var = struck_analysis_cuts.get_few_channels_cmd(energy_var="energy1")
         all_energy_var = None # skipp fit to all channels
 
-        process_file(sys.argv[1], False, all_energy_var, selection, channel_selection, do_use_step=False, energy_var="energy1")
+        process_file(sys.argv[1], False, all_energy_var, selection, channel_selection, do_use_step=False, energy_var="energy1_pz")
         #process_file(sys.argv[1], True, all_energy_var, selection, channel_selection)
 
         # cuts need more work to be used with this "few channels" draw command 
