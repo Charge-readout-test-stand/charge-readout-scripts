@@ -49,7 +49,8 @@ sampling_freq_Hz = 25.0e6 # digitizer sampling frequency, Hz
 #FIXME--will be saved in trees so no longer needed
 
 charge_channels_to_use = [0]*16
-single_strip_channels = [0]*32
+one_strip_channels = [0]*32
+two_strip_channels = [0]*32
 if is_8th_LXe:
     charge_channels_to_use = [0]*32
 
@@ -125,27 +126,38 @@ if is_7th_LXe:
     channel_map[7] = "Y19"
 if is_8th_LXe: # FIXME with real values for 8th LXe
 
-    single_strip_channels[1] = 1
-    single_strip_channels[2] = 1
-    single_strip_channels[3] = 1
-    single_strip_channels[4] = 1
-    single_strip_channels[5] = 1
-    single_strip_channels[6] = 1
-    single_strip_channels[7] = 1
-    single_strip_channels[8] = 1
-    single_strip_channels[9] = 1
-    single_strip_channels[10] = 1
+    one_strip_channels[1] = 1
+    one_strip_channels[2] = 1
+    one_strip_channels[3] = 1
+    one_strip_channels[4] = 1
+    one_strip_channels[5] = 1
+    one_strip_channels[6] = 1
+    one_strip_channels[7] = 1
+    one_strip_channels[8] = 1
+    one_strip_channels[9] = 1
+    one_strip_channels[10] = 1
 
-    single_strip_channels[17] = 1
-    single_strip_channels[18] = 1
-    single_strip_channels[19] = 1
-    single_strip_channels[20] = 1
-    single_strip_channels[21] = 1
-    single_strip_channels[22] = 1
-    single_strip_channels[23] = 1
-    single_strip_channels[24] = 1
-    single_strip_channels[25] = 1
-    single_strip_channels[26] = 1
+    two_strip_channels[11] = 1
+    two_strip_channels[12] = 1
+    two_strip_channels[13] = 1
+    two_strip_channels[14] = 1
+    two_strip_channels[15] = 1
+
+    one_strip_channels[17] = 1
+    one_strip_channels[18] = 1
+    one_strip_channels[19] = 1
+    one_strip_channels[20] = 1
+    one_strip_channels[21] = 1
+    one_strip_channels[22] = 1
+    one_strip_channels[23] = 1
+    one_strip_channels[24] = 1
+    one_strip_channels[25] = 1
+    one_strip_channels[26] = 1
+
+    two_strip_channels[27] = 1
+    two_strip_channels[28] = 1
+    two_strip_channels[29] = 1
+    two_strip_channels[30] = 1
 
     # S/N 97, slot 0, Y channels
     channel_map[0] = "Y1-10"
@@ -609,6 +621,7 @@ if __name__ == "__main__":
     print "\t drift_length:", drift_length
     print "\t drift_velocity:", drift_velocity
     print "\t drift_time_threshold:", drift_time_threshold
+    print "\t max_drift_time:", max_drift_time
 
     #print "\nchannels used:"
     #for channel in channels:
@@ -618,13 +631,14 @@ if __name__ == "__main__":
 
     print "n_chargechannels:", n_chargechannels
 
-    print "\nchannel | label | use | is single strip:"
+    print "\nchannel | label | use | 1 strip | 2 strip"
     for (channel, name) in channel_map.items():
-        print "\t %2i | %-6s | %i  | %i" % (
+        print "\t %2i | %-6s | %i  | %i | %i" % (
             channel, 
             name,
             charge_channels_to_use[channel],
-            single_strip_channels[channel],
+            one_strip_channels[channel],
+            two_strip_channels[channel],
         )
 
     print "\nMC channel names:"
