@@ -54,12 +54,13 @@ def process_files(filenames):
 
     # choose one:
     do_draw_energy = 0
-    do_draw_drift_times = 1
+    do_draw_drift_times = 0
     do_draw_rms = 0
-    do_draw_rms_keV = 1
+    do_draw_rms_keV = 0
     do_draw_rms_mV = 0
     do_draw_ADC_units = 0
     do_draw_mV = 0
+    do_draw_one_strip_channels = 1
 
     #do_draw_sum = False # sum energy
     do_draw_sum = True # sum energy
@@ -74,9 +75,9 @@ def process_files(filenames):
         print "---> drawing energies... "
         #draw_command = "energy1_pz"
         draw_command = "energy1"
-        min_bin = 0
+        min_bin = 50
         max_bin = 2000
-        bin_width = 20
+        bin_width = 10
 
         xUnits = "keV"
         xtitle = "Energy"
@@ -88,6 +89,17 @@ def process_files(filenames):
         #))
         #selections.append("(rise_time_stop99-trigger_time>6.43)&&(rise_time_stop99-trigger_time<9.0)")
         #selections.append("(rise_time_stop95-trigger_time>6.43)&&(rise_time_stop95-trigger_time<9.0)")
+
+    elif do_draw_one_strip_channels:
+        print "---> drawing single-strip channel energies... "
+        draw_command = "energy1_pz"
+        min_bin = 100
+        max_bin = 2000
+        bin_width = 20
+
+        xUnits = "keV"
+        xtitle = "Energy"
+        prefix = "single_strip_ch_energy_"
         
     elif do_draw_drift_times:
         print "---> drawing drift times"
@@ -266,13 +278,22 @@ def process_files(filenames):
                 selection = " && ".join(selections)
                 print "sum selection:", selection
                 #energy_cmd = "chargeEnergy"
-                energy_cmd = struck_analysis_cuts.get_few_channels_cmd(energy_var="energy1")
+                energy_cmd = struck_analysis_cuts.get_few_channels_cmd_baseline_rms()
                 print "sum energy cmd:"
                 print energy_cmd
                 print "%i entries in sum hist" % tree.Draw(
                     "%s >>+ frame_hist" % energy_cmd, 
                     selection, 
-                    "goff"
+                    ""
+                    )
+            elif do_draw_one_strip_channels:
+                energy_cmd = struck_analysis_cuts.get_few_one_strip_channels()
+                print "sum energy cmd:"
+                print energy_cmd
+                print "%i entries in sum hist" % tree.Draw(
+                    "%s >>+ frame_hist" % energy_cmd, 
+                    "", 
+                    ""
                     )
             else:
                 selection = " && ".join(selections + [struck_analysis_cuts.get_channel_selection(isMC)])
@@ -297,6 +318,11 @@ def process_files(filenames):
             if not value:
                 continue
      
+            if do_draw_one_strip_channels:
+                if struck_analysis_parameters.one_strip_channels[channel] != 1:
+                    print "==> skipping channel %i: %s" % (channel, struck_analysis_parameters.channel_map[channel])
+                    continue
+
             #print "channel %i | %s " % (channel, channel_map[channel])
 
             
