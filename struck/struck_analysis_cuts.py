@@ -101,7 +101,7 @@ def get_drift_time_selection(
                         energy_threshold,
                     )
                     cut2.append(part)
-                part = "(rise_time_stop95[%i]-trigger_time>%s)" % (
+                part = "(rise_time_stop95[%i]-trigger_time<%s)" % (
                     channel,
                     drift_time_high,
                 )
@@ -220,6 +220,55 @@ def get_single_strip_cut(energy_threshold=10.0, isMC=False):
     """Select events with only one channel above threshold"""
     selection = "(%s==1)" % get_multiplicity_cmd(energy_threshold, isMC)
     return selection
+
+def get_few_one_strip_channels(
+    n_sigma=5.0,
+    energy_var="energy1_pz",
+):
+    """A draw command for total energy, only including single-strip channels above threshold """
+    draw_cmd = []
+    for channel, value in enumerate(struck_analysis_parameters.one_strip_channels): 
+        if value:
+            part = "(%s[%i]>%s*baseline_rms[%i]*calibration[%i]*%f)*%s[%i]" % (
+                energy_var,
+                channel, 
+                n_sigma,
+                channel, 
+                channel, 
+                math.sqrt(2.0/struck_analysis_parameters.n_baseline_samples),
+                energy_var,
+                channel,
+            )
+
+            draw_cmd.append(part)
+    # join each part with "+"
+    draw_cmd = " + ".join(draw_cmd)
+    return draw_cmd
+
+def get_few_two_strip_channels(
+    n_sigma=5.0,
+    energy_var="energy1_pz",
+):
+    """A draw command for total energy, only including single-strip channels above threshold """
+    draw_cmd = []
+    for channel, value in enumerate(struck_analysis_parameters.two_strip_channels): 
+        if value:
+            part = "(%s[%i]>%s*baseline_rms[%i]*calibration[%i]*%f)*%s[%i]" % (
+                energy_var,
+                channel, 
+                n_sigma,
+                channel, 
+                channel, 
+                math.sqrt(2.0/struck_analysis_parameters.n_baseline_samples),
+                energy_var,
+                channel,
+            )
+
+            draw_cmd.append(part)
+    # join each part with "+"
+    draw_cmd = " + ".join(draw_cmd)
+    return draw_cmd
+
 
 def get_few_channels_cmd(
     energy_threshold=10.0,
@@ -375,6 +424,9 @@ if __name__ == "__main__":
     print "\ndrift time cut:"
     print "\t" + "\n\t ||".join(get_drift_time_cut().split("||"))
 
+    print "\ndrift time selection:"
+    print "\t" + "\n\t ||".join(get_drift_time_selection().split("||"))
+
     print "\nget_few_channels_cmd:"
     print "\t" + "\n\t +".join(get_few_channels_cmd().split("+"))
 
@@ -407,6 +459,7 @@ if __name__ == "__main__":
 
     #print "\n"+ get_drift_time_cut(energy_threshold=200,drift_time_low=7.0,drift_time_high=8.5)
     #print "\n"+ get_drift_time_cut(drift_time_low=7.0,drift_time_high=8.0)
+    print "\n"+ get_drift_time_cut()
     print "\n"+ get_drift_time_cut(drift_time_high=9.0)
     print "\n"+ get_drift_time_cut(drift_time_high=9.0,isMC=True)
     print "\n"+ get_drift_time_cut(drift_time_high=9.0,is_single_channel=True)
