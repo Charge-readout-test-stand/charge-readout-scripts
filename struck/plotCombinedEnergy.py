@@ -2,6 +2,7 @@
 import os
 import sys
 import ROOT
+ROOT.gROOT.SetBatch(True)
 
 import struck_analysis_cuts
 import struck_analysis_parameters
@@ -11,7 +12,7 @@ def get_hist(tree, draw_cmd, selection, name="hist"):
 
     # options
     energy_max = 3000.0
-    n_bins = int(energy_max/2.0)
+    n_bins = int(energy_max/5.0)
     hist = ROOT.TH1D(name, "", n_bins, 0, energy_max)
     hist.GetDirectory().cd()
     hist.SetLineWidth(2)
@@ -23,7 +24,7 @@ def get_hist(tree, draw_cmd, selection, name="hist"):
     print "\t draw_cmd:", draw_cmd
     print "\t selection:", selection
     n_drawn = tree.Draw("%s >> %s" % (draw_cmd, hist.GetName()), selection, "goff")
-    print "\t %i drawn | %i in hist" % (n_drawn, hist.GetEntries())
+    print "\t %i drawn | %i in %s" % (n_drawn, hist.GetEntries(), hist.GetName())
     return hist
            
 
@@ -41,23 +42,59 @@ print "%i entries in tree" % n_entries
 
 hists = []
 
+#-------------------------------------------------------------------------------
+# current tests
+#-------------------------------------------------------------------------------
+
+# current best:
+hists.append(get_hist(tree, struck_analysis_cuts.get_few_channels_cmd_baseline_rms(),"","5x_baseline_rms"))
+
+hists.append(get_hist(tree, struck_analysis_cuts.get_few_channels_cmd_baseline_rms(),
+    struck_analysis_cuts.get_drift_time_selection(),
+    "5x_baseline_rms_dt_low_sel"))
+
+hists.append(get_hist(tree, struck_analysis_cuts.get_few_channels_cmd_baseline_rms(),
+    struck_analysis_cuts.get_drift_time_selection(drift_time_high=struck_analysis_parameters.max_drift_time),
+    "5x_baseline_rms_dt_low_and_hi_sel"))
+
+hists.append(get_hist(tree, struck_analysis_cuts.get_few_channels_cmd_baseline_rms(),
+    struck_analysis_cuts.get_drift_time_cut(),
+    "5x_baseline_rms_dt_low_cut"))
+
+hists.append(get_hist(tree, struck_analysis_cuts.get_few_channels_cmd_baseline_rms(),
+    struck_analysis_cuts.get_drift_time_cut(drift_time_high=struck_analysis_parameters.max_drift_time),
+    "5x_baseline_rms_dt_low_and_hi_cut"))
+
+
+
+#-------------------------------------------------------------------------------
+# previous attempts
+#-------------------------------------------------------------------------------
 
 # constant threshold:
-hists.append(get_hist(tree, struck_analysis_cuts.get_few_channels_cmd(),"","10-keV"))
-hists.append(get_hist(tree,
-struck_analysis_cuts.get_few_channels_cmd(energy_threshold=20.0),"","20-keV"))
+#hists.append(get_hist(tree, struck_analysis_cuts.get_few_channels_cmd(),"","10-keV"))
+#hists.append(get_hist(tree, struck_analysis_cuts.get_few_channels_cmd(energy_threshold=20.0),"","20-keV"))
 
 # channel-dependent threshold (uses rms_keV):
-hists.append(get_hist(tree, struck_analysis_cuts.get_few_channels_cmd_rms_keV(),"","5xRMS_keV"))
-hists.append(get_hist(tree, struck_analysis_cuts.get_few_channels_cmd_rms_keV(n_sigma=4.0),"","4xRMS_keV"))
+#hists.append(get_hist(tree, struck_analysis_cuts.get_few_channels_cmd_rms_keV(),"","5xRMS_keV"))
+#hists.append(get_hist(tree, struck_analysis_cuts.get_few_channels_cmd_rms_keV(n_sigma=4.0),"","4xRMS_keV"))
 
 # wfm-dependent threshold (uses baseline_rms):
-hists.append(get_hist(tree,
-    struck_analysis_cuts.get_few_channels_cmd_baseline_rms(),"","5x_baseline_rms"))
-hists.append(get_hist(tree,
-    struck_analysis_cuts.get_few_channels_cmd_baseline_rms(n_sigma=4.0),"","4x_baseline_rms"))
+#hists.append(get_hist(tree, struck_analysis_cuts.get_few_channels_cmd_baseline_rms(n_sigma=1.0),"","1x_baseline_rms"))
+#hists.append(get_hist(tree, struck_analysis_cuts.get_few_channels_cmd_baseline_rms(n_sigma=2.0),"","2x_baseline_rms"))
+#hists.append(get_hist(tree, struck_analysis_cuts.get_few_channels_cmd_baseline_rms(n_sigma=3.0),"","3x_baseline_rms"))
+#hists.append(get_hist(tree, struck_analysis_cuts.get_few_channels_cmd_baseline_rms(n_sigma=4.0),"","4x_baseline_rms"))
+#hists.append(get_hist(tree, struck_analysis_cuts.get_few_channels_cmd_baseline_rms(),"","5x_baseline_rms"))
+#hists.append(get_hist(tree, struck_analysis_cuts.get_few_channels_cmd_baseline_rms(n_sigma=6.0),"","6x_baseline_rms"))
 
-hists.append(get_hist(tree, "chargeEnergy","", "chargeEnergy"))
+# single-strip channels only
+#hists.append(get_hist(tree, struck_analysis_cuts.get_few_one_strip_channels(n_sigma=5.0),"","5x_baseline_rms_single_ch"))
+
+# two-strip channels only
+#hists.append(get_hist(tree, struck_analysis_cuts.get_few_two_strip_channels(n_sigma=5.0),"","5x_baseline_rms_single_ch"))
+
+# chargeEnergy
+#hists.append(get_hist(tree, "chargeEnergy","", "chargeEnergy"))
 
 canvas = ROOT.TCanvas()
 canvas.SetGrid()
@@ -77,14 +114,24 @@ for i, hist in enumerate(hists):
     hist.SetMarkerStyle(21)
     hist.SetMarkerSize(0.9)
     hist.SetMarkerColor(struck_analysis_parameters.colors[i])
-    legend.AddEntry(hist, hist.GetName(), "p")
+    legend.AddEntry(hist, "%s: %.3e" % (hist.GetName(), hist.GetEntries()), "p")
 
 legend.Draw()
 canvas.Update()
 canvas.Print("energies.pdf")
 
+canvas.SetLogy(1)
+canvas.Update()
+canvas.Print("energies_log.pdf")
+canvas.SetLogy(0)
+
+hists[0].SetAxisRange(400, 750.0)
+canvas.Update()
+canvas.Print("energies_zoom_peak.pdf")
+
 hists[0].SetAxisRange(0, 1400.0)
 canvas.Update()
 canvas.Print("energies_zoom.pdf")
-raw_input("any key to continue... ")
+if not ROOT.gROOT.IsBatch():
+    raw_input("any key to continue... ")
 
