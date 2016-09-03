@@ -51,11 +51,12 @@ def process_files(filenames):
         basename = os.path.splitext(basename)[0]
         print "processing file: ", filename
 
-        hist = TH1D("hist%i" % len(hists), basename,32, -0.5, 31.5)
+        hist = TH1D("hist%i" % len(hists), basename,64, -0.25, 31.75)
         print "hist:", hist.GetName()
         color = colors[len(hists)]
         hist.SetLineColor(color)
-        hist.SetLineWidth(2)
+        hist.SetFillColor(color)
+        #hist.SetLineWidth(2)
         hist.SetLineStyle(len(hists)+1)
         hist.SetMarkerColor(color)
         hist.SetMarkerStyle(21)
@@ -84,28 +85,35 @@ def process_files(filenames):
             multiplier = 1.15
 
         # draw channels hit:    
-        ch_hist = TH1D("ch_hist%i" % len(hists), basename,32, -0.5, 31.5)
+        ch_hist = TH1D("ch_hist%i" % len(hists), basename,64, -0.25, 31.75)
         ch_hist.SetLineColor(color)
-        ch_hist.SetLineWidth(2)
+        #ch_hist.SetLineWidth(2)
+        ch_hist.SetFillColor(color)
         ch_hist.SetXTitle("Channel hit [above %.1f keV]" % threshold)
         selection = "energy1_pz>%s" % (threshold/multiplier)
         n_drawn = tree.Draw("channel >> %s" % ch_hist.GetName(), selection)
+        ch_hist.Scale(1.0/n_entries)
+
+        canvas.SetLogy(1)
         canvas.Update()
         canvas.Print("hitChannels.pdf")
         ch_hists.append(ch_hist)
+
+        canvas.SetLogy(0)
+        canvas.Update()
+        canvas.Print("hitChannels_lin.pdf")
+
         raw_input("any key to continue  ")
 
 
 
-        selection = "chargeEnergy*%s>1000 & chargeEnergy*%s<1200" % (
-            multiplier,
-            multiplier,
-        )
-        selection = ""
-        title = selection
+        #selection = "chargeEnergy*%s>1000 & chargeEnergy*%s<1200" % (multiplier, multiplier)
+        #selection = ""
+        selection = "%s > 200" % struck_analysis_cuts.get_few_channels_cmd_baseline_rms()
         draw_cmd = struck_analysis_cuts.get_multiplicity_cmd(energy_threshold=threshold/multiplier, isMC=is_MC)
         draw_cmd = "%s >> %s" % (draw_cmd, hist.GetName())
 
+        title = selection[:100] + "..."
         print "draw_cmd:", draw_cmd
         print "selection", selection
 
@@ -131,9 +139,14 @@ def process_files(filenames):
     for hist in hists:
         hist.Draw("same")
 
+    canvas.SetLogy(1)
     legend.Draw()
     canvas.Update()
     canvas.Print("multiplicity.pdf")
+
+    canvas.SetLogy(0)
+    canvas.Update()
+    canvas.Print("multiplicity_lin.pdf")
     raw_input("any key to continue  ")
 
 
@@ -150,7 +163,9 @@ if __name__ == "__main__":
 
     # 8th LXe
     filenames = [
-        "~/2016_08_15_8th_LXe_overnight/tier3_added/overnight8thLXe_v2.root", # ubuntu DAQ
+        #"~/2016_08_15_8th_LXe_overnight/tier3_added/overnight8thLXe_v2.root", # ubuntu DAQ
+        #"~/2016_08_15_8th_LXe_overnight/tier3_added/overnight8thLXe_v3.root", # ubuntu DAQ
+        "/p/lscratchd/alexiss/2016_08_15_8th_LXe_overnight/tier3_added/overnight8thLXe_v3.root ", # LLNL
     ]
 
     process_files(filenames)
