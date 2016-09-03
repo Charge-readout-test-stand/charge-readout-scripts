@@ -1,20 +1,26 @@
 import ROOT
 import struck_analysis_parameters
+import os
+ROOT.gROOT.SetBatch(True)
 
 def getDecayTimes():
-
-    tree = ROOT.TChain("tree")
-    tree.Add("/home/teststand/2016_08_15_8th_LXe_overnight/DecayTimes/Testing/tier3*.root")
-
-    plot_name = "/home/teststand/2016_08_15_8th_LXe_overnight/DecayTimes/Testing/DecayDist.pdf"
     
+    filename = "/home/teststand/2016_08_15_8th_LXe_overnight/tier3_added/overnight8thLXe_v3.root"
+    tree = ROOT.TChain("tree")
+    tree.Add(filename)
+
+    basename = os.path.splitext(os.path.basename(filename))[0]
+    print "basename:", basename
+
+    plot_name = "/home/teststand/2016_08_15_8th_LXe_overnight/tier3_added/DecayTime_%s.pdf" % basename
+
     canvas = ROOT.TCanvas("canvas")
     canvas.SetTopMargin(0.15)
     canvas.SetGrid()
     canvas.Print("%s[" % plot_name) # open multi-page canvas
 
     n_bins = 500
-    decay_max = 3000.0
+    decay_max = 3000.0 #max energy
 
     fitter = 1  #0=gaus, 1=landau
     if fitter < 0.5: 
@@ -25,7 +31,7 @@ def getDecayTimes():
     landau = ROOT.TF1("landau","[0]*TMath::Landau(x,[1],[2],0)", 0, decay_max)
     mygaus   = ROOT.TF1("mygaus", "[0]*TMath::Exp(-0.5*((x-[1])/[2])^2)", 0, decay_max)
 
-    decay_log = open('/home/teststand/2016_08_15_8th_LXe_overnight/DecayTimes/Testing/decay_log.txt', 'w')
+    decay_log = open('/home/teststand/2016_08_15_8th_LXe_overnight/tier3_added/decay_log_%s.txt' % basename, 'w')
 
     decay_log.write("# Fits are in %s \n" % plot_name)
     for (channel, value) in enumerate(struck_analysis_parameters.charge_channels_to_use):
@@ -49,8 +55,11 @@ def getDecayTimes():
         draw_cmd = "decay_fit[%i] >> %s" % (channel, hist.GetName())
         selection = ""
         if fitter < 0.5:
+            #If Gaus try to cut bad fits
             selection = "decay_error[%i]/decay_fit[%i] < 0.015" % (channel, channel)
+        print "--> drawing..."
         n_drawn = tree.Draw(draw_cmd, selection)
+        print "%i drawn" % n_drawn
         
         mean = -999
         mean_error = -999
@@ -80,12 +89,14 @@ def getDecayTimes():
         canvas.SetLogy(0)
         canvas.Update()
         canvas.Print("%s" % plot_name)
-        raw_input()
+        if not ROOT.gROOT.IsBatch(): 
+            raw_input()
 
         canvas.SetLogy(1)
         canvas.Update()
         canvas.Print("%s" % plot_name)
-        raw_input()
+        if not ROOT.gROOT.IsBatch(): 
+            raw_input()
 
     canvas.Print("%s]" % plot_name) # close multi-page canvas
 

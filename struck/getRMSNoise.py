@@ -11,7 +11,6 @@ def getRMS():
     basename = os.path.splitext(os.path.basename(filename))[0]
     print "basename:", basename
 
-
     plot_name = "/home/teststand/2016_08_15_8th_LXe_overnight/tier3_added/RMSNoise_%s.pdf" % basename
     
     canvas = ROOT.TCanvas("canvas")
