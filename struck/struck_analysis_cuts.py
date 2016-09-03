@@ -66,7 +66,7 @@ def get_drift_time_selection(
             selection.append("(rise_time_stop95-trigger_time>%s)" % drift_time_low)
         if drift_time_high != None:
             selection.append("(rise_time_stop95-trigger_time<%s)" % drift_time_high)
-        sleection = " && ".join(selection)
+        selection = " && ".join(selection)
         return selection
 
 
@@ -108,7 +108,7 @@ def get_drift_time_selection(
                 cut2.append(part)
                 cut.append("&&".join(cut2))
             #print cut
-            cut = "||".join(cut)
+            cut = "&&".join(cut)
             selection.append(cut)
             
     # join each channel requirement with or
@@ -202,7 +202,12 @@ def get_chargeEnergy_no_pz():
     draw_cmd = " + ".join(draw_cmd)
     return draw_cmd
 
-def get_multiplicity_cmd(energy_threshold=100.0,isMC=False):
+def get_multiplicity_cmd(
+    energy_var="energy1_pz",
+    n_sigma=5.0, 
+    energy_threshold=100.0,
+    isMC=False
+):
     """A draw command for multiplicity """
     draw_cmd = []
     if isMC:
@@ -211,14 +216,26 @@ def get_multiplicity_cmd(energy_threshold=100.0,isMC=False):
         charge_channels_to_use = struck_analysis_parameters.charge_channels_to_use
     for channel, value in enumerate(charge_channels_to_use): 
         if value:
-            draw_cmd.append("(energy1_pz[%i]>%s)" % (channel,energy_threshold))
+            #part = "(energy1_pz[%i]>%s)" % (channel,energy_threshold)
+            if energy_threshold != 100.0: 
+                print "get_multiplicity_cmd: energy_threshold no longer used!"
+            part = "(%s[%i]>%s*baseline_rms[%i]*calibration[%i]*%f)" % (
+                energy_var,
+                channel, 
+                n_sigma,
+                channel, 
+                channel, 
+                math.sqrt(2.0/struck_analysis_parameters.n_baseline_samples),
+            )
+            draw_cmd.append(part)
+
     # join each part with "+"
     draw_cmd = "+".join(draw_cmd)
     return draw_cmd
 
-def get_single_strip_cut(energy_threshold=10.0, isMC=False):
+def get_single_strip_cut(n_sigma=5.0, isMC=False):
     """Select events with only one channel above threshold"""
-    selection = "(%s==1)" % get_multiplicity_cmd(energy_threshold, isMC)
+    selection = "(%s==1)" % get_multiplicity_cmd(n_sigma=n_sigma, isMC=isMC)
     return selection
 
 def get_few_one_strip_channels(
@@ -427,6 +444,9 @@ if __name__ == "__main__":
     print "\ndrift time selection:"
     print "\t" + "\n\t ||".join(get_drift_time_selection().split("||"))
 
+    print "\ndrift time selection:"
+    print "\t" + "\n\t ||".join(get_drift_time_selection(drift_time_high=struck_analysis_parameters.max_drift_time).split("||"))
+
     print "\nget_few_channels_cmd:"
     print "\t" + "\n\t +".join(get_few_channels_cmd().split("+"))
 
@@ -459,20 +479,20 @@ if __name__ == "__main__":
 
     #print "\n"+ get_drift_time_cut(energy_threshold=200,drift_time_low=7.0,drift_time_high=8.5)
     #print "\n"+ get_drift_time_cut(drift_time_low=7.0,drift_time_high=8.0)
-    print "\n"+ get_drift_time_cut()
-    print "\n"+ get_drift_time_cut(drift_time_high=9.0)
-    print "\n"+ get_drift_time_cut(drift_time_high=9.0,isMC=True)
-    print "\n"+ get_drift_time_cut(drift_time_high=9.0,is_single_channel=True)
+    print "\n get_drift_time_cut(): \n"+ get_drift_time_cut()
+    print "\n get_drift_time_cut(drift_time_high=9.0): \n"+ get_drift_time_cut(drift_time_high=9.0)
+    print "\n get_drift_time_cut(drift_time_high=9.0, isMC=True): \n"+ get_drift_time_cut(drift_time_high=9.0,isMC=True)
+    print "\n get_drift_time_cut(drift_time_high=9.0, is_single_channel=True): \n"+ get_drift_time_cut(drift_time_high=9.0,is_single_channel=True)
+    print "\n get_drift_time_selection(drift_time_high=9.0, is_single_channel=True): \n" + get_drift_time_selection(drift_time_high=9.0,is_single_channel=True)
     print "\n"+ get_single_strip_cut(isMC=True)
 
-    print "\n" + get_negative_energy_cut()
-    print "\n" + get_single_strip_cut(energy_threshold=20.0)
-    print "\n"+ get_drift_time_cut(drift_time_low=7.0,drift_time_high=8.0,isMC=True)
-    print "\n"+ get_drift_time_cut(drift_time_low=8.0,drift_time_high=9.0,isMC=True)
+    #print "\n" + get_negative_energy_cut()
+    #print "\n"+ get_drift_time_cut(drift_time_low=7.0,drift_time_high=8.0,isMC=True)
+    #print "\n"+ get_drift_time_cut(drift_time_low=8.0,drift_time_high=9.0,isMC=True)
 
-    print "\n"+ get_drift_time_cut(drift_time_low=8.0,drift_time_high=10.0)
+    #print "\n"+ get_drift_time_cut(drift_time_low=8.0,drift_time_high=10.0)
 
-    print "\n" + get_few_channels_cmd()
+    #print "\n" + get_few_channels_cmd()
 
     print "get_drift_time_cut:", get_drift_time_cut(is_single_channel=True)
 
