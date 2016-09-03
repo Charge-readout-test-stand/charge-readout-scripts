@@ -5,6 +5,8 @@ import ROOT
 import struck_analysis_parameters
 import struck_analysis_cuts
 
+#ROOT.gStyle.SetPalette(51) # deep sea doesn't look good
+
 # 8th LXe overnight, v3, at LLNL:
 filename = "/p/lscratchd/alexiss/2016_08_15_8th_LXe_overnight/tier3_added/overnight8thLXe_v3.root"
 basename = os.path.splitext(os.path.basename(filename))[0]
@@ -33,7 +35,7 @@ print "energy var:", energy_var.split("+")[0] + "+ ..."
 print "selection:"
 print selection
 
-hist = ROOT.TH2D("hist","",200,200,2000,200,0,2000)
+hist = ROOT.TH2D("hist","",200,100,2000,200,0,2000)
 hist.SetTitle("%s: %s  + ..." % (basename, energy_var.split("+")[0]))
 hist.SetYTitle("Scintillation Energy")
 hist.SetXTitle("Ionization Energy")
@@ -48,8 +50,13 @@ n_drawn = tree.Draw(
 
 print "%i in tree | %i drawn | %i in hist" % (n_entries, n_drawn, hist.GetEntries())
 
+canvas.SetLogz(0)
 canvas.Update()
-canvas.Print("chargeVsLight_%s.png" % basename)
-if not ROOT.gROOT.IsBatch():
-    raw_input("enter to continue... ")
+canvas.Print("chargeVsLight_lin_%s.png" % basename)
+if not ROOT.gROOT.IsBatch(): raw_input("enter to continue... ")
+
+canvas.SetLogz(1)
+canvas.Update()
+canvas.Print("chargeVsLight_log%s.png" % basename)
+if not ROOT.gROOT.IsBatch(): raw_input("enter to continue... ")
 
