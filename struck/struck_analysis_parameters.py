@@ -86,6 +86,7 @@ elif is_8th_LXe:
         charge_channels_to_use[i_channel] = 1
     charge_channels_to_use[pmt_channel] = 0
     charge_channels_to_use[0] = 0 # Y1-10 is dead
+    #charge_channels_to_use[16] = 0 # X1-12 is noisy !!
     charge_channels_to_use[27] = 0 # X23/24 is dead
 else:
     # channels for 5th LXe
