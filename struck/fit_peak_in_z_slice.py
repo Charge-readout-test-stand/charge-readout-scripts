@@ -31,7 +31,7 @@ def process_file(filename):
     #n_slices = 8 # ~2-mm slices
     #n_slices = 3 # 3 detector regions
     #n_slices = 4 # 3 detector regions
-    single_strip_cut = struck_analysis_cuts.get_single_strip_cut(10.0)
+    single_strip_cut = struck_analysis_cuts.get_single_strip_cut(energy_threshold=10.0)
     n_bins = 160
     min_bin = 0
     max_bin = 1600
