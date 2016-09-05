@@ -93,7 +93,7 @@ from array import array
 # definition of calibration constants, decay times, channels
 import struck_analysis_parameters
 import wfmProcessing
-
+import BundleSignals
 
 def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=False):
 
@@ -114,6 +114,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     sampling_freq_Hz = struck_analysis_parameters.sampling_freq_Hz
    
     channels = struck_analysis_parameters.channels
+    channel_map = struck_analysis_parameters.channel_map
     n_chargechannels = struck_analysis_parameters.n_chargechannels
     pmt_channel = struck_analysis_parameters.pmt_channel
     n_channels = struck_analysis_parameters.n_channels
@@ -463,6 +464,65 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     out_tree.Branch('baseline_rms_file', baseline_rms_file, 'baseline_rms_file[%i]/D' % n_channels)
     run_tree.Branch('baseline_rms_file', baseline_rms_file, 'baseline_rms_file[%i]/D' % n_channels)
 
+    #--------------------------------------Info For Multiplicity-------------------------------------
+    #--------------------------------------and Signal holding----------------------------------------
+    #Reocrd the channels which appear above the RMS noise threshold
+    signal_threshold = array('d', [0])
+    out_tree.Branch('signal_threshold', signal_threshold, 'signal_threshold/D')
+    run_tree.Branch('signal_threshold', signal_threshold, 'signal_threshold/D')
+    signal_threshold[0] = struck_analysis_parameters.rms_threshold
+
+    signal_map = array('I', [0]*n_channels) 
+    out_tree.Branch('signal_map', signal_map, 'signal_map[%i]/i' % n_channels_in_event) 
+    
+    nsignals = array('I', [0])
+    out_tree.Branch('nsignals', nsignals, 'nsignals/i') #Total Signals above threshold
+
+    nXsignals = array('I', [0])
+    out_tree.Branch('nXsignals', nXsignals, 'nXsignals/i') #Total XSignals above threshold
+    
+    nYsignals = array('I', [0])
+    out_tree.Branch('nYsignals', nYsignals, 'nYsignals/i') #Total YSignals above thresholdY
+    
+    SignalEnergy = array('d', [0])
+    out_tree.Branch('SignalEnergy', SignalEnergy, 'SignalEnergy/D') #Sum Energy of Signals
+
+    SignalEnergyX = array('d', [0])
+    out_tree.Branch('SignalEnergyX', SignalEnergyX, 'SignalEnergyX/D') #Sum Energy of XSignals
+
+    SignalEnergyY = array('d', [0])
+    out_tree.Branch('SignalEnergyY', SignalEnergyY, 'SignalEnergyY/D') #Sum Energy of YSignals
+    
+    #Store the assosiated bundle of adjacent wires 
+    #Map each bundle to set of channels
+    signal_bundle_map = array('I', [0]*n_channels)
+    out_tree.Branch('signal_bundle_map', signal_bundle_map, 'signal_bundle_map[%i]/i' % n_channels_in_event)
+    
+    nbundles = array('I', [0])
+    out_tree.Branch('nbundles', nbundles, 'nbundles/i')
+    
+    nbundlesX = array('I', [0])
+    out_tree.Branch('nbundlesX', nbundlesX, 'nbundlesX/i')
+
+    nbundlesY = array('I', [0])
+    out_tree.Branch('nbundlesY', nbundlesY, 'nbundlesY/i')
+
+    #The most bundles ever is just 1 per channel
+    bundle_type = array('I', [0]*n_channels)
+    out_tree.Branch('bundle_type', bundle_type, 'bundle_type[nbundles]/i')
+
+    bundle_energy = array('d', [0]*n_channels)
+    out_tree.Branch('bundle_energy', bundle_energy, 'bundle_energy[nbundles]/D')
+    
+    bundle_nsigs = array('I', [0]*n_channels)
+    out_tree.Branch('bundle_nsigs', bundle_nsigs, 'bundle_nsigs[nbundles]/i')
+    #------------------------------------------------------------------------------------------------
+    #------------------------------------------------------------------------------------------------
+    #------------------------------------------------------------------------------------------------
+
+
+
+
     # parameters coming from sum waveform
     rise_time_stop10_sum = array('d', [0.0]) # double
     out_tree.Branch('rise_time_stop10_sum', rise_time_stop10_sum, 'rise_time_stop10_sum/D')
@@ -525,6 +585,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     for (i, i_channel) in enumerate(channels):
         if isMC: continue
         print "%i: ch %i" % (i, i_channel)
+        
+        #if True:
         if do_debug: 
             print "\t skipping for debugging"
             continue
@@ -746,6 +808,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     i_entry = 0
     n_channels_in_this_event = 0
     while i_entry < n_entries:
+    #while i_entry < 1000:
         tree.GetEntry(i_entry)
         #if isNGM and i_entry > 1e6: 
         #    print "<<<< DEBUGGING >>>>"
@@ -802,9 +865,22 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         prev_time_stamp = time_stampDouble[0]
         if isMC: prev_time_stamp = 0
 
-        # initialize these two to zero
+        #---------------------------INIT--------------------------
+        # initialize things which track sums
         chargeEnergy[0] = 0.0
         lightEnergy[0] = 0.0
+        nsignals[0] = 0
+        nXsignals[0] = 0
+        nYsignals[0] = 0
+        SignalEnergy[0] = 0.0
+        SignalEnergyX[0] = 0.0
+        SignalEnergyY[0] = 0.0 
+        for bundle_index in xrange(nbundles[0]):
+            bundle_type[bundle_index] = 0
+            bundle_nsigs[bundle_index] = 0
+            bundle_energy[bundle_index] = 0.0
+        nbundles[0] = 0
+        
         if isMC:
             MCchargeEnergy[0] = 0.0
             MCtotalEventEnergy[0] = tree.Energy
@@ -919,7 +995,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 wfm_min[i],
                 decay_fit[i],
                 decay_error[i],
-                decay_chi2[i]
+                decay_chi2[i],
+                signal_map[i]
             ) = wfmProcessing.get_wfmparams(
                 exo_wfm=exo_wfm, 
                 wfm_length=wfm_length[i], 
@@ -931,6 +1008,19 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             )
             
             
+            if signal_map[i] > 0.5:
+                #This is a signal so add to total and figure out the type
+                #Record Energy in  new variable which tracks total energy from 
+                #channels above threshold.
+                nsignals[0]+=1
+                SignalEnergy[0] += energy1_pz[i]
+                if 'X' in channel_map[i]:
+                    nXsignals[0]+=1
+                    SignalEnergyX[0] += energy1_pz[i]
+                elif 'Y' in channel_map[i]:
+                    nYsignals[0]+=1
+                    SignalEnergyY[0] += energy1_pz[i]
+
             if channel[i] == pmt_channel:
                 lightEnergy[0] = energy[i]
             elif charge_channels_to_use[channel[i]]:
@@ -1015,6 +1105,25 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             calibrated_wfm.IsA().Destructor(calibrated_wfm)
             # end loop over channels
 
+        #-------------Create bundles of wire signals-------------
+        (   nbundles,
+            bundle_type,
+            signal_bundle_map,
+            bundle_energy,
+            bundle_nsigs,
+            nbundlesX[0],
+            nbundlesY[0]
+        ) = BundleSignals.BundleSignals(signal_map, energy1_pz, 
+                                        nbundles, bundle_type, signal_bundle_map,
+                                        bundle_energy, bundle_nsigs)
+        
+        #nbundles[0] = nbundles_temp
+        #for bundle_index in xrange(nbundles[0]):
+        #    bundle_type.append(bundle_type_temp[bundle_index])
+        #for ch_index, bundle_index in enumerate(signal_bundle_map_temp):
+        #    signal_bundle_map[ch_index] = bundle_index
+        #--------------EndBundlind----------------
+        
 
         ##### processing sum waveform
         if sum_wfm == None:

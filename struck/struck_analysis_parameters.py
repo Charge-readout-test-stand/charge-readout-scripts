@@ -534,6 +534,10 @@ if is_7th_LXe:
     rms_keV[6] = 18.66388
     rms_keV[7] = 19.21589
 
+
+#Threshold to be a signal 5*RMS
+rms_threshold = 5.0
+
 if is_8th_LXe: # FIXME with real values
     for i_channel in xrange(len(channels)):
         # Fits are in /home/teststand/2016_08_15_8th_LXe_overnight/tier3_llnl/RMSNoise.pdf
