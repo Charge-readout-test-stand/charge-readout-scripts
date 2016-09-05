@@ -283,7 +283,7 @@ def fit_channel(
         leg.Draw()
         hist.SetMinimum(0)
         canvas.Update()
-        canvas.Print("%s_pre_lin.pdf" % plot_name)
+        #canvas.Print("%s_pre_lin.pdf" % plot_name)
 
 
         if not ROOT.gROOT.IsBatch():
@@ -607,12 +607,16 @@ if __name__ == "__main__":
     #selections.append([nc, lc])
     #selections.append([nc, sc, lc])
     #selections.append([dc])
-    selections.append([dc])
+    selections.append([dc,struck_analysis_cuts.get_single_strip_cut()])
 
-    channel_selection = struck_analysis_cuts.get_drift_time_cut(is_single_channel=True, drift_time_high=drift_time_high)
+    channel_selections = []
+    channel_selections.append(struck_analysis_cuts.get_drift_time_cut(is_single_channel=True, drift_time_high=drift_time_high))
+    channel_selections.append(struck_analysis_cuts.get_single_strip_cut())
+    channel_selection = " && ".join(channel_selections)
     #channel_selection = None
 
     # loop over all selections
+    # selection affects the all_energy_var
     for i,selection in enumerate(selections):
 
         selection = " && ".join(selection)
