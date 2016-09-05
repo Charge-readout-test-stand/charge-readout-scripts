@@ -492,8 +492,8 @@ if __name__ == "__main__":
 
     #print "\n"+ get_drift_time_cut(drift_time_low=8.0,drift_time_high=10.0)
 
-    #print "\n" + get_few_channels_cmd()
+    print "\n get_few_channels_cmd: \n" + get_few_channels_cmd()
 
-    print "get_drift_time_cut:", get_drift_time_cut(is_single_channel=True)
+    print "\n get_drift_time_cut:", get_drift_time_cut(is_single_channel=True)
 
 
