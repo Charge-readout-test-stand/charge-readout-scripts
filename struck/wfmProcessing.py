@@ -144,6 +144,9 @@ def get_wfmparams(
         print "decay_time:", decay_time
         print "is_pmtchannel:", is_pmtchannel
 
+    #Intitially not a signal
+    isSignal = 0
+
     exo_wfm.SetSamplingFreq(sampling_freq_Hz/second)
     energy_wfm = EXODoubleWaveform(exo_wfm)
 
@@ -227,6 +230,12 @@ def get_wfmparams(
     baseline_remover.Transform(energy_wfm)
     energy1_pz = baseline_remover.GetBaselineMean()*calibration
     energy_rms1_pz = baseline_remover.GetBaselineRMS()*calibration
+    
+    #Apply threshold
+    if energy1_pz/energy_rms1_pz > struck_analysis_parameters.rms_threshold:
+        if not is_pmtchannel:
+            #PMT can't be a signal because by default it has to have triggered
+            isSignal = 1
 
     if is_pmtchannel: # for PMT channel, use GetMaxValue()
         extremum_finder = EXOExtremumFinder()
@@ -308,7 +317,8 @@ def get_wfmparams(
         wfm_min,
         decay_fit,
         decay_error,
-        decay_chi2
+        decay_chi2,
+        isSignal
     )
 
 def do_risetime_calc(rise_time_calculator, threshold_percent, wfm, max_val, period):
