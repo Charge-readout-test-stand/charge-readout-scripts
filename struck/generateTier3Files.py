@@ -586,8 +586,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         if isMC: continue
         print "%i: ch %i" % (i, i_channel)
         
-        if True:
-        #if do_debug: 
+        #if True:
+        if do_debug: 
             print "\t skipping for debugging"
             continue
             
