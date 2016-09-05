@@ -393,35 +393,35 @@ if is_8th_LXe: # FIXME with real values
     # on entire overnight data set, with rise time cuts, 31 Aug 2016
     # from new_calib_570_overnight8thLXe_v22016_08_31_15_40_48_.txt
 
-    calibration_values[1] = 0.988282 # +/- 0.010689
-    calibration_values[2] = 0.934251 # +/- 0.008747
-    calibration_values[3] = 1.029508 # +/- 0.007743
-    calibration_values[4] = 4.115042 # +/- 0.024005
-    calibration_values[5] = 2.000537 # +/- 0.010008
-    calibration_values[6] = 1.898302 # +/- 0.005793
-    calibration_values[7] = 2.006565 # +/- 0.006655
-    calibration_values[8] = 1.003114 # +/- 0.003175
-    calibration_values[9] = 0.959238 # +/- 0.003735
-    calibration_values[10] = 0.987396 # +/- 0.005569
-    calibration_values[11] = 0.993208 # +/- 0.003732
-    calibration_values[12] = 1.064447 # +/- 0.003568
-    calibration_values[13] = 0.999448 # +/- 0.006207
-    calibration_values[14] = 1.047485 # +/- 0.011405
-    calibration_values[15] = 0.936932 # +/- 0.017607
-    calibration_values[16] = 1.063177 # +/- 0.011334
-    calibration_values[17] = 0.999421 # +/- 0.009077
-    calibration_values[18] = 0.981359 # +/- 0.004873
-    calibration_values[19] = 0.998568 # +/- 0.004620
-    calibration_values[20] = 1.909665 # +/- 0.005864
-    calibration_values[21] = 2.011594 # +/- 0.008318
-    calibration_values[22] = 1.993124 # +/- 0.006252
-    calibration_values[23] = 2.153462 # +/- 0.009576
-    calibration_values[24] = 0.937444 # +/- 0.006026
-    calibration_values[25] = 0.985128 # +/- 0.006098
-    calibration_values[26] = 1.029753 # +/- 0.008611
-    calibration_values[28] = 1.069116 # +/- 0.004836
-    calibration_values[29] = 1.005360 # +/- 0.004647
-    calibration_values[30] = 1.991535 # +/- 0.009357
+    calibration_values[1] = 0.941202 # +/- 0.006842
+    calibration_values[2] = 0.910808 # +/- 0.005103
+    calibration_values[3] = 0.994761 # +/- 0.004914
+    calibration_values[4] = 3.959773 # +/- 0.016096
+    calibration_values[5] = 1.917820 # +/- 0.005818
+    calibration_values[6] = 1.825965 # +/- 0.004064
+    calibration_values[7] = 1.908706 # +/- 0.004006
+    calibration_values[8] = 0.964900 # +/- 0.001936
+    calibration_values[9] = 0.915300 # +/- 0.002505
+    calibration_values[10] = 0.946391 # +/- 0.002979
+    calibration_values[11] = 0.956886 # +/- 0.002104
+    calibration_values[12] = 1.030227 # +/- 0.002073
+    calibration_values[13] = 0.976099 # +/- 0.003473
+    calibration_values[14] = 1.000098 # +/- 0.006787
+    calibration_values[15] = 0.923127 # +/- 0.011730
+    calibration_values[16] = 1.020810 # +/- 0.006806
+    calibration_values[17] = 0.965269 # +/- 0.004444
+    calibration_values[18] = 0.941890 # +/- 0.003407
+    calibration_values[19] = 0.961320 # +/- 0.002962
+    calibration_values[20] = 1.831759 # +/- 0.003718
+    calibration_values[21] = 1.923281 # +/- 0.003483
+    calibration_values[22] = 1.912008 # +/- 0.003792
+    calibration_values[23] = 2.066341 # +/- 0.005921
+    calibration_values[24] = 0.908744 # +/- 0.003232
+    calibration_values[25] = 0.943060 # +/- 0.003862
+    calibration_values[26] = 1.001475 # +/- 0.005421
+    calibration_values[28] = 1.031480 # +/- 0.002665
+    calibration_values[29] = 0.963934 # +/- 0.001759
+    calibration_values[30] = 1.923727 # +/- 0.005794
 
 resolution_guess = 0.06*570.0 #Instrinsic Charge Resolution at the 570 guess for fitting peak
 
