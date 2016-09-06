@@ -574,6 +574,71 @@ if is_8th_LXe: # FIXME with real values
         rms_keV[30] = 14.788121*calibration_values[30]  # +/- 0.000373  
         rms_keV[31] = 0.000000 # Not Used 
 
+tileCh_to_PreCh = {}
+if is_8th_LXe:
+    tileCh_to_PreCh[0] = 16
+    tileCh_to_PreCh[1] = 16
+    tileCh_to_PreCh[2] = 16
+    tileCh_to_PreCh[3] = 16
+    tileCh_to_PreCh[4] = 16
+    tileCh_to_PreCh[5] = 16
+    tileCh_to_PreCh[6] = 16
+    tileCh_to_PreCh[7] = 16
+    tileCh_to_PreCh[8] = 16
+    tileCh_to_PreCh[9] = 16
+    tileCh_to_PreCh[10] = 16
+    tileCh_to_PreCh[11] = 16
+    tileCh_to_PreCh[12] = 17
+    tileCh_to_PreCh[13] = 18
+    tileCh_to_PreCh[14] = 19
+    tileCh_to_PreCh[15] = 20
+    tileCh_to_PreCh[16] = 21
+    tileCh_to_PreCh[17] = 22
+    tileCh_to_PreCh[18] = 23
+    tileCh_to_PreCh[19] = 24
+    tileCh_to_PreCh[20] = 25
+    tileCh_to_PreCh[21] = 26
+    tileCh_to_PreCh[22] = 27
+    tileCh_to_PreCh[23] = 27
+    tileCh_to_PreCh[24] = 28
+    tileCh_to_PreCh[25] = 28
+    tileCh_to_PreCh[26] = 29
+    tileCh_to_PreCh[27] = 29
+    tileCh_to_PreCh[28] = 30
+    tileCh_to_PreCh[29] = 30
+    tileCh_to_PreCh[30] = 0
+    tileCh_to_PreCh[31] = 0
+    tileCh_to_PreCh[32] = 0
+    tileCh_to_PreCh[33] = 0
+    tileCh_to_PreCh[34] = 0
+    tileCh_to_PreCh[35] = 0
+    tileCh_to_PreCh[36] = 0
+    tileCh_to_PreCh[37] = 0
+    tileCh_to_PreCh[38] = 0
+    tileCh_to_PreCh[39] = 0
+    tileCh_to_PreCh[40] = 1
+    tileCh_to_PreCh[41] = 2
+    tileCh_to_PreCh[42] = 3
+    tileCh_to_PreCh[43] = 4
+    tileCh_to_PreCh[44] = 5
+    tileCh_to_PreCh[45] = 6
+    tileCh_to_PreCh[46] = 7
+    tileCh_to_PreCh[47] = 8
+    tileCh_to_PreCh[48] = 9
+    tileCh_to_PreCh[49] = 10
+    tileCh_to_PreCh[50] = 11
+    tileCh_to_PreCh[51] = 11
+    tileCh_to_PreCh[52] = 12
+    tileCh_to_PreCh[53] = 12
+    tileCh_to_PreCh[54] = 13
+    tileCh_to_PreCh[55] = 13
+    tileCh_to_PreCh[56] = 14
+    tileCh_to_PreCh[57] = 14
+    tileCh_to_PreCh[58] = 15
+    tileCh_to_PreCh[59] = 15
+
+
+
 
 avg_rms_keV = sum(rms_keV.values())/len(rms_keV)
 
