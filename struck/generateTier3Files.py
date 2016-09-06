@@ -979,9 +979,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             exo_wfm = EXODoubleWaveform(array('d',wfm), wfm_length[i])
 
             wfm_max[i] = exo_wfm.GetMaxValue()
-            wfm_max_time[i] = exo_wfm.GetMaxTime()
             wfm_min[i] = exo_wfm.GetMinValue()
-            wfm_min_time[i] = exo_wfm.GetMinTime()
 
             if do_debug:
                 # a copy of the un-transformed wfm, for debugging
