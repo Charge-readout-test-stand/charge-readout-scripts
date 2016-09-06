@@ -588,9 +588,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     for (i, i_channel) in enumerate(channels):
         if isMC: continue
         print "%i: ch %i" % (i, i_channel)
-        #if isNGM:
-        #    print "\t skipping NGM for now..."
-        #    continue
+        if isNGM:
+            print "\t skipping NGM for now..."
+            continue
         
         #if True:
         if do_debug: 
