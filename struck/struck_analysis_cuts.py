@@ -209,28 +209,31 @@ def get_multiplicity_cmd(
     isMC=False
 ):
     """A draw command for multiplicity """
-    draw_cmd = []
-    if isMC:
-        charge_channels_to_use = struck_analysis_parameters.MCcharge_channels_to_use
+    if struck_analysis_parameters.is_8th_LXe and n_sigma==5.0:
+        draw_cmd = "nsignals"
     else:
-        charge_channels_to_use = struck_analysis_parameters.charge_channels_to_use
-    for channel, value in enumerate(charge_channels_to_use): 
-        if value:
-            #part = "(energy1_pz[%i]>%s)" % (channel,energy_threshold)
-            if energy_threshold != 100.0: 
-                print "get_multiplicity_cmd: energy_threshold no longer used!"
-            part = "(%s[%i]>%s*baseline_rms[%i]*calibration[%i]*%f)" % (
-                energy_var,
-                channel, 
-                n_sigma,
-                channel, 
-                channel, 
-                math.sqrt(2.0/struck_analysis_parameters.n_baseline_samples),
-            )
-            draw_cmd.append(part)
+        draw_cmd = []
+        if isMC:
+            charge_channels_to_use = struck_analysis_parameters.MCcharge_channels_to_use
+        else:
+            charge_channels_to_use = struck_analysis_parameters.charge_channels_to_use
+        for channel, value in enumerate(charge_channels_to_use): 
+            if value:
+                #part = "(energy1_pz[%i]>%s)" % (channel,energy_threshold)
+                if energy_threshold != 100.0: 
+                    print "get_multiplicity_cmd: energy_threshold no longer used!"
+                part = "(%s[%i]>%s*baseline_rms[%i]*calibration[%i]*%f)" % (
+                    energy_var,
+                    channel, 
+                    n_sigma,
+                    channel, 
+                    channel, 
+                    math.sqrt(2.0/struck_analysis_parameters.n_baseline_samples),
+                )
+                draw_cmd.append(part)
 
-    # join each part with "+"
-    draw_cmd = "+".join(draw_cmd)
+        # join each part with "+"
+        draw_cmd = "+".join(draw_cmd)
     return draw_cmd
 
 def get_single_strip_cut(n_sigma=5.0, isMC=False):
