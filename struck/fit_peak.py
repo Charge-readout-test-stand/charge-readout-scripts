@@ -42,10 +42,10 @@ def fit_channel(
     all_energy_var,
     selection,
     do_use_step=False,
-    min_bin=200, # just for drawing plots
-    max_bin=1000, # just for plotting
+    min_bin=300, # just for drawing plots
+    max_bin=1200, # just for plotting
     line_energy = 570,
-    fit_half_width=250,
+    fit_half_width=170,
     #fit_half_width=170,
     do_use_exp=True,
     energy_var = "energy1_pz",
@@ -60,13 +60,14 @@ def fit_channel(
     do_individual_channels = True
 
     # defaults for 570-keV
-    bin_width = 15
+    bin_width = 5
     #line_energy = 620
-    #sigma_guess = 40
-    sigma_guess = (
-        (struck_analysis_parameters.rms_keV[channel]*math.sqrt(2.0/struck_analysis_parameters.n_baseline_samples))**2 + \
-        struck_analysis_parameters.resolution_guess**2
-    )**0.5
+    sigma_guess = 40
+    if channel != None:
+        sigma_guess = (
+            (struck_analysis_parameters.rms_keV[channel]*math.sqrt(2.0/struck_analysis_parameters.n_baseline_samples))**2 + \
+            struck_analysis_parameters.resolution_guess**2
+        )**0.5
 
     # gaus + exponential
     if do_use_exp:
@@ -158,7 +159,7 @@ def fit_channel(
     print "selection:"
     print "\t" + "\n\t||".join(selection.split("||"))
 
-    hist_title += " " + selection
+    hist_title += " " + selection[:150] + " ..."
     hist.SetTitle(hist_title)
     entries = tree.Draw(draw_cmd, selection, "goff")
     print "tree entries: %i" % entries
@@ -309,6 +310,8 @@ def fit_channel(
 
     # calculate residuals:
     x = fit_start_energy
+    resid_min = -3.5
+    resid_max = 3.5
     while x < fit_stop_energy:
 
         # calculate values from hist:
@@ -342,6 +345,8 @@ def fit_channel(
             residual,
         )
         #resid_hist.SetBinContent(i_bin, residual)
+        if residual > resid_max: resid_max = residual
+        if residual < resid_min: resid_min = residual
 
         x += bin_width
 
@@ -413,8 +418,8 @@ def fit_channel(
     leg.SetFillColor(0)
     leg.Draw()
 
-    resid_hist.SetMaximum(3.5)
-    resid_hist.SetMinimum(-3.5)
+    resid_hist.SetMaximum(resid_max+0.1)
+    resid_hist.SetMinimum(resid_min-0.1)
     pad2 = canvas.cd(2)
     pad2.SetGrid(1,1)
     #resid_hist.Draw("hist P")
@@ -570,6 +575,7 @@ def process_file(
         charge_channels_to_use = struck_analysis_parameters.charge_channels_to_use
 
     for channel, value in enumerate(charge_channels_to_use):
+        continue # skipping indiv channels for now... 
         if value:
             result = fit_channel(tree, channel, basename, do_1064_fit, all_energy_var, channel_selection, do_use_step, energy_var=energy_var)
             if result:
@@ -595,7 +601,12 @@ if __name__ == "__main__":
     sc = struck_analysis_cuts.get_drift_time_cut()
     lc = struck_analysis_cuts.get_drift_time_cut(drift_time_low=None,
         drift_time_high=drift_time_high, isMC=isMC)
-    dc = struck_analysis_cuts.get_drift_time_cut(drift_time_high=drift_time_high, isMC=isMC)
+    dc = struck_analysis_cuts.get_drift_time_cut( drift_time_high=drift_time_high, isMC=isMC)
+    ds = struck_analysis_cuts.get_drift_time_selection( drift_time_high=drift_time_high, isMC=isMC)
+
+    # sets of selections 
+    # we will loop over each item in selections, join each item in selections[i] with "&&"
+
     selections = []
     #selections.append([lc])
     #selections.append([""])
@@ -606,8 +617,10 @@ if __name__ == "__main__":
     #selections.append([sc, lc])
     #selections.append([nc, lc])
     #selections.append([nc, sc, lc])
-    #selections.append([dc])
-    selections.append([dc,struck_analysis_cuts.get_single_strip_cut()])
+    selections.append([dc])
+    selections.append([struck_analysis_cuts.get_single_strip_cut(), dc])
+    selections.append([struck_analysis_cuts.get_single_strip_cut(), ds])
+    selections.append(["(nbundlesX<2&&nbundlesY<2)",dc])
 
     channel_selections = []
     channel_selections.append(struck_analysis_cuts.get_drift_time_cut(is_single_channel=True, drift_time_high=drift_time_high))
@@ -631,9 +644,10 @@ if __name__ == "__main__":
 
         #all_energy_var = "chargeEnergy"
         #all_energy_var = struck_analysis_cuts.get_few_channels_cmd(energy_var="energy1")
-        all_energy_var = None # skipp fit to all channels
+        #all_energy_var = None # skipp fit to all channels
+        all_energy_var = "SignalEnergy"
 
-        process_file(sys.argv[1], False, all_energy_var, selection, channel_selection, do_use_step=False, energy_var="energy1_pz")
+        process_file(sys.argv[1], False, all_energy_var, selection, channel_selection, do_use_step=True, energy_var="energy1_pz")
         #process_file(sys.argv[1], True, all_energy_var, selection, channel_selection)
 
         # cuts need more work to be used with this "few channels" draw command 
