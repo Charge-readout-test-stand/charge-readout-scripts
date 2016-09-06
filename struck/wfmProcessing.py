@@ -7,6 +7,7 @@ Extract parameters (energy, risetime, etc.) from a waveform.
 
 import os
 import sys
+import math
 
 from ROOT import gROOT
 from ROOT import TFile
@@ -232,7 +233,7 @@ def get_wfmparams(
     energy_rms1_pz = baseline_remover.GetBaselineRMS()*calibration
     
     #Apply threshold
-    if energy1_pz/energy_rms1_pz > struck_analysis_parameters.rms_threshold:
+    if energy1_pz > struck_analysis_parameters.rms_threshold*energy_rms1_pz*math.sqrt(2.0/n_baseline_samples):
         if not is_pmtchannel:
             #PMT can't be a signal because by default it has to have triggered
             isSignal = 1
