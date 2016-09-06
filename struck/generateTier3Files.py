@@ -107,7 +107,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     # whether to run in debug mode (draw wfms):
     do_debug = not gROOT.IsBatch()
     do_draw_extra = not gROOT.IsBatch()
-    skip_short_risetimes = True # reduce file size
+    skip_short_risetimes = False # reduce file size
     # samples at wfm start and end to use for energy calc:
     baseline_average_time_microseconds = 4.0 # 100 samples at 25 MHz
 
@@ -449,6 +449,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     wfm_min = array('d', [0]*n_channels_in_event) # double
     out_tree.Branch('wfm_min', wfm_min, 'wfm_min[%i]/D' % n_channels_in_event)
 
+    wfm_min_time = array('d', [0]*n_channels_in_event) # double
+    out_tree.Branch('wfm_min_time', wfm_min_time, 'wfm_min_time[%i]/D' % n_channels_in_event)
+
     baseline_mean = array('d', [0]*n_channels_in_event) # double
     out_tree.Branch('baseline_mean', baseline_mean, 'baseline_mean[%i]/D' % n_channels_in_event)
 
@@ -585,6 +588,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     for (i, i_channel) in enumerate(channels):
         if isMC: continue
         print "%i: ch %i" % (i, i_channel)
+        #if isNGM:
+        #    print "\t skipping NGM for now..."
+        #    continue
         
         #if True:
         if do_debug: 
@@ -900,12 +906,10 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             if is_tier1:
                 wfm = tree.wfm
                 channel[i] = tree.channel
-                wfm_max_time[i] = tree.wfm_max_time
             elif isMC:
                 #START HERE MJJJ
                 wfm = [wfmp for wfmp in tree.ChannelWaveform[i]]
                 channel[i] = i
-                wfm_max_time[i] = np.argmax(wfm)
 
             elif isNGM:
                 if n_channels_in_this_event > 0: # For NGM, each wfm is its own tree entry
@@ -973,6 +977,11 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                     wfm[i_point]+=noise
 
             exo_wfm = EXODoubleWaveform(array('d',wfm), wfm_length[i])
+
+            wfm_max[i] = exo_wfm.GetMaxValue()
+            wfm_max_time[i] = exo_wfm.GetMaxTime()
+            wfm_min[i] = exo_wfm.GetMinValue()
+            wfm_min_time[i] = exo_wfm.GetMinTime()
 
             if do_debug:
                 # a copy of the un-transformed wfm, for debugging
