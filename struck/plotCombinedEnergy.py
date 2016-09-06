@@ -8,6 +8,7 @@ import struck_analysis_cuts
 import struck_analysis_parameters
 
 canvas = ROOT.TCanvas()
+canvas.SetLeftMargin(0.12)
 canvas.SetGrid()
 
 def get_hist(tree, draw_cmd, selection, name="hist"):
@@ -21,7 +22,7 @@ def get_hist(tree, draw_cmd, selection, name="hist"):
     hist.SetLineWidth(2)
     hist.SetXTitle("Energy [keV]")
     hist.SetYTitle("Counts / %s keV" % (energy_max/n_bins))
-    hist.GetYaxis().SetTitleOffset(1.35)
+    hist.GetYaxis().SetTitleOffset(1.5)
 
     print "--> making hist", name
     print "\t draw_cmd:", draw_cmd
@@ -46,7 +47,7 @@ def get_hist(tree, draw_cmd, selection, name="hist"):
     line_energy = hist.GetBinCenter(hist.GetMaximumBin())
     print "line_energy:", line_energy
     hist.SetLineColor(ROOT.kBlue+2) # for the fit
-    delta_E = 85.0
+    delta_E = 65.0
     fcn2 = ROOT.TF1("fcn2","gaus(0)",line_energy-delta_E, line_energy+delta_E)
     fcn2.SetParameter(0, hist.GetBinContent(hist.FindBin(line_energy))) # peak height
     fcn2.SetParameter(1, line_energy) # mean
@@ -68,12 +69,18 @@ def get_hist(tree, draw_cmd, selection, name="hist"):
     hist.Fit(fcn2,"SRNI") # do the fit
 
     # update title with fit results
-    hist.SetTitle("%s: #sigma_{570} = %.2f #pm %.2f, #sigma_{1063} = %.2f #pm %.2f" % (
+    hist.SetTitle("%s: #bar{x}_{570} = %.2f #pm %.2f, #sigma_{570} = %.2f #pm %.2f, #sigma/#bar{x} = %.3f, #bar{x}_{1062} = %.2f #pm %.2f, #sigma_{1063} = %.2f #pm %.2f, #sigma/#bar{x} = %.3f" % (
         hist.GetName(),
-        fcn.GetParameter(2),
-        fcn.GetParError(2),
-        fcn2.GetParameter(2),
-        fcn2.GetParError(2),
+        fcn.GetParameter(1),    # mean
+        fcn.GetParError(1),     # mean error
+        fcn.GetParameter(2),    # sigma
+        fcn.GetParError(2),     # sigma error
+        fcn.GetParameter(2)/fcn.GetParameter(1), # sigma/E
+        fcn2.GetParameter(1),   # mean
+        fcn2.GetParError(1),    # mean error
+        fcn2.GetParameter(2),   # sigma
+        fcn2.GetParError(2),    # sigma error
+        fcn2.GetParameter(2)/fcn2.GetParameter(1), # sigma/E
     ))
 
     # draw after fit results
@@ -89,7 +96,10 @@ def get_hist(tree, draw_cmd, selection, name="hist"):
     return hist
            
 
-filename = sys.argv[1]
+if len(sys.argv) < 2:
+    filename = "/p/lscratchd/alexiss/2016_08_15_8th_LXe_overnight/tier3_added/overnight8thLXe_v4.root" 
+else:
+    filename = sys.argv[1]
 
 print "---> processing", filename
 
@@ -110,29 +120,27 @@ hists = []
 # current best:
 hists.append(get_hist(tree, struck_analysis_cuts.get_few_channels_cmd_baseline_rms(),"","5x_baseline_rms"))
 
-hists.append(get_hist(tree, struck_analysis_cuts.get_few_channels_cmd_baseline_rms(),
-    "%s && %s" % (
-        struck_analysis_cuts.get_single_strip_cut(),
-        struck_analysis_cuts.get_drift_time_selection(drift_time_high=struck_analysis_parameters.max_drift_time, is_single_channel=True)
-    ),
-    "5x_baseline_rms_SS"))
+hists.append(get_hist(tree, "SignalEnergy","", "SignalEnergy"))
 
+hists.append(get_hist(tree, "SignalEnergy",
+    struck_analysis_cuts.get_drift_time_selection(drift_time_high=struck_analysis_parameters.max_drift_time), "SignalEnergy_dt_cut"))
 
-hists.append(get_hist(tree, struck_analysis_cuts.get_few_channels_cmd_baseline_rms(),
-    struck_analysis_cuts.get_drift_time_selection(drift_time_high=struck_analysis_parameters.max_drift_time),
-    "5x_baseline_rms_dt_low_and_hi_sel"))
+hists.append(get_hist(tree, "SignalEnergy",
+    struck_analysis_cuts.get_drift_time_cut(drift_time_high=struck_analysis_parameters.max_drift_time), "SignalEnergy_dt_sel"))
 
-hists.append(get_hist(tree, struck_analysis_cuts.get_few_channels_cmd_baseline_rms(),
-    struck_analysis_cuts.get_drift_time_selection(),
-    "5x_baseline_rms_dt_low_sel"))
+#hists.append(get_hist(tree, "Sum$(bundle_energy)","", "bundle_energy")) # same as SignalEnergy
 
-hists.append(get_hist(tree, struck_analysis_cuts.get_few_channels_cmd_baseline_rms(),
-    struck_analysis_cuts.get_drift_time_cut(drift_time_high=struck_analysis_parameters.max_drift_time),
-    "5x_baseline_rms_dt_low_and_hi_cut"))
+hists.append(get_hist(tree, "Sum$(bundle_energy)","nbundlesX<2 && nbundlesY<2", "bundle_energy_1"))
 
-hists.append(get_hist(tree, struck_analysis_cuts.get_few_channels_cmd_baseline_rms(),
-    struck_analysis_cuts.get_drift_time_cut(),
-    "5x_baseline_rms_dt_low_cut"))
+hists.append(get_hist(tree, "Sum$(bundle_energy)",
+    "nbundlesX<2 && nbundlesY<2 && %s" % struck_analysis_cuts.get_drift_time_cut(drift_time_high=struck_analysis_parameters.max_drift_time), 
+    "bundle_energy_1_dt_cut"))
+
+hists.append(get_hist(tree, "Sum$(bundle_energy)",
+    "nbundlesX<2 && nbundlesY<2 && %s" % struck_analysis_cuts.get_drift_time_selection(drift_time_high=struck_analysis_parameters.max_drift_time), 
+    "bundle_energy_1_dt_sel"))
+
+hists.append(get_hist(tree, "Sum$(bundle_energy)","nbundlesX>1 || nbundlesY>1", "bundle_energy_2"))
 
 # doesn't work! too many operators:
 #hists.append(get_hist(tree, struck_analysis_cuts.get_few_channels_cmd_baseline_rms(),
@@ -173,7 +181,7 @@ hists.append(get_hist(tree, struck_analysis_cuts.get_few_channels_cmd_baseline_r
 # chargeEnergy
 #hists.append(get_hist(tree, "chargeEnergy","", "chargeEnergy"))
 
-legend = ROOT.TLegend(0.1, 0.9, 0.9, 0.99)
+legend = ROOT.TLegend(canvas.GetLeftMargin(), 0.9, 0.9, 0.99)
 legend.SetNColumns(2)
 
 # draw hists
@@ -191,6 +199,7 @@ for i, hist in enumerate(hists):
     legend.AddEntry(hist, "%s: %.3e" % (hist.GetName(), hist.GetEntries()), "p")
 
 legend.Draw()
+hists[0].SetAxisRange(0, 2000.0)
 canvas.Update()
 canvas.Print("energies.pdf")
 
