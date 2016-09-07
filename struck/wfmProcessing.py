@@ -48,7 +48,8 @@ except ImportError:
     do_decay_time_fit = False
     print "wfmProcessing.py : couldn't import EXODecayTimeFit"
 
-import struck_analysis_parameters
+#import struck_analysis_parameters
+from struck import struck_analysis_parameters # testing
 
 
 
@@ -140,7 +141,8 @@ def get_wfmparams(
     n_baseline_samples, 
     calibration, 
     decay_time, 
-    is_pmtchannel
+    is_pmtchannel,
+    isMC=False,
 ):
     if False:
         print "exo_wfm:", exo_wfm
@@ -174,18 +176,27 @@ def get_wfmparams(
     baseline_remover.Transform(exo_wfm, energy_wfm)
     energy = baseline_remover.GetBaselineMean()*calibration
     energy_rms = baseline_remover.GetBaselineRMS()*calibration
+    if math.isnan(energy_rms): # for events with 0 noise, RMS is sometimes NaN
+        if not isMC: print "WARNING: setting RMS from nan to 0"
+        energy_rms = 0.0
 
     # remove baseline using 2x n_baseline_samples
     baseline_remover.SetBaselineSamples(2*n_baseline_samples)
     baseline_remover.SetStartSample(0)
     baseline_remover.Transform(exo_wfm)
     baseline_rms = baseline_remover.GetBaselineRMS()
+    if math.isnan(baseline_rms): # for events with 0 noise, RMS is sometimes NaN
+        if not isMC: print "WARNING: setting RMS from nan to 0"
+        baseline_rms = 0.0
 
     # measure energy before PZ correction, use 2x n_baseline_samples
     baseline_remover.SetStartSample(wfm_length - 2*n_baseline_samples - 1)
     baseline_remover.Transform(exo_wfm, energy_wfm)
     energy1 = baseline_remover.GetBaselineMean()*calibration
     energy_rms1 = baseline_remover.GetBaselineRMS()*calibration
+    if math.isnan(energy_rms1): # for events with 0 noise, RMS is sometimes NaN
+        if not isMC: print "WARNING: setting RMS from nan to 0"
+        energy_rms1 = 0.0
     
     #measure Decay Time for this WF
     #Only measure if there is a signal which we defice as 10 times above the noise
@@ -219,6 +230,9 @@ def get_wfmparams(
     baseline_remover.Transform(energy_wfm)
     energy_pz = baseline_remover.GetBaselineMean()*calibration
     energy_rms_pz = baseline_remover.GetBaselineRMS()*calibration
+    if math.isnan(energy_rms_pz): # for events with 0 noise, RMS is sometimes NaN
+        if not isMC: print "WARNING: setting RMS from nan to 0"
+        energy_rms_pz = 0.0
  
     # measure energy after PZ correction, use 2x n_baseline_samples
     baseline_remover.SetBaselineSamples(2*n_baseline_samples)
@@ -237,10 +251,15 @@ def get_wfmparams(
     baseline_remover.Transform(energy_wfm)
     energy1_pz = baseline_remover.GetBaselineMean()*calibration
     energy_rms1_pz = baseline_remover.GetBaselineRMS()*calibration
+    if math.isnan(energy_rms1_pz): # for events with 0 noise, RMS is sometimes NaN
+        if not isMC: print "WARNING: setting RMS from nan to 0"
+        energy_rms1_pz = 0.0
     
     #Apply threshold
     if energy1_pz > struck_analysis_parameters.rms_threshold*energy_rms1_pz*math.sqrt(2.0/n_baseline_samples):
-        if not is_pmtchannel:
+        if isMC and energy_rms1_pz <= 0.1 and energy1_pz > 10.0: # for MC with no noise, only consider events above 10 keV
+            isSignal = 1
+        elif not is_pmtchannel:
             #PMT can't be a signal because by default it has to have triggered
             isSignal = 1
 
