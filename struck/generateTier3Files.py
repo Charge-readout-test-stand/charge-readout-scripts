@@ -981,9 +981,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 except KeyError:
                     sigma = rms_keV[0]/calibration[i] # MC can have more channels than data
                 #print "%.1f keV (%.1f ADC units) noise to MC" % (rms_keV[1], sigma)
-                #for i_point in xrange(len(wfm)):
-                #    noise = generator.Gaus()*sigma
-                #    wfm[i_point]+=noise
+                for i_point in xrange(len(wfm)):
+                    noise = generator.Gaus()*sigma
+                    wfm[i_point]+=noise
 
                 noise_val[i] = generator.Gaus() # an extra noise value for use with energy smearing
 
