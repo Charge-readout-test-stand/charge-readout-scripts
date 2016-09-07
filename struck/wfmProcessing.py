@@ -40,7 +40,13 @@ from ROOT import EXOSmoother
 from ROOT import EXOPoleZeroCorrection
 from ROOT import EXOExtremumFinder
 from ROOT import EXOTrapezoidalFilter
-from ROOT import EXODecayTimeFit
+
+do_decay_time_fit = True
+try:
+    from ROOT import EXODecayTimeFit
+except ImportError:
+    do_decay_time_fit = False
+    print "wfmProcessing.py : couldn't import EXODecayTimeFit"
 
 import struck_analysis_parameters
 
@@ -188,7 +194,7 @@ def get_wfmparams(
     decay_fit = -999.0
     decay_chi2 = -999.0
     decay_error = -999.0
-    if energy_rms1 > 0.0 and energy1/energy_rms1 > 10.0:
+    if do_decay_time_fit and energy_rms1 > 0.0 and energy1/energy_rms1 > 10.0:
         decay_fitter = EXODecayTimeFit()
         decay_fitter.SetStartSample(struck_analysis_parameters.decay_start_time)
         decay_fitter.SetEndSample(struck_analysis_parameters.decay_end_time)
