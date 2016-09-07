@@ -13,6 +13,7 @@ microsecond = 1.0e3
 second = 1.0e9
 if os.getenv("EXOLIB") is not None:
     try:
+        from ROOT import gSystem
         gSystem.Load("$EXOLIB/lib/libEXOROOT")
         from ROOT import CLHEP
         microsecond = CLHEP.microsecond
