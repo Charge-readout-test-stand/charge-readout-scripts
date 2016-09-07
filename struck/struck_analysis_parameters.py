@@ -125,8 +125,8 @@ if is_7th_LXe:
     channel_map[5] = "Y17"
     channel_map[6] = "Y18"
     channel_map[7] = "Y19"
-if is_8th_LXe: # FIXME with real values for 8th LXe
 
+if is_8th_LXe: 
     one_strip_channels[1] = 1
     one_strip_channels[2] = 1
     one_strip_channels[3] = 1
@@ -206,21 +206,36 @@ MCcharge_channels_to_use = [0]*MCn_channels
 mc_channel_map = {} # map MC channel to label
 struck_to_mc_channel_map = {} # map struck channel to MC channel
 for struck_channel, label in channel_map.items():
+    if is_8th_LXe: break # FIXME -- skip this for now
     is_y = False
     if "Y" in label:
         is_y = True
     elif "PMT" in label: continue
-    if is_8th_LXe:
-        mc_channel = struck_channel # FIXME?
-    else:
-        mc_channel = int(label[1:]) -1
+    mc_channel = int(label[1:]) -1
     if is_y: mc_channel += 30
     #print "channel %s: struck=%i | mc=%i" % (label, struck_channel, mc_channel)
     struck_to_mc_channel_map[struck_channel] = mc_channel
     mc_channel_map[mc_channel] = label
     MCcharge_channels_to_use[mc_channel] = 1
-n_MCchargechannels = sum(MCcharge_channels_to_use)
 
+if is_8th_LXe:
+    MCcharge_channels_to_use = [1]*MCn_channels
+    # X23/24 is dead
+    MCcharge_channels_to_use[22] = 0
+    MCcharge_channels_to_use[23] = 0
+    # Y1-10 is dead
+    MCcharge_channels_to_use[30] = 0
+    MCcharge_channels_to_use[31] = 0
+    MCcharge_channels_to_use[32] = 0
+    MCcharge_channels_to_use[33] = 0
+    MCcharge_channels_to_use[34] = 0
+    MCcharge_channels_to_use[35] = 0
+    MCcharge_channels_to_use[36] = 0
+    MCcharge_channels_to_use[37] = 0
+    MCcharge_channels_to_use[38] = 0
+    MCcharge_channels_to_use[39] = 0
+
+n_MCchargechannels = sum(MCcharge_channels_to_use)
 
 def is_tree_MC(tree):
     """ test whether tier3 tree is of MC results or not"""
