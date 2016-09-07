@@ -843,10 +843,15 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             #Event number
             event[0] = tree.EventNumber
             sub_event[0] = tree.SubEventNumber
-	    NOP[0] = tree.NOP
-	    NOPactive[0] = tree.NOPactive
-	    NPE[0] = tree.NPE
-	    NPEactive[0] = tree.NPEactive
+
+            # check for backwards compatibility...
+            try:
+                NOP[0] = tree.NOP
+                NOPactive[0] = tree.NOPactive
+                NPE[0] = tree.NPE
+                NPEactive[0] = tree.NPEactive
+            except AttributeError:
+                pass
         elif isNGM:
             event[0] = n_events
         else:
@@ -976,9 +981,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 except KeyError:
                     sigma = rms_keV[0]/calibration[i] # MC can have more channels than data
                 #print "%.1f keV (%.1f ADC units) noise to MC" % (rms_keV[1], sigma)
-                for i_point in xrange(len(wfm)):
-                    noise = generator.Gaus()*sigma
-                    wfm[i_point]+=noise
+                #for i_point in xrange(len(wfm)):
+                #    noise = generator.Gaus()*sigma
+                #    wfm[i_point]+=noise
 
                 noise_val[i] = generator.Gaus() # an extra noise value for use with energy smearing
 
@@ -1021,7 +1026,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             )
             
             
-            if signal_map[i] > 0.5:
+            if not isMC and signal_map[i] > 0.5:
                 #This is a signal so add to total and figure out the type
                 #Record Energy in  new variable which tracks total energy from 
                 #channels above threshold.
@@ -1119,17 +1124,18 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             # end loop over channels
 
         #-------------Create bundles of wire signals-------------
-        (   nbundles,
-            bundle_type,
-            signal_bundle_map,
-            bundle_energy,
-            bundle_nsigs,
-            nbundlesX[0],
-            nbundlesY[0]
-        ) = BundleSignals.BundleSignals(signal_map, energy1_pz, 
-                                        nbundles, bundle_type, signal_bundle_map,
-                                        bundle_energy, bundle_nsigs)
-        
+        if not isMC:
+            (   nbundles,
+                bundle_type,
+                signal_bundle_map,
+                bundle_energy,
+                bundle_nsigs,
+                nbundlesX[0],
+                nbundlesY[0]
+            ) = BundleSignals.BundleSignals(signal_map, energy1_pz, 
+                                            nbundles, bundle_type, signal_bundle_map,
+                                            bundle_energy, bundle_nsigs)
+            
         #nbundles[0] = nbundles_temp
         #for bundle_index in xrange(nbundles[0]):
         #    bundle_type.append(bundle_type_temp[bundle_index])
