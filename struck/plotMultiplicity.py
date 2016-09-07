@@ -8,7 +8,7 @@ import sys
 
 import ROOT
 from ROOT import gROOT
-#gROOT.SetBatch(True)
+gROOT.SetBatch(True)
 from ROOT import TH1D
 from ROOT import TFile
 from ROOT import TCanvas
@@ -89,10 +89,25 @@ def process_files(filenames):
         ch_hist.SetLineColor(color)
         #ch_hist.SetLineWidth(2)
         ch_hist.SetFillColor(color)
-        ch_hist.SetXTitle("Channel hit [above %.1f keV]" % threshold)
-        selection = "energy1_pz>%s" % (threshold/multiplier)
+        #ch_hist.SetXTitle("Channel hit [above %.1f keV]" % threshold)
+        #selection = "energy1_pz>%s" % (threshold/multiplier)
+        selection = "signal_map==1"
         n_drawn = tree.Draw("channel >> %s" % ch_hist.GetName(), selection)
         ch_hist.Scale(1.0/n_entries)
+
+
+        for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use):
+
+            i_bin = ch_hist.FindBin(channel)
+            ch_hist.GetXaxis().SetBinLabel(i_bin, struck_analysis_parameters.channel_map[channel])
+
+            # set contents to 0 for unused channels
+            if val == 0:
+                if channel == struck_analysis_parameters.pmt_channel: continue
+                content = ch_hist.GetBinContent(i_bin)
+                ch_hist.SetBinContent(i_bin, 0.0)
+                print "set ch %i %s bin %i from %i to 0" % (channel, struck_analysis_parameters.channel_map[channel], i_bin, content)
+
 
         canvas.SetLogy(1)
         canvas.Update()
@@ -103,14 +118,16 @@ def process_files(filenames):
         canvas.Update()
         canvas.Print("hitChannels_lin.pdf")
 
-        raw_input("any key to continue  ")
+        if not ROOT.gROOT.IsBatch(): raw_input("any key to continue  ")
 
 
 
         #selection = "chargeEnergy*%s>1000 & chargeEnergy*%s<1200" % (multiplier, multiplier)
         #selection = ""
-        selection = "%s > 200" % struck_analysis_cuts.get_few_channels_cmd_baseline_rms()
-        draw_cmd = struck_analysis_cuts.get_multiplicity_cmd(energy_threshold=threshold/multiplier, isMC=is_MC)
+        #selection = "%s > 200" % struck_analysis_cuts.get_few_channels_cmd_baseline_rms()
+        selection = "SignalEnergy > 200"
+        #draw_cmd = struck_analysis_cuts.get_multiplicity_cmd(energy_threshold=threshold/multiplier, isMC=is_MC)
+        draw_cmd = "nsignals"
         draw_cmd = "%s >> %s" % (draw_cmd, hist.GetName())
 
         title = selection[:100] + "..."
@@ -140,14 +157,14 @@ def process_files(filenames):
         hist.Draw("same")
 
     canvas.SetLogy(1)
-    legend.Draw()
+    #legend.Draw()
     canvas.Update()
     canvas.Print("multiplicity.pdf")
 
     canvas.SetLogy(0)
     canvas.Update()
     canvas.Print("multiplicity_lin.pdf")
-    raw_input("any key to continue  ")
+    if not ROOT.gROOT.IsBatch(): raw_input("any key to continue  ")
 
 
 if __name__ == "__main__":
@@ -165,7 +182,7 @@ if __name__ == "__main__":
     filenames = [
         #"~/2016_08_15_8th_LXe_overnight/tier3_added/overnight8thLXe_v2.root", # ubuntu DAQ
         #"~/2016_08_15_8th_LXe_overnight/tier3_added/overnight8thLXe_v3.root", # ubuntu DAQ
-        "/p/lscratchd/alexiss/2016_08_15_8th_LXe_overnight/tier3_added/overnight8thLXe_v3.root ", # LLNL
+        "/p/lscratchd/alexiss/2016_08_15_8th_LXe_overnight/tier3_added/overnight8thLXe_v4.root ", # LLNL
     ]
 
     process_files(filenames)
