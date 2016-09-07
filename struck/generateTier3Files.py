@@ -69,6 +69,7 @@ from ROOT import kRed
 
 if os.getenv("EXOLIB") is not None:
     try:
+        print "loading libEXOROOT"
         gSystem.Load("$EXOLIB/lib/libEXOROOT")
     except:
         pass
@@ -269,6 +270,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
         NPEactive = array("d", [0])
         out_tree.Branch('NPEactive', NPEactive, 'NPEactive/D')
+
+        noise_val = array("d", [0]*n_channels)
+        out_tree.Branch('noise', noise_val, 'noise[%i]/D' % n_channels)
 
     file_start_time = array('I', [0]) # unsigned int
     file_start_time[0] = posix_start_time
@@ -975,6 +979,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 for i_point in xrange(len(wfm)):
                     noise = generator.Gaus()*sigma
                     wfm[i_point]+=noise
+
+                noise_val[i] = generator.Gaus() # an extra noise value for use with energy smearing
 
             exo_wfm = EXODoubleWaveform(array('d',wfm), wfm_length[i])
 
