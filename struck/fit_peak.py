@@ -18,6 +18,7 @@ import os
 import sys
 import json
 import math
+import commands
 import datetime
 
 import ROOT
@@ -90,9 +91,9 @@ def fit_channel(
         fit_formula += " + [6]*TMath::Erfc((x-[1])/sqrt(2)/[2])"
             
     if channel != None:
-        plot_name = "fit_ch%i_%s" % (channel, basename)
+        plot_name = "%s/fit_ch%i_%s" % (basename, channel, basename)
     else:
-        plot_name = "fit_all_%s" % basename
+        plot_name = "%s/fit_all_%s" % (basename, basename)
 
 
     n_bins = int((max_bin-min_bin)/bin_width)
@@ -411,7 +412,8 @@ def fit_channel(
     leg.AddEntry(testfit, "Total Fit: #chi^{2}/DOF = %.1f/%i, P-val = %.1E" % (chi2, ndf, prob),"l")
     leg.AddEntry(bestfit_gaus, "Gaus Peak: #sigma = %.1f #pm %.1f keV, %.1E #pm %.1E cts" % ( 
         sigma, sigma_err, n_peak_counts, n_peak_counts_err), "l")
-    leg.AddEntry(bestfit_gaus, "centroid = %.1f #pm %.1f keV | status=%i" % (centroid, centroid_err, fit_status), "")
+    leg.AddEntry(bestfit_gaus, "#bar{x} = %.1f #pm %.1f keV | status=%i | #sigma/E = %.2f #pm %.2f" % (
+        centroid, centroid_err, fit_status, sigma/centroid*100.0, sigma_err/centroid*100.0) + "%", "")
     leg.AddEntry(bestfit_exp,  "Exp + const", "l")
     if do_use_step: 
         leg.AddEntry(bestfit_step, "Erfc step: height = %.1E #pm %.1E" % (testfit.GetParameter(6), testfit.GetParError(6)), "l")
@@ -503,7 +505,7 @@ def fit_channel(
             new_calibration_value_err,
         )
         print new_calibration
-        new_calib_file = file("new_calib_%s.txt" % basename,"a")
+        new_calib_file = file("%s/new_calib_%s.txt" % (basename, basename),"a")
         new_calib_file.write(new_calibration + "\n")
         new_calib_file.close()
 
@@ -533,8 +535,8 @@ def process_file(
     print "--> processing", filename
     basename = os.path.splitext(os.path.basename(filename))[0]
 
-
-    #basename = "step" + basename
+    if do_use_step:
+        basename = "step" + basename
 
     # cuts label prefix:
     if all_energy_var!= None:
@@ -550,9 +552,14 @@ def process_file(
 
     # append date & time to basename
     now = datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S_')
-    basename = basename + now
+    basename = basename + "_" + now
 
     print basename
+    cmd = "mkdir %s" % basename
+    print cmd
+    output = commands.getstatusoutput(cmd)
+    if output[1] != 0:
+        print output[0]
 
     root_file = ROOT.TFile(filename)
     tree = root_file.Get("tree")
@@ -575,14 +582,14 @@ def process_file(
         charge_channels_to_use = struck_analysis_parameters.charge_channels_to_use
 
     for channel, value in enumerate(charge_channels_to_use):
-        continue # skipping indiv channels for now... 
+        #continue # skipping indiv channels for now... 
         if value:
             result = fit_channel(tree, channel, basename, do_1064_fit, all_energy_var, channel_selection, do_use_step, energy_var=energy_var)
             if result:
                 all_results["channel %i" % channel] = result
 
     # write results to file
-    result_file = file("fit_results_%s.txt" % basename, 'w')
+    result_file = file("%s/fit_results_%s.txt" % (basename, basename), 'w')
     json.dump(all_results, result_file, indent=4, sort_keys=True)
 
 
@@ -617,10 +624,13 @@ if __name__ == "__main__":
     #selections.append([sc, lc])
     #selections.append([nc, lc])
     #selections.append([nc, sc, lc])
-    selections.append([dc])
+    #selections.append([dc])
+
+    # best so far:
     selections.append([struck_analysis_cuts.get_single_strip_cut(), dc])
-    selections.append([struck_analysis_cuts.get_single_strip_cut(), ds])
-    selections.append(["(nbundlesX<2&&nbundlesY<2)",dc])
+
+    #selections.append([struck_analysis_cuts.get_single_strip_cut(), ds])
+    #selections.append(["(nbundlesX<2&&nbundlesY<2)",dc])
 
     channel_selections = []
     channel_selections.append(struck_analysis_cuts.get_drift_time_cut(is_single_channel=True, drift_time_high=drift_time_high))
