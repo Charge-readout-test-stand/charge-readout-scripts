@@ -26,14 +26,20 @@ import struck_analysis_parameters
 
 #Bundle Signals together into 
 
-def GetChType(ch):
+def GetChType(ch, isMC):
     channel_map = struck_analysis_parameters.channel_map
     chtype = 0
     
-    if 'X' in channel_map[ch]: chtype = 1
-    elif 'Y' in channel_map[ch]: chtype = 2
-    elif 'PMT' in channel_map[ch]: chtype = 0
-    else: print "What happened??", channel_map[ch]
+    if isMC:
+        if ch < 30: chtype = 1
+        elif ch<60: chtype = 2
+        else: print "MC -- What happened??", ch
+
+    else:
+        if 'X' in channel_map[ch]: chtype = 1
+        elif 'Y' in channel_map[ch]: chtype = 2
+        elif 'PMT' in channel_map[ch]: chtype = 0
+        else: print "What happened??", channel_map[ch]
     
     return chtype
 
@@ -44,7 +50,8 @@ def BundleSignals(
     bundle_type, 
     signal_bundle_map,
     bundle_energy,
-    bundle_nsigs
+    bundle_nsigs,
+    isMC,
 ):
 
     #Constants from Struck Code
@@ -65,7 +72,7 @@ def BundleSignals(
         if isSignal > 0.5:
             
             #Is it an X or Y channel 
-            chtype = GetChType(i)
+            chtype = GetChType(i, isMC)
 
             #Get Neighbor.  We always go through from left to right so only need
             #to check neighbor to the left.
@@ -75,7 +82,7 @@ def BundleSignals(
             if nindex >= 0 and nindex < n_channels and nindex != pmt_channel: 
                 #Make sure not PMT channel, or over the edge
                 #print "Compare types", chtype, GetChType(nindex)
-                if chtype == GetChType(nindex):
+                if chtype == GetChType(nindex, isMC):
                     #Must be same type of channel
                     if signal_map[nindex] > 0.5:
                         #Left neighbor saw a signal so 
