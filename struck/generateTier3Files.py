@@ -1023,21 +1023,30 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 calibration=calibration[i], 
                 decay_time=decay_time[i], 
                 is_pmtchannel=channel[i]==pmt_channel,
+                isMC=isMC,
             )
             
             
-            if not isMC and signal_map[i] > 0.5:
+            if signal_map[i] > 0.5:
                 #This is a signal so add to total and figure out the type
                 #Record Energy in  new variable which tracks total energy from 
                 #channels above threshold.
                 nsignals[0]+=1
                 SignalEnergy[0] += energy1_pz[i]
-                if 'X' in channel_map[i]:
-                    nXsignals[0]+=1
-                    SignalEnergyX[0] += energy1_pz[i]
-                elif 'Y' in channel_map[i]:
-                    nYsignals[0]+=1
-                    SignalEnergyY[0] += energy1_pz[i]
+
+                if isMC:
+                    if i < 30:
+                        nXsignals[0]+=1
+                    else:
+                        nYsignals[0]+=1
+
+                else: # not MC
+                    if 'X' in channel_map[i]:
+                        nXsignals[0]+=1
+                        SignalEnergyX[0] += energy1_pz[i]
+                    elif 'Y' in channel_map[i]:
+                        nYsignals[0]+=1
+                        SignalEnergyY[0] += energy1_pz[i]
 
             if channel[i] == pmt_channel:
                 lightEnergy[0] = energy[i]
@@ -1124,18 +1133,17 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             # end loop over channels
 
         #-------------Create bundles of wire signals-------------
-        if not isMC:
-            (   nbundles,
-                bundle_type,
-                signal_bundle_map,
-                bundle_energy,
-                bundle_nsigs,
-                nbundlesX[0],
-                nbundlesY[0]
-            ) = BundleSignals.BundleSignals(signal_map, energy1_pz, 
-                                            nbundles, bundle_type, signal_bundle_map,
-                                            bundle_energy, bundle_nsigs)
-            
+        (   nbundles,
+            bundle_type,
+            signal_bundle_map,
+            bundle_energy,
+            bundle_nsigs,
+            nbundlesX[0],
+            nbundlesY[0]
+        ) = BundleSignals.BundleSignals(signal_map, energy1_pz, 
+                                        nbundles, bundle_type, signal_bundle_map,
+                                        bundle_energy, bundle_nsigs, isMC=isMC)
+        
         #nbundles[0] = nbundles_temp
         #for bundle_index in xrange(nbundles[0]):
         #    bundle_type.append(bundle_type_temp[bundle_index])
