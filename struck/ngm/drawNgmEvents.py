@@ -13,7 +13,7 @@ import commands
 from scipy.fftpack import fft
 
 import ROOT
-ROOT.gROOT.SetBatch(True) # uncomment to draw multi-page PDF
+#ROOT.gROOT.SetBatch(True) # uncomment to draw multi-page PDF
 
 from struck import struck_analysis_parameters
 
