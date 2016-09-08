@@ -46,7 +46,7 @@ ROOT.gStyle.SetTitleFontSize(0.04)
 def process_file(filename=None, n_plots_total=0):
 
     # options ------------------------------------------
-    threshold = 1250 # keV
+    threshold = 1000 # keV
     #threshold = 570 # keV, for generating multi-page PDF
     #threshold = 50 # ok for unshaped, unamplified data
 
@@ -244,11 +244,6 @@ def process_file(filename=None, n_plots_total=0):
                 multiplier = 1.0
             elif units_to_use == 2: # mV
                 multiplier = voltage_range_mV/pow(2,14)
-            elif units_to_use == 0 and channel == pmt_channel: # keV
-                # for digitizer testing, using a typical chanrge-channel energy
-                # conversion, even for PMT channel!!! FIXME
-                multiplier = calibration_values[0]/20.0
-                print "*** WARNING -- setting pmt calibration to calibration_values[0]/10 for digitizer tests!!"
 
 
             if False: # print debug output
@@ -269,7 +264,8 @@ def process_file(filename=None, n_plots_total=0):
                 energy += graph.GetY()[graph.GetN() - i_sample - 1] / n_samples_to_avg
             energy = (energy - baseline)*multiplier
             if channel != pmt_channel:
-                sum_energy += energy
+                if energy > 10.0:
+                    sum_energy += energy
 
             rms_noise = 0.0
             for i_sample in xrange(n_samples_to_avg):
@@ -295,9 +291,11 @@ def process_file(filename=None, n_plots_total=0):
                 graph.SetPoint(i_point, x/sampling_freq_Hz*1e6, y)
 
             graph.SetLineWidth(2)
+            if energy>20.0:
+                graph.SetLineWidth(5)
+
             graph.Draw("l")
             #print "\t entry %i, ch %i, slot %i" % ( i_entry-1, channel, slot,)
-
             # construct sum wfm
             for i_point in xrange(tree.HitTree.GetNSamples()):
                 y = graph.GetY()[i_point]
@@ -386,7 +384,7 @@ def process_file(filename=None, n_plots_total=0):
 
         frame_hist.SetMinimum(y_min)
         frame_hist.SetMaximum(y_max)
-        frame_hist.SetTitle("Sum Ionization Energy: %.1f keV" % sum_energy)
+        frame_hist.SetTitle("Event %i | Sum Ionization Energy: %.1f keV" % (i_entry/32, sum_energy))
         frame_hist.SetTitleSize(0.2, "t")
 
         for i in xrange(32):
