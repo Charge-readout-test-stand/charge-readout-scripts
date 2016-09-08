@@ -257,8 +257,9 @@ def get_wfmparams(
     
     #Apply threshold
     if energy1_pz > struck_analysis_parameters.rms_threshold*energy_rms1_pz*math.sqrt(2.0/n_baseline_samples):
-        if isMC and energy_rms1_pz <= 0.1 and energy1_pz > 10.0: # for MC with no noise, only consider events above 10 keV
-            isSignal = 1
+        if isMC:
+            if energy_rms1_pz <= 0.1 and energy1_pz > 10.0: # for MC with no noise, only consider events above 10 keV
+                isSignal = 1
         elif not is_pmtchannel:
             #PMT can't be a signal because by default it has to have triggered
             isSignal = 1

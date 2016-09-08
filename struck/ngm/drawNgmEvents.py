@@ -13,7 +13,7 @@ import commands
 from scipy.fftpack import fft
 
 import ROOT
-#ROOT.gROOT.SetBatch(True) # uncomment to draw multi-page PDF
+ROOT.gROOT.SetBatch(True) # uncomment to draw multi-page PDF
 
 from struck import struck_analysis_parameters
 
@@ -47,6 +47,8 @@ def process_file(filename=None, n_plots_total=0):
 
     # options ------------------------------------------
     threshold = 1000 # keV
+    #threshold = -20000
+    #threshold = 1250 # keV
     #threshold = 570 # keV, for generating multi-page PDF
     #threshold = 50 # ok for unshaped, unamplified data
 
@@ -511,7 +513,7 @@ def process_file(filename=None, n_plots_total=0):
 
 if __name__ == "__main__":
 
-    n_plots_total = 200
+    n_plots_total = 100
     n_plots_so_far = 0
     if len(sys.argv) > 1:
         for filename in sys.argv[1:]:
