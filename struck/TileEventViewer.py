@@ -114,12 +114,14 @@ if __name__ == "__main__":
         #for ich, E in enumerate(energy):
         #    print ich, E
         #print "Max: ", max(energy[0:31])
-        if tree.SignalEnergy < 200: 
+        if tree.SignalEnergy < 200 or tree.nsignals > 3:
             print "Skip"
             continue
         print "Sig Energy ", tree.SignalEnergy
+        print index, tree.filename
         make_tile_event(energy)
         plt.show()
+        plt.savefig("event%i.pdf" % int(index+1))
         raw_input()
         plt.clf()
 
