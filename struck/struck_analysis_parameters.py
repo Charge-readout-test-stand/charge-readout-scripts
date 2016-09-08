@@ -51,6 +51,7 @@ sampling_freq_Hz = 25.0e6 # digitizer sampling frequency, Hz
 charge_channels_to_use = [0]*16
 one_strip_channels = [0]*32
 two_strip_channels = [0]*32
+channel_to_n_strips_map = [1.0]*32
 if is_8th_LXe:
     charge_channels_to_use = [0]*32
 
@@ -195,6 +196,11 @@ if is_8th_LXe:
     channel_map[29] = "X27/28"
     channel_map[30] = "X29/30"
     channel_map[pmt_channel] = "PMT"
+
+    channel_to_n_strips_map[pmt_channel] = 0.0
+    for channel, val in enumerate(two_strip_channels):
+        channel_to_n_strips_map[channel] = 2.0
+    channel_to_n_strips_map[16] = 12
 
 #MC Channels index starts at 0 so X26 = 25
 #Y  Channles are offset by 30
