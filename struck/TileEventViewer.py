@@ -34,6 +34,7 @@ class TileEventViewer:
         self.num_channelsx = 30
         self.num_channelsy = 30
         self.diag = 3.0
+        self.ColorTitle = "Energy[keV]"
 
     def get_color_map(self, n):
         jet = plt.get_cmap('jet')
@@ -82,6 +83,9 @@ class TileEventViewer:
                 yi+=self.diag
             xi+=self.diag
 
+    
+    def ChangeTitle(self, title):
+        self.ColorTitle = title
 
     def PlotOutline(self):
         xbig = [-45.0, 45.0, 45.0,  -45.0, -45.0 ]
@@ -94,7 +98,7 @@ class TileEventViewer:
         scalarMap = cmx.ScalarMappable(norm=cNorm, cmap='jet')
         scalarMap.set_array(self.ncols)
         cb = plt.colorbar(scalarMap,fraction=0.035)
-        cb.set_label('Energy[keV]')
+        cb.set_label(self.ColorTitle)
 
     def make_tile_event(self, energy):
         self.PlotOutline()
