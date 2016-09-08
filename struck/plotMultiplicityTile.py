@@ -6,6 +6,7 @@ Draw multiplicity plot
 import os
 import sys
 import TileEventViewer
+import matplotlib.pyplot as plt
 
 import ROOT
 from ROOT import gROOT
@@ -87,8 +88,10 @@ def process_files(filenames):
             hits_per_ch.append(ch_hist.GetBinContent(i_bin))
         
         TEV = TileEventViewer.TileEventViewer(100, min(hits_per_ch), max(hits_per_ch))
+        TEV.ChangeTitle("Event Fraction")
         print len(hits_per_ch)
         TEV.make_tile_event(hits_per_ch)
+        plt.savefig("TileHits.pdf")
         raw_input()
         print "Tile Draw"
 
