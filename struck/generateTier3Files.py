@@ -759,6 +759,23 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
         NumPCDs = array('i', [0]) # signed int
         out_tree.Branch('NumPCDs', NumPCDs, 'NumPCDs/I')
+        max_n_PCDs = 300
+
+        # PCDx:
+        PCDx = array('d',[0.0]*max_n_PCDs)
+        out_tree.Branch("PCDx",PCDx,"PCDx[NumPCDs]/D")
+
+        # PCDy:
+        PCDy = array('d',[0.0]*max_n_PCDs)
+        out_tree.Branch("PCDy",PCDy,"PCDy[NumPCDs]/D")
+
+        # PCDz:
+        PCDz = array('d',[0.0]*max_n_PCDs)
+        out_tree.Branch("PCDz",PCDz,"PCDz[NumPCDs]/D")
+
+        # PCDq:
+        PCDq = array('d',[0.0]*max_n_PCDs)
+        out_tree.Branch("PCDq",PCDq,"PCDq[NumPCDs]/D")
 
         NumTE = array('i', [0]) # signed int
         out_tree.Branch('NumTE', NumTE, 'NumTE/I')
@@ -902,12 +919,22 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             MCtotalEventLXeEnergy[0] = tree.TotalEventLXeEnergy
             MCnestEventEnergy[0] = tree.NestEventEnergy
             MCEventNumber[0] = tree.EventNumber
-            NumPCDs[0] = tree.NumPCDs
             NumTE[0] = tree.NumTE
             NPrimaries[0] = tree.NPrimaries
             for i_primary in xrange(tree.NPrimaries):
                 PdgCode[i_primary] = tree.PdgCode[i_primary]
                 KineticEnergy[i_primary] = tree.KineticEnergy[i_primary]
+            NumPCDs[0] = tree.NumPCDs
+            #print NumPCDs[0]
+            if NumPCDs[0] > max_n_PCDs:
+                print "WARNING: %i PCDs and only space for %i" % (tree.NumPCDs, max_n_PCDs)
+                NumPCDs[0] = max_n_PCDs
+            for i_pcd in xrange(NumPCDs[0]):
+                #print i_pcd
+                PCDx[i_pcd] = tree.PCDx[i_pcd]
+                PCDy[i_pcd] = tree.PCDy[i_pcd]
+                PCDz[i_pcd] = tree.PCDz[i_pcd]
+                PCDq[i_pcd] = tree.PCDq[i_pcd]
 
         sum_wfm = None
         for i in xrange(n_channels_in_event):
@@ -980,7 +1007,6 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                     sigma = rms_keV[i]/calibration[i] 
                 except KeyError:
                     sigma = rms_keV[0]/calibration[i] # MC can have more channels than data
-                #print "%.1f keV (%.1f ADC units) noise to MC" % (rms_keV[1], sigma)
                 for i_point in xrange(len(wfm)):
                     noise = generator.Gaus()*sigma
                     wfm[i_point]+=noise
