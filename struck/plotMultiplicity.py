@@ -99,7 +99,12 @@ def process_files(filenames):
         for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use):
 
             i_bin = ch_hist.FindBin(channel)
-            ch_hist.GetXaxis().SetBinLabel(i_bin, struck_analysis_parameters.channel_map[channel])
+            n_strips = struck_analysis_parameters.channel_to_n_strips_map[channel]
+            label = struck_analysis_parameters.channel_map[channel]
+            print "ch %i | %s | %i strips" % (channel, label, n_strips)
+            ch_hist.GetXaxis().SetBinLabel(i_bin, label)
+            if n_strips>1:
+                ch_hist.SetBinContent(i_bin, ch_hist.GetBinContent(i_bin)/n_strips)
 
             # set contents to 0 for unused channels
             if val == 0:
