@@ -1022,6 +1022,11 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 # a copy of the un-transformed wfm, for debugging
                 copy_wfm = EXODoubleWaveform(exo_wfm)
 
+            label = "Event %i " % n_events
+            if not isMC:
+                label += struck_analysis_parameters.channel_map[i]
+            else:
+                label += " MC ch %i" % i
             # use wfmProcessing to get most wfm parameters
             (
                 baseline_mean[i], 
@@ -1050,6 +1055,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 decay_time=decay_time[i], 
                 is_pmtchannel=channel[i]==pmt_channel,
                 isMC=isMC,
+                label=label,
             )
             
             
@@ -1085,7 +1091,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             exo_wfm.SetSamplingFreq(sampling_freq_Hz/second)
 
             #Sum the Waveforms of the active channels
-            if charge_channels_to_use[channel[i]]:
+            if charge_channels_to_use[channel[i]] and signal_map[i] > 0.5:
                 if i == 0 or sum_wfm is None:
                     sum_wfm = EXODoubleWaveform(calibrated_wfm)
                 else:
@@ -1109,6 +1115,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 wfm_length[i], 
                 sampling_frequency_Hz[0],
                 skip_short_risetimes,
+                label="%s %i keV" % (label, energy1_pz[i]),
             )
 
 
@@ -1117,7 +1124,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             #if not gROOT.IsBatch() and smoothed_max[i] > 60 and channel[i] != pmt_channel:
             #if not gROOT.IsBatch() and i_entry > 176:
             #if not gROOT.IsBatch():
-            if not gROOT.IsBatch() and do_debug:
+            #if not gROOT.IsBatch() and do_debug and channel[i]!=pmt_channel and energy1_pz[i]>100:
+            if False:
 
                 print "--> entry %i | channel %i" % (i_entry, channel[i])
                 print "\t n samples: %i" % wfm_length[i]
@@ -1180,7 +1188,19 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
         ##### processing sum waveform
         if sum_wfm == None:
-            print "sum wfm is None!"
+            smoothed_max_sum[0] = 0.0
+            rise_time_stop10_sum[0] = 0.0 
+            rise_time_stop20_sum[0] = 0.0
+            rise_time_stop30_sum[0] = 0.0
+            rise_time_stop40_sum[0] = 0.0
+            rise_time_stop50_sum[0] = 0.0
+            rise_time_stop60_sum[0] = 0.0
+            rise_time_stop70_sum[0] = 0.0
+            rise_time_stop80_sum[0] = 0.0
+            rise_time_stop90_sum[0] = 0.0
+            rise_time_stop95_sum[0] = 0.0
+            rise_time_stop99_sum[0] = 0.0
+
         else:
             (
                 smoothed_max_sum[0], 
@@ -1200,8 +1220,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 wfm_length[0], 
                 sampling_frequency_Hz[0],
                 skip_short_risetimes,
+                label="Event %i Sum %i keV" % (n_events, SignalEnergy[0]),
             )
-            
+ 
             baseline_remover = EXOBaselineRemover()
             baseline_remover.SetBaselineSamples(2*n_baseline_samples[0])
             baseline_remover.SetStartSample(wfm_length[i] - 2*n_baseline_samples[0] - 1)
@@ -1217,6 +1238,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
               print "====> WARNING: %i channels in this event!!" % i
             else:
                 out_tree.Fill()
+                n_events+=1
         else:
             out_tree.Fill()
 
