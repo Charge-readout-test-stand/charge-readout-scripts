@@ -58,7 +58,8 @@ def do_draw(
     title="", 
     extra_wfm=None, 
     extra_wfm2=None,
-    vlines=None):
+    vlines=None, # vertical lines
+    ):
     
     if gROOT.IsBatch(): return
     # a canvas for drawing, if debugging:
@@ -68,9 +69,10 @@ def do_draw(
     hist = exo_wfm.GimmeHist("hist")
     hist.SetTitle(title)
     hist.SetLineWidth(2)
-    #hist.SetAxisRange(7.9,16.1) # zoom to interesting times
+    hist.SetAxisRange(6.0,19.0) # zoom to interesting times
     if vlines != None:
-        hist.SetAxisRange(vlines[-1]-3.0,vlines[-1]+1.0) # zoom to interesting times
+        #hist.SetAxisRange(vlines[1]-2.0,vlines[-1]+2.0) # zoom to interesting times
+        pass
     hist.SetMarkerStyle(8)
     hist.SetMarkerSize(0.7)
     hist.Draw()
@@ -94,25 +96,29 @@ def do_draw(
             hist_max = hist3.GetMaximum()
         if hist3.GetMinimum() < hist_min:
             hist_min = hist3.GetMinimum()
+    hist_max = hist_max*1.1
+    hist_min = hist_min - hist_max*0.1
     if vlines:
         lines = []
         for vline in vlines:
-            line = TLine(vline, hist.GetMinimum(), vline, hist.GetMaximum())
+            line = TLine(vline, hist_min, vline, hist_max)
             line.SetLineStyle(2)
             line.SetLineWidth(2)
             line.Draw()
             lines.append(line)
-    hist.SetMaximum(hist_max*1.1)
-    hist.SetMinimum(hist_min-hist_max*0.1)
+    hist.SetMaximum(hist_max)
+    hist.SetMinimum(hist_min)
 
 
     canvas.Update()
+    plot_name = "_".join(title.split(" "))
+    print plot_name
     val = raw_input("enter to continue (q=quit, b=batch, p=print) ")
 
     print val
     if (val == 'q' or val == 'Q'): sys.exit(1) 
     if val == 'b': gROOT.SetBatch(True)
-    #if val == 'p': canvas.Print("entry_%i_proc_wfm_%s.png" % (i_entry, basename,))
+    if val == 'p': canvas.Print("%s.pdf" % plot_name)
     
 
 
@@ -143,6 +149,7 @@ def get_wfmparams(
     decay_time, 
     is_pmtchannel,
     isMC=False,
+    label="",
 ):
     if False:
         print "exo_wfm:", exo_wfm
@@ -220,9 +227,9 @@ def get_wfmparams(
     # correct for exponential decay
     pole_zero = EXOPoleZeroCorrection()
     pole_zero.SetDecayConstant(decay_time)
-    if not is_pmtchannel:
+    if not is_pmtchannel and energy1>100:
         pole_zero.Transform(exo_wfm, energy_wfm)
-        do_draw(energy_wfm, "after PZ correction")
+        #do_draw(energy_wfm, "%s after PZ correction" % label)
 
     # measure energy after PZ correction -- use baseline remover
     baseline_remover.SetBaselineSamples(n_baseline_samples) # remove baseline
@@ -289,7 +296,7 @@ def get_wfmparams(
         energy = exo_wfm.GetMaxValue()*calibration
         energy1 = avg*calibration
 
-        if not gROOT.IsBatch():
+        if not gROOT.IsBatch() and False:
             print "is PMT"
             print "index_of_max:", index_of_max
             print "max_val", avg*calibration
@@ -313,11 +320,13 @@ def get_wfmparams(
         trap_filter.Transform(pz_wfm, trap_wfm)
         energy1_pz = trap_wfm.GetMaxValue()
 
-        do_draw(
+        if False: do_draw(
             #exo_wfm, 
             #pz_wfm,
             trap_wfm,
-            "after %i-sample baseline_remover" % baseline_remover.GetBaselineSamples(), 
+            "%s after %i-sample baseline_remover" % (
+                label,
+                baseline_remover.GetBaselineSamples(), ),
             #extra_wfm=trap_wfm,
             extra_wfm=exo_wfm,
             extra_wfm2=pz_wfm,
@@ -359,7 +368,13 @@ def do_risetime_calc(rise_time_calculator, threshold_percent, wfm, max_val, peri
 
 
 
-def get_risetimes(exo_wfm, wfm_length, sampling_freq_Hz, skip_short_risetimes=True):
+def get_risetimes(
+    exo_wfm, 
+    wfm_length, 
+    sampling_freq_Hz,
+    skip_short_risetimes=True, # whether to skip risetimes < 80%
+    label="", # a name for plots, used for debugging
+):
 
     exo_wfm.SetSamplingFreq(sampling_freq_Hz/second)
     new_wfm = EXODoubleWaveform(exo_wfm)
@@ -463,19 +478,19 @@ def get_risetimes(exo_wfm, wfm_length, sampling_freq_Hz, skip_short_risetimes=Tr
         print "\trise_time_stop95:", rise_time_stop95
         print "\trise_time_stop99:", rise_time_stop99
 
-    #do_draw(exo_wfm, "after smoothing", new_wfm, maw_wfm, vlines=[
-    #    rise_time_stop10,
-    #    rise_time_stop20,
-    #    rise_time_stop30,
-    #    rise_time_stop40,
-    #    rise_time_stop50,
-    #    rise_time_stop60,
-    #    rise_time_stop70,
-    #    rise_time_stop80,
-    #    rise_time_stop90,
-    #    rise_time_stop95,
-    #    rise_time_stop99,
-    #])
+    if max_val > 100 and not "PMT" in label: do_draw(exo_wfm, "%s after rise-time calc" % label, new_wfm, maw_wfm, vlines=[
+        rise_time_stop10,
+        rise_time_stop20,
+        rise_time_stop30,
+        rise_time_stop40,
+        rise_time_stop50,
+        rise_time_stop60,
+        rise_time_stop70,
+        rise_time_stop80,
+        rise_time_stop90,
+        rise_time_stop95,
+        rise_time_stop99,
+    ])
     
     maw_wfm.IsA().Destructor(maw_wfm)
     new_wfm.IsA().Destructor(new_wfm)
