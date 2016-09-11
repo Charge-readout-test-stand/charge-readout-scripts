@@ -35,10 +35,10 @@ for filename in filenames:
 
     # construct some cuts...
     selections = []
-    selections.append("(nsignals>0)")
+    #selections.append("(nsignals>0)") # this must be true if we are making a cut on SignalEnergy
     #selections.append("(nsignals==1)")
-    selections.append("(SignalEnergy>100)")
-    selections.append(struck_analysis_cuts.get_drift_time_cut(isMC=isMC))
+    selections.append("(SignalEnergy>50)")
+    #selections.append(struck_analysis_cuts.get_drift_time_cut(isMC=isMC))
     selections = "&&".join(selections)
     print "selections:"
     print selections[:150] # first ~line
@@ -54,7 +54,9 @@ for filename in filenames:
     elist = ROOT.gDirectory.Get("elist")
     print "\t %i entries to copy" % elist.GetN()
 
-    # turn on selected branches
+
+    """
+    # turn on selected branches -- this isn't working... 
     oldtree.SetBranchStatus("*",0) # first turn off all branches
     oldtree.SetBranchStatus("SignalEnergy",1)
     oldtree.SetBranchStatus("nsignals",1)
@@ -63,10 +65,26 @@ for filename in filenames:
     oldtree.SetBranchStatus("energy1_pz",1)
     oldtree.SetBranchStatus("channel",1)
     oldtree.SetBranchStatus("rise_time_stop95",1)
+
+    # sum wfm
+    oldtree.SetBranchStatus("rise_time_stop10_sum",1)
+    oldtree.SetBranchStatus("rise_time_stop20_sum",1)
+    oldtree.SetBranchStatus("rise_time_stop30_sum",1)
+    oldtree.SetBranchStatus("rise_time_stop40_sum",1)
+    oldtree.SetBranchStatus("rise_time_stop50_sum",1)
+    oldtree.SetBranchStatus("rise_time_stop60_sum",1)
+    oldtree.SetBranchStatus("rise_time_stop70_sum",1)
+    oldtree.SetBranchStatus("rise_time_stop80_sum",1)
+    oldtree.SetBranchStatus("rise_time_stop90_sum",1)
+    oldtree.SetBranchStatus("rise_time_stop95_sum",1)
+    oldtree.SetBranchStatus("rise_time_stop99_sum",1)
+    oldtree.SetBranchStatus("energy_rms_sum",1)
+
     if isMC:
         oldtree.SetBranchStatus("noise",1) # MC only 
+    """
 
-    reporting_percent = 5
+    reporting_percent = 1
     reporting_period = elist.GetN() * reporting_percent / 100
     print "\t reporting_period", reporting_period
 
