@@ -179,7 +179,8 @@ def get_wfmparams(
     #do_draw(energy_wfm, "after baseline_remover")
 
     # measure energy before PZ correction -- use baseline_remover for this
-    baseline_remover.SetStartSample(wfm_length - n_baseline_samples - 1)
+    #baseline_remover.SetStartSample(wfm_length - n_baseline_samples - 1)
+    baseline_remover.SetStartSample(450)
     baseline_remover.Transform(exo_wfm, energy_wfm)
     energy = baseline_remover.GetBaselineMean()*calibration
     energy_rms = baseline_remover.GetBaselineRMS()*calibration
@@ -197,7 +198,8 @@ def get_wfmparams(
         baseline_rms = 0.0
 
     # measure energy before PZ correction, use 2x n_baseline_samples
-    baseline_remover.SetStartSample(wfm_length - 2*n_baseline_samples - 1)
+    #baseline_remover.SetStartSample(wfm_length - 2*n_baseline_samples - 1)
+    baseline_remover.SetStartSample(450)
     baseline_remover.Transform(exo_wfm, energy_wfm)
     energy1 = baseline_remover.GetBaselineMean()*calibration
     energy_rms1 = baseline_remover.GetBaselineRMS()*calibration
@@ -233,7 +235,8 @@ def get_wfmparams(
 
     # measure energy after PZ correction -- use baseline remover
     baseline_remover.SetBaselineSamples(n_baseline_samples) # remove baseline
-    baseline_remover.SetStartSample(wfm_length - n_baseline_samples - 1)
+    #baseline_remover.SetStartSample(wfm_length - n_baseline_samples - 1)
+    baseline_remover.SetStartSample(450)
     baseline_remover.Transform(energy_wfm)
     energy_pz = baseline_remover.GetBaselineMean()*calibration
     energy_rms_pz = baseline_remover.GetBaselineRMS()*calibration
@@ -254,7 +257,8 @@ def get_wfmparams(
     calibrated_wfm = EXODoubleWaveform(energy_wfm)
     calibrated_wfm *= calibration
 
-    baseline_remover.SetStartSample(wfm_length - 2*n_baseline_samples - 1)
+    #baseline_remover.SetStartSample(wfm_length - 2*n_baseline_samples - 1)
+    baseline_remover.SetStartSample(450)
     baseline_remover.Transform(energy_wfm)
     energy1_pz = baseline_remover.GetBaselineMean()*calibration
     energy_rms1_pz = baseline_remover.GetBaselineRMS()*calibration
