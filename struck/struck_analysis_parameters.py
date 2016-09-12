@@ -727,11 +727,23 @@ if __name__ == "__main__":
 
     print "\nchannel | label | use | n strips"
     for (channel, name) in channel_map.items():
-        print "\t %2i | %-6s | %i  | %i " % (
+        labels = []
+        try:
+            for strip in struck_to_mc_channel_map[channel]:
+                if strip < 30:
+                    label = "X%i" % (strip+1)
+                else:
+                    label = "Y%i" % (strip-30+1)
+                labels.append(label)
+            labels = ", ".join(labels)
+        except: pass
+        if len(labels) == 0: labels = ""
+        print "\t %2i | %-6s | %i  | %2i | %s" % (
             channel, 
             name,
             charge_channels_to_use[channel],
             channel_to_n_strips_map[channel],
+            labels,
         )
 
     print "\nMC channel names:"
