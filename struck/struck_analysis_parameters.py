@@ -737,7 +737,8 @@ if __name__ == "__main__":
                 labels.append(label)
             labels = ", ".join(labels)
         except: pass
-        print "\t %2i | %-6s | %i  | %i | %s" % (
+        if len(labels) == 0: labels = ""
+        print "\t %2i | %-6s | %i  | %2i | %s" % (
             channel, 
             name,
             charge_channels_to_use[channel],
