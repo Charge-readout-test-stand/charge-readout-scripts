@@ -69,18 +69,25 @@ def process_files(filenames):
         ch_hist = TH1D("ch_hist%i" % len(hists), basename,64, -0.25, 31.75)
         selection = "signal_map==1"
         n_drawn = tree.Draw("channel >> %s" % ch_hist.GetName(), selection, "goff")
+        print "%i entries drawn" % n_drawn
         ch_hist.Scale(1.0/n_entries)
         print "Done draw start the python part"
 
         hits_per_ch = []
         for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use):
 
+            n_strips = struck_analysis_parameters.channel_to_n_strips_map[channel]
             i_bin = ch_hist.FindBin(channel)
+            content = ch_hist.GetBinContent(i_bin)
+            if n_strips > 0:
+                ch_hist.SetBinContent(i_bin, content/n_strips)
+            else:
+                print "ch %i, n_strips=%i" % (channel, n_strips)
+
 
             # set contents to 0 for unused channels
             if val == 0:
                 if channel == struck_analysis_parameters.pmt_channel: continue
-                content = ch_hist.GetBinContent(i_bin)
                 ch_hist.SetBinContent(i_bin, 0.0)
                 print "set ch %i %s bin %i from %i to 0" % (channel, struck_analysis_parameters.channel_map[channel], i_bin, content)
 
@@ -101,8 +108,8 @@ if __name__ == "__main__":
 
 
     filenames = [
-        "/home/teststand/2016_08_15_8th_LXe_overnight/tier3_added/overnight8thLXe_v4.root"
-            #"/p/lscratchd/alexiss/2016_08_15_8th_LXe_overnight/tier3_added/overnight8thLXe_v4.root ", # LLNL
+        #"/home/teststand/2016_08_15_8th_LXe_overnight/tier3_added/overnight8thLXe_v4.root"
+        "/p/lscratchd/alexiss/2016_08_15_8th_LXe_overnight/tier3_added/overnight8thLXe_v6.root ", # LLNL
     ]
 
     process_files(filenames)
