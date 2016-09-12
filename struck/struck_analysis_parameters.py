@@ -52,6 +52,7 @@ charge_channels_to_use = [0]*16
 one_strip_channels = [0]*32
 two_strip_channels = [0]*32
 channel_to_n_strips_map = [1.0]*32
+struck_to_mc_channel_map = {} # map struck channel to MC channel
 if is_8th_LXe:
     charge_channels_to_use = [0]*32
 
@@ -128,40 +129,24 @@ if is_7th_LXe:
     channel_map[7] = "Y19"
 
 if is_8th_LXe: 
-    one_strip_channels[1] = 1
-    one_strip_channels[2] = 1
-    one_strip_channels[3] = 1
-    one_strip_channels[4] = 1
-    one_strip_channels[5] = 1
-    one_strip_channels[6] = 1
-    one_strip_channels[7] = 1
-    one_strip_channels[8] = 1
-    one_strip_channels[9] = 1
-    one_strip_channels[10] = 1
-
-    two_strip_channels[11] = 1
-    two_strip_channels[12] = 1
-    two_strip_channels[13] = 1
-    two_strip_channels[14] = 1
-    two_strip_channels[15] = 1
-
-    one_strip_channels[17] = 1
-    one_strip_channels[18] = 1
-    one_strip_channels[19] = 1
-    one_strip_channels[20] = 1
-    one_strip_channels[21] = 1
-    one_strip_channels[22] = 1
-    one_strip_channels[23] = 1
-    one_strip_channels[24] = 1
-    one_strip_channels[25] = 1
-    one_strip_channels[26] = 1
-
-    two_strip_channels[27] = 1
-    two_strip_channels[28] = 1
-    two_strip_channels[29] = 1
-    two_strip_channels[30] = 1
 
     # S/N 97, slot 0, Y channels
+    struck_to_mc_channel_map[0] = [30,31,32,33,34,35,36,37,38,39]
+    struck_to_mc_channel_map[1] = [40]
+    struck_to_mc_channel_map[2] = [41]
+    struck_to_mc_channel_map[3] = [42]
+    struck_to_mc_channel_map[4] = [43]
+    struck_to_mc_channel_map[5] = [44]
+    struck_to_mc_channel_map[6] = [45]
+    struck_to_mc_channel_map[7] = [46]
+    struck_to_mc_channel_map[8] = [47]
+    struck_to_mc_channel_map[9] = [48]
+    struck_to_mc_channel_map[10] = [49]
+    struck_to_mc_channel_map[11] = [50,51]
+    struck_to_mc_channel_map[12] = [52,53]
+    struck_to_mc_channel_map[13] = [54,55]
+    struck_to_mc_channel_map[14] = [56,57]
+    struck_to_mc_channel_map[15] = [58,59]
     channel_map[0] = "Y1-10"
     channel_map[1] = "Y11"
     channel_map[2] = "Y12"
@@ -180,6 +165,21 @@ if is_8th_LXe:
     channel_map[15] = "Y29/30"
 
     # S/N 98, slot 1, X channels+PMT
+    struck_to_mc_channel_map[16] = [0,1,2,3,4,5,6,7,8,9,10,11]
+    struck_to_mc_channel_map[17] = [12]
+    struck_to_mc_channel_map[18] = [13]
+    struck_to_mc_channel_map[19] = [14]
+    struck_to_mc_channel_map[20] = [15]
+    struck_to_mc_channel_map[21] = [16]
+    struck_to_mc_channel_map[22] = [17]
+    struck_to_mc_channel_map[23] = [18]
+    struck_to_mc_channel_map[24] = [19]
+    struck_to_mc_channel_map[25] = [20]
+    struck_to_mc_channel_map[26] = [21]
+    struck_to_mc_channel_map[27] = [22,23]
+    struck_to_mc_channel_map[28] = [24,25]
+    struck_to_mc_channel_map[29] = [26,27]
+    struck_to_mc_channel_map[30] = [28,29]
     channel_map[16] = "X1-12"
     channel_map[17] = "X13"
     channel_map[18] = "X14"
@@ -198,9 +198,13 @@ if is_8th_LXe:
     channel_map[pmt_channel] = "PMT"
 
     channel_to_n_strips_map[pmt_channel] = 0.0
-    for channel, val in enumerate(two_strip_channels):
-        channel_to_n_strips_map[channel] = 2.0
-    channel_to_n_strips_map[16] = 12
+    for channel, val in struck_to_mc_channel_map.items():
+        n_strips = len(val)
+        channel_to_n_strips_map[channel] = n_strips
+        if n_strips == 1:
+            one_strip_channels[channel] = 1
+        elif n_strips == 2:
+            two_strip_channels[channel] = 1
 
 #MC Channels index starts at 0 so X26 = 25
 #Y  Channles are offset by 30
@@ -210,7 +214,6 @@ MCchannels = range(60)
 MCn_channels = len(MCchannels)
 MCcharge_channels_to_use = [0]*MCn_channels
 mc_channel_map = {} # map MC channel to label
-struck_to_mc_channel_map = {} # map struck channel to MC channel
 for struck_channel, label in channel_map.items():
     if is_8th_LXe: break # FIXME -- skip this for now
     is_y = False
@@ -722,14 +725,13 @@ if __name__ == "__main__":
 
     print "n_chargechannels:", n_chargechannels
 
-    print "\nchannel | label | use | 1 strip | 2 strip"
+    print "\nchannel | label | use | n strips"
     for (channel, name) in channel_map.items():
-        print "\t %2i | %-6s | %i  | %i | %i" % (
+        print "\t %2i | %-6s | %i  | %i " % (
             channel, 
             name,
             charge_channels_to_use[channel],
-            one_strip_channels[channel],
-            two_strip_channels[channel],
+            channel_to_n_strips_map[channel],
         )
 
     print "\nMC channel names:"
