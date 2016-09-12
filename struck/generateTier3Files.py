@@ -185,18 +185,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
     # calculate file start time, in POSIX time, from filename suffix
     # date and time are last two parts of filename separated with "_":
-    try:
-        file_start = "_".join(basename.split("_")[-2:])
-        #print file_start
-        # create datetime object from relevant parts of filename:
-        file_start  = datetime.datetime.strptime(file_start, "%Y-%m-%d_%H-%M-%S")
-        # get the POSIX timestamp, in seconds:
-        posix_start_time = int(time.mktime(file_start.timetuple()))
-        #print posix_start_time
-        #print "this file was started at:", file_start
-    except:
+    if isNGM:
         try:
-            file_start = "_".join(basename.split("_")[-3:-2])
+            file_start = basename.split("_")[1]
             #print file_start
             # create datetime object from relevant parts of filename:
             file_start  = datetime.datetime.strptime(file_start, "%Y%m%d%H%M%S")
@@ -205,7 +196,20 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             #print posix_start_time
             print "this NGM file was started at: %s GMT" % file_start
         except: 
+            print "couldn't calculate file start time"
             posix_start_time = 0
+    else:
+        try:
+            file_start = "_".join(basename.split("_")[-2:])
+            #print file_start
+            # create datetime object from relevant parts of filename:
+            file_start  = datetime.datetime.strptime(file_start, "%Y-%m-%d_%H-%M-%S")
+            # get the POSIX timestamp, in seconds:
+            posix_start_time = int(time.mktime(file_start.timetuple()))
+            #print posix_start_time
+            #print "this file was started at:", file_start
+        except:
+            pass
 
     # decide if this is a tier1 or tier2 file
     is_tier1 = False
