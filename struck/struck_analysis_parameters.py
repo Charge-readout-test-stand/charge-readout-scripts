@@ -210,6 +210,7 @@ if is_8th_LXe:
 #Y  Channles are offset by 30
 #MC only has charge no PMT channel
 #All MC channels are there but only use the 5 for sum energies
+
 MCchannels = range(60)
 MCn_channels = len(MCchannels)
 MCcharge_channels_to_use = [0]*MCn_channels
@@ -451,7 +452,13 @@ resolution_guess = 0.06*570.0 #Instrinsic Charge Resolution at the 570 guess for
 
 # PMT calibration is from PMT-triggered data
 # EMI 9531QB, 1200V PMT bias, 1700V cathode bias
-calibration_values[pmt_channel] = 0.4470588
+#calibration_values[pmt_channel] = 0.4470588
+
+
+# PMT calibration is from PMT-triggered data
+# EMI 9921QB, 1250V PMT bias, 1700V cathode bias
+# using Ako's readout chain
+calibration_values[pmt_channel] = 0.4470588*3.0
 
 if is_6th_LXe:
     calibration_values[0] = 5.388958
@@ -727,11 +734,23 @@ if __name__ == "__main__":
 
     print "\nchannel | label | use | n strips"
     for (channel, name) in channel_map.items():
-        print "\t %2i | %-6s | %i  | %i " % (
+        labels = []
+        try:
+            for strip in struck_to_mc_channel_map[channel]:
+                if strip < 30:
+                    label = "X%i" % (strip+1)
+                else:
+                    label = "Y%i" % (strip-30+1)
+                labels.append(label)
+            labels = ", ".join(labels)
+        except: pass
+        if len(labels) == 0: labels = ""
+        print "\t %2i | %-6s | %i  | %2i | %s" % (
             channel, 
             name,
             charge_channels_to_use[channel],
             channel_to_n_strips_map[channel],
+            labels,
         )
 
     print "\nMC channel names:"

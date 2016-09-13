@@ -173,31 +173,23 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
     if isMC:
         #MC has different structure so use MC channels
-        channels = struck_analysis_parameters.MCchannels
-        n_chargechannels = struck_analysis_parameters.n_MCchargechannels
+        #After the 8th LXe not sure we need alot of this
+        #channels = struck_analysis_parameters.MCchannels
+        #n_chargechannels = struck_analysis_parameters.n_MCchargechannels
         pmt_channel = None #No PMT in MC
-        n_channels = struck_analysis_parameters.MCn_channels
-        charge_channels_to_use = struck_analysis_parameters.MCcharge_channels_to_use
+        #n_channels = struck_analysis_parameters.MCn_channels
+        #charge_channels_to_use = struck_analysis_parameters.MCcharge_channels_to_use
         generator = TRandom3(0) # random number generator, initialized with TUUID object
         rms_keV = struck_analysis_parameters.rms_keV
-        tileCh_to_PreCh = struck_analysis_parameters.tileCh_to_PreCh
+        struck_to_mc_channel_map = struck_analysis_parameters.struck_to_mc_channel_map   
 
     basename = wfmProcessing.create_basename(filename, isMC)
 
     # calculate file start time, in POSIX time, from filename suffix
     # date and time are last two parts of filename separated with "_":
-    try:
-        file_start = "_".join(basename.split("_")[-2:])
-        #print file_start
-        # create datetime object from relevant parts of filename:
-        file_start  = datetime.datetime.strptime(file_start, "%Y-%m-%d_%H-%M-%S")
-        # get the POSIX timestamp, in seconds:
-        posix_start_time = int(time.mktime(file_start.timetuple()))
-        #print posix_start_time
-        #print "this file was started at:", file_start
-    except:
+    if isNGM:
         try:
-            file_start = "_".join(basename.split("_")[-3:-2])
+            file_start = basename.split("_")[1]
             #print file_start
             # create datetime object from relevant parts of filename:
             file_start  = datetime.datetime.strptime(file_start, "%Y%m%d%H%M%S")
@@ -206,7 +198,20 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             #print posix_start_time
             print "this NGM file was started at: %s GMT" % file_start
         except: 
+            print "couldn't calculate file start time"
             posix_start_time = 0
+    else:
+        try:
+            file_start = "_".join(basename.split("_")[-2:])
+            #print file_start
+            # create datetime object from relevant parts of filename:
+            file_start  = datetime.datetime.strptime(file_start, "%Y-%m-%d_%H-%M-%S")
+            # get the POSIX timestamp, in seconds:
+            posix_start_time = int(time.mktime(file_start.timetuple()))
+            #print posix_start_time
+            #print "this file was started at:", file_start
+        except:
+            pass
 
     # decide if this is a tier1 or tier2 file
     is_tier1 = False
@@ -944,8 +949,17 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 wfm = tree.wfm
                 channel[i] = tree.channel
             elif isMC:
-                #START HERE MJJJ
-                wfm = [wfmp for wfmp in tree.ChannelWaveform[i]]
+                #Some channels are grouped together so for those sum each channel in the gropu
+                #First always get the one channel that has to exist
+                wfm = [wfmp for wfmp in tree.ChannelWaveform[struck_to_mc_channel_map[i][0]]]
+                
+                #Now check if a multi strip and if it is loop over the channels and add
+                #their wfms to the sum wfm
+                if len(struck_to_mc_channel_map[i]) > 1.5:
+                    for mcch in struck_to_mc_channel_map[i][1:]:
+                        for index, wfmi in enumerate(tree.ChannelWaveform[mcch]):
+                            wfm[index] += wfmi
+                    
                 channel[i] = i
 
             elif isNGM:
@@ -1067,19 +1081,12 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 nsignals[0]+=1
                 SignalEnergy[0] += energy1_pz[i]
 
-                if isMC:
-                    if i < 30:
-                        nXsignals[0]+=1
-                    else:
-                        nYsignals[0]+=1
-
-                else: # not MC
-                    if 'X' in channel_map[i]:
-                        nXsignals[0]+=1
-                        SignalEnergyX[0] += energy1_pz[i]
-                    elif 'Y' in channel_map[i]:
-                        nYsignals[0]+=1
-                        SignalEnergyY[0] += energy1_pz[i]
+                if 'X' in channel_map[i]:
+                    nXsignals[0]+=1
+                    SignalEnergyX[0] += energy1_pz[i]
+                elif 'Y' in channel_map[i]:
+                    nYsignals[0]+=1
+                    SignalEnergyY[0] += energy1_pz[i]
 
             if channel[i] == pmt_channel:
                 lightEnergy[0] = energy[i]
