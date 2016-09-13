@@ -85,7 +85,7 @@ def process_files(filenames):
                 print "set ch %i %s bin %i from %i to 0" % (channel, struck_analysis_parameters.channel_map[channel], i_bin, content)
 
             print struck_analysis_parameters.channel_map[channel], ch_hist.GetBinContent(i_bin)
-            hits_per_ch.append(ch_hist.GetBinContent(i_bin))
+            hits_per_ch.append(ch_hist.GetBinContent(i_bin)/struck_analysis_parameters.channel_to_n_strips_map[channel])
         
         TEV = TileEventViewer.TileEventViewer(100, min(hits_per_ch), max(hits_per_ch))
         TEV.ChangeTitle("Event Fraction")

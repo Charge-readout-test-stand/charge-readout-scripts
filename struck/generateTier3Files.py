@@ -180,7 +180,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         charge_channels_to_use = struck_analysis_parameters.MCcharge_channels_to_use
         generator = TRandom3(0) # random number generator, initialized with TUUID object
         rms_keV = struck_analysis_parameters.rms_keV
-        
+        tileCh_to_PreCh = struck_analysis_parameters.tileCh_to_PreCh
+
     basename = wfmProcessing.create_basename(filename, isMC)
 
     # calculate file start time, in POSIX time, from filename suffix
