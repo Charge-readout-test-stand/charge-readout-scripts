@@ -451,7 +451,13 @@ resolution_guess = 0.06*570.0 #Instrinsic Charge Resolution at the 570 guess for
 
 # PMT calibration is from PMT-triggered data
 # EMI 9531QB, 1200V PMT bias, 1700V cathode bias
-calibration_values[pmt_channel] = 0.4470588
+#calibration_values[pmt_channel] = 0.4470588
+
+
+# PMT calibration is from PMT-triggered data
+# EMI 9921QB, 1250V PMT bias, 1700V cathode bias
+# using Ako's readout chain
+calibration_values[pmt_channel] = 0.4470588*3.0
 
 if is_6th_LXe:
     calibration_values[0] = 5.388958
