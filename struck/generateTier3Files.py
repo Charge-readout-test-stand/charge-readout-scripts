@@ -176,7 +176,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         #After the 8th LXe not sure we need alot of this
         #channels = struck_analysis_parameters.MCchannels
         #n_chargechannels = struck_analysis_parameters.n_MCchargechannels
-        pmt_channel = None #No PMT in MC
+        #pmt_channel = None #No PMT in MC
         #n_channels = struck_analysis_parameters.MCn_channels
         #charge_channels_to_use = struck_analysis_parameters.MCcharge_channels_to_use
         generator = TRandom3(0) # random number generator, initialized with TUUID object
@@ -200,6 +200,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         except: 
             print "couldn't calculate file start time"
             posix_start_time = 0
+    elif isMC:
+        posix_start_time = 0
     else:
         try:
             file_start = "_".join(basename.split("_")[-2:])
@@ -833,8 +835,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
     run_tree.Fill() # this tree only has one entry with run-level entries
 
+    n_events = 0
+    
     if isNGM:
-        n_events = 0
         n_channels_in_this_event = 0
 
     # loop over all entries in tree
@@ -951,12 +954,16 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             elif isMC:
                 #Some channels are grouped together so for those sum each channel in the gropu
                 #First always get the one channel that has to exist
+                if i == pmt_channel: continue
+
+                #print i, pmt_channel
                 wfm = [wfmp for wfmp in tree.ChannelWaveform[struck_to_mc_channel_map[i][0]]]
                 
                 #Now check if a multi strip and if it is loop over the channels and add
                 #their wfms to the sum wfm
                 if len(struck_to_mc_channel_map[i]) > 1.5:
                     for mcch in struck_to_mc_channel_map[i][1:]:
+                        #print "MC=", i, mcch
                         for index, wfmi in enumerate(tree.ChannelWaveform[mcch]):
                             wfm[index] += wfmi
                     
@@ -1037,6 +1044,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 # a copy of the un-transformed wfm, for debugging
                 copy_wfm = EXODoubleWaveform(exo_wfm)
 
+            
             label = "Event %i " % n_events
             if not isMC:
                 label += struck_analysis_parameters.channel_map[i]
@@ -1249,6 +1257,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 n_events+=1
         else:
             out_tree.Fill()
+            n_events+=1
 
         i_entry += 1
         # end loop over tree entries
@@ -1283,6 +1292,8 @@ if __name__ == "__main__":
         sys.exit(1)
 
     print "%i files to process" % len(filenames)
+    
+    print "Is MC set to ", options.isMC
 
     for filename in filenames:
         process_file(filename, dir_name=options.dir_name, verbose=options.verbose, do_overwrite=options.do_overwrite, isMC=options.isMC)
