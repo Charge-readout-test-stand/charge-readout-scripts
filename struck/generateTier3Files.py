@@ -954,7 +954,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             elif isMC:
                 #Some channels are grouped together so for those sum each channel in the gropu
                 #First always get the one channel that has to exist
-                if i == pmt_channel: continue
+                if i == pmt_channel: 
+                    #print "Skip pmt", i, pmt_channel
+                    continue
 
                 #print i, pmt_channel
                 wfm = [wfmp for wfmp in tree.ChannelWaveform[struck_to_mc_channel_map[i][0]]]
@@ -966,9 +968,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                         #print "MC=", i, mcch
                         for index, wfmi in enumerate(tree.ChannelWaveform[mcch]):
                             wfm[index] += wfmi
-                    
                 channel[i] = i
-
             elif isNGM:
                 if n_channels_in_this_event > 0: # For NGM, each wfm is its own tree entry
                     i_entry += 1
@@ -1020,7 +1020,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 elif i == 6:
                     wfm = tree.wfm8
                 wfm_max_time[i] = tree.wfm_max_time[i]
-
+            
             wfm_length[i] = len(wfm)
 
             # add noise to MC
@@ -1088,7 +1088,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 #channels above threshold.
                 nsignals[0]+=1
                 SignalEnergy[0] += energy1_pz[i]
-
+                
                 if 'X' in channel_map[i]:
                     nXsignals[0]+=1
                     SignalEnergyX[0] += energy1_pz[i]
@@ -1241,7 +1241,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
  
             baseline_remover = EXOBaselineRemover()
             baseline_remover.SetBaselineSamples(2*n_baseline_samples[0])
-            baseline_remover.SetStartSample(wfm_length[i] - 2*n_baseline_samples[0] - 1)
+            baseline_remover.SetStartSample(wfm_length[0] - 2*n_baseline_samples[0] - 1)
             baseline_remover.Transform(sum_wfm)
             energy_sum[0] = baseline_remover.GetBaselineMean()
             energy_rms_sum[0] = baseline_remover.GetBaselineRMS()
