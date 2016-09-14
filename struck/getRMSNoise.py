@@ -4,13 +4,14 @@ import struck_analysis_parameters
 
 def getRMS(calibrate):
 
-    filename = "/home/teststand/2016_08_15_8th_LXe_overnight/tier3_added/overnight8thLXe_v3.root"
+    #filename = "/home/teststand/2016_08_15_8th_LXe_overnight/tier3_added/overnight8thLXe_v3.root"
+    filename = "/home/teststand/2016_09_13_pulser_tests/tier3_SIS3316Raw_20160913233650_digitizer_noise_tests__1-ngm.root"
+
     tree = ROOT.TChain("tree")
     tree.Add(filename)
 
     basename = os.path.splitext(os.path.basename(filename))[0]
     print "basename:", basename
-
 
     log_name = "log_RMSNoise.txt"
     plot_name = "/home/teststand/2016_08_15_8th_LXe_overnight/tier3_added/RMSNoise_%s.pdf" % basename
@@ -60,7 +61,8 @@ def getRMS(calibrate):
         hist.SetMarkerColor(color)
         hist.SetMarkerStyle(21)
         hist.SetMarkerSize(0.8)
-        hist.SetDirectory(0)
+        hist.GetDirectory().cd()
+        #hist.SetDirectory(0)
 
         draw_cmd = ""
         if calibrate:
@@ -72,6 +74,8 @@ def getRMS(calibrate):
         selection = ""
 
         n_drawn = tree.Draw(draw_cmd, selection)
+        print "n_drawn", n_drawn
+        print "entries in hist:", hist.GetEntries()
         
         canvas.Update()
 
@@ -112,7 +116,6 @@ def getRMS(calibrate):
         canvas.Print("%s" % plot_name)
         #raw_input()
     
-    out_rfile.Close()
 
     #Draw total Hist
     hist_list[0].SetTitle("")
@@ -121,14 +124,17 @@ def getRMS(calibrate):
         hist.Draw("SAME")
     
     legend.Draw()
-    raw_input()
+    raw_input("press enter")
     canvas.Print("%s" % plot_name)
 
 
     canvas.Print("%s]" % plot_name) # close multi-page canvas
+    out_rfile.Close()
 
 def plotRMS():
     fname = "/home/teststand/2016_08_15_8th_LXe_overnight/tier3_added/RMSNoise_calibrated_overnight8thLXe_v3.root"
+    fname = "/home/teststand/2016_08_15_8th_LXe_overnight/tier3_added/RMSNoise_calibrated_tier3_SIS3316Raw_20160913233650_digitizer_noise_tests__1-ngm.root"
+    fname = "/home/teststand/2016_08_15_8th_LXe_overnight/tier3_added/RMSNoise_tier3_SIS3316Raw_20160913233650_digitizer_noise_tests__1-ngm.root"
     rfile = ROOT.TFile(fname)
     
     canvas = ROOT.TCanvas("canvas")
@@ -162,7 +168,7 @@ def plotRMS():
             hist.Draw("SAME")
         else:
             hist.SetTitle("")
-            hist.GetXaxis().SetRangeUser(9, 60)
+            hist.GetXaxis().SetRangeUser(0, 60)
             hist.Draw()
             drawn=True
         
@@ -200,7 +206,7 @@ def plotRMS():
 
 if __name__ == "__main__":
     remake = False
-    calibrate = True
+    calibrate = False
     if remake:
         getRMS(calibrate)
     else:
