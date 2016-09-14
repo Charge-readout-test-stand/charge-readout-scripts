@@ -23,16 +23,17 @@ drift_time_low = struck_analysis_parameters.drift_time_threshold
 #drift_time_low = 8.0
 nsignals = 1
 # the usual:
-#struck_selection = "nsignals<=%i && rise_time_stop95_sum-trigger_time>%s && rise_time_stop95_sum-trigger_time<%s" % (
-#    nsignals, drift_time_low, drift_time_high)
+struck_selection = "nsignals<=%i && rise_time_stop95_sum-trigger_time>%s && rise_time_stop95_sum-trigger_time<%s" % (
+    nsignals, drift_time_low, drift_time_high)
+mc_selection = struck_selection
 
 # testing:
-struck_selection = struck_analysis_cuts.get_drift_time_cut(
-    drift_time_low=drift_time_low, drift_time_high=drift_time_high)
-mc_selection = struck_analysis_cuts.get_drift_time_cut(
-    drift_time_low=drift_time_low, drift_time_high=None, isMC=True)
+#struck_selection = "nsignals==1 && %s" % struck_analysis_cuts.get_drift_time_cut(
+#    drift_time_low=drift_time_low, drift_time_high=drift_time_high)
+#mc_selection = "nsignals=0" # kill MC hist...
+#mc_selection = struck_analysis_cuts.get_drift_time_cut(
+#    drift_time_low=drift_time_low, drift_time_high=None, isMC=True)
 
-#mc_selection = struck_selection
 
 # hist options
 min_bin = 300.0
@@ -124,7 +125,11 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
     start_bin = struck_hist.FindBin(350.0)
     stop_bin = struck_hist.FindBin(1400.0)
 
-    scale_factor = 1.0*struck_hist.Integral(start_bin,stop_bin)/mc_hist.Integral(start_bin,stop_bin)
+    try:
+        scale_factor = 1.0*struck_hist.Integral(start_bin,stop_bin)/mc_hist.Integral(start_bin,stop_bin)
+    except ZeroDivisionError: 
+        scale_factor = 1.0
+        print "No counts in MC hist!!"
     print "MC scale factor:", scale_factor
     mc_hist.Scale(scale_factor)
 
@@ -136,13 +141,13 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
         legend.AddEntry(struck_hist, "Data", "f")
 
     # this doesn't work well for low stats:
-    if False and draw_cmd == "SignalEnergy":
+    if draw_cmd == "SignalEnergy":
         y_max = struck_hist.GetMaximum()
         if mc_hist.GetMaximum() > y_max: y_max = mc_hist.GetMaximum()
         struck_hist.SetMaximum(y_max*1.1)
 
     struck_hist.Draw()
-    #mc_hist.Draw("hist same")
+    mc_hist.Draw("hist same")
     legend.Draw()
     canvas.Update()
     plotname = "comparison_%s" % draw_cmd
@@ -154,7 +159,7 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
     canvas.Print("%s.pdf" % plotname)
 
     pavetext = ROOT.TPaveText(0.12, 0.8, 0.9, 0.9, "ndc")
-    pavetext.AddText(struck_selection[:50])
+    pavetext.AddText(struck_selection[:100])
     pavetext.AddText("\nMC amplitude x %.2f, %.1f-keV add'l noise" % (scale_factor, mc_noise))
     pavetext.SetBorderSize(0)
     pavetext.SetFillStyle(0)
