@@ -57,7 +57,7 @@ def get_graph(energy_var, selection, filenames, color):
             print "SPECIAL CASE!"
             val = hist.GetMean()
         graph.SetPoint(i_point, baseline_average_time, val)
-        #graph.SetPointError(i_point, 0.0, hist.GetMean())
+        graph.SetPointError(i_point, 0.0, hist.GetMean())
         print "\t baseline_average_time:", baseline_average_time, "RMS:", rms, "mean:", mean
         title = "%s: %.1f #mus | mean: %.3f | RMS: %.3f" % (
             energy_var, 
@@ -81,14 +81,15 @@ def plot_results(results):
     results.sort()
 
     #selection = "channel != %i" % struck_analysis_parameters.pmt_channel
-    selection = "channel==2 && lightEnergy/calibration<20"
+    #selection = "channel==2 && lightEnergy/calibration<20"
+    selection = "channel==2" # during filling
 
     graphs = []
     #graphs.append(get_graph("energy_rms1", results, ROOT.kRed)) # just a test
-    graphs.append(get_graph("energy", selection, results, ROOT.kViolet+1))
-    graphs.append(get_graph("energy_pz", selection, results, ROOT.kRed))
+    #graphs.append(get_graph("energy", selection, results, ROOT.kViolet+1)) # only for testing
+    #graphs.append(get_graph("energy_pz", selection, results, ROOT.kGreen+1)) # only for testing
     graphs.append(get_graph("energy1_pz", selection, results, ROOT.kBlue))
-    graphs.append(get_graph("energy1", selection, results, ROOT.kGreen+1))
+    graphs.append(get_graph("energy1", selection, results, ROOT.kRed))
 
     # our simple approximation:
     filename = results[len(results)-1]
@@ -107,9 +108,11 @@ def plot_results(results):
     canvas.Update()
     #if not ROOT.gROOT.IsBatch(): raw_input("enter to continue")
 
-    fcn = ROOT.TF1("fcn","%s*sqrt(2.0/(x*1000/40))" % baseline_rms, 1, 100)
+    fcn = ROOT.TF1("fcn","%s*sqrt(2.0/(x*1000/40))" % baseline_rms, 0.5, 200)
     print "fcn at 8:", fcn.Eval(8)
     fcn.SetLineColor(ROOT.kBlack)
+    fcn.SetLineWidth(2)
+    fcn.SetLineStyle(7)
 
 
     graphs[0].Draw("alp")
@@ -123,6 +126,7 @@ def plot_results(results):
     legend = ROOT.TLegend(0.1, 0.91, 0.9, 0.99)
     legend.SetNColumns(2)
  
+    legend.AddEntry(fcn, selection, "")
     for graph in graphs:
         graph.Draw("pl same")
         legend.AddEntry(graph, graph.GetTitle(), "p")
