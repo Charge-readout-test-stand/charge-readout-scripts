@@ -547,6 +547,8 @@ def get_colors():
 
 # from tier2to3_overnight.root, baseline_rms
 n_baseline_samples = 200.0
+energy_gap_time_microseconds = 450*40/1000 # energy calc starts 450 samples after wfm start, in a normal 25-MS/s run
+baseline_average_time_microseconds = 4.0 # 100 samples at 25 MHz
 rms_keV = {}
 rms_keV[0] = 18.137
 rms_keV[1] = 17.557
