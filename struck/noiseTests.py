@@ -23,10 +23,8 @@ def baseline_process_file(filename):
     result_files = []
 
     # different numbers of baseline samples
-    #for i in xrange(8):
-    for i in xrange(8):
-        struck_analysis_parameters.baseline_average_time_microseconds = default_baseline_average_time_microseconds - i*0.5
-        #struck_analysis_parameters.baseline_average_time_microseconds = default_baseline_average_time_microseconds + i*0.5
+    for i in xrange(15):
+        struck_analysis_parameters.baseline_average_time_microseconds = default_baseline_average_time_microseconds + (i-7)*0.5
         print "i=%i | baseline_average_time_microseconds = %.1f, default = %.1f" % (
             i, 
             struck_analysis_parameters.baseline_average_time_microseconds,
@@ -88,6 +86,7 @@ if __name__ == "__main__":
 
     filename = "/g/g17/alexiss/scratch/2016_09_13_pulser_tests/tier1_SIS3316Raw_20160914184725_digitizer_noise_tests__1-ngm.root"
     filename = "/g/g17/alexiss/scratch/2016_08_15_8th_LXe/tier1/tier1_SIS3316Raw_20160816180708_8thLXe_126mvDT_cell_full_cath_1700V_HVOn_Noise_100cg__1-ngm.root"
+    filename = "tier1_SIS3316Raw_20160815193659_8thLXe_30mvDT_filling_1-ngm.root"
 
     results = baseline_process_file(filename) # generate new results
 
