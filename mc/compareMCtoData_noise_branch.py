@@ -10,14 +10,30 @@ import os
 import sys
 import ROOT
 
-import struck_analysis_parameters
+from struck import struck_analysis_cuts
+from struck import struck_analysis_parameters
 
 # options
 #draw_cmd = "energy1_pz"
 draw_cmd = "SignalEnergy"
 
-mc_selection = ""
-struck_selection = ""
+drift_time_high = struck_analysis_parameters.max_drift_time
+drift_time_low = struck_analysis_parameters.drift_time_threshold
+#drift_time_high = 8.5
+#drift_time_low = 8.0
+nsignals = 1
+# the usual:
+struck_selection = "nsignals<=%i && rise_time_stop95_sum-trigger_time>%s && rise_time_stop95_sum-trigger_time<%s" % (
+    nsignals, drift_time_low, drift_time_high)
+mc_selection = struck_selection
+
+# testing:
+#struck_selection = "nsignals==1 && %s" % struck_analysis_cuts.get_drift_time_cut(
+#    drift_time_low=drift_time_low, drift_time_high=drift_time_high)
+#mc_selection = "nsignals=0" # kill MC hist...
+#mc_selection = struck_analysis_cuts.get_drift_time_cut(
+#    drift_time_low=drift_time_low, drift_time_high=None, isMC=True)
+
 
 # hist options
 min_bin = 300.0
@@ -36,6 +52,10 @@ struck_filename = sys.argv[2]
 canvas = ROOT.TCanvas("canvas","")
 canvas.SetLeftMargin(0.12)
 canvas.SetGrid(1,1)
+
+mc_basename = os.path.splitext(os.path.basename(mc_filename))[0]
+struck_basename = os.path.splitext(os.path.basename(struck_filename))[0]
+basename = "%s_%s" % (mc_basename, struck_basename)
 
 print "--> MC file:", mc_filename
 mc_file = ROOT.TFile(mc_filename)
@@ -73,7 +93,8 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
 
     if draw_cmd == "energy1_pz":
         print "--> channel", channel, struck_analysis_parameters.channel_map[channel]
-        struck_selection = "channel==%i" % channel
+        struck_selection = " && ".join([struck_selection, "channel==%i" % channel])
+        mc_selection = struck_selection
 
     legend = ROOT.TLegend(canvas.GetLeftMargin(), 0.91, 0.9, 0.99)
     legend.SetNColumns(2)
@@ -81,10 +102,13 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
     legend.SetFillColor(0)
 
     #mc_draw_cmd = draw_cmd
-    mc_multiplier = 1.02
-    mc_noise = 25.0 # keV
-    if draw_cmd == "energy1_pz": mc_noise = struck_analysis_parameters.rms_keV[channel]
-    mc_draw_cmd = "%s*%s + %s*noise[0]" % (draw_cmd, mc_multiplier, mc_noise)
+    mc_multiplier = 1.01
+    #mc_noise = 24.0 # keV
+    mc_noise = 0.0 # keV
+    mc_draw_cmd = "%s*%s" % (draw_cmd, mc_multiplier)
+    if mc_noise > 0.0:
+        if draw_cmd == "energy1_pz": mc_noise = struck_analysis_parameters.rms_keV[channel]
+        mc_draw_cmd = "%s*%s + %s*noise[0]" % (draw_cmd, mc_multiplier, mc_noise)
 
     mc_hist.GetDirectory().cd()
     print "mc_draw_cmd:", mc_draw_cmd
@@ -99,26 +123,52 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
     print "\t %i entries in hist" % struck_hist.GetEntries()
 
     start_bin = struck_hist.FindBin(350.0)
-    stop_bin = struck_hist.FindBin(1600.0)
+    stop_bin = struck_hist.FindBin(1400.0)
 
-    scale_factor = 1.0*struck_hist.Integral(start_bin,stop_bin)/mc_hist.Integral(start_bin,stop_bin)
+    try:
+        scale_factor = 1.0*struck_hist.Integral(start_bin,stop_bin)/mc_hist.Integral(start_bin,stop_bin)
+    except ZeroDivisionError: 
+        scale_factor = 1.0
+        print "No counts in MC hist!!"
     print "MC scale factor:", scale_factor
     mc_hist.Scale(scale_factor)
 
-    #legend.AddEntry(mc_hist, "MC x %.2f" % scale_factor , "f")
     legend.AddEntry(mc_hist, "MC", "f")
+
     if draw_cmd == "energy1_pz":
         legend.AddEntry(struck_hist, "Data ch %i %s" % (channel, struck_analysis_parameters.channel_map[channel]), "f")
     else:
         legend.AddEntry(struck_hist, "Data", "f")
 
+    # this doesn't work well for low stats:
+    if draw_cmd == "SignalEnergy":
+        y_max = struck_hist.GetMaximum()
+        if mc_hist.GetMaximum() > y_max: y_max = mc_hist.GetMaximum()
+        struck_hist.SetMaximum(y_max*1.1)
+
     struck_hist.Draw()
     mc_hist.Draw("hist same")
     legend.Draw()
     canvas.Update()
-    canvas.Print("comparison_%s_ch%i.pdf" % (draw_cmd, channel))
+    plotname = "comparison_%s" % draw_cmd
+    if draw_cmd == "energy1_pz":
+        plotname += "_ch%i" % channel
+    plotname += "_drift_%i_to_%i_" % (drift_time_low*1e3, drift_time_high*1e3)
+    plotname += "%i_signals_" % nsignals
+    plotname += basename
+    canvas.Print("%s.pdf" % plotname)
 
-    raw_input("any key to continue... ")
+    pavetext = ROOT.TPaveText(0.12, 0.8, 0.9, 0.9, "ndc")
+    pavetext.AddText(struck_selection[:100])
+    pavetext.AddText("\nMC amplitude x %.2f, %.1f-keV add'l noise" % (scale_factor, mc_noise))
+    pavetext.SetBorderSize(0)
+    pavetext.SetFillStyle(0)
+    pavetext.Draw()
+    canvas.Update()
+    canvas.Print("%s_cuts.pdf" % plotname)
+
+    if not ROOT.gROOT.IsBatch():
+        raw_input("any key to continue... ")
 
     if draw_cmd == "SignalEnergy": break
 

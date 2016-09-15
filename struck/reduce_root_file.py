@@ -33,11 +33,14 @@ for filename in filenames:
     isMC = struck_analysis_parameters.is_tree_MC(oldtree)
     print "\t isMC:", isMC
 
+    drift_time_low = struck_analysis_parameters.drift_time_threshold
+
     # construct some cuts...
     selections = []
     #selections.append("(nsignals>0)") # this must be true if we are making a cut on SignalEnergy
     #selections.append("(nsignals==1)")
     selections.append("(SignalEnergy>50)")
+    selections.append("(rise_time_stop95_sum-trigger_time>%.6f)" % drift_time_low)
     #selections.append(struck_analysis_cuts.get_drift_time_cut(isMC=isMC))
     selections = "&&".join(selections)
     print "selections:"

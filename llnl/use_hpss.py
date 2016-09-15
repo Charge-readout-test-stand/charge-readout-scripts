@@ -23,9 +23,8 @@ import commands
 
 # files to transfer:
 
-# 12 Sept 2016
-filenames = glob.glob("/p/lscratchd/alexiss/2016_08_15_8th_LXe_overnight/tier0/*") 
-#filenames = sys.argv[1:] 
+#filenames = glob.glob("/p/lscratchd/alexiss/2016_08_15_8th_LXe_overnight/tier0/*") # 12 Sept 2016
+filenames = glob.glob("/p/lscratchd/alexiss/2016_08_15_8th_LXe/tier0/*") # 13 Sept 2016
 
 filenames.sort() # sort names
 
