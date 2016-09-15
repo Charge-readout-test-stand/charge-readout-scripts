@@ -229,7 +229,7 @@ def get_wfmparams(
     # correct for exponential decay
     pole_zero = EXOPoleZeroCorrection()
     pole_zero.SetDecayConstant(decay_time)
-    if not is_pmtchannel and energy1>100:
+    if not is_pmtchannel:
         pole_zero.Transform(exo_wfm, energy_wfm)
         #do_draw(energy_wfm, "%s after PZ correction" % label)
 
