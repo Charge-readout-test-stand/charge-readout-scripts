@@ -40,7 +40,7 @@ for filename in filenames:
     #selections.append("(nsignals==1)") # single-channel cut
     selections.append("(nsignals>0)") 
     selections.append("(SignalEnergy>50)")
-    selections.append("(rise_time_stop95_sum-trigger_time>%.6f)" % drift_time_low)
+    #selections.append("(rise_time_stop95_sum-trigger_time>%.6f)" % drift_time_low)
     #selections.append(struck_analysis_cuts.get_drift_time_cut(isMC=isMC))
     selections = "&&".join(selections)
     print "selections:"
