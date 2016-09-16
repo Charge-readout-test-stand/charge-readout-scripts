@@ -14,16 +14,18 @@ from struck import struck_analysis_cuts
 from struck import struck_analysis_parameters
 
 # options
-#draw_cmd = "energy1_pz"
-draw_cmd = "SignalEnergy"
+#draw_cmd = "energy1_pz" # individual channel spectra
+#draw_cmd = "Sum$(energy_pz*signal_map)" # testing
+draw_cmd = "SignalEnergy" # the usual
 
 drift_time_high = struck_analysis_parameters.max_drift_time
 drift_time_low = struck_analysis_parameters.drift_time_threshold
 #drift_time_high = 8.5
 #drift_time_low = 8.0
+drift_time_high = 9.0
 nsignals = 1
 # the usual:
-struck_selection = "nsignals<=%i && rise_time_stop95_sum-trigger_time>%s && rise_time_stop95_sum-trigger_time<%s" % (
+struck_selection = "nsignals==%i && rise_time_stop95_sum-trigger_time>%s && rise_time_stop95_sum-trigger_time<%s" % (
     nsignals, drift_time_low, drift_time_high)
 mc_selection = struck_selection
 
@@ -102,7 +104,7 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
     legend.SetFillColor(0)
 
     #mc_draw_cmd = draw_cmd
-    mc_multiplier = 1.01
+    mc_multiplier = 1.02
     #mc_noise = 24.0 # keV
     mc_noise = 0.0 # keV
     mc_draw_cmd = "%s*%s" % (draw_cmd, mc_multiplier)
@@ -122,7 +124,7 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
     struck_tree.Draw("%s >> %s" % (draw_cmd, struck_hist.GetName()),struck_selection)
     print "\t %i entries in hist" % struck_hist.GetEntries()
 
-    start_bin = struck_hist.FindBin(350.0)
+    start_bin = struck_hist.FindBin(450.0)
     stop_bin = struck_hist.FindBin(1400.0)
 
     try:
@@ -133,30 +135,32 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
     print "MC scale factor:", scale_factor
     mc_hist.Scale(scale_factor)
 
-    legend.AddEntry(mc_hist, "MC", "f")
-
     if draw_cmd == "energy1_pz":
         legend.AddEntry(struck_hist, "Data ch %i %s" % (channel, struck_analysis_parameters.channel_map[channel]), "f")
     else:
         legend.AddEntry(struck_hist, "Data", "f")
 
+    legend.AddEntry(mc_hist, "MC", "f")
+
     # this doesn't work well for low stats:
-    if draw_cmd == "SignalEnergy":
+    if draw_cmd != "energy1_pz":
         y_max = struck_hist.GetMaximum()
         if mc_hist.GetMaximum() > y_max: y_max = mc_hist.GetMaximum()
         struck_hist.SetMaximum(y_max*1.1)
 
     struck_hist.Draw()
     mc_hist.Draw("hist same")
+    struck_hist.Draw("same")
     legend.Draw()
     canvas.Update()
     plotname = "comparison_%s" % draw_cmd
+    if "Sum" in draw_cmd:
+        plotname = "comparison_test" 
     if draw_cmd == "energy1_pz":
         plotname += "_ch%i" % channel
-    plotname += "_drift_%i_to_%i_" % (drift_time_low*1e3, drift_time_high*1e3)
-    plotname += "%i_signals_" % nsignals
-    plotname += basename
-    canvas.Print("%s.pdf" % plotname)
+    plotname += "%ikeV_bins" % bin_width
+
+    canvas.Print("%s_%s.pdf" % (plotname, basename))
 
     pavetext = ROOT.TPaveText(0.12, 0.8, 0.9, 0.9, "ndc")
     pavetext.AddText(struck_selection[:100])
@@ -165,10 +169,13 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
     pavetext.SetFillStyle(0)
     pavetext.Draw()
     canvas.Update()
-    canvas.Print("%s_cuts.pdf" % plotname)
+
+    plotname += "_drift_%i_to_%i_" % (drift_time_low*1e3, drift_time_high*1e3)
+    plotname += "%i_signals_" % nsignals
+    canvas.Print("%s_%s_cuts.pdf" % (plotname, basename))
 
     if not ROOT.gROOT.IsBatch():
         raw_input("any key to continue... ")
 
-    if draw_cmd == "SignalEnergy": break
+    if draw_cmd != "energy1_pz": break
 
