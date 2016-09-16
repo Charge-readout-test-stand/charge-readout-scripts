@@ -61,7 +61,7 @@ def fit_channel(
     do_individual_channels = True
 
     # defaults for 570-keV
-    bin_width = 5
+    bin_width = 10
     #line_energy = 620
     sigma_guess = 40
     if channel != None:
@@ -285,7 +285,7 @@ def fit_channel(
         leg.Draw()
         hist.SetMinimum(0)
         canvas.Update()
-        #canvas.Print("%s_pre_lin.pdf" % plot_name)
+        canvas.Print("%s_pre_lin.pdf" % plot_name)
 
 
         if not ROOT.gROOT.IsBatch():
@@ -582,7 +582,7 @@ def process_file(
         charge_channels_to_use = struck_analysis_parameters.charge_channels_to_use
 
     for channel, value in enumerate(charge_channels_to_use):
-        #continue # skipping indiv channels for now... 
+        continue # skipping indiv channels for now... 
         if value:
             result = fit_channel(tree, channel, basename, do_1064_fit, all_energy_var, channel_selection, do_use_step, energy_var=energy_var)
             if result:
