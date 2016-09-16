@@ -144,46 +144,53 @@ def get_drift_time_cut(
         return selection
 
     selection = []
-    if isMC:
-        charge_channels_to_use = struck_analysis_parameters.MCcharge_channels_to_use
+    if struck_analysis_parameters.is_8th_LXe:
+        if drift_time_low != None:
+            selection.append("rise_time_stop95_sum-trigger_time < %s" % drift_time_low)
+        if drift_time_high != None:
+            selection.append("rise_time_stop95_sum-trigger_time > %s" % drift_time_high)
+        
     else:
-        charge_channels_to_use = struck_analysis_parameters.charge_channels_to_use
-    for channel, value  in enumerate(charge_channels_to_use): 
-        if value:
-            cut = []
-            cut2 = []
-            if drift_time_low != None:
-                cut1 = []
-                if energy_threshold != None:
-                    part = "(energy1_pz[%i]>%s)" % (
+        if isMC:
+            charge_channels_to_use = struck_analysis_parameters.MCcharge_channels_to_use
+        else:
+            charge_channels_to_use = struck_analysis_parameters.charge_channels_to_use
+        for channel, value  in enumerate(charge_channels_to_use): 
+            if value:
+                cut = []
+                cut2 = []
+                if drift_time_low != None:
+                    cut1 = []
+                    if energy_threshold != None:
+                        part = "(energy1_pz[%i]>%s)" % (
+                            channel, 
+                            energy_threshold,
+                        )
+                        cut1.append(part)
+                    part = "(rise_time_stop95[%i]-trigger_time<%s)" % (
                         channel, 
-                        energy_threshold,
+                        drift_time_low,
                     )
                     cut1.append(part)
-                part = "(rise_time_stop95[%i]-trigger_time<%s)" % (
-                    channel, 
-                    drift_time_low,
-                )
-                cut1.append(part)
-                cut.append("&&".join(cut1))
-            if drift_time_high != None:
-                cut2 = []
-                if energy_threshold != None:
-                    part = "(energy1_pz[%i]>%s)" % (
-                        channel, 
-                        energy_threshold,
+                    cut.append("&&".join(cut1))
+                if drift_time_high != None:
+                    cut2 = []
+                    if energy_threshold != None:
+                        part = "(energy1_pz[%i]>%s)" % (
+                            channel, 
+                            energy_threshold,
+                        )
+                        cut2.append(part)
+                    part = "(rise_time_stop95[%i]-trigger_time>%s)" % (
+                        channel,
+                        drift_time_high,
                     )
                     cut2.append(part)
-                part = "(rise_time_stop95[%i]-trigger_time>%s)" % (
-                    channel,
-                    drift_time_high,
-                )
-                cut2.append(part)
-                cut.append("&&".join(cut2))
-            #print cut
-            cut = "||".join(cut)
-            selection.append(cut)
-            
+                    cut.append("&&".join(cut2))
+                #print cut
+                cut = "||".join(cut)
+                selection.append(cut)
+                
     # join each channel requirement with or
     selection = " || ".join(selection)
 
