@@ -15,7 +15,8 @@ def takeData(doLoop=False, n_hours=10.0):
   #file_suffix = "_test" # this gets appended to the file name
   #file_suffix = "_digitizer_noise_tests_" # this gets appended to the file name
   #file_suffix = "_8thLXe_126mvDT_cell_full_cath_1700V_100cg_overnight_" # 126-mV discrim threshold, 1700 cathode bias, 100x PMT coarse gain
-  file_suffix = "_9thLXe_126mvDT_filling_cath_1700V_100cg_overnight_" # 126-mV discrim threshold, 1700 cathode bias, 100x PMT coarse gain
+  #file_suffix = "_9thLXe_126mvDT_filling_cath_1700V_100cg_overnight_" # 126-mV discrim threshold, 1700 cathode bias, 100x PMT coarse gain
+  file_suffix = "_9thLXe_pulsar_cooldown_notFull_pulsarisX23_24_"
   runDuration = 2*60 # seconds
   #runDuration = 10 # seconds -- debugging! FIXME
   #A 60s run is 720 MB with 4ms veto

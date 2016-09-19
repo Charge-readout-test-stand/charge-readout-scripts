@@ -88,6 +88,7 @@ class LXeMonitoring:
                 'schubert.alexis@gmail.com', 
                 'agschube@gmail.com',
                 '2064121866@tmomail.net', # cell phone
+                'mjjewell46@gmail.com', 
             ],
         }
 

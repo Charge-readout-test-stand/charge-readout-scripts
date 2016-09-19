@@ -46,7 +46,7 @@ ROOT.gStyle.SetTitleFontSize(0.04)
 def process_file(filename=None, n_plots_total=0):
 
     # options ------------------------------------------
-    threshold = 1000 # keV
+    threshold = 10 # keV
     #threshold = -20000
     #threshold = 1250 # keV
     #threshold = 570 # keV, for generating multi-page PDF
