@@ -38,9 +38,9 @@ import commands
 import smtplib
 
 # options -- monitoring thresholds:
-temperature_threshold = 168.0 # LXe & Cu operating threshold, K
+temperature_threshold = 167.0 # LXe & Cu operating threshold, K
 dp_threshold = 400.0 # xenon - HFE, torr
-ln_mass_threshold = 70.0 # lbs of LN needed
+ln_mass_threshold = 80.0 # lbs of LN needed
 ln_hours_left_threshold = 1.0 # at least 1 hour of LN must remain! 
 lookback_time_minutes = 10.0 # LabView plots shouldn't be older than this, minutes
 sleep_seconds = 60*5 # sleep for this many seconds between tests
@@ -51,7 +51,7 @@ def print_warning(warning):
 
 def load_gmail_info():
     gmail_user = "lxe.readout@gmail.com"
-    gmail_pwd = os.environ["LXEPASS"]
+    gmail_pwd = os.environ["LXEPASS"] # password for this account
     return gmail_user, gmail_pwd
 
 def filter_SMS(users):
@@ -340,10 +340,10 @@ class LXeMonitoring:
 
         if self.lxe:
 
-            if data['ln_hours_left'] < ln_hours_left_threshold:
-                message = "hours of LN remaining: %.2f" % data['ln_hours_left']
-                messages.append(message)
-                print_warning(message)
+            #if data['ln_hours_left'] < ln_hours_left_threshold:
+            #    message = "hours of LN remaining: %.2f" % data['ln_hours_left']
+            #    messages.append(message)
+            #    print_warning(message)
 
             if data['ln_mass_lbs'] < ln_mass_threshold:
                 message = "hours of LN remaining: %.2f" % data['ln_mass_lbs']
