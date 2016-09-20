@@ -9,25 +9,33 @@ use MC noise branch to smear MC energies.
 import os
 import sys
 import ROOT
+ROOT.gROOT.SetBatch(True)
 
 from struck import struck_analysis_cuts
 from struck import struck_analysis_parameters
 
 # options
-#draw_cmd = "energy1_pz" # individual channel spectra
+draw_cmd = "energy1_pz" # individual channel spectra
 #draw_cmd = "Sum$(energy_pz*signal_map)" # testing
-draw_cmd = "SignalEnergy" # the usual
+#draw_cmd = "SignalEnergy" # the usual
 
 drift_time_high = struck_analysis_parameters.max_drift_time
 drift_time_low = struck_analysis_parameters.drift_time_threshold
-#drift_time_high = 8.5
+#drift_time_high = 8.0
 #drift_time_low = 8.0
+#drift_time_low = 3.0
+#drift_time_high = 8.5
 drift_time_high = 9.0
 nsignals = 1
 # the usual:
 struck_selection = "nsignals==%i && rise_time_stop95_sum-trigger_time>%s && rise_time_stop95_sum-trigger_time<%s" % (
     nsignals, drift_time_low, drift_time_high)
+#struck_selection = "nsignals==1 && rise_time_stop95_sum-8>8.5&&rise_time_stop95_sum-8<8.9&&rise_time_stop50_sum-8>7" # like Conti
+#struck_selection += "&& rise_time_stop50_sum>8.0"
+#struck_selection += " && signal_map[16]==0 && signal_map[7]==0 && signal_map[21]==0"
+#struck_selection += " && signal_map[16]==0"
 mc_selection = struck_selection
+selection = struck_selection
 
 # testing:
 #struck_selection = "nsignals==1 && %s" % struck_analysis_cuts.get_drift_time_cut(
@@ -40,7 +48,7 @@ mc_selection = struck_selection
 # hist options
 min_bin = 300.0
 max_bin = 1400.0
-bin_width = 10 # keV
+bin_width = 5 # keV
 n_bins = int((max_bin - min_bin)/bin_width)
 
 
@@ -95,7 +103,7 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
 
     if draw_cmd == "energy1_pz":
         print "--> channel", channel, struck_analysis_parameters.channel_map[channel]
-        struck_selection = " && ".join([struck_selection, "channel==%i" % channel])
+        struck_selection = " && ".join([selection, "channel==%i" % channel])
         mc_selection = struck_selection
 
     legend = ROOT.TLegend(canvas.GetLeftMargin(), 0.91, 0.9, 0.99)
@@ -124,7 +132,7 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
     struck_tree.Draw("%s >> %s" % (draw_cmd, struck_hist.GetName()),struck_selection)
     print "\t %i entries in hist" % struck_hist.GetEntries()
 
-    start_bin = struck_hist.FindBin(450.0)
+    start_bin = struck_hist.FindBin(300.0)
     stop_bin = struck_hist.FindBin(1400.0)
 
     try:
@@ -143,7 +151,9 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
     legend.AddEntry(mc_hist, "MC", "f")
 
     # this doesn't work well for low stats:
-    if draw_cmd != "energy1_pz":
+    #if draw_cmd != "energy1_pz":
+    if True:
+        struck_hist.SetMaximum() # reset since we keep filling the same hist... 
         y_max = struck_hist.GetMaximum()
         if mc_hist.GetMaximum() > y_max: y_max = mc_hist.GetMaximum()
         struck_hist.SetMaximum(y_max*1.1)
@@ -163,15 +173,15 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
     canvas.Print("%s_%s.pdf" % (plotname, basename))
 
     pavetext = ROOT.TPaveText(0.12, 0.8, 0.9, 0.9, "ndc")
-    pavetext.AddText(struck_selection[:100])
+    pavetext.AddText(struck_selection[:200])
     pavetext.AddText("\nMC amplitude x %.2f, %.1f-keV add'l noise" % (scale_factor, mc_noise))
     pavetext.SetBorderSize(0)
     pavetext.SetFillStyle(0)
     pavetext.Draw()
-    canvas.Update()
 
     plotname += "_drift_%i_to_%i_" % (drift_time_low*1e3, drift_time_high*1e3)
     plotname += "%i_signals_" % nsignals
+    canvas.Update()
     canvas.Print("%s_%s_cuts.pdf" % (plotname, basename))
 
     if not ROOT.gROOT.IsBatch():

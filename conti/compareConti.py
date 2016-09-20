@@ -1,10 +1,13 @@
 
+import sys
 import ROOT
 
 # relative paths from this directory:
 conti_filename = "ContiIonization.root"
 #struck_filename = "../llnl/overnight8thLXe_v6.root"
 struck_filename = "~/scratch/mc_slac/red_overnight8thLXe_v6.root" # alexis
+if len(sys.argv) > 1:
+    struck_filename = sys.argv[1]
 
 # convert Conti TE to keV:
 conti_calibration = 1.0/22.004*0.74
@@ -42,6 +45,7 @@ conti_integral2 = conti_integral2/n_points2*(integral2_stop-integral2_start)
 # get struck tree
 struck_file = ROOT.TFile(struck_filename)
 struck_tree = struck_file.Get("tree")
+print struck_filename
 print "%i entries in struck tree" % struck_tree.GetEntries()
 
 # set up canvas
@@ -55,9 +59,9 @@ canvas.SetGrid()
 
 # make a selection for cuts to Struck data
 selection = [] 
-selection.append("rise_time_stop95_sum-8>8.5")
-selection.append("rise_time_stop95_sum-8<8.9")
-selection.append("rise_time_stop50_sum-8>7")
+selection.append("rise_time_stop95_sum-8>8.0")
+selection.append("rise_time_stop95_sum-8<9.0")
+#selection.append("rise_time_stop50_sum-8>7.5")
 selection = "&&".join(selection)
 
 # make & fill struck hist

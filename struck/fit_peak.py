@@ -45,9 +45,9 @@ def fit_channel(
     do_use_step=False,
     min_bin=300, # just for drawing plots
     max_bin=1200, # just for plotting
-    line_energy = 570,
-    fit_half_width=170,
-    #fit_half_width=170,
+    #line_energy = 570,
+    line_energy = 565,
+    fit_half_width=120,
     do_use_exp=True,
     energy_var = "energy1_pz",
 ):
@@ -61,7 +61,7 @@ def fit_channel(
     do_individual_channels = True
 
     # defaults for 570-keV
-    bin_width = 10
+    bin_width = 5
     #line_energy = 620
     sigma_guess = 40
     if channel != None:
@@ -71,10 +71,14 @@ def fit_channel(
         )**0.5
 
     # gaus + exponential
+    step_amplitude_index = 6
     if do_use_exp:
         fit_formula = "gausn(0) + [3]*TMath::Exp(-[4]*x) + [5]"
     else:
-        fit_formula = "gausn(0) + pol1(3)"
+        fit_formula = "gausn(0) + pol1(3)" # 1st-degree polynomial
+        #step_amplitude_index = 5
+        #fit_formula = "gausn(0) + pol2(3)" # 1st-degree polynomial
+        #fit_formula = "gausn(0)" 
 
     if do_1064_fit: # 1064-keV peak fit
         min_bin = 500
@@ -88,7 +92,12 @@ def fit_channel(
 
     if do_use_step:
         # http://radware.phy.ornl.gov/gf3/gf3.html#Fig.2.
-        fit_formula += " + [6]*TMath::Erfc((x-[1])/sqrt(2)/[2])"
+        fit_formula += " + [%i]*TMath::Erfc((x-[1])/sqrt(2)/[2])" % step_amplitude_index
+
+        # exp tail
+        # y = constant * EXP( (x-c)/beta ) * ERFC( (x-c)/(SQRT(2)*sigma) + sigma/(SQRT(2)*beta) )
+        #fit_formula += " + [%i]*exp((x-[1])/[%i])*TMath::Erfc((x-[1])/sqrt(2)/[2] + [2]/sqrt(2)/[%i])" % (
+        #    step_amplitude_index, step_amplitude_index+1, step_amplitude_index+1)
             
     if channel != None:
         plot_name = "%s/fit_ch%i_%s" % (basename, channel, basename)
@@ -219,11 +228,13 @@ def fit_channel(
             const_guess,    # a0
             slope_guess,   # a1
         )
+        testfit.SetParameter(5, 0.0)
 
     if do_use_step:
         step_height_guess = gaus_integral_guess*0.0001
         print "\tstep height guess:", step_height_guess
-        testfit.SetParameter(6, step_height_guess)
+        testfit.SetParameter(step_amplitude_index, step_height_guess)
+        testfit.SetParameter(step_amplitude_index+1, 20.0)
 
     
     if do_debug:
@@ -232,8 +243,10 @@ def fit_channel(
             bestfit_exp = ROOT.TF1("bestfite","[0]*TMath::Exp(-[1]*x) + [2]", fit_start_energy, fit_stop_energy)
             bestfit_exp.SetParameters(testfit.GetParameter(3), testfit.GetParameter(4), testfit.GetParameter(5))
         else:
+            #bestfit_exp = ROOT.TF1("bestfite","pol1(0)", fit_start_energy, fit_stop_energy)
+            #bestfit_exp.SetParameters(testfit.GetParameter(3), testfit.GetParameter(4))
             bestfit_exp = ROOT.TF1("bestfite","pol1(0)", fit_start_energy, fit_stop_energy)
-            bestfit_exp.SetParameters(testfit.GetParameter(3), testfit.GetParameter(4))
+            bestfit_exp.SetParameters(testfit.GetParameter(3), testfit.GetParameter(4), testfit.GetParameter(5))
         bestfit_exp.SetLineColor(ROOT.kBlack)
 
         bestfit_gaus = ROOT.TF1("bestfitg", "gausn(0)", fit_start_energy, fit_stop_energy)
@@ -243,8 +256,9 @@ def fit_channel(
 
         if do_use_step:
             bestfit_step = ROOT.TF1("bestfits", "[0]*TMath::Erfc((x-[1])/sqrt(2)/[2])", fit_start_energy, fit_stop_energy)
-            bestfit_step.SetParameters(testfit.GetParameter(6), 
-                testfit.GetParameter(1), testfit.GetParameter(2))
+            #bestfit_step = ROOT.TF1("bestfits", "[0]*exp((x-[1])/[3])*TMath::Erfc((x-[1])/sqrt(2)/[2] + [2]/sqrt(2)/[3])", fit_start_energy, fit_stop_energy)
+            bestfit_step.SetParameters(testfit.GetParameter(step_amplitude_index), 
+                testfit.GetParameter(1), testfit.GetParameter(2), testfit.GetParameter(step_amplitude_index+1))
             bestfit_step.SetLineColor(ROOT.kGreen+2)
 
         pad1 = canvas.cd(1)
@@ -280,7 +294,7 @@ def fit_channel(
         else:
             leg.AddEntry(bestfit_exp,  "linear bkg", "l")
         if do_use_step: 
-            leg.AddEntry(bestfit_step, "Erfc step: height = %.1E #pm %.1E" % (testfit.GetParameter(6), testfit.GetParError(6)), "l")
+            leg.AddEntry(bestfit_step, "Erfc step: height = %.1E #pm %.1E" % (testfit.GetParameter(step_amplitude_index), testfit.GetParError(step_amplitude_index)), "l")
         leg.SetFillColor(0)
         leg.Draw()
         hist.SetMinimum(0)
@@ -365,8 +379,10 @@ def fit_channel(
         bestfit_exp = ROOT.TF1("bestfite","[0]*TMath::Exp(-[1]*x) + [2]", fit_start_energy, fit_stop_energy)
         bestfit_exp.SetParameters(testfit.GetParameter(3), testfit.GetParameter(4), testfit.GetParameter(5))
     else:
+        #bestfit_exp = ROOT.TF1("bestfite","pol1(0)", fit_start_energy, fit_stop_energy)
+        #bestfit_exp.SetParameters(testfit.GetParameter(3), testfit.GetParameter(4))
         bestfit_exp = ROOT.TF1("bestfite","pol1(0)", fit_start_energy, fit_stop_energy)
-        bestfit_exp.SetParameters(testfit.GetParameter(3), testfit.GetParameter(4))
+        bestfit_exp.SetParameters(testfit.GetParameter(3), testfit.GetParameter(4), testfit.GetParameter(5))
     bestfit_exp.SetLineColor(ROOT.kBlack)
 
 
@@ -376,7 +392,9 @@ def fit_channel(
 
     if do_use_step:
         bestfit_step = ROOT.TF1("bestfits", "[0]*TMath::Erfc((x-[1])/sqrt(2)/[2])", fit_start_energy, fit_stop_energy)
-        bestfit_step.SetParameters(testfit.GetParameter(6), centroid, sigma)
+        #bestfit_step = ROOT.TF1("bestfits", "[0]*exp((x-[1])/[3])*TMath::Erfc((x-[1])/sqrt(2)/[2] + [2]/sqrt(2)/[3])", fit_start_energy, fit_stop_energy)
+        bestfit_step.SetParameters(testfit.GetParameter(step_amplitude_index), 
+            testfit.GetParameter(1), testfit.GetParameter(2), testfit.GetParameter(step_amplitude_index+1))
         bestfit_step.SetLineColor(ROOT.kGreen+2)
 
     if channel != None:
@@ -414,9 +432,13 @@ def fit_channel(
         sigma, sigma_err, n_peak_counts, n_peak_counts_err), "l")
     leg.AddEntry(bestfit_gaus, "#bar{x} = %.1f #pm %.1f keV | status=%i | #sigma/E = %.2f #pm %.2f" % (
         centroid, centroid_err, fit_status, sigma/centroid*100.0, sigma_err/centroid*100.0) + "%", "")
-    leg.AddEntry(bestfit_exp,  "Exp + const", "l")
+    if do_use_exp:
+        leg.AddEntry(bestfit_exp,  "Exp + const", "l")
+    else:
+        leg.AddEntry(bestfit_exp,  "linear bkg", "l")
     if do_use_step: 
-        leg.AddEntry(bestfit_step, "Erfc step: height = %.1E #pm %.1E" % (testfit.GetParameter(6), testfit.GetParError(6)), "l")
+        leg.AddEntry(bestfit_step, "Erfc step: height = %.1E #pm %.1E" % (testfit.GetParameter(step_amplitude_index), testfit.GetParError(step_amplitude_index)), "l")
+
     leg.SetFillColor(0)
     leg.Draw()
 
@@ -486,8 +508,8 @@ def fit_channel(
     result["cuts_label"] = cuts_label
     result["fit_status"] = fit_status
     if do_use_step:
-        result["step_height"] = testfit.GetParameter(6)
-        result["step_height_err"] = testfit.GetParError(6)
+        result["step_height"] = testfit.GetParameter(step_amplitude_index)
+        result["step_height_err"] = testfit.GetParError(step_amplitude_index)
     result["do_use_exp"] = do_use_exp
 
     keys = result.keys()
@@ -530,13 +552,14 @@ def process_file(
     channel_selection="",
     do_use_step=True,
     energy_var="energy1_pz",
+    do_use_exp=True,
 ):
 
     print "--> processing", filename
     basename = os.path.splitext(os.path.basename(filename))[0]
 
     if do_use_step:
-        basename = "step" + basename
+        basename = "step_" + basename
 
     # cuts label prefix:
     if all_energy_var!= None:
@@ -556,10 +579,10 @@ def process_file(
 
     print basename
     cmd = "mkdir %s" % basename
-    print cmd
+    #print cmd
     output = commands.getstatusoutput(cmd)
-    if output[1] != 0:
-        print output[0]
+    if output[0] != 0:
+        print output[1]
 
     root_file = ROOT.TFile(filename)
     tree = root_file.Get("tree")
@@ -571,7 +594,7 @@ def process_file(
 
     all_results = {}
     if all_energy_var != None:
-        result = fit_channel(tree, None, basename, do_1064_fit, all_energy_var, selection, do_use_step)
+        result = fit_channel(tree, None, basename, do_1064_fit, all_energy_var, selection, do_use_step, do_use_exp=do_use_exp)
         all_results["all"] = result
 
     isMC = struck_analysis_parameters.is_tree_MC(tree)
@@ -584,7 +607,7 @@ def process_file(
     for channel, value in enumerate(charge_channels_to_use):
         continue # skipping indiv channels for now... 
         if value:
-            result = fit_channel(tree, channel, basename, do_1064_fit, all_energy_var, channel_selection, do_use_step, energy_var=energy_var)
+            result = fit_channel(tree, channel, basename, do_1064_fit, all_energy_var, channel_selection, do_use_step, energy_var=energy_var, do_use_exp=do_use_exp)
             if result:
                 all_results["channel %i" % channel] = result
 
@@ -601,7 +624,10 @@ if __name__ == "__main__":
         sys.exit(1)
 
     #isMC = True
-    isMC = False
+    tfile = ROOT.TFile(sys.argv[1])
+    tree = tfile.Get("tree")
+    isMC = struck_analysis_parameters.is_tree_MC(tree)
+
     drift_time_high=9.0 # microseconds
 
     nc = struck_analysis_cuts.get_negative_energy_cut(isMC=isMC)
@@ -627,7 +653,9 @@ if __name__ == "__main__":
     #selections.append([dc])
 
     # best so far:
-    selections.append([struck_analysis_cuts.get_single_strip_cut(), dc])
+    #selections.append([struck_analysis_cuts.get_single_strip_cut(), dc])
+    #selections.append([dc])
+    selections.append(["rise_time_stop95_sum-trigger_time>8.5 && rise_time_stop95_sum-trigger_time<9.0", "rise_time_stop50_sum-trigger_time>7.0"])
 
     #selections.append([struck_analysis_cuts.get_single_strip_cut(), ds])
     #selections.append(["(nbundlesX<2&&nbundlesY<2)",dc])
@@ -656,8 +684,12 @@ if __name__ == "__main__":
         #all_energy_var = struck_analysis_cuts.get_few_channels_cmd(energy_var="energy1")
         #all_energy_var = None # skipp fit to all channels
         all_energy_var = "SignalEnergy"
+        if isMC: all_energy_var = "SignalEnergy*1.02"
+        print "all_energy_var:", all_energy_var
+        do_use_step=False
+        do_use_exp=False
 
-        process_file(sys.argv[1], False, all_energy_var, selection, channel_selection, do_use_step=True, energy_var="energy1_pz")
+        process_file(sys.argv[1], False, all_energy_var, selection, channel_selection, do_use_step=do_use_step, energy_var="energy1_pz", do_use_exp=do_use_exp)
         #process_file(sys.argv[1], True, all_energy_var, selection, channel_selection)
 
         # cuts need more work to be used with this "few channels" draw command 
