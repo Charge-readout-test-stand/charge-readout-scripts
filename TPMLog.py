@@ -294,7 +294,7 @@ def main(
         print "trying alexis' path..."
         #directory = '/Users/alexis/stanford-Dropbox/Dropbox/labViewPlots/'
         directory = '/Users/alexis/Downloads/%s/' % basename
-        cmd = "mkdir %s" % directory
+        cmd = "mkdir -p %s" % directory
         import commands
         output = commands.getstatusoutput(cmd)
         if output[0]: print output[1]
@@ -324,6 +324,7 @@ def main(
     ccgpath_log = os.path.join(directory, "92-CCGauge-log_%s.%s" % (basename, filetype))
     rccgpath_log = os.path.join(directory, "92-CCGauge-log-recent_%s.%s" % (basename, filetype))
     lnpath = os.path.join(directory, "02-LN-Mass_%s.%s" % (basename, filetype))
+    rlnpath = os.path.join(directory, "02-LN-Mass-recent_%s.%s" % (basename, filetype))
     bottle_mass_path = os.path.join(directory, "07-BottleMass_%s.%s" % (basename, filetype))
     capacitance_path = os.path.join(directory, "08-Capacitance_%s.%s" % (basename, filetype))
     hfep_path = os.path.join(directory, "06-HFE-Pressure_%s.%s" % (basename, filetype))
@@ -904,20 +905,31 @@ def main(
    
     if len(ln_mass) > 0:
         ln_density = 1.78 # lb / Liter
+
+        fit = np.polyfit(recent_time, ln_mass[start_index_of_last_hour:], 1)
+        fit_fn = np.poly1d(fit) 
+        print fit
+        ln_slope_lbs_per_hour = fit[0] 
+        ln_intercept_hours = fit[1]
+
         # ln_mass is total mass (dewar tare weight + hooks + LN)
-        old_amt_ln = ln_mass[start_index_of_last_hour] - ln_tare_mass[start_index_of_last_hour]
+
+        # old estimate:
+        #old_amt_ln = ln_mass[start_index_of_last_hour] - ln_tare_mass[start_index_of_last_hour]
         new_amt_ln = ln_mass[last_index] - ln_tare_mass[last_index]
         #print "old amt ln [lb]:", old_amt_ln
         #print "new amt ln [lb]:", new_amt_ln
         #print "recent time span:", recent_time_span
-        ln_consumption_rate = (old_amt_ln - new_amt_ln) / (recent_time_span/3600.0)
+        #ln_consumption_rate = (old_amt_ln - new_amt_ln) / (recent_time_span/3600.0)
+
+        ln_consumption_rate = -ln_slope_lbs_per_hour
         ln_consumption_rate_info = "LN consumption rate [lb / hour]: %.2f" %  ln_consumption_rate
         #print ln_consumption_rate_info
         #print "LN consumption rate [L / hour]:", ln_consumption_rate/ln_density
         try: 
             ln_hours_remaining = (new_amt_ln)/ ln_consumption_rate
         except ZeroDivisionError:
-            ln_hours_remaining = -999.99
+            ln_hours_remaining = 999.99
             
         #print "LN time remaining: [hours]", ln_hours_remaining
         outfile.write("LN time remaining [hours]: %.2f \n" % ln_hours_remaining)
@@ -928,7 +940,6 @@ def main(
         empty_time = datetime.datetime.fromtimestamp(
           time_stamps[last_index]- 2082844800 + ln_hours_remaining*3600.0)
 
-        plt.figure(12)
         plt.grid(b=True)
         title="LN mass (should run out in %.1f hours, at %s) \n " % (
             ln_hours_remaining,
@@ -960,6 +971,44 @@ def main(
         legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, fontsize='medium', ncol=2)
         plt.savefig(lnpath)
         print "printed %s" % lnpath
+        plt.clf()
+        outfile.write("LN total mass [lb]: %.3f \n" % ln_mass[-1])
+        outfile.write("LN tare mass [lb]: %.3f \n" % ln_tare_mass[-1])
+        outfile.write("LN mass [lb]: %.3f \n" % (ln_mass[-1] - ln_tare_mass[-1])) 
+
+
+        plt.grid(b=True)
+        title="LN mass (should run out in %.1f hours, at %s) \n " % (
+            ln_hours_remaining,
+            empty_time.strftime("%m-%d-%y %I:%M%p"),
+        )
+        title += "LN mass = %.1f lb (%.1f  L), %.1f lb/hr (%.1f L/hr) in past hour" % ( 
+            new_amt_ln,
+            new_amt_ln/ln_density,
+            ln_consumption_rate,
+            ln_consumption_rate/ln_density,
+        )
+        plt.title(title, y=1.1)
+        ln_line = plt.plot( recent_time,
+            ln_mass[start_index_of_last_hour:], 
+            label = "Total mass: %.1f lb" % (new_amt_ln + ln_tare_mass[last_index]) )
+        #ln_tare_line = plt.plot( recent_time,
+        #    ln_tare_mass[start_index_of_last_hour:], 
+        #    label = "Tare (dewar + hooks): %.1f lb" % ln_tare_mass[last_index])
+        fit_line = plt.plot(recent_time, fit_fn(recent_time), '--k', label="fit to past hour")
+        plt.setp(ln_line, color = 'b', linewidth = linewidth)
+        plt.setp(ln_tare_line, color = 'red', linewidth = linewidth)
+        plt.xlabel('Time [hours] %s' % time_string)
+        plt.ylabel('total mass = LN mass + tare weight [lb]')
+
+        # shrink plot height to create space for legend
+        #plt.title(title, y=1.3)
+        subplt = plt.subplot(111)
+        box = subplt.get_position()
+        subplt.set_position([box.x0, box.y0, box.width, box.height*0.9])
+        legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, fontsize='medium', ncol=2)
+        plt.savefig(rlnpath)
+        print "printed %s" % rlnpath
         plt.clf()
         outfile.write("LN total mass [lb]: %.3f \n" % ln_mass[-1])
         outfile.write("LN tare mass [lb]: %.3f \n" % ln_tare_mass[-1])
