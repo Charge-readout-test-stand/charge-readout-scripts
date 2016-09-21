@@ -316,8 +316,9 @@ def main(
     filetype = 'jpeg'    
     mfpath = os.path.join(directory, "09-MassFlow_%s.%s" % (basename, filetype))
     vpath = os.path.join(directory, "03-ValveStates_%s.%s" % (basename, filetype))
-    ppath = os.path.join(directory, "04-Pressure-10kTorr_%s.%s" % (basename, filetype))
+    ppath = os.path.join(directory, "90-Pressure-10kTorr_%s.%s" % (basename, filetype))
     ppath2 = os.path.join(directory, "90-Pressure-1kTorr_%s.%s" % (basename, filetype))
+    ppath3 = os.path.join(directory, "04-Pressure-Baratrons_%s.%s" % (basename, filetype))
     mfrpath = os.path.join(directory, "09-MassFlowRate_%s.%s" % (basename, filetype))
     ccgpath = os.path.join(directory, "91-CCGauge_%s.%s" % (basename, filetype))
     rccgpath = os.path.join(directory, "91-CCGauge-recent_%s.%s" % (basename, filetype))
@@ -819,14 +820,32 @@ def main(
       plt.figure(6)
       plt.grid(b=True)
       plt.title("XP5 Vacuum system pressure (1k Torr Baratron) [Torr]: %.2f \n" % Pressure2[-1])
-      pline1 = plt.plot(time_hours[first_index:last_index],
-      Pressure2[first_index:last_index])
+      pline1 = plt.plot(time_hours[first_index:last_index], Pressure2[first_index:last_index])
       plt.setp(pline1, color = 'b', linewidth = linewidth)
       plt.xlabel('Time [hours] %s' % time_string)
       plt.ylabel('Pressure [Torr]')
       plt.savefig(ppath2)
       print "printed %s" % ppath2
       plt.clf()
+      
+      
+      plt.grid(b=True)
+      pline1 = plt.plot(time_hours[first_index:last_index], Pressure[first_index:last_index],
+          label = "XP3 Xe system: %.1f Torr" % Pressure[last_index])
+      pline2 = plt.plot(time_hours[first_index:last_index], Pressure2[first_index:last_index], 
+          label = "XP5 Vac (XP7 Xe): %.1f Torr" % Pressure2[last_index])
+      plt.setp(pline1, color = 'b', linewidth = linewidth)
+      plt.setp(pline2, color = 'r', linewidth = linewidth)
+      plt.xlabel('Time [hours] %s' % time_string)
+      plt.ylabel('Pressure [Torr]')
+      legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, fontsize='medium', ncol=2)
+      plt.savefig(ppath3)
+      print "printed %s" % ppath3
+      plt.clf()
+
+
+
+
       
     if len(mass_flow_rate) > 0:
       plt.figure(7)
