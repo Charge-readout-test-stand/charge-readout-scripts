@@ -470,6 +470,8 @@ def main(
         if time_stamp >= 3554119175:
             empty_capacitance = 23.7
             full_capacitance = 34.0
+            full_bottle_mass = 94.6
+            empty_bottle_mass = full_bottle_mass - 6.5
 
         TC0.append(float(split_line[1]))
         TC1.append(float(split_line[2]))
@@ -908,7 +910,6 @@ def main(
 
         fit = np.polyfit(recent_time, ln_mass[start_index_of_last_hour:], 1)
         fit_fn = np.poly1d(fit) 
-        print fit
         ln_slope_lbs_per_hour = fit[0] 
         ln_intercept_hours = fit[1]
 
