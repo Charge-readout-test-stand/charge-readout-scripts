@@ -417,7 +417,7 @@ def main(
             if time_stamp >= 3539732526:
                 mass_flow_rate_offset = 100.0/15.0/60.0 # 100 grams in 15 hours
 
-            if time_stamp >= 3554119175.:
+            if time_stamp >= 3553816731.0:
                 print "during/after 8th LXe"
                 mass_flow_rate_offset = 170.0/15.0/60.0 # 100 grams in 15 hours
 
@@ -468,7 +468,7 @@ def main(
             full_mass_integral = 6437.6 # when cell is "full"
 
 
-        if time_stamp >= 3554119175:
+        if time_stamp >= 3553816731:
             empty_capacitance = 23.7
             full_capacitance = 34.0
             full_bottle_mass = 94.6
@@ -838,6 +838,15 @@ def main(
       plt.setp(pline2, color = 'r', linewidth = linewidth)
       plt.xlabel('Time [hours] %s' % time_string)
       plt.ylabel('Pressure [Torr]')
+
+      # draw LXe fill box:
+      if fill_start and fill_stop:
+          plt.axvspan(fill_start, fill_stop, color='blue', alpha=0.3)
+
+      # draw recovery box:
+      if recovery_start and recovery_stop:
+          plt.axvspan(recovery_start, recovery_stop, color='red', alpha=0.3)
+
       legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, fontsize='medium', ncol=2)
       plt.savefig(ppath3)
       print "printed %s" % ppath3
