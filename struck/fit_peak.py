@@ -47,7 +47,7 @@ def fit_channel(
     max_bin=1200, # just for plotting
     #line_energy = 570,
     line_energy = 565,
-    fit_half_width=120,
+    fit_half_width=170,
     do_use_exp=True,
     energy_var = "energy1_pz",
 ):
@@ -156,14 +156,14 @@ def fit_channel(
     resid_hist.SetMarkerStyle(8)
     resid_hist.SetMarkerSize(0.8)
 
-    #draw_cmd = "%s*%s/calibration >> fit_hist" % (
-    #    energy_var,
-    #    struck_analysis_parameters.calibration_values[channel], 
-    #)
-
-    draw_cmd = "%s >> fit_hist" % (
-        energy_var,
-    )
+    # test new calibration:
+    if channel != None:
+        draw_cmd = "%s*%s/calibration >> fit_hist" % (
+            energy_var,
+            struck_analysis_parameters.calibration_values[channel], 
+        )
+    else:
+        draw_cmd = "%s >> fit_hist" % energy_var
 
     print "draw command:", draw_cmd
     print "selection:"
@@ -299,7 +299,7 @@ def fit_channel(
         leg.Draw()
         hist.SetMinimum(0)
         canvas.Update()
-        canvas.Print("%s_pre_lin.pdf" % plot_name)
+        #canvas.Print("%s_pre_lin.pdf" % plot_name)
 
 
         if not ROOT.gROOT.IsBatch():
@@ -398,10 +398,14 @@ def fit_channel(
         bestfit_step.SetLineColor(ROOT.kGreen+2)
 
     if channel != None:
-        if isMC:
-            calibration_value = struck_analysis_parameters.Wvalue
-        else:
-            calibration_value = struck_analysis_parameters.calibration_values[channel]
+
+        tree.GetEntry(0)
+
+        calibration_value = tree.calibration[channel]
+        #if isMC:
+        #    calibration_value = struck_analysis_parameters.Wvalue
+        #else:
+        #    calibration_value = struck_analysis_parameters.calibration_values[channel]
         new_calibration_value = calibration_value*calibration_ratio
         new_calibration_value_err = calibration_value*calibration_ratio_err
     else:
@@ -521,10 +525,11 @@ def fit_channel(
         
 
     if channel != None:
-        new_calibration = "calibration_values[%i] = %.6f # +/- %.6f" % (
+        new_calibration = "calibration_values[%i] = %.6f # +/- %.6f  %s" % (
             channel, 
             new_calibration_value,
             new_calibration_value_err,
+            struck_analysis_parameters.channel_map[channel],
         )
         print new_calibration
         new_calib_file = file("%s/new_calib_%s.txt" % (basename, basename),"a")
@@ -605,7 +610,7 @@ def process_file(
         charge_channels_to_use = struck_analysis_parameters.charge_channels_to_use
 
     for channel, value in enumerate(charge_channels_to_use):
-        continue # skipping indiv channels for now... 
+        #continue # skipping indiv channels for now... 
         if value:
             result = fit_channel(tree, channel, basename, do_1064_fit, all_energy_var, channel_selection, do_use_step, energy_var=energy_var, do_use_exp=do_use_exp)
             if result:
@@ -653,9 +658,9 @@ if __name__ == "__main__":
     #selections.append([dc])
 
     # best so far:
-    #selections.append([struck_analysis_cuts.get_single_strip_cut(), dc])
+    selections.append([struck_analysis_cuts.get_single_strip_cut(), dc])
     #selections.append([dc])
-    selections.append(["rise_time_stop95_sum-trigger_time>8.5 && rise_time_stop95_sum-trigger_time<9.0", "rise_time_stop50_sum-trigger_time>7.0"])
+    #selections.append(["rise_time_stop95_sum-trigger_time>8.5 && rise_time_stop95_sum-trigger_time<9.0", "rise_time_stop50_sum-trigger_time>7.0"])
 
     #selections.append([struck_analysis_cuts.get_single_strip_cut(), ds])
     #selections.append(["(nbundlesX<2&&nbundlesY<2)",dc])
@@ -686,8 +691,8 @@ if __name__ == "__main__":
         all_energy_var = "SignalEnergy"
         if isMC: all_energy_var = "SignalEnergy*1.02"
         print "all_energy_var:", all_energy_var
-        do_use_step=False
-        do_use_exp=False
+        do_use_step=True
+        do_use_exp=True
 
         process_file(sys.argv[1], False, all_energy_var, selection, channel_selection, do_use_step=do_use_step, energy_var="energy1_pz", do_use_exp=do_use_exp)
         #process_file(sys.argv[1], True, all_energy_var, selection, channel_selection)
