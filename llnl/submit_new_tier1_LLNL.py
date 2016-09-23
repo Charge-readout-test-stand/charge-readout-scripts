@@ -10,7 +10,7 @@ import sys
 import inspect
 import commands
 
-from struck import toRoot
+from struck.ngm import toRoot
 import submitPythonJobsLLNL
 
 
@@ -35,7 +35,8 @@ def process_files(filenames):
         print "--> processing file %i of %i: %s" % (i, len(filenames), filename)
 
         basename = os.path.splitext(os.path.basename(filename))[0] # drop the directory structure
-        tier1_name = "tier1_%s.root" % basename
+        tier1_name = "tier1_%s-ngm.root" % basename
+        #print tier1_name
 
         # if tier1 file exists, skip it, otherwise create it:
         if os.path.isfile(tier1_name):
