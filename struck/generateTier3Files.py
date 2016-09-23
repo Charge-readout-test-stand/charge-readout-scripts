@@ -162,6 +162,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 print "==> This is an NGM tree!"
             except AttributeError:
                 print "==> problem accessing tree -- skipping this file"
+                return
 
     print "%i tree entries" % n_entries
     reporting_period = 1000
