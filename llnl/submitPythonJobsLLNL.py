@@ -22,8 +22,8 @@ def main(python_script, filenames, options="", verbose=True):
 
     # options:
     queue = "pbatch" 
-    hours = 2
-    minutes = 00
+    hours = 0
+    minutes = 30
 
 
     #print "\n".join(filenames)
@@ -87,7 +87,6 @@ def main(python_script, filenames, options="", verbose=True):
           "minutes": minutes,
           "base": basename,
           "python_script": python_script,
-          "options": options,
           "filename": filename,
           "batch_script_name":batch_script_name,
         }
