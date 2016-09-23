@@ -523,17 +523,27 @@ def fit_channel(
         print "\t%s : %s" % (key, result[key])
         
 
+    # write stuff to file -- if channel is None, we are fitting all channels 
+    label = "all"
+    ch_label = "all"
     if channel != None:
-        new_calibration = "calibration_values[%i] = %.6f # +/- %.6f  %s" % (
-            channel, 
-            new_calibration_value,
-            new_calibration_value_err,
-            struck_analysis_parameters.channel_map[channel],
-        )
-        print new_calibration
-        new_calib_file = file("%s/new_calib_%s.txt" % (basename, basename),"a")
-        new_calib_file.write(new_calibration + "\n")
-        new_calib_file.close()
+        label = struck_analysis_parameters.channel_map[channel]
+        ch_label = channel
+
+    new_calibration = "calibration_values[%s] = %.6f # +/- %.6f " % (
+        ch_label, 
+        new_calibration_value,
+        new_calibration_value_err,
+    )
+    #if channel != None:
+    #    new_calibration += "(was %s) " % struck_analysis_parameters.calibration_values[channel]
+    new_calibration += label
+    if channel == None:
+        new_calibration = "# " + new_calibration
+    print new_calibration
+    new_calib_file = file("%s/new_calib_%s.txt" % (basename, basename),"a")
+    new_calib_file.write(new_calibration + "\n")
+    new_calib_file.close()
 
 
     if not ROOT.gROOT.IsBatch():
@@ -595,6 +605,13 @@ def process_file(
         print "%i entries" % n_entries
     except AttributeError:
         print "could not get entries from tree"
+
+    # start the calibration file
+    new_calib_file = file("%s/new_calib_%s.txt" % (basename, basename),"w")
+    new_calib_file.write("# basename: %s \n" % basename)
+    new_calib_file.write("# selection: %s \n" % selection)
+    new_calib_file.write("# channel_selection: %s \n" % selection)
+    new_calib_file.close()
 
     all_results = {}
     if all_energy_var != None:
