@@ -645,7 +645,8 @@ if is_8th_LXe:
 
 
 if is_9th_LXe: 
-    rms_keV[0] = 0.000000 # Not Used 
+    # Fits are in RMSNoise_red_some_9th_729.pdf 
+    rms_keV[0] = 7.905006*calibration_values[0]  # +/- 0.000144  
     rms_keV[1] = 20.444287*calibration_values[1]  # +/- 0.000384  
     rms_keV[2] = 20.960956*calibration_values[2]  # +/- 0.000394  
     rms_keV[3] = 20.697933*calibration_values[3]  # +/- 0.000398  
@@ -672,12 +673,11 @@ if is_9th_LXe:
     rms_keV[24] = 18.116218*calibration_values[24]  # +/- 0.000356  
     rms_keV[25] = 20.930816*calibration_values[25]  # +/- 0.000391  
     rms_keV[26] = 22.080452*calibration_values[26]  # +/- 0.000409  
-    rms_keV[27] = 0.000000 # Not Used 
+    rms_keV[27] = 3.468925*calibration_values[27]  # +/- 0.000261  
     rms_keV[28] = 23.229219*calibration_values[28]  # +/- 0.000456  
     rms_keV[29] = 23.981512*calibration_values[29]  # +/- 0.000527  
     rms_keV[30] = 13.934240*calibration_values[30]  # +/- 0.000352  
-    rms_keV[31] = 0.000000 # Not Used 
-
+    rms_keV[31] = 2.807817*calibration_values[31]  # +/- 0.000998  
 
 tileCh_to_PreCh = {}
 if is_8th_LXe or is_9th_LXe:
