@@ -50,6 +50,7 @@ import sys
 import time
 import math
 import datetime
+import commands
 import numpy as np
 from optparse import OptionParser
 
@@ -118,6 +119,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     channel_map = struck_analysis_parameters.channel_map
     n_chargechannels = struck_analysis_parameters.n_chargechannels
     pmt_channel = struck_analysis_parameters.pmt_channel
+    pulser_channel = struck_analysis_parameters.pulser_channel
     n_channels = struck_analysis_parameters.n_channels
     charge_channels_to_use = struck_analysis_parameters.charge_channels_to_use
 
@@ -536,8 +538,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     #------------------------------------------------------------------------------------------------
     #------------------------------------------------------------------------------------------------
 
-
-
+    is_pulser = array('I', [0])
+    out_tree.Branch('is_pulser', is_pulser, 'is_pulser/i')
 
     # parameters coming from sum waveform
     rise_time_stop10_sum = array('d', [0.0]) # double
@@ -719,9 +721,12 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         pmt_threshold[0] = 0.0
     elif do_debug:
         print "--> debugging -- skipping PMT threshold calc"
+    elif pulser_channel != None:
+        print "skipping PMT threshold calc since pulser is channel %i" % pulser_channel
     else:
         draw_command = "wfm_max-wfm[0] >> hist"
         selection = "channel==%i" % pmt_channel
+            
         if not is_tier1:
             draw_command = "wfm_max-wfm%i[0] >> hist" % pmt_channel
         if isNGM:
@@ -922,6 +927,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             bundle_nsigs[bundle_index] = 0
             bundle_energy[bundle_index] = 0.0
         nbundles[0] = 0
+        is_pulser[0] = 0
         
         if isMC:
             MCchargeEnergy[0] = 0.0
@@ -1250,12 +1256,21 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
         #raw_input("Press Enter...")
 
+        if pulser_channel:
+            if wfm_min[pulser_channel] < 3000: # 9th LXe value
+                is_pulser[0] = 1
+
         if isNGM: # check that event contains all channels:
             if (n_channels_in_this_event != len(charge_channels_to_use)):
               print "====> WARNING: %i channels in this event!!" % i
             else:
-                out_tree.Fill()
-                n_events+=1
+                do_fill = False
+                if nsignals[0] > 0: do_fill = True
+                if is_pulser[0] > 0: do_fill = True
+
+                if do_fill:
+                    out_tree.Fill()
+            n_events+=1
         else:
             out_tree.Fill()
             n_events+=1
@@ -1270,6 +1285,12 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         time.time()-start_time)
     print "writing", out_filename
     out_tree.Write()
+
+    # change file permissions -- for LLNL aztec:
+    cmd = "chmod 644 %s" % out_filename
+    output = commands.getstatusoutput(cmd)
+    if output[0] != 0:
+        print output[1]
 
 
 if __name__ == "__main__":
