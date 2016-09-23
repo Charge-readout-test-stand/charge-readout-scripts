@@ -1,4 +1,5 @@
 import os
+import sys
 import ROOT
 import struck_analysis_parameters
 
@@ -6,6 +7,11 @@ def getRMS(calibrate):
 
     #filename = "/home/teststand/2016_08_15_8th_LXe_overnight/tier3_added/overnight8thLXe_v3.root"
     filename = "/home/teststand/2016_09_13_pulser_tests/tier3_SIS3316Raw_20160913233650_digitizer_noise_tests__1-ngm.root"
+
+    if len(sys.argv) > 1:
+        filename = sys.argv[1]
+
+    print "--> getRMS:", filename
 
     tree = ROOT.TChain("tree")
     tree.Add(filename)
@@ -16,6 +22,10 @@ def getRMS(calibrate):
     log_name = "log_RMSNoise.txt"
     plot_name = "/home/teststand/2016_08_15_8th_LXe_overnight/tier3_added/RMSNoise_%s.pdf" % basename
     out_fname = "/home/teststand/2016_08_15_8th_LXe_overnight/tier3_added/RMSNoise_%s.root" % basename
+
+    if len(sys.argv) > 1:
+        plot_name = "RMSNoise_%s.pdf" % basename
+        out_fname = "RMSNoise_%s.root" % basename
     
     if calibrate:
         plot_name = "/home/teststand/2016_08_15_8th_LXe_overnight/tier3_added/RMSNoise_calibrated_%s.pdf" % basename
@@ -45,11 +55,11 @@ def getRMS(calibrate):
 
     for (channel, value) in enumerate(struck_analysis_parameters.charge_channels_to_use):
         
-        if not value:
-            #not a used channel
-            log_out =  "rms_keV[%i] = %f # %s \n" %(channel, 0.0, "Not Used")
-            log.write(log_out)
-            continue
+        #if not value:
+        #    #not a used channel
+        #log_out =  "rms_keV[%i] = %f # %s \n" %(channel, 0.0, "Not Used")
+        #    log.write(log_out)
+        #    continue
 
         hist = ROOT.TH1D("hist_%i" % channel,"",n_bins,0, energy_max)
         hist.SetXTitle("RMS Noise [ADC units]")
@@ -120,11 +130,13 @@ def getRMS(calibrate):
     #Draw total Hist
     hist_list[0].SetTitle("")
     hist_list[0].Draw()
-    for hist in hist_list:
+    for i_hist, hist in enumerate(hist_list):
+        print "printing hist %i of %i" % (i_hist, len(hist_list))
         hist.Draw("SAME")
     
     legend.Draw()
-    raw_input("press enter")
+    if not ROOT.gROOT.IsBatch():
+        raw_input("press enter")
     canvas.Print("%s" % plot_name)
 
 
@@ -135,6 +147,14 @@ def plotRMS():
     fname = "/home/teststand/2016_08_15_8th_LXe_overnight/tier3_added/RMSNoise_calibrated_overnight8thLXe_v3.root"
     fname = "/home/teststand/2016_08_15_8th_LXe_overnight/tier3_added/RMSNoise_calibrated_tier3_SIS3316Raw_20160913233650_digitizer_noise_tests__1-ngm.root"
     fname = "/home/teststand/2016_08_15_8th_LXe_overnight/tier3_added/RMSNoise_tier3_SIS3316Raw_20160913233650_digitizer_noise_tests__1-ngm.root"
+
+    if len(sys.argv) > 1:
+        fname = sys.argv[1]
+        basename = os.path.splitext(os.path.basename(fname))[0]
+        fname = "RMSNoise_%s.root" % basename
+    
+    print "---> plotRMS:", fname
+
     rfile = ROOT.TFile(fname)
     
     canvas = ROOT.TCanvas("canvas")
@@ -205,10 +225,11 @@ def plotRMS():
 
 
 if __name__ == "__main__":
-    remake = False
+    remake = True
     calibrate = False
     if remake:
         getRMS(calibrate)
+        plotRMS()
     else:
         plotRMS()
 
