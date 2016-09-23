@@ -55,6 +55,7 @@ if is_8th_LXe or is_9th_LXe:
 
 # in software, struck channels start from 0, not 1
 pmt_channel = 8
+pulser_channel = None
 if is_6th_LXe:
     # channels for 6th LXe
     channels = [0,1,2,3,4,5,8]
@@ -202,6 +203,9 @@ if is_8th_LXe or is_9th_LXe:
             one_strip_channels[channel] = 1
         elif n_strips == 2:
             two_strip_channels[channel] = 1
+if is_9th_LXe:
+    pulser_channel = 12
+    channel_map[pulser_channel] = "pulser"
 
 #MC Channels index starts at 0 so X26 = 25
 #Y  Channles are offset by 30
