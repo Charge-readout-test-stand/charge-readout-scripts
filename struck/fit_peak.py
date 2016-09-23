@@ -45,8 +45,8 @@ def fit_channel(
     do_use_step=False,
     min_bin=300, # just for drawing plots
     max_bin=1200, # just for plotting
-    #line_energy = 570,
-    line_energy = 565,
+    line_energy = 570,
+    #line_energy = 565,
     fit_half_width=170,
     do_use_exp=True,
     energy_var = "energy1_pz",
@@ -401,11 +401,10 @@ def fit_channel(
 
         tree.GetEntry(0)
 
-        calibration_value = tree.calibration[channel]
-        #if isMC:
-        #    calibration_value = struck_analysis_parameters.Wvalue
-        #else:
-        #    calibration_value = struck_analysis_parameters.calibration_values[channel]
+        if isMC:
+            calibration_value = struck_analysis_parameters.Wvalue
+        else:
+            calibration_value = struck_analysis_parameters.calibration_values[channel]
         new_calibration_value = calibration_value*calibration_ratio
         new_calibration_value_err = calibration_value*calibration_ratio_err
     else:
