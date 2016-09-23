@@ -39,7 +39,10 @@ def GetChType(ch, isMC):
         if 'X' in channel_map[ch]: chtype = 1
         elif 'Y' in channel_map[ch]: chtype = 2
         elif 'PMT' in channel_map[ch]: chtype = 0
-        else: print "What happened??", channel_map[ch]
+        elif 'pulser' in channel_map[ch]: chtype = 0
+        else: 
+            print "What happened??", channel_map[ch]
+            chtype = 0
     
     return chtype
 
