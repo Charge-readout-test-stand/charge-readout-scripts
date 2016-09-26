@@ -13,7 +13,7 @@ import commands
 from scipy.fftpack import fft
 
 import ROOT
-#ROOT.gROOT.SetBatch(True) # uncomment to draw multi-page PDF
+ROOT.gROOT.SetBatch(True) # uncomment to draw multi-page PDF
 
 from struck import struck_analysis_parameters
 
@@ -46,8 +46,8 @@ ROOT.gStyle.SetTitleFontSize(0.04)
 def process_file(filename=None, n_plots_total=0):
 
     # options ------------------------------------------
-    threshold = 10 # keV
-    #threshold = -20000
+    #threshold = 10 # keV
+    threshold = -20000
     #threshold = 1250 # keV
     #threshold = 570 # keV, for generating multi-page PDF
     #threshold = 50 # ok for unshaped, unamplified data
@@ -129,6 +129,7 @@ def process_file(filename=None, n_plots_total=0):
     sampling_freq_Hz = struck_analysis_parameters.get_clock_frequency_Hz_ngm(card0.clock_source_choice)
     print "sampling_freq_Hz: %.1f MHz" % (sampling_freq_Hz/1e6)
     n_samples_to_avg = int(200*sampling_freq_Hz/25e6) # n baseline samples to use for energy 
+    print "n_samples_to_avg", n_samples_to_avg
 
     channel_map = struck_analysis_parameters.channel_map
 
@@ -223,8 +224,9 @@ def process_file(filename=None, n_plots_total=0):
 
         # loop over all channels in the event:
         sum_energy = 0.0
+        n_high_rms = 0
         for i in xrange(32):
-
+            
             tree.GetEntry(i_entry)
             i_entry += 1
             slot = tree.HitTree.GetSlot()
@@ -265,14 +267,17 @@ def process_file(filename=None, n_plots_total=0):
                 baseline += graph.GetY()[i_sample] / n_samples_to_avg
                 energy += graph.GetY()[graph.GetN() - i_sample - 1] / n_samples_to_avg
             energy = (energy - baseline)*multiplier
-            if channel != pmt_channel:
-                if energy > 10.0:
-                    sum_energy += energy
+
+            if channel == pmt_channel:
+                # pmt energy is proportional to max, at ~ 9 microseconds
+                (energy = graph.GetY()[225]-baseline)*multiplier
 
             rms_noise = 0.0
             for i_sample in xrange(n_samples_to_avg):
                 rms_noise += pow(graph.GetY()[i_sample]-baseline, 2.0)/n_samples_to_avg
             rms_noise = math.sqrt(rms_noise)*multiplier
+
+           
                 
 
             # add an offset so the channels are draw at different levels
@@ -293,8 +298,15 @@ def process_file(filename=None, n_plots_total=0):
                 graph.SetPoint(i_point, x/sampling_freq_Hz*1e6, y)
 
             graph.SetLineWidth(2)
-            if energy>20.0:
-                graph.SetLineWidth(5)
+            signal_threshold = 5.0*rms_noise/10.0
+            rms_threshold = struck_analysis_parameters.rms_keV[channel] + struck_analysis_parameters.rms_keV_sigma[channel]*4.0
+            if charge_channels_to_use[channel] > 0:
+                if energy > signal_threshold:
+                    graph.SetLineWidth(5)
+                    sum_energy += energy
+                if rms_noise >  rms_threshold:
+                    n_high_rms += 1
+                    graph.SetLineColor(ROOT.kBlack)
 
             graph.Draw("l")
             #print "\t entry %i, ch %i, slot %i" % ( i_entry-1, channel, slot,)
@@ -318,6 +330,13 @@ def process_file(filename=None, n_plots_total=0):
 
             # end loop over channels
 
+        print "---------> entry %i of %i (%.1f percent), %i plots so far" % (
+            i_entry/32,  # current event
+            n_entries/32,  # n events in file                       
+            100.0*i_entry/n_entries, # percent done
+            n_plots,
+        ) 
+        if n_high_rms <= 0: continue
         if sum_energy < threshold: continue
 
         # create sum graphs; add offsets & set x-coords
@@ -414,7 +433,7 @@ def process_file(filename=None, n_plots_total=0):
         frame_hist.SetTitleSize(0.02, "t")
         canvas.Update()
         n_plots += 1
-        print "--> %i of %i plots so far" % (n_plots, n_plots_total)
+        print "--> Event %i, %i of %i plots so far" % (i_entry/32, n_plots, n_plots_total)
 
         if not ROOT.gROOT.IsBatch(): 
 
@@ -499,21 +518,21 @@ def process_file(filename=None, n_plots_total=0):
             # end test of do_fft
 
 
-        if ROOT.gROOT.IsBatch() and n_plots >= n_plots_total: # end multi-page pdf file
-            canvas.Print("%s]" % plot_name)
 
         if n_plots >= n_plots_total:
             print "quitting..."
-            sys.exit()
+            break
 
         # end loop over entries
     
+    if ROOT.gROOT.IsBatch(): # end multi-page pdf file
+        canvas.Print("%s]" % plot_name)
     return n_plots
 
 
 if __name__ == "__main__":
 
-    n_plots_total = 100
+    n_plots_total = 5
     n_plots_so_far = 0
     if len(sys.argv) > 1:
         for filename in sys.argv[1:]:
