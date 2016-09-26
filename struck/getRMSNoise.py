@@ -1,6 +1,7 @@
 import os
 import sys
 import ROOT
+ROOT.gROOT.SetBatch(True)
 import struck_analysis_parameters
 
 def getRMS(calibrate):
@@ -99,11 +100,16 @@ def getRMS(calibrate):
         
         mean = hist.GetMean()
         mean_error = hist.GetMeanError()
+        sigma = hist.GetRMS()
+        sigma_error = hist.GetRMSError()
         
-        log_out =  "rms_keV[%i] = %f*calibration_values[%i]  # +/- %f  \n" %(channel, mean, channel, mean_error)
+        log_out =  "rms_keV[%i] = %f*calibration_values[%i]  # +/- %f \n" %(channel, mean, channel, mean_error)
+        log_out += "rms_keV_sigma[%i] = %f*calibration_values[%i] # +/- %f\n" % (channel, sigma, channel, sigma_error)
 
         if calibrate:
             log_out =  "rms_keV[%i] = %f # +/- %f  \n" %(channel, mean, mean_error)
+            log_out += "rms_keV_sigma[%i] = %f # +/- %f\n" % (channel, sigma, sigma_error)
+
 
         print log_out
         log.write(log_out)
