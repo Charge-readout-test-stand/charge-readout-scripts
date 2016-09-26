@@ -16,7 +16,7 @@ notes:
 is_6th_LXe = False 
 is_7th_LXe = False # March 2016
 is_8th_LXe = False # August 2016
-is_9th_LXe = True # Se[t 2016
+is_9th_LXe = True # Sept 2016
 
 import os
 import math
@@ -596,6 +596,7 @@ n_baseline_samples = 200.0
 energy_gap_time_microseconds = 450*40/1000 # energy calc starts 450 samples after wfm start, in a normal 25-MS/s run
 baseline_average_time_microseconds = 4.0 # 100 samples at 25 MHz
 rms_keV = {}
+rms_keV_sigma = {}
 rms_keV[0] = 18.137
 rms_keV[1] = 17.557
 rms_keV[2] = 17.805
@@ -654,39 +655,73 @@ if is_8th_LXe:
 
 
 if is_9th_LXe: 
-    # Fits are in RMSNoise_red_some_9th_729.pdf 
-    rms_keV[0] = 7.905006*calibration_values[0]  # +/- 0.000144  
-    rms_keV[1] = 20.444287*calibration_values[1]  # +/- 0.000384  
-    rms_keV[2] = 20.960956*calibration_values[2]  # +/- 0.000394  
-    rms_keV[3] = 20.697933*calibration_values[3]  # +/- 0.000398  
-    rms_keV[4] = 7.562590*calibration_values[4]  # +/- 0.000167  
-    rms_keV[5] = 8.678037*calibration_values[5]  # +/- 0.000189  
-    rms_keV[6] = 9.217814*calibration_values[6]  # +/- 0.000204  
-    rms_keV[7] = 8.716837*calibration_values[7]  # +/- 0.000275  
-    rms_keV[8] = 21.356149*calibration_values[8]  # +/- 0.000417  
-    rms_keV[9] = 20.619537*calibration_values[9]  # +/- 0.000411  
-    rms_keV[10] = 21.321356*calibration_values[10]  # +/- 0.000399  
-    rms_keV[11] = 25.141273*calibration_values[11]  # +/- 0.000493  
-    rms_keV[12] = 23.633293*calibration_values[12]  # +/- 0.000516  
-    rms_keV[13] = 24.589892*calibration_values[13]  # +/- 0.000488  
-    rms_keV[14] = 21.833440*calibration_values[14]  # +/- 0.000442  
-    rms_keV[15] = 18.938333*calibration_values[15]  # +/- 0.000384  
-    rms_keV[16] = 42.967258*calibration_values[16]  # +/- 0.001086  
-    rms_keV[17] = 20.981012*calibration_values[17]  # +/- 0.000394  
-    rms_keV[18] = 21.203342*calibration_values[18]  # +/- 0.000410  
-    rms_keV[19] = 20.525552*calibration_values[19]  # +/- 0.000386  
-    rms_keV[20] = 8.979727*calibration_values[20]  # +/- 0.000204  
-    rms_keV[21] = 8.797201*calibration_values[21]  # +/- 0.000246  
-    rms_keV[22] = 9.030533*calibration_values[22]  # +/- 0.000212  
-    rms_keV[23] = 8.563876*calibration_values[23]  # +/- 0.000186  
-    rms_keV[24] = 18.116218*calibration_values[24]  # +/- 0.000356  
-    rms_keV[25] = 20.930816*calibration_values[25]  # +/- 0.000391  
-    rms_keV[26] = 22.080452*calibration_values[26]  # +/- 0.000409  
-    rms_keV[27] = 3.468925*calibration_values[27]  # +/- 0.000261  
-    rms_keV[28] = 23.229219*calibration_values[28]  # +/- 0.000456  
-    rms_keV[29] = 23.981512*calibration_values[29]  # +/- 0.000527  
-    rms_keV[30] = 13.934240*calibration_values[30]  # +/- 0.000352  
-    rms_keV[31] = 2.807817*calibration_values[31]  # +/- 0.000998  
+
+    # Fits are in RMSNoise_overnight_9thLXe_v0.pdf 
+    rms_keV[0] = 7.989843*calibration_values[0]  # +/- 0.000089 
+    rms_keV_sigma[0] = 0.439870*calibration_values[0] # +/- 0.000063
+    rms_keV[1] = 20.447405*calibration_values[1]  # +/- 0.000220 
+    rms_keV_sigma[1] = 1.093195*calibration_values[1] # +/- 0.000156
+    rms_keV[2] = 20.969644*calibration_values[2]  # +/- 0.000226 
+    rms_keV_sigma[2] = 1.120212*calibration_values[2] # +/- 0.000160
+    rms_keV[3] = 20.671686*calibration_values[3]  # +/- 0.000226 
+    rms_keV_sigma[3] = 1.121889*calibration_values[3] # +/- 0.000160
+    rms_keV[4] = 7.544668*calibration_values[4]  # +/- 0.000095 
+    rms_keV_sigma[4] = 0.471945*calibration_values[4] # +/- 0.000067
+    rms_keV[5] = 8.683733*calibration_values[5]  # +/- 0.000110 
+    rms_keV_sigma[5] = 0.545730*calibration_values[5] # +/- 0.000078
+    rms_keV[6] = 9.242321*calibration_values[6]  # +/- 0.000115 
+    rms_keV_sigma[6] = 0.570915*calibration_values[6] # +/- 0.000081
+    rms_keV[7] = 8.717167*calibration_values[7]  # +/- 0.000151 
+    rms_keV_sigma[7] = 0.749143*calibration_values[7] # +/- 0.000107
+    rms_keV[8] = 21.366966*calibration_values[8]  # +/- 0.000241 
+    rms_keV_sigma[8] = 1.196606*calibration_values[8] # +/- 0.000171
+    rms_keV[9] = 20.577530*calibration_values[9]  # +/- 0.000236 
+    rms_keV_sigma[9] = 1.172323*calibration_values[9] # +/- 0.000167
+    rms_keV[10] = 21.326033*calibration_values[10]  # +/- 0.000229 
+    rms_keV_sigma[10] = 1.138030*calibration_values[10] # +/- 0.000162
+    rms_keV[11] = 25.145735*calibration_values[11]  # +/- 0.000283 
+    rms_keV_sigma[11] = 1.403506*calibration_values[11] # +/- 0.000200
+    rms_keV[12] = 23.639935*calibration_values[12]  # +/- 0.000293 
+    rms_keV_sigma[12] = 1.453611*calibration_values[12] # +/- 0.000207
+    rms_keV[13] = 24.594816*calibration_values[13]  # +/- 0.000280 
+    rms_keV_sigma[13] = 1.388630*calibration_values[13] # +/- 0.000198
+    rms_keV[14] = 21.846698*calibration_values[14]  # +/- 0.000253 
+    rms_keV_sigma[14] = 1.256562*calibration_values[14] # +/- 0.000179
+    rms_keV[15] = 18.967606*calibration_values[15]  # +/- 0.000222 
+    rms_keV_sigma[15] = 1.102184*calibration_values[15] # +/- 0.000157
+    rms_keV[16] = 42.969472*calibration_values[16]  # +/- 0.000624 
+    rms_keV_sigma[16] = 3.095251*calibration_values[16] # +/- 0.000441
+    rms_keV[17] = 20.987097*calibration_values[17]  # +/- 0.000225 
+    rms_keV_sigma[17] = 1.117466*calibration_values[17] # +/- 0.000159
+    rms_keV[18] = 21.208325*calibration_values[18]  # +/- 0.000234 
+    rms_keV_sigma[18] = 1.159832*calibration_values[18] # +/- 0.000165
+    rms_keV[19] = 20.525007*calibration_values[19]  # +/- 0.000221 
+    rms_keV_sigma[19] = 1.097417*calibration_values[19] # +/- 0.000156
+    rms_keV[20] = 8.989174*calibration_values[20]  # +/- 0.000116 
+    rms_keV_sigma[20] = 0.576075*calibration_values[20] # +/- 0.000082
+    rms_keV[21] = 8.841458*calibration_values[21]  # +/- 0.000135 
+    rms_keV_sigma[21] = 0.671244*calibration_values[21] # +/- 0.000096
+    rms_keV[22] = 9.029190*calibration_values[22]  # +/- 0.000121 
+    rms_keV_sigma[22] = 0.597769*calibration_values[22] # +/- 0.000085
+    rms_keV[23] = 8.596233*calibration_values[23]  # +/- 0.000106 
+    rms_keV_sigma[23] = 0.524314*calibration_values[23] # +/- 0.000075
+    rms_keV[24] = 18.118557*calibration_values[24]  # +/- 0.000203 
+    rms_keV_sigma[24] = 1.007719*calibration_values[24] # +/- 0.000144
+    rms_keV[25] = 20.930787*calibration_values[25]  # +/- 0.000223 
+    rms_keV_sigma[25] = 1.105085*calibration_values[25] # +/- 0.000158
+    rms_keV[26] = 22.084362*calibration_values[26]  # +/- 0.000236 
+    rms_keV_sigma[26] = 1.167919*calibration_values[26] # +/- 0.000167
+    rms_keV[27] = 3.605056*calibration_values[27]  # +/- 0.000957 
+    rms_keV_sigma[27] = 4.718354*calibration_values[27] # +/- 0.000677
+    rms_keV[28] = 23.245143*calibration_values[28]  # +/- 0.000262 
+    rms_keV_sigma[28] = 1.301311*calibration_values[28] # +/- 0.000186
+    rms_keV[29] = 23.988151*calibration_values[29]  # +/- 0.000301 
+    rms_keV_sigma[29] = 1.493171*calibration_values[29] # +/- 0.000213
+    rms_keV[30] = 13.949614*calibration_values[30]  # +/- 0.000215 
+    rms_keV_sigma[30] = 1.063978*calibration_values[30] # +/- 0.000152
+    rms_keV[31] = 2.829068*calibration_values[31]  # +/- 0.000609 
+    rms_keV_sigma[31] = 3.021563*calibration_values[31] # +/- 0.000431
+
 
 tileCh_to_PreCh = {}
 if is_8th_LXe or is_9th_LXe:
