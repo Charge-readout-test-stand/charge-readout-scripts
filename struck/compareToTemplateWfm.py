@@ -1,6 +1,5 @@
 """
-Divide this into 2 files: 1 to compare wfms to the reference and calc chi^2, one to make the reference
-Save the reference wfm as some kind of text/json file
+Compare PMT signals to template signal to see chi^2 vals.
 """
 
 
@@ -19,7 +18,8 @@ from ROOT import EXODoubleWaveform # import fails if EXOBaselineRemover not impo
 from struck import struck_analysis_parameters
 
 # default file on ubuntu DAQ:
-filename = "~/2016_09_19_overnight/tier1/tier1_SIS3316Raw_20160919230343_9thLXe_126mvDT_cath_1700V_100cg_overnight__1-ngm.root"
+#filename = "~/2016_09_19_overnight/tier1/tier1_SIS3316Raw_20160919230343_9thLXe_126mvDT_cath_1700V_100cg_overnight__1-ngm.root"
+filename = "~/2016_09_19_overnight/tier1/tier1_SIS3316Raw_20160919225739_9thLXe_126mvDT_cath_1700V_100cg_overnight__1-ngm.root"
 if len(sys.argv) > 1: # use command-line argument otherwise
     filename = sys.argv[1]
 
@@ -53,7 +53,7 @@ canvas.Print("%s.pdf[" % plot_name) # open multi-page PDF
 
 for i_entry in xrange(n_entries):
     #if i_entry >= 32*100: break # 100 events
-    if ROOT.gROOT.IsBatch() and n_big >= 200: break 
+    if ROOT.gROOT.IsBatch() and n_big >= 100: break # 100 events = ~ 8MB file
 
     tree.GetEntry(i_entry)
 
@@ -72,7 +72,7 @@ for i_entry in xrange(n_entries):
         wfm_hist.SetBinError(i+1, 0.0)
     max_val = wfm_hist.GetMaximum()
     pmt_max = pmt_hist.GetMaximum() 
-    #wfm_hist.Scale(1.0/max_val)
+    #print pmt_hist.GetBinError(300)/pmt_max # just checking...
     pmt_hist.Scale(max_val/pmt_max)
 
     pad = canvas.cd(1)
