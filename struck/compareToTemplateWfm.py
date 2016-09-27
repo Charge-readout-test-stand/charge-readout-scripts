@@ -39,7 +39,8 @@ n_big = 0
 
 pmt_channel = struck_analysis_parameters.pmt_channel
 # pmt electronics noise, in ADC units
-pmt_electronics_noise = struck_analysis_parameters.rms_keV[pmt_channel]/struck_analysis_parameters.calibration_values[pmt_channel]
+calibration = struck_analysis_parameters.calibration_values[pmt_channel]
+pmt_electronics_noise = struck_analysis_parameters.rms_keV[pmt_channel]/calibration
 #print pmt_channel, struck_analysis_parameters.rms_keV[pmt_channel], struck_analysis_parameters.calibration_values[pmt_channel]
 
 baseline_remover = ROOT.EXOBaselineRemover()
@@ -52,7 +53,7 @@ canvas.Print("%s.pdf[" % plot_name) # open multi-page PDF
 
 for i_entry in xrange(n_entries):
     #if i_entry >= 32*100: break # 100 events
-    if ROOT.gROOT.IsBatch() and n_big > 50: break 
+    if ROOT.gROOT.IsBatch() and n_big >= 200: break 
 
     tree.GetEntry(i_entry)
 
@@ -62,35 +63,17 @@ for i_entry in xrange(n_entries):
     if slot != 1: continue
 
     graph = tree.HitTree.GetGraph()
-    """
-    baseline = 0.0
-    n_samples_to_average = 10
-    for i in xrange(n_samples_to_average):
-        baseline += graph.GetY()[i]
-    baseline /= n_samples_to_average
-    max_val = graph.GetY()[227]
-    #print np.amax(graph.GetY())
-    energy = max_val - baseline
-    #if energy < 400: continue # too much noise!
-    """
-
     wfm = ROOT.EXODoubleWaveform(graph.GetY(),graph.GetN())
     baseline_remover.Transform(wfm)
     wfm_hist = wfm.GimmeHist("wfm_hist")
 
-    #p_val = wfm_hist.Chi2Test(pmt_hist,'WW')
-    #chi2 = wfm_hist.Chi2Test(pmt_hist,'WW CHI2')
-    #chi2_per_ndf = wfm_hist.Chi2Test(pmt_hist,'WW CHI2/NDF')
-    #print chi2, chi2/chi2_per_ndf, p_val
-
-    wfm_hist.SetAxisRange(0,650)
+    #wfm_hist.SetAxisRange(0,650)
     for i in xrange(wfm_hist.GetNbinsX()):
         wfm_hist.SetBinError(i+1, 0.0)
     max_val = wfm_hist.GetMaximum()
     pmt_max = pmt_hist.GetMaximum() 
     #wfm_hist.Scale(1.0/max_val)
     pmt_hist.Scale(max_val/pmt_max)
-
 
     pad = canvas.cd(1)
     pad.SetGrid()
@@ -103,7 +86,7 @@ for i_entry in xrange(n_entries):
     wfm_hist.Draw("hist")
     pmt_hist.Draw("same")
     wfm_hist.Draw("hist same")
-    legend.AddEntry(wfm_hist, "event %i" % (i_entry/32))
+    legend.AddEntry(wfm_hist, "event %i, %i ADC units, %i keV" % (i_entry/32, max_val, max_val*calibration))
     legend.AddEntry(pmt_hist, "template signal")
     legend.Draw()
 
@@ -116,7 +99,7 @@ for i_entry in xrange(n_entries):
     diff_hist.SetMarkerSize(0.8)
     chi2 = 0.0
     #print "pmt_electronics_noise:", pmt_electronics_noise
-    for i in xrange(650):
+    for i in xrange(pmt_hist.GetNbinsX()):
         val = diff_hist.GetBinContent(i+1)
         error = math.sqrt(
                     math.pow(pmt_hist.GetBinError(i+1), 2.0) + \
@@ -127,7 +110,7 @@ for i_entry in xrange(n_entries):
             #diff_hist.SetBinContent(i+1, val/error)
             chi2 += val*val/(error*error)
     #print "my chi2:", chi2
-    diff_hist.SetAxisRange(0,650)
+    #diff_hist.SetAxisRange(0,650)
     diff_hist.SetTitle("difference hist: #chi^{2}/DOF = %.1f/%i = %.2f" % (chi2, i, chi2/i))
     diff_hist.Draw("x0")
     if chi2/i < 2.0: 
@@ -150,5 +133,4 @@ for i_entry in xrange(n_entries):
 
 print "%i above threshold" % n_big
 canvas.Print("%s.pdf]" % plot_name) # close multi-page PDF
-
 
