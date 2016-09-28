@@ -442,6 +442,23 @@ def get_noise_cut(energy_threshold=35.0,isMC=False):
     selection = "+".join(selection)
     return "(%s==0)" % selection
 
+def pmt_chisq_per_dof(pmt_hist, wfm_hist, electronics_noise=0.0):
+    """
+    This is used to calculate chi^2/dof compared to PMT hist, in generateTier3.py
+    """
+    chisq_per_dof = 0.0
+    for i in xrange(pmt_hist.GetNbinsX()):
+        i_bin = i+1
+        val = pmt_hist.GetBinContent(i_bin) - wfm_hist.GetBinContent(i_bin)
+        error = math.sqrt(
+            math.pow(pmt_hist.GetBinError(i_bin), 2.0) + \
+            math.pow(electronics_noise, 2.0)
+        ) 
+        if error > 0.0:
+            chisq_per_dof += val*val/(error*error)
+    return chisq_per_dof/i
+
+
 
 
 if __name__ == "__main__":
