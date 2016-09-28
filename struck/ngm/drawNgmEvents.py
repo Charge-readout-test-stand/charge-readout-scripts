@@ -46,8 +46,8 @@ ROOT.gStyle.SetTitleFontSize(0.04)
 def process_file(filename=None, n_plots_total=0):
 
     # options ------------------------------------------
-    #threshold = 10 # keV
-    threshold = -20000
+    threshold = 50 # keV
+    #threshold = 500
     #threshold = 1250 # keV
     #threshold = 570 # keV, for generating multi-page PDF
     #threshold = 50 # ok for unshaped, unamplified data
@@ -261,26 +261,27 @@ def process_file(filename=None, n_plots_total=0):
 
             graph = tree.HitTree.GetGraph()
 
+            # as in http://exo-data.slac.stanford.edu/exodoc/src/EXOBaselineRemover.cxx.html#48
             baseline = 0.0
             energy = 0.0
+            baseline_avg_sq = 0.0
+            energy_avg_sq = 0.0
             for i_sample in xrange(n_samples_to_avg):
-                baseline += graph.GetY()[i_sample] / n_samples_to_avg
-                energy += graph.GetY()[graph.GetN() - i_sample - 1] / n_samples_to_avg
+                y = graph.GetY()[i_sample]
+                y2 = graph.GetY()[i_sample+450]
+                baseline += y / n_samples_to_avg
+                energy += y2 / n_samples_to_avg
+                baseline_avg_sq += y*y/n_samples_to_avg
+                energy_avg_sq += y2*y2/n_samples_to_avg
+            rms_noise = math.sqrt(baseline_avg_sq-baseline*baseline)*multiplier
+            energy_noise = math.sqrt(energy_avg_sq-energy*energy)*multiplier
             energy = (energy - baseline)*multiplier
 
             if channel == pmt_channel:
                 # pmt energy is proportional to max, at ~ 9 microseconds
-                (energy = graph.GetY()[225]-baseline)*multiplier
+                energy = (graph.GetY()[227]-baseline)*multiplier
 
-            rms_noise = 0.0
-            for i_sample in xrange(n_samples_to_avg):
-                rms_noise += pow(graph.GetY()[i_sample]-baseline, 2.0)/n_samples_to_avg
-            rms_noise = math.sqrt(rms_noise)*multiplier
-
-           
-                
-
-            # add an offset so the channels are draw at different levels
+            # add an offset so the channels are drawn at different levels
             offset = channel*500
 
             graph.SetLineColor(color)
@@ -298,7 +299,8 @@ def process_file(filename=None, n_plots_total=0):
                 graph.SetPoint(i_point, x/sampling_freq_Hz*1e6, y)
 
             graph.SetLineWidth(2)
-            signal_threshold = 5.0*rms_noise/10.0
+            #signal_threshold = 5.0*rms_noise/10.0
+            signal_threshold = 5.0*energy_noise/10.0
             rms_threshold = struck_analysis_parameters.rms_keV[channel] + struck_analysis_parameters.rms_keV_sigma[channel]*4.0
             if charge_channels_to_use[channel] > 0:
                 if energy > signal_threshold:
@@ -336,7 +338,7 @@ def process_file(filename=None, n_plots_total=0):
             100.0*i_entry/n_entries, # percent done
             n_plots,
         ) 
-        if n_high_rms <= 0: continue
+        #if n_high_rms <= 0: continue
         if sum_energy < threshold: continue
 
         # create sum graphs; add offsets & set x-coords
@@ -405,7 +407,7 @@ def process_file(filename=None, n_plots_total=0):
 
         frame_hist.SetMinimum(y_min)
         frame_hist.SetMaximum(y_max)
-        frame_hist.SetTitle("Event %i | Sum Ionization Energy: %.1f keV" % (i_entry/32, sum_energy))
+        frame_hist.SetTitle("Event %i | Sum Ionization Energy: %.1f keV" % ((i_entry-1)/32, sum_energy))
         frame_hist.SetTitleSize(0.2, "t")
 
         for i in xrange(32):
@@ -532,7 +534,7 @@ def process_file(filename=None, n_plots_total=0):
 
 if __name__ == "__main__":
 
-    n_plots_total = 5
+    n_plots_total = 500
     n_plots_so_far = 0
     if len(sys.argv) > 1:
         for filename in sys.argv[1:]:
