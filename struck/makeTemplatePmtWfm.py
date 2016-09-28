@@ -39,8 +39,10 @@ basename = os.path.splitext(os.path.basename(filename))[0]
 plot_name = "pmt_ref_wfm_%s" % basename
 canvas.Print("%s.pdf[" % plot_name) # open multi-page PDF
 
+n_baseline_samples = int(struck_analysis_parameters.n_baseline_samples)
+
 baseline_remover = ROOT.EXOBaselineRemover()
-baseline_remover.SetBaselineSamples(200)
+baseline_remover.SetBaselineSamples(n_baseline_samples)
 
 for i_entry in xrange(n_entries):
     if n_sum >= 5000: break # debugging, 5000 events takes ~5 minutes
@@ -55,32 +57,34 @@ for i_entry in xrange(n_entries):
 
     graph = tree.HitTree.GetGraph()
     wfm = ROOT.EXODoubleWaveform(graph.GetY(),graph.GetN())
+    wfm.SetSamplingFreq(struck_analysis_parameters.sampling_freq_Hz/1e9)
     baseline_remover.Transform(wfm)
     max_val = wfm.GetMaxValue()
     energy = max_val*calibration
     if energy < 10: continue # too much noise!
     wfm/=max_val # normalize to 1
     wfm_hist = wfm.GimmeHist("wfm_hist")
-    wfm_hist.SetXTitle("Time [samples]")
+    n_bins = wfm_hist.GetNbinsX()
+    bin_width = wfm_hist.GetBinWidth(1)
     max_bin = wfm_hist.GetMaximumBin()
     is_skipped = 0
     if max_bin < 225 or max_bin > 235: # skip pulser triggers
         print "--> skipping this wfm, max_bin=", max_bin
         continue
         is_skipped = 1
-    wfm_hist.SetAxisRange(0,200) # skip random concidences
+    wfm_hist.SetAxisRange(0,wfm_hist.GetBinCenter(n_baseline_samples)) # skip random concidences
     new_max = wfm_hist.GetMaximum()
     if new_max > 0.1: 
         print "---> skipping for high value in first 200 bins"
         continue
         is_skipped = 1
-    wfm_hist.SetAxisRange(400,wfm_hist.GetNbinsX()) # skip randon coincidences
+    wfm_hist.SetAxisRange(wfm_hist.GetBinCenter(400),wfm_hist.GetBinCenter(n_bins) + bin_width) # skip randon coincidences
     new_max = wfm_hist.GetMaximum()
     if new_max > 0.2:  # use 20% as threshold in region that includes ringing
         print "---> skipping for high value in last  bins"
         continue
         is_skipped = 1
-    wfm_hist.SetAxisRange(500,wfm_hist.GetNbinsX()) # skip randon coincidences
+    wfm_hist.SetAxisRange(wfm_hist.GetBinCenter(500),wfm_hist.GetBinCenter(n_bins) + bin_width) # skip randon coincidences
     new_max = wfm_hist.GetMaximum()
     if new_max > 0.1: # use 10% at late times
         print "---> skipping for high value in last  bins"
@@ -101,7 +105,6 @@ for i_entry in xrange(n_entries):
     n_sum += 1
 
     sum_hist = sum_wfm.GimmeHist("sum_hist")
-    sum_hist.SetXTitle("Time [samples]")
     sum_hist.SetTitle("")
     sum_hist.Scale(1.0/n_sum) # normalize to 1
 
@@ -189,7 +192,12 @@ text_file = file(text_file_name,"w")
 text_file.write("# this script was auto-generated on %s\n" % datetime.datetime.now())
 text_file.write("# %i events from %s \n\n" % (n_sum, filename))
 text_file.write("import ROOT \n")
-text_file.write("hist = ROOT.TH1D('pmt_ref_hist','',800, -0.5, 799.5) \n")
+n_bins = sum_hist.GetNbinsX()
+text_file.write("hist = ROOT.TH1D('pmt_ref_hist','',%i, %f, %f) \n" % (
+    n_bins,
+    sum_hist.GetBinLowEdge(1),
+    sum_hist.GetBinLowEdge(n_bins) + sum_hist.GetBinWidth(1)
+))
 for i in xrange(sum_hist.GetNbinsX()):
     i_bin = i+1
     sum_val = sum_hist.GetBinContent(i_bin)
