@@ -1,8 +1,8 @@
-# this script was auto-generated on 2016-09-27 15:15:11.960791
+# this script was auto-generated on 2016-09-27 17:23:39.912385
 # 5000 events from /home/teststand/2016_09_19_overnight/tier1/tier1_SIS3316Raw_20160919230343_9thLXe_126mvDT_cath_1700V_100cg_overnight__1-ngm.root 
 
 import ROOT 
-hist = ROOT.TH1D('pmt_ref_hist','',800, -0.5, 799.5) 
+hist = ROOT.TH1D('pmt_ref_hist','',800, -0.020000, 31.980000) 
 hist.SetBinContent(1,-2.535894e-04) 
 hist.SetBinError(1,7.377289e-03) 
 hist.SetBinContent(2,-1.060396e-04) 
