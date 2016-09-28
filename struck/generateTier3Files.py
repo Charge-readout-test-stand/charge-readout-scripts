@@ -44,7 +44,6 @@ hadd -O all_tier3.root tier3*.root
     7392227/6 = 1.478445e+06 tier0 *NotShaped_Amplified_*DT*.dat entries
 """
 
-
 import os
 import sys
 import time
@@ -54,24 +53,13 @@ import commands
 import numpy as np
 from optparse import OptionParser
 
-
-from ROOT import gROOT
-gROOT.SetBatch(True) # run in batch mode:
-from ROOT import TFile
-from ROOT import TTree
-from ROOT import TCanvas
-from ROOT import TColor
-from ROOT import TLegend
-from ROOT import TH1D
-from ROOT import gSystem
-from ROOT import TRandom3
-from ROOT import kBlue
-from ROOT import kRed
+import ROOT
+ROOT.gROOT.SetBatch(True) # run in batch mode:
 
 if os.getenv("EXOLIB") is not None:
     try:
         print "loading libEXOROOT"
-        gSystem.Load("$EXOLIB/lib/libEXOROOT")
+        ROOT.gSystem.Load("$EXOLIB/lib/libEXOROOT")
     except:
         pass
 
@@ -94,8 +82,10 @@ from array import array
 
 # definition of calibration constants, decay times, channels
 import struck_analysis_parameters
+import struck_analysis_cuts
 import wfmProcessing
 import BundleSignals
+import pmt_reference_signal
 
 def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=False):
 
@@ -107,8 +97,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     #print "do_overwrite:", do_overwrite
 
     # whether to run in debug mode (draw wfms):
-    do_debug = not gROOT.IsBatch()
-    do_draw_extra = not gROOT.IsBatch()
+    do_debug = not ROOT.gROOT.IsBatch()
+    do_draw_extra = not ROOT.gROOT.IsBatch()
     skip_short_risetimes = False # reduce file size
     # samples at wfm start and end to use for energy calc:
     baseline_average_time_microseconds = 4.0 # 100 samples at 25 MHz
@@ -122,6 +112,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     pulser_channel = struck_analysis_parameters.pulser_channel
     n_channels = struck_analysis_parameters.n_channels
     charge_channels_to_use = struck_analysis_parameters.charge_channels_to_use
+    rms_keV = struck_analysis_parameters.rms_keV
 
     # this is the number of channels per event (1 if we are processing tier1
     # data, len(channels) if we are processing tier2 data
@@ -135,13 +126,14 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     start_time = time.time()
     last_time = start_time
     prev_time_stamp = 0.0
+    run_number = 0
 
     # a canvas for drawing, if debugging:
-    canvas = TCanvas()
+    canvas = ROOT.TCanvas("tier3_canvas","")
     canvas.SetGrid(1,1)
 
     # open the root file and grab the tree
-    root_file = TFile(filename)
+    root_file = ROOT.TFile(filename)
     isNGM = False # flag for Jason Newby's NGM code
     tree = None
     if isMC:
@@ -182,8 +174,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         #pmt_channel = None #No PMT in MC
         #n_channels = struck_analysis_parameters.MCn_channels
         #charge_channels_to_use = struck_analysis_parameters.MCcharge_channels_to_use
-        generator = TRandom3(0) # random number generator, initialized with TUUID object
-        rms_keV = struck_analysis_parameters.rms_keV
+        generator = ROOT.TRandom3(0) # random number generator, initialized with TUUID object
         struck_to_mc_channel_map = struck_analysis_parameters.struck_to_mc_channel_map   
 
     basename = wfmProcessing.create_basename(filename, isMC)
@@ -193,6 +184,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     if isNGM:
         try:
             file_start = basename.split("_")[1]
+            run_number = int(file_start)
+            print "run_number:", run_number
             #print file_start
             # create datetime object from relevant parts of filename:
             file_start  = datetime.datetime.strptime(file_start, "%Y%m%d%H%M%S")
@@ -243,24 +236,38 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         if os.path.isfile(out_filename):
             print "file exists!"
             return 0
-    out_file = TFile(out_filename, "recreate")
-    out_tree = TTree("tree", "%s processed wfm tree" % basename)
-    out_tree.SetLineColor(kBlue)
+    out_file = ROOT.TFile(out_filename, "recreate")
+    out_tree = ROOT.TTree("tree", "%s processed wfm tree" % basename)
+    out_tree.SetLineColor(ROOT.kBlue)
     out_tree.SetLineWidth(2)
-    out_tree.SetMarkerColor(kRed)
+    out_tree.SetMarkerColor(ROOT.kRed)
     out_tree.SetMarkerStyle(8)
     out_tree.SetMarkerSize(0.5)
-    run_tree = TTree("run_tree", "run-level data")
+    run_tree = ROOT.TTree("run_tree", "run-level data")
 
     # Writing trees in pyroot is clunky... need to use python arrays to provide
     # branch addresses, see:
     # http://wlav.web.cern.ch/wlav/pyroot/tpytree.html
+
+    is_bad = array("I", [0]) # unsigned int, 0 if event is good
+    out_tree.Branch('is_bad', is_bad, 'is_bad/i')
+    # is_bad bits: 
+    # 0: pmt shape chi^2 above threshold (2^0=1)
+    # 1: RMS noise too high (2^1=2)
+    # 2: energy1_pz noise too high (2^2=4)
+    # 3: wfm min is at ADC min (2^3=8)
+    # 4: wfm max is at ADC max (2^4=16)
+    # 5: event doesn't contain correct number of channels (2^5=32)
 
     is_2Vinput = array('I', [0]*n_channels) # unsigned int
     out_tree.Branch('is_2Vinput', is_2Vinput, 'is_2Vinput[%i]/i' % n_channels)
 
     is_amplified = array('I', [1]*n_channels) # unsigned int
     out_tree.Branch('is_amplified', is_amplified, 'is_amplified[%i]/i' % n_channels)
+
+    run = array('L', [run_number]) # unsigned int
+    out_tree.Branch('run', run, 'run/l')
+    run_tree.Branch('run', run, 'run/l')
 
     event = array('I', [0]) # unsigned int
     out_tree.Branch('event', event, 'event/i')
@@ -284,6 +291,10 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
         noise_val = array("d", [0]*n_channels)
         out_tree.Branch('noise', noise_val, 'noise[%i]/D' % n_channels)
+
+    else:
+        pmt_chi2 = array("d", [0.0])
+        out_tree.Branch('pmt_chi2', pmt_chi2, 'pmt_chi2/D')
 
     file_start_time = array('I', [0]) # unsigned int
     file_start_time[0] = posix_start_time
@@ -357,7 +368,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     elif do_debug:
         print "--> debugging -- skipping trigger_time calc"
     else:
-        trigger_hist = TH1D("trigger_hist","",5000,0,5000)
+        trigger_hist = ROOT.TH1D("trigger_hist","",5000,0,5000)
         selection = "channel==%i && wfm_max - wfm%i[0] > 20" % (pmt_channel, pmt_channel)
         if is_tier1:
             selection = "channel==%i && wfm_max - wfm[0] > 20" % pmt_channel
@@ -381,6 +392,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     # store some processing parameters:
     n_baseline_samples = array('I', [0]) # double
     out_tree.Branch('n_baseline_samples', n_baseline_samples, 'n_baseline_samples/i')
+    run_tree.Branch('n_baseline_samples', n_baseline_samples, 'n_baseline_samples/i')
     n_baseline_samples[0] = int(baseline_average_time_microseconds*sampling_freq_Hz/1e6)
     print "n_baseline_samples:", n_baseline_samples[0]
 
@@ -598,7 +610,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
 
     # make a hist for calculating some averages
-    hist = TH1D("hist","",100, 0, pow(2,14))
+    hist = ROOT.TH1D("hist","",100, 0, pow(2,14))
     print "calculating mean baseline & baseline RMS for each channel in this file..."
     for (i, i_channel) in enumerate(channels):
         if isMC: continue
@@ -845,6 +857,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     
     if isNGM:
         n_channels_in_this_event = 0
+        pmt_hist = pmt_reference_signal.hist
 
     # loop over all entries in tree
     i_entry = 0
@@ -928,6 +941,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             bundle_energy[bundle_index] = 0.0
         nbundles[0] = 0
         is_pulser[0] = 0
+        is_bad[0] = 0
+        pmt_chi2[0] = 0.0
         
         if isMC:
             MCchargeEnergy[0] = 0.0
@@ -1087,6 +1102,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 isMC=isMC,
                 label=label,
             )
+
             
             
             if signal_map[i] > 0.5:
@@ -1182,9 +1198,32 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
                 print val
                 if (val == 'q' or val == 'Q'): sys.exit(1) 
-                if val == 'b': gROOT.SetBatch(True)
+                if val == 'b': ROOT.gROOT.SetBatch(True)
                 if val == 'p': canvas.Print("entry_%i_proc_wfm_%s.png" % (i_entry, basename,))
                 
+            if isNGM and i == pmt_channel:
+            
+                # check scaling of PMT hist and baseline of exo_wfm
+                wfm_hist = exo_wfm.GimmeHist("wfm_hist")
+                pmt_hist.Scale(wfm_hist.GetMaximum()/pmt_hist.GetMaximum())
+                pmt_chi2[0] = struck_analysis_cuts.pmt_chisq_per_dof(
+                    pmt_hist, wfm_hist, rms_keV[pmt_channel]/calibration_values[pmt_channel]
+                )
+    
+                # testing chi2 calc
+                #if not ROOT.gROOT.IsBatch():
+                #    pmt_hist.SetTitle("event %i, entry %i" % (i_entry/32, i_entry))
+                #    pmt_hist.SetLineColor(ROOT.kBlue)
+                #    wfm_hist.SetLineColor(ROOT.kRed)
+                #    canvas.cd()
+                #    pmt_hist.Draw()
+                #    wfm_hist.Draw("same")
+                #    #wfm_hist.Draw()
+                #    #pmt_hist.Draw("same")
+                #    print calibration_values[pmt_channel], lightEnergy[0], wfm_hist.GetMaximum()*calibration_values[pmt_channel]
+                #    canvas.Update()
+                #    raw_input("lightEnergy: %i, pmt_chi2: %.2f " % (lightEnergy[0], pmt_chi2[0]))
+
             exo_wfm.IsA().Destructor(exo_wfm)      
             calibrated_wfm.IsA().Destructor(calibrated_wfm)
             # end loop over channels
@@ -1254,7 +1293,31 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             energy_rms_sum[0] = baseline_remover.GetBaselineRMS()
             sum_wfm.IsA().Destructor(sum_wfm)
 
-        #raw_input("Press Enter...")
+
+        # check for bad conditions:
+        high_baseline_rms = False
+        high_energy_rms = False
+        wfm_too_low = False
+        wfm_too_high = False
+        if pmt_chi2[0] > 3.0: is_bad[0] += 1
+        rms_keV_sigma = struck_analysis_parameters.rms_keV_sigma
+
+        # if any channels exceed conditions, we flag the event:
+        for j, val  in enumerate(charge_channels_to_use):
+            if val == 0: continue
+            # check for any 5-sigma excursions of noise:
+            try: # rms_keV_sigma doesn't exist for all runs
+                if baseline_rms[j]*calibration[j] > rms_keV[j] + 5.0*rms_keV_sigma[j]: high_baseline_rms = True
+                if energy_rms1_pz[j] > rms_keV[j] + 5.0*rms_keV_sigma[j]: high_energy_rms = True
+            except:
+                pass
+            if wfm_min[j] == 0: wfm_too_low = True
+            if wfm_max[j] == pow(2,14)-1: wfm_too_high = True
+
+        if high_baseline_rms: is_bad[0] += 2
+        if high_energy_rms: is_bad[0] += 4
+        if wfm_too_low: is_bad[0] += 8
+        if wfm_too_high: is_bad[0] += 16
 
         if pulser_channel:
             if wfm_min[pulser_channel] < 3000: # 9th LXe value
@@ -1263,6 +1326,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         if isNGM: # check that event contains all channels:
             if (n_channels_in_this_event != len(charge_channels_to_use)):
               print "====> WARNING: %i channels in this event!!" % i
+              is_bad[0] += 32
             else:
                 do_fill = False
                 if nsignals[0] > 0: do_fill = True
