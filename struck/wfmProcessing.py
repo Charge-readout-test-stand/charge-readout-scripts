@@ -266,8 +266,8 @@ def get_wfmparams(
         if not isMC: print "WARNING: setting RMS from nan to 0"
         energy_rms1_pz = 0.0
     
-    #Apply threshold
-    if energy1_pz > struck_analysis_parameters.rms_threshold*energy_rms1_pz*math.sqrt(2.0/n_baseline_samples):
+    #Apply threshold -- we really use 2*n_baseline_samples, so 2.0/2.0 cancels
+    if energy1_pz > struck_analysis_parameters.rms_threshold*energy_rms1_pz*math.sqrt(1.0/n_baseline_samples):
         if not is_pmtchannel:
             #PMT can't be a signal because by default it has to have triggered
             isSignal = 1
