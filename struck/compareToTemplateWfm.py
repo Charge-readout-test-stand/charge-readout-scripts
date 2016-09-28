@@ -16,6 +16,7 @@ from ROOT import EXOBaselineRemover
 from ROOT import EXODoubleWaveform # import fails if EXOBaselineRemover not imported first?
 
 from struck import struck_analysis_parameters
+from struck import struck_analysis_cuts
 
 # default file on ubuntu DAQ:
 #filename = "~/2016_09_19_overnight/tier1/tier1_SIS3316Raw_20160919230343_9thLXe_126mvDT_cath_1700V_100cg_overnight__1-ngm.root"
@@ -64,6 +65,7 @@ for i_entry in xrange(n_entries):
 
     graph = tree.HitTree.GetGraph()
     wfm = ROOT.EXODoubleWaveform(graph.GetY(),graph.GetN())
+    wfm.SetSamplingFreq(struck_analysis_parameters.sampling_freq_Hz/1e9)
     baseline_remover.Transform(wfm)
     wfm_hist = wfm.GimmeHist("wfm_hist")
 
@@ -82,7 +84,6 @@ for i_entry in xrange(n_entries):
     wfm_hist.SetLineColor(ROOT.kRed)
     wfm_hist.SetLineWidth(2)
     wfm_hist.SetTitle("")
-    wfm_hist.SetXTitle("Time [samples]")
     wfm_hist.Draw("hist")
     pmt_hist.Draw("same")
     wfm_hist.Draw("hist same")
@@ -109,7 +110,8 @@ for i_entry in xrange(n_entries):
         if error > 0:
             #diff_hist.SetBinContent(i+1, val/error)
             chi2 += val*val/(error*error)
-    #print "my chi2:", chi2
+    #print "my chi2:", chi2/i
+    #print struck_analysis_cuts.pmt_chisq_per_dof(pmt_hist, wfm_hist, pmt_electronics_noise)
     #diff_hist.SetAxisRange(0,650)
     diff_hist.SetTitle("difference hist: #chi^{2}/DOF = %.1f/%i = %.2f" % (chi2, i, chi2/i))
     diff_hist.Draw("x0")
