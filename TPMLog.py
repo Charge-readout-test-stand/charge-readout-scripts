@@ -52,7 +52,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 from optparse import OptionParser
 
-def compare_isochoric(data_path, plot_dir, basename, temp_top, temp_mid, temp_bot, press_obs, time_hours):
+def compare_isochoric(data_path, plot_dir, basename, temp_top, temp_mid,
+    temp_bot, press_obs, press_obs2, time_hours):
+
     linewidth = 2
     temp, press = np.loadtxt(str(data_path)+"/vapor_pressure_data.txt",unpack=True, usecols = (0,1))
     plt.figure(1)
@@ -67,24 +69,34 @@ def compare_isochoric(data_path, plot_dir, basename, temp_top, temp_mid, temp_bo
     print "printed", plot_dir+"50-Comp-Isochoric_"+basename+".jpeg"
     plt.clf()
     
+    # loop over baratron data, find corresponding pressure data from NIST
     calc_temp = []
     for p in press_obs:
         if np.min(press) < p < np.max(press): 
-            index = (np.abs(press-p)).argmin()
+            index = (np.abs(press-p)).argmin() # find closest NIST value
             calc_temp.append(temp[index])
         else:
             calc_temp.append(161.4) # freezing 
+    calc_temp2 = []
+    for p in press_obs2:
+        if np.min(press) < p < np.max(press): 
+            index = (np.abs(press-p)).argmin() # find closest NIST value
+            calc_temp2.append(temp[index])
+        else:
+            calc_temp2.append(161.4) # freezing 
             
     plt.figure(2)
-    plt.title("Isochoric Temp Cell vs Thermocouples", y=1.15)
+    plt.title("Isochoric Temp: Baratrons vs Thermocouples", y=1.15)
     plt.xlabel("Time [hours]")
     plt.ylabel("Temp [K]")
     plt.grid(b=True)
-    iso_calc = plt.plot(time_hours, calc_temp)
     iso_top = plt.plot(time_hours, temp_top)
+    iso_calc = plt.plot(time_hours, calc_temp)
     iso_mid = plt.plot(time_hours, temp_mid)
+    iso_calc2 = plt.plot(time_hours, calc_temp2)
     iso_bot = plt.plot(time_hours, temp_bot)
-    plt.setp(iso_calc, color = 'k', linewidth = linewidth, label = 'Baratron (%.1fK)' % calc_temp[-1])
+    plt.setp(iso_calc, color = 'k', linewidth = linewidth, label = 'Baratron XP3 (%.1fK)' % calc_temp[-1])
+    plt.setp(iso_calc2, color = 'c', linewidth = linewidth, label = 'Baratron XP5/7 (%.1fK)' % calc_temp2[-1])
     plt.setp(iso_top, color = 'r', linewidth = linewidth, label = 'Cell Top (%.1fK)' % temp_top[-1])
     plt.setp(iso_mid, color = 'b', linewidth = linewidth, label = 'Cell Mid (%.1fK)' % temp_mid[-1])
     plt.setp(iso_bot, color = 'g', linewidth = linewidth, label = 'Cell Bot (%.1fK)' % temp_bot[-1])
@@ -94,12 +106,61 @@ def compare_isochoric(data_path, plot_dir, basename, temp_top, temp_mid, temp_bo
     subplt = plt.subplot(111)
     box = subplt.get_position()
     subplt.set_position([box.x0, box.y0, box.width, box.height*0.9])
-    legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, fontsize='medium', ncol=2)
+    legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, fontsize='medium', ncol=3)
     plt.savefig(plot_dir+"10-Temp-Isochoric_" + basename + ".jpeg")
     print "printed", plot_dir+"10-Temp-Isochoric_" + basename +".jpeg"
     plt.clf()
         
-     
+      
+    # loop over baratron data, find corresponding pressure data from NIST
+    # subtract 2K from cell temps
+    calc_press_top = []
+    for cell_temp in temp_top:
+        #if np.min(temp) < cell_temp < np.max(temp): 
+        index = (np.abs(temp-cell_temp+2)).argmin() # find closest NIST value
+        calc_press_top.append(press[index])
+    calc_press_mid = []
+    for cell_temp in temp_mid:
+        #if np.min(temp) < cell_temp < np.max(temp): 
+        index = (np.abs(temp-cell_temp+2)).argmin() # find closest NIST value
+        calc_press_mid.append(press[index])
+    calc_press_bot = []
+    for cell_temp in temp_bot:
+        #if np.min(temp) < cell_temp < np.max(temp): 
+        index = (np.abs(temp-cell_temp+2)).argmin() # find closest NIST value
+        calc_press_bot.append(press[index])
+           
+    plt.figure(2)
+    plt.title("Isochoric Pressure: Baratrons vs Thermocouples - 2K", y=1.15)
+    plt.xlabel("Time [hours]")
+    plt.ylabel("Pressure [Torr]")
+    plt.grid(b=True)
+    iso_top = plt.plot(time_hours, calc_press_top)
+    iso_calc = plt.plot(time_hours, press_obs)
+    iso_mid = plt.plot(time_hours, calc_press_mid)
+    iso_calc2 = plt.plot(time_hours, press_obs2)
+    iso_bot = plt.plot(time_hours, calc_press_bot)
+    plt.setp(iso_calc, color = 'k', linewidth = linewidth, 
+        label = 'Bar. XP3 (%i torr)' % press_obs[-1])
+    plt.setp(iso_calc2, color = 'c', linewidth = linewidth, 
+        label = 'Bar. XP5/7 (%i torr)' % press_obs2[-1])
+    plt.setp(iso_top, color = 'r', linewidth = linewidth, 
+        label = 'Cell Top (%i torr)' % (calc_press_top[-1]))
+    plt.setp(iso_mid, color = 'b', linewidth = linewidth, 
+        label = 'Cell Mid (%i torr)' % (calc_press_mid[-1]))
+    plt.setp(iso_bot, color = 'g', linewidth = linewidth, 
+        label = 'Cell Bot (%i torr)' % (calc_press_bot[-1]))
+
+    # shrink plot height to create space for legend
+    #plt.title(title, y=1.3)
+    subplt = plt.subplot(111)
+    box = subplt.get_position()
+    subplt.set_position([box.x0, box.y0, box.width, box.height*0.9])
+    legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, fontsize='medium', ncol=3)
+    plt.savefig(plot_dir+"10-Press-Isochoric_" + basename + ".jpeg")
+    print "printed", plot_dir+"10-Press-Isochoric_" + basename +".jpeg"
+    plt.clf()
+ 
 
 def plot_temp_vs_lmass(filename, title, time_hours, time_stamps, T_ambient, mass):
     linewidth=1
@@ -319,6 +380,7 @@ def main(
     ppath = os.path.join(directory, "90-Pressure-10kTorr_%s.%s" % (basename, filetype))
     ppath2 = os.path.join(directory, "90-Pressure-1kTorr_%s.%s" % (basename, filetype))
     ppath3 = os.path.join(directory, "04-Pressure-Baratrons_%s.%s" % (basename, filetype))
+    ppath4 = os.path.join(directory, "04-Pressure-Baratrons-Recent_%s.%s" % (basename, filetype))
     mfrpath = os.path.join(directory, "09-MassFlowRate_%s.%s" % (basename, filetype))
     ccgpath = os.path.join(directory, "91-CCGauge_%s.%s" % (basename, filetype))
     rccgpath = os.path.join(directory, "91-CCGauge-recent_%s.%s" % (basename, filetype))
@@ -817,6 +879,7 @@ def main(
 
 
     if len(Pressure2) > 0:
+      # 2nd baratron plot:
       plt.figure(6)
       plt.grid(b=True)
       plt.title("XP5 Vacuum system pressure (1k Torr Baratron) [Torr]: %.2f \n" % Pressure2[-1])
@@ -829,10 +892,41 @@ def main(
       plt.clf()
       
       
+      # both baratrons plot:
       plt.grid(b=True)
       pline1 = plt.plot(time_hours[first_index:last_index], Pressure[first_index:last_index],
           label = "XP3 Xe system: %.1f Torr" % Pressure[last_index])
       pline2 = plt.plot(time_hours[first_index:last_index], Pressure2[first_index:last_index], 
+          label = "XP5 Vac (XP7 Xe): %.1f Torr" % Pressure2[last_index])
+      plt.setp(pline1, color = 'b', linewidth = linewidth)
+      plt.setp(pline2, color = 'r', linewidth = linewidth)
+      plt.xlabel('Time [hours] %s' % time_string)
+      plt.ylabel('Pressure [Torr]')
+
+
+      # add red zone without changing plot y axes:
+      ymin, ymax = plt.gca().get_ylim()
+      plt.axhspan(ymin=760*2, ymax=ymax, color='red', alpha=0.5)
+      plt.gca().set_ylim([ymin,ymax])
+
+      # draw LXe fill box:
+      if fill_start and fill_stop:
+          plt.axvspan(fill_start, fill_stop, color='blue', alpha=0.3)
+
+      # draw recovery box:
+      if recovery_start and recovery_stop:
+          plt.axvspan(recovery_start, recovery_stop, color='red', alpha=0.3)
+
+      legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, fontsize='medium', ncol=2)
+      plt.savefig(ppath3)
+      print "printed %s" % ppath3
+      plt.clf()
+      
+      # recent both baratrons plot:
+      plt.grid(b=True)
+      pline1 = plt.plot(recent_time, Pressure[start_index_of_last_hour:],
+          label = "XP3 Xe system: %.1f Torr" % Pressure[last_index])
+      pline2 = plt.plot(recent_time, Pressure2[start_index_of_last_hour:], 
           label = "XP5 Vac (XP7 Xe): %.1f Torr" % Pressure2[last_index])
       plt.setp(pline1, color = 'b', linewidth = linewidth)
       plt.setp(pline2, color = 'r', linewidth = linewidth)
@@ -848,12 +942,9 @@ def main(
           plt.axvspan(recovery_start, recovery_stop, color='red', alpha=0.3)
 
       legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, fontsize='medium', ncol=2)
-      plt.savefig(ppath3)
-      print "printed %s" % ppath3
+      plt.savefig(ppath4)
+      print "printed %s" % ppath4
       plt.clf()
-
-
-
 
       
     if len(mass_flow_rate) > 0:
@@ -865,6 +956,12 @@ def main(
       plt.setp(mfline1, color = 'b', linewidth = linewidth)
       plt.xlabel('Time [hours] %s' % time_string)
       plt.ylabel('Rate [grams/minute xenon gas]')
+
+      # add red zone without changing plot y axes:
+      ymin, ymax = plt.gca().get_ylim()
+      plt.axhspan(ymin=ymin, ymax=-25.0, color='red', alpha=0.5)
+      plt.gca().set_ylim([ymin,ymax])
+
       plt.savefig(mfrpath)
       print "printed %s" % mfrpath
       plt.clf()
@@ -1193,7 +1290,10 @@ def main(
         print "skipping RMS noise plot"
  
 
-    compare_isochoric(os.path.dirname(os.path.realpath(sys.argv[0])), directory, basename, TC1[first_index:last_index], TC2[first_index:last_index], TC3[first_index:last_index], Pressure[first_index:last_index], time_hours[first_index:last_index])
+    compare_isochoric(os.path.dirname(os.path.realpath(sys.argv[0])), directory,
+    basename, TC1[first_index:last_index], TC2[first_index:last_index],
+    TC3[first_index:last_index], Pressure[first_index:last_index],
+    Pressure2[first_index:last_index], time_hours[first_index:last_index])
     
     outfile.write("Xenon mass in cell (integrated mass flow) [g]: %.4f \n" % mass)
     outfile.write("XP5 Vacuum system pressure (1k Torr Baratron) [Torr]: %.2f \n" % Pressure2[-1])
