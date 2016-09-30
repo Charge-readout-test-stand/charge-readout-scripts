@@ -942,7 +942,6 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         nbundles[0] = 0
         is_pulser[0] = 0
         is_bad[0] = 0
-        pmt_chi2[0] = 0.0
         
         if isMC:
             MCchargeEnergy[0] = 0.0
@@ -967,6 +966,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 PCDz[i_pcd] = tree.PCDz[i_pcd]
                 PCDq[i_pcd] = tree.PCDq[i_pcd]
 
+        else:
+            pmt_chi2[0] = 0.0
         sum_wfm = None
         for i in xrange(n_channels_in_event):
 
