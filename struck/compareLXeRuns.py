@@ -13,9 +13,9 @@ from struck import struck_analysis_cuts
 from struck import struck_analysis_parameters
 
 # options
-draw_cmd = "energy1_pz" # individual channel spectra
+#draw_cmd = "energy1_pz" # individual channel spectra
 #draw_cmd = "Sum$(energy_pz*signal_map)" # testing
-#draw_cmd = "SignalEnergy" # the usual
+draw_cmd = "SignalEnergy" # the usual
 
 drift_time_high = struck_analysis_parameters.max_drift_time
 drift_time_low = struck_analysis_parameters.drift_time_threshold
@@ -26,9 +26,9 @@ drift_time_low = struck_analysis_parameters.drift_time_threshold
 drift_time_high = 9.0
 #drift_time_high = 0.0
 #drift_time_low = 0.0
-nsignals = 1
+nsignals = 0
 # the usual:
-selection = "nsignals==%i && rise_time_stop95_sum-trigger_time>%s && rise_time_stop95_sum-trigger_time<%s" % ( nsignals, drift_time_low, drift_time_high)
+selection = "nsignals>=%i && rise_time_stop95_sum-trigger_time>%s && rise_time_stop95_sum-trigger_time<%s" % ( nsignals, drift_time_low, drift_time_high)
 #selection = "nsignals==1 && rise_time_stop95_sum-8>8.5&&rise_time_stop95_sum-8<8.9&&rise_time_stop50_sum-8>7" # like Conti
 #selection += "&& rise_time_stop50_sum>8.0"
 #selection += " && signal_map[16]==0 && signal_map[7]==0 && signal_map[21]==0"
@@ -95,6 +95,8 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
     if draw_cmd == "energy1_pz":
         print "--> channel", channel, struck_analysis_parameters.channel_map[channel]
         struck_selection = " && ".join([selection, "channel==%i" % channel])
+    else:
+        struck_selection = selection
 
     legend = ROOT.TLegend(canvas.GetLeftMargin(), 0.91, 0.9, 0.99)
     legend.SetNColumns(2)
