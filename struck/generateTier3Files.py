@@ -1300,7 +1300,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         high_energy_rms = False
         wfm_too_low = False
         wfm_too_high = False
-        if pmt_chi2[0] > 3.0: is_bad[0] += 1
+        if not isMC and pmt_chi2[0] > 3.0: is_bad[0] += 1
         rms_keV_sigma = struck_analysis_parameters.rms_keV_sigma
 
         # if any channels exceed conditions, we flag the event:
