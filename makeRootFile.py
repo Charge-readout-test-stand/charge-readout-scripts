@@ -64,8 +64,8 @@ def main(filename):
       "lnRecoveryValveOpen",
       ]
 
-    if len(n_cols) > len(branchList): 
-    branchList.append("massFlowValveClosed")
+    if n_cols > len(branchList): 
+        branchList.append("massFlowValveClosed")
 
     # for any extra columns, add some extra arbitrary variable names to make
     # this work:
