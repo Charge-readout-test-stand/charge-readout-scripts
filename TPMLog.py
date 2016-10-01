@@ -103,11 +103,10 @@ def compare_isochoric(data_path, plot_dir, basename, temp_top, temp_mid,
     plt.setp(iso_bot, color = 'g', linewidth = linewidth, label = 'Cell Bot (%.1fK)' % temp_bot[-1])
 
     # shrink plot height to create space for legend
-    #plt.title(title, y=1.3)
     subplt = plt.subplot(111)
     box = subplt.get_position()
     subplt.set_position([box.x0, box.y0, box.width, box.height*0.9])
-    legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, fontsize='medium', ncol=3)
+    legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, fontsize='medium', ncol=2)
     plt.savefig(plot_dir+"10-Temp-Isochoric_" + basename + ".jpeg")
     print "printed", plot_dir+"10-Temp-Isochoric_" + basename +".jpeg"
     plt.clf()
@@ -955,22 +954,25 @@ def main(
       
     if len(mass_flow_rate) > 0:
       plt.figure(7)
-      plt.title('Mass Flow Rate: [g/min] %.2f' % mass_flow_rate[last_index])
       plt.grid(b=True)
       mfline1 = plt.plot(time_hours[first_index:last_index],
       mass_flow_rate[first_index:last_index])
-      plt.setp(mfline1, color = 'b', linewidth = linewidth)
+      plt.setp(mfline1, color = 'b', linewidth = linewidth, 
+      label="Mass flow rate: %.2f g/min" % mass_flow_rate[last_index])
       ymin, ymax = plt.gca().get_ylim() # record y axis limits now
+      label_val = mass_flow_valve_closed[last_index]
       mass_flow_valve_closed = np.array(mass_flow_valve_closed[first_index:last_index])
       mass_flow_valve_closed[ mass_flow_valve_closed==0 ] = np.nan #if valve state is closed, set to nan so point won't be drawn
       mfline1 = plt.plot(time_hours[first_index:last_index],np.array(mass_flow_rate[first_index:last_index])*mass_flow_valve_closed)
-      plt.setp(mfline1, color = 'r', linewidth = linewidth*4)
+      plt.setp(mfline1, color = 'r', linewidth = linewidth*4, label="valve closed: %i" % label_val)
       plt.xlabel('Time [hours] %s' % time_string)
       plt.ylabel('Rate [grams/minute xenon gas]')
 
       # add red zone without changing plot y axes:
       plt.axhspan(ymin=ymin, ymax=-25.0, color='red', alpha=0.5)
       plt.gca().set_ylim([ymin,ymax])
+
+      legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, fontsize='medium', ncol=2)
 
       plt.savefig(mfrpath)
       print "printed %s" % mfrpath
@@ -1155,17 +1157,18 @@ def main(
     if len(bottle_mass) > 0:
         plt.figure(13)
         plt.grid(b=True)
-        plt.title("Xenon bottle mass [kg]: %.2f  (%.1fkg  in cell)" % (
-        bottle_mass[last_index], full_bottle_mass - bottle_mass[last_index]))
         mfline1 = plt.plot(time_hours[first_index:last_index], bottle_mass[first_index:last_index])
-        plt.setp(mfline1, color = 'b', linewidth = linewidth)
+        plt.setp(mfline1, color = 'b', linewidth = linewidth, 
+        label="Xe bottle mass: %.2f kg (%.1f kg in cell)" % (bottle_mass[-1], full_bottle_mass - bottle_mass[last_index]))
 
         ymin, ymax = plt.gca().get_ylim() # record y axes now
 
+        label_val = recovery_LN_valve[-1] # store this valuve before we do anything else
         recovery_LN_valve = np.array(recovery_LN_valve[first_index:last_index])
         recovery_LN_valve[recovery_LN_valve==0 ] = np.nan #if valve state is closed, set to nan so point won't be drawn
         mfline1 = plt.plot(time_hours[first_index:last_index], recovery_LN_valve*np.array(bottle_mass[first_index:last_index]))
-        plt.setp(mfline1, color = 'r', linewidth = linewidth*4)
+        plt.setp(mfline1, color = 'r', linewidth = linewidth*4, 
+        label="recovery LN open: %i" % label_val)
 
         # add indicator lines without changing plot y axes:
         plt.axhline(y=full_bottle_mass, color='black', linestyle="--")
@@ -1182,6 +1185,10 @@ def main(
 
         plt.xlabel('Time [hours] %s' % time_string)
         plt.ylabel('Mass [kg]')
+
+        legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, fontsize='medium', ncol=2)
+
+
         plt.savefig(bottle_mass_path)
         print "printed %s" % bottle_mass_path
         plt.clf()
