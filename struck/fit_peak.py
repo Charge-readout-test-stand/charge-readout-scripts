@@ -4,13 +4,9 @@
 Script to calibrate energies based on location of 570-keV peak. 
 Currently doing binned fit, using exponential background model
 
-This script was adapted from mca/fit_to_resolution.py 
+All channels are fit first, then each channel individually. 
 
-to do:
-* draw residuals
-* goodness of fit
-* try different background models
-* unbinned fit / test different binning
+This script was adapted from mca/fit_to_resolution.py 
 """
 
 
@@ -37,20 +33,23 @@ ROOT.gStyle.SetTitleBorderSize(0)
 
 def fit_channel(
     tree, 
-    channel, 
+    channel, # channel number, or None for all channels
     basename, 
-    do_1064_fit,
-    all_energy_var,
-    selection,
-    do_use_step=False,
+    do_1064_fit, # wheter to fit 1064-keV peak instead of 570
+    all_energy_var, # used if channel==None, usually "SignalEnergy"
+    selection, # selection for draw commands
+    do_use_step=False, # whether to use Erfc step
     min_bin=300, # just for drawing plots
     max_bin=1200, # just for plotting
-    line_energy = 570,
+    line_energy = 570, # center of fit range
     #line_energy = 565,
-    fit_half_width=170,
-    do_use_exp=True,
-    energy_var = "energy1_pz",
+    fit_half_width=170, # half width for fit range
+    do_use_exp=True, # whether to use exponential function in the fit
+    energy_var = "energy1_pz", # energy variable
 ):
+    """
+    Perform a fit of one channel, or all channels together if channel is None. 
+    """
 
     #-------------------------------------------------------------------------------
     # options
@@ -561,13 +560,16 @@ def fit_channel(
 def process_file(
     filename, 
     do_1064_fit=False,
-    all_energy_var="chargeEnergy",
+    all_energy_var="SignalEnergy",
     selection="",
     channel_selection="",
     do_use_step=True,
     energy_var="energy1_pz",
     do_use_exp=True,
 ):
+    """
+    Process one file, fitting all channels
+    """
 
     print "--> processing", filename
     basename = os.path.splitext(os.path.basename(filename))[0]
@@ -644,7 +646,6 @@ if __name__ == "__main__":
         print "argument: [sis tier 3 root file]"
         sys.exit(1)
 
-    #isMC = True
     tfile = ROOT.TFile(sys.argv[1])
     tree = tfile.Get("tree")
     isMC = struck_analysis_parameters.is_tree_MC(tree)
@@ -659,19 +660,9 @@ if __name__ == "__main__":
     ds = struck_analysis_cuts.get_drift_time_selection( drift_time_high=drift_time_high, isMC=isMC)
 
     # sets of selections 
-    # we will loop over each item in selections, join each item in selections[i] with "&&"
+    # we will loop over each list in selections, join each list in selections[i] with "&&"
 
     selections = []
-    #selections.append([lc])
-    #selections.append([""])
-    #selections.append([nc])
-    #selections.append([sc])
-    #selections.append([lc])
-    #selections.append([nc, sc])
-    #selections.append([sc, lc])
-    #selections.append([nc, lc])
-    #selections.append([nc, sc, lc])
-    #selections.append([dc])
 
     # best so far:
     selections.append([struck_analysis_cuts.get_single_strip_cut(), dc])
@@ -698,12 +689,6 @@ if __name__ == "__main__":
             selection,
         )
 
-        # do 570-keV and 1064-keV fits, for chargeEnergy and for
-        # get_few_channels_cmd:
-
-        #all_energy_var = "chargeEnergy"
-        #all_energy_var = struck_analysis_cuts.get_few_channels_cmd(energy_var="energy1")
-        #all_energy_var = None # skipp fit to all channels
         all_energy_var = "SignalEnergy"
         if isMC: all_energy_var = "SignalEnergy*1.02"
         print "all_energy_var:", all_energy_var
@@ -711,12 +696,4 @@ if __name__ == "__main__":
         do_use_exp=True
 
         process_file(sys.argv[1], False, all_energy_var, selection, channel_selection, do_use_step=do_use_step, energy_var="energy1_pz", do_use_exp=do_use_exp)
-        #process_file(sys.argv[1], True, all_energy_var, selection, channel_selection)
-
-        # cuts need more work to be used with this "few channels" draw command 
-        #all_energy_var = struck_analysis_cuts.get_few_channels_cmd()
-
-        #all_energy_var = struck_analysis_cuts.get_chargeEnergy_no_pz()
-        #process_file(sys.argv[1], False, all_energy_var, selection, channel_selection)
-        #process_file(sys.argv[1], True, all_energy_var, selection, channel_selection)
 
