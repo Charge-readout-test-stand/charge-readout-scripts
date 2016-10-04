@@ -1,3 +1,6 @@
+"""
+Produce tier1 from tier0, only if tier1 doesn't exist already
+"""
 
 import os
 import sys
