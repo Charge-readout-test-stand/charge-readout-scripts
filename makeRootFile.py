@@ -6,8 +6,6 @@ this script converts slow controls *.dat files to root files
 using TTree:ReadFile()
 https://root.cern.ch/root/html/TTree.html#TTree:ReadFile
 
-this is a draft, written for test_20141106_142221.dat
-
 07 January 2014 AGS
 """
 
@@ -32,7 +30,7 @@ def main(filename):
     n_cols = len(line0.split())
     print "%i columns in data file" % n_cols
 
-    # identify the first few columns of variables in the .dat file:
+    # identify columns of variables in the .dat file:
     branchList = [
       "timeStamp/D",
       "tCuBot",
@@ -61,12 +59,16 @@ def main(filename):
       "capacitance",
       "T_max_offset",
       "T_min_offset",
+      "pHFE",
       "massLnTare",
-      "rmsNoise",
+      "lnRecoveryValveOpen",
       ]
 
-    # ignore the rest of the columns
-    # add some extra arbitrary variable names to make this work:
+    if n_cols > len(branchList): 
+        branchList.append("massFlowValveClosed")
+
+    # for any extra columns, add some extra arbitrary variable names to make
+    # this work:
     for i in xrange(n_cols - len(branchList)):
         branchList.append("var%i" % i)
     

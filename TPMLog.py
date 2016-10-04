@@ -37,9 +37,10 @@ Plot names = DataType_Date_Index*.jpeg
 24: Capacitance [pF]
 25: T_max set point offset [K]
 26: T_min set point offset [K]
-27: LN tare mass [lbs]
-*** there is another value in the files after LN mass -- what is it?! -- Alexis 06 Feb 2015
-29: RMS noise [mV] added 19 Mar 2015
+27: HFE pressure
+28: LN tare mass (hooks + dewar tare) [lbs]
+29: Recovery LN valve after 30 Sept 2016 (RMS noise [mV] from 19 Mar 2015 to 30 Sept 2016)
+30: mass flow valve closed
 """
 
 
@@ -102,11 +103,10 @@ def compare_isochoric(data_path, plot_dir, basename, temp_top, temp_mid,
     plt.setp(iso_bot, color = 'g', linewidth = linewidth, label = 'Cell Bot (%.1fK)' % temp_bot[-1])
 
     # shrink plot height to create space for legend
-    #plt.title(title, y=1.3)
     subplt = plt.subplot(111)
     box = subplt.get_position()
     subplt.set_position([box.x0, box.y0, box.width, box.height*0.9])
-    legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, fontsize='medium', ncol=3)
+    legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, fontsize='medium', ncol=2)
     plt.savefig(plot_dir+"10-Temp-Isochoric_" + basename + ".jpeg")
     print "printed", plot_dir+"10-Temp-Isochoric_" + basename +".jpeg"
     plt.clf()
@@ -324,7 +324,6 @@ def main(
     
     # options
     recent_time_span = 3600.0 # seconds to use for "recent" plots
-    do_rms = False # whether to make RMS noise plot
 
     # print some status info 
     print "--> processing", filename
@@ -392,7 +391,6 @@ def main(
     capacitance_path = os.path.join(directory, "08-Capacitance_%s.%s" % (basename, filetype))
     hfep_path = os.path.join(directory, "06-HFE-Pressure_%s.%s" % (basename, filetype))
     dp_path = os.path.join(directory, "05-dP-Pressure_%s.%s" % (basename, filetype))
-    rms_noise_path = os.path.join(directory, "93-rms-noise_%s.%s" % (basename, filetype))
 
     # create some lists to hold values from files
     time_stamps = [] # labview timestamp, in seconds
@@ -427,7 +425,8 @@ def main(
     bottle_mass = []
     capacitance = []
     hfe_pressure = []
-    rms_noise = []
+    recovery_LN_valve = []
+    mass_flow_valve_closed = []
 
     # open the input file
     testfile = file(filename)
@@ -634,10 +633,16 @@ def main(
         ln_mass.append(float(split_line[15+column_offset]) + tare_mass)    
 
         try:
-            if do_rms:
-                rms_noise.append(float(split_line[22+column_offset]))
+            recovery_LN_valve.append(float(split_line[22+column_offset]))
         except:
             pass
+
+        try:
+            mass_flow_valve_closed.append(float(split_line[23+column_offset]))
+        except:
+            pass
+
+        # end loop over lines in input file
 
     # indices to use if start_time or stop_time are not specified
     first_index = 0
@@ -949,18 +954,25 @@ def main(
       
     if len(mass_flow_rate) > 0:
       plt.figure(7)
-      plt.title('Mass Flow Rate: [g/min] %.2f' % mass_flow_rate[last_index])
       plt.grid(b=True)
       mfline1 = plt.plot(time_hours[first_index:last_index],
       mass_flow_rate[first_index:last_index])
-      plt.setp(mfline1, color = 'b', linewidth = linewidth)
+      plt.setp(mfline1, color = 'b', linewidth = linewidth, 
+      label="Mass flow rate: %.2f g/min" % mass_flow_rate[last_index])
+      ymin, ymax = plt.gca().get_ylim() # record y axis limits now
+      label_val = mass_flow_valve_closed[last_index]
+      mass_flow_valve_closed = np.array(mass_flow_valve_closed[first_index:last_index])
+      mass_flow_valve_closed[ mass_flow_valve_closed==0 ] = np.nan #if valve state is closed, set to nan so point won't be drawn
+      mfline1 = plt.plot(time_hours[first_index:last_index],np.array(mass_flow_rate[first_index:last_index])*mass_flow_valve_closed)
+      plt.setp(mfline1, color = 'r', linewidth = linewidth*4, label="valve closed: %i" % label_val)
       plt.xlabel('Time [hours] %s' % time_string)
       plt.ylabel('Rate [grams/minute xenon gas]')
 
       # add red zone without changing plot y axes:
-      ymin, ymax = plt.gca().get_ylim()
       plt.axhspan(ymin=ymin, ymax=-25.0, color='red', alpha=0.5)
       plt.gca().set_ylim([ymin,ymax])
+
+      legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, fontsize='medium', ncol=2)
 
       plt.savefig(mfrpath)
       print "printed %s" % mfrpath
@@ -1145,13 +1157,20 @@ def main(
     if len(bottle_mass) > 0:
         plt.figure(13)
         plt.grid(b=True)
-        plt.title("Xenon bottle mass [kg]: %.2f  (%.1fkg  in cell)" % (
-        bottle_mass[last_index], full_bottle_mass - bottle_mass[last_index]))
         mfline1 = plt.plot(time_hours[first_index:last_index], bottle_mass[first_index:last_index])
-        plt.setp(mfline1, color = 'b', linewidth = linewidth)
+        plt.setp(mfline1, color = 'b', linewidth = linewidth, 
+        label="Xe bottle mass: %.2f kg (%.1f kg in cell)" % (bottle_mass[-1], full_bottle_mass - bottle_mass[last_index]))
+
+        ymin, ymax = plt.gca().get_ylim() # record y axes now
+
+        label_val = recovery_LN_valve[-1] # store this valuve before we do anything else
+        recovery_LN_valve = np.array(recovery_LN_valve[first_index:last_index])
+        recovery_LN_valve[recovery_LN_valve==0 ] = np.nan #if valve state is closed, set to nan so point won't be drawn
+        mfline1 = plt.plot(time_hours[first_index:last_index], recovery_LN_valve*np.array(bottle_mass[first_index:last_index]))
+        plt.setp(mfline1, color = 'r', linewidth = linewidth*4, 
+        label="recovery LN open: %i" % label_val)
 
         # add indicator lines without changing plot y axes:
-        ymin, ymax = plt.gca().get_ylim()
         plt.axhline(y=full_bottle_mass, color='black', linestyle="--")
         plt.axhline(y=empty_bottle_mass, color='black', linestyle="--")
         plt.gca().set_ylim([ymin,ymax]) # reset axes to original
@@ -1166,6 +1185,10 @@ def main(
 
         plt.xlabel('Time [hours] %s' % time_string)
         plt.ylabel('Mass [kg]')
+
+        legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, fontsize='medium', ncol=2)
+
+
         plt.savefig(bottle_mass_path)
         print "printed %s" % bottle_mass_path
         plt.clf()
@@ -1260,35 +1283,6 @@ def main(
             print "hfe_pressure list and time_hours list are different lengths"
             print "--> skipping HFE pressure plot"
 
-
-    if len(rms_noise) > 0 : 
-        if len(rms_noise) == len(time_hours):
-            plt.figure(16)
-            plt.grid(b=True)
-            plt.yscale('log')
-            last_value = rms_noise[-1]
-            mean_rms = sum(rms_noise)/float(len(rms_noise))
-            title = 'RMS noise (last value: %.2f mV, mean value: %.2f mV)' % (
-                last_value, mean_rms) 
-            plt.title(title)
-            try:
-                rms_line = plt.plot(time_hours[first_index:last_index],
-                    rms_noise[first_index:last_index])
-                plt.setp(rms_line, color = 'b', linewidth = linewidth)
-            except ValueError:
-                print "--> RMS noise value error"
-            plt.xlabel('Time [hours] %s' % time_string)
-            plt.ylabel('RMS noise [mV]')
-            plt.savefig(rms_noise_path)
-            print "printed %s" % rms_noise_path
-            plt.clf()
-            outfile.write("RMS noise [mV]: %.1f \n" % (last_value))
-        else:
-            print "rms_noise list and time_hours list are different lengths"
-            print "--> skipping rms noise plot"
-    else:
-        print "skipping RMS noise plot"
- 
 
     compare_isochoric(os.path.dirname(os.path.realpath(sys.argv[0])), directory,
     basename, TC1[first_index:last_index], TC2[first_index:last_index],
