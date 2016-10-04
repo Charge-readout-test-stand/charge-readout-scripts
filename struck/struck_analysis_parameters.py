@@ -458,41 +458,40 @@ if is_9th_LXe:
     # can 2 (channels 20, 21, 22, 23 = X16, X17, X18, X19) is old preamps
     # calibration values from fit_peak.py with rise-time and single-strip cuts 
 
-    # basename: 570_No_cuts_step_red_some_9th_729_2016_09_22_20_04_49_ 
-    # selection: (nsignals==1) && (!(rise_time_stop95_sum-trigger_time < 6.43 ||
-    # rise_time_stop95_sum-trigger_time > 9.0)) 
-    # channel_selection: (nsignals==1) && (!(rise_time_stop95_sum-trigger_time <
-    # 6.43 || rise_time_stop95_sum-trigger_time > 9.0)) 
-    # calibration_values[all] = 1.001592 # +/- 0.000498  all
-    calibration_values[1] = 0.935662 # +/- 0.006031  Y11
-    calibration_values[2] = 0.908096 # +/- 0.005366  Y12
-    calibration_values[3] = 0.983986 # +/- 0.004081  Y13
-    calibration_values[4] = 2.440876 # +/- 0.009454  Y14
-    calibration_values[5] = 1.916723 # +/- 0.004496  Y15
-    calibration_values[6] = 1.823272 # +/- 0.002889  Y16
-    calibration_values[7] = 1.919067 # +/- 0.003323  Y17
-    calibration_values[8] = 0.965094 # +/- 0.001546  Y18
-    calibration_values[9] = 0.919680 # +/- 0.002136  Y19
-    calibration_values[10] = 0.958491 # +/- 0.003366  Y20
-    calibration_values[11] = 0.958791 # +/- 0.001923  Y21/22
-    calibration_values[12] = 1.036614 # +/- 0.001872  Y23/24
-    calibration_values[13] = 0.967746 # +/- 0.002944  Y25/26
-    calibration_values[14] = 1.055896 # +/- 0.005602  Y27/28
-    calibration_values[15] = 0.904993 # +/- 0.006616  Y29/30
-    calibration_values[16] = 1.005320 # +/- 0.009628  X1-12
-    calibration_values[17] = 0.961828 # +/- 0.005395  X13
-    calibration_values[18] = 0.943918 # +/- 0.004564  X14
-    calibration_values[19] = 0.957732 # +/- 0.002512  X15
-    calibration_values[20] = 1.835695 # +/- 0.002925  X16
-    calibration_values[21] = 1.925606 # +/- 0.002907  X17
-    calibration_values[22] = 1.912413 # +/- 0.002952  X18
-    calibration_values[23] = 1.892612 # +/- 0.004127  X19
-    calibration_values[24] = 0.936283 # +/- 0.003315  X20
-    calibration_values[25] = 0.931134 # +/- 0.003639  X21
-    calibration_values[26] = 0.982966 # +/- 0.004183  X22
-    calibration_values[28] = 1.063203 # +/- 0.002144  X25/26
-    calibration_values[29] = 0.968573 # +/- 0.001629  X27/28
-    calibration_values[30] = 1.921746 # +/- 0.004450  X29/30
+    # basename: 570_No_cuts_step_overnight_9thLXe_v1_2016_10_03_12_33_05_ 
+    # selection: (nsignals==1) && (!(rise_time_stop95_sum-trigger_time < 6.43 || rise_time_stop95_sum-trigger_time > 9.0)) 
+    # channel_selection: (nsignals==1) && (!(rise_time_stop95_sum-trigger_time < 6.43 || rise_time_stop95_sum-trigger_time > 9.0)) 
+    # calibration_values[all] = 0.997689 # +/- 0.000315 all
+    calibration_values[1] = 0.929761 # +/- 0.003398 Y11
+    calibration_values[2] = 0.916165 # +/- 0.003835 Y12
+    calibration_values[3] = 0.980632 # +/- 0.002732 Y13
+    calibration_values[4] = 2.428339 # +/- 0.006286 Y14
+    calibration_values[5] = 1.912586 # +/- 0.003041 Y15
+    calibration_values[6] = 1.818427 # +/- 0.002093 Y16
+    calibration_values[7] = 1.914533 # +/- 0.002280 Y17
+    calibration_values[8] = 0.964218 # +/- 0.001111 Y18
+    calibration_values[9] = 0.917491 # +/- 0.001353 Y19
+    calibration_values[10] = 0.955506 # +/- 0.001737 Y20
+    calibration_values[11] = 0.956040 # +/- 0.001239 Y21/22
+    calibration_values[12] = 1.032623 # +/- 0.001158 Y23/24
+    calibration_values[13] = 0.962927 # +/- 0.001926 Y25/26
+    calibration_values[14] = 1.043044 # +/- 0.004276 Y27/28
+    calibration_values[15] = 0.902715 # +/- 0.005045 Y29/30
+    calibration_values[16] = 1.006127 # +/- 0.006022 X1-12
+    calibration_values[17] = 0.961838 # +/- 0.002642 X13
+    calibration_values[18] = 0.939369 # +/- 0.002229 X14
+    calibration_values[19] = 0.951769 # +/- 0.001637 X15
+    calibration_values[20] = 1.836569 # +/- 0.002156 X16
+    calibration_values[21] = 1.917633 # +/- 0.002155 X17
+    calibration_values[22] = 1.911182 # +/- 0.002107 X18
+    calibration_values[23] = 1.892692 # +/- 0.002967 X19
+    calibration_values[24] = 0.936823 # +/- 0.001890 X20
+    calibration_values[25] = 0.925640 # +/- 0.002206 X21
+    calibration_values[26] = 0.988795 # +/- 0.003182 X22
+    calibration_values[28] = 1.060951 # +/- 0.001503 X25/26
+    calibration_values[29] = 0.966761 # +/- 0.001092 X27/28
+    calibration_values[30] = 1.926988 # +/- 0.003290 X29/30
+
 
 resolution_guess = 0.06*570.0 #Instrinsic Charge Resolution at the 570 guess for fitting peak
 
