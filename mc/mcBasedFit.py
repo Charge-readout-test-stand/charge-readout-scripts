@@ -1,4 +1,7 @@
 """
+RooFit manual:
+It is not possible to import data from array branches such as Double_t[10]. 
+
 to do:
 * add some energy scaling/calibration
 * select individual channels
@@ -38,8 +41,8 @@ from struck import struck_analysis_parameters
 #struck_name = "~/9thLXe/red_red_overnight_9thLXe_v1.root" # LLNL
 #struck_name = "~/9thLXe/red_overnight_9thLXe_v1.root" # LLNL
 #struck_name = "~/9thLXe/overnight_9thLXe_v2.root" # LLNL
-struck_name = "~/scratch/9thLXe/2016_09_19_overnight/tier3/tier3_SIS3316Raw_20160919225337_9thLXe_126mvDT_cath_1700V_100cg_overnight__1-ngm.root" # LLNL
-#struck_name = "~/scratch/9thLXe/2016_09_19_overnight/tier3/tier3_SIS3316Raw_201609192*.root" # LLNL
+#struck_name = "~/scratch/9thLXe/2016_09_19_overnight/tier3/tier3_SIS3316Raw_20160919225337_9thLXe_126mvDT_cath_1700V_100cg_overnight__1-ngm.root" # LLNL
+struck_name = "~/scratch/9thLXe/2016_09_19_overnight/tier3/tier3_SIS3316Raw_201609192*.root" # LLNL
 
 #mc_name = "/p/lscratchd/alexiss/mc_slac/red_jobs_0_to_3399.root" # LLNL, white noise
 mc_name = "/p/lscratchd/alexiss/mc_slac/no_noise_hadd_0_to_3999.root" # LLNL, no added noise
@@ -65,8 +68,7 @@ max_drift_time = 9.0
 # make the energy variable
 energy_var = ROOT.RooRealVar(
     energy_var_name,
-    energy_var_name,
-    #'Energy [keV]',
+    "%s [keV]" % energy_var_name,
     0.0,
     3000.0,
     #fit_window_min,
@@ -77,7 +79,8 @@ energy_var.Print()
 channel_var = ROOT.RooRealVar(
     "channel",
     "channel",
-    0,60
+    #6.5,7.5 # making a selection
+    0,60 # all channels
 )
 channel_var.Print()
 
@@ -114,7 +117,7 @@ struck_tree.SetBranchStatus("channel", 1)
 print "%i entries in struck tree" % struck_tree.GetEntries()
 struck_data = ROOT.RooDataSet(
     "struck_data",
-    "Struck SignalEnergy",
+    "Struck %s" % energy_var_name,
     arg_set,
     ROOT.RooFit.Import(struck_tree),
 )
@@ -149,7 +152,7 @@ energy_var.setBins(n_range_bins) # ok?
 
 mc_data = ROOT.RooDataSet(
     "mc_data",
-    "MC SignalEnergy",
+    "MC %s" % energy_var_name,
     arg_set,
     ROOT.RooFit.Import(mc_tree),
 )
@@ -170,7 +173,7 @@ calibration_var = ROOT.RooRealVar(
 # make energy calibration formula
 cal_energy = ROOT.RooFormulaVar(
     "cal_energy",
-    "SignalEnergy*calibration",
+    "%s*calibration % energy_var_name",
     ROOT.RooArgList(energy_var,calibration_var)
 )
 
@@ -211,8 +214,10 @@ scaling = ROOT.RooRealVar(
 
 mean_shifted = ROOT.RooFormulaVar(
     "mean_shifted",
-    "SignalEnergy*scaling-SignalEnergy",
-    ROOT.RooArgList(energy_var,scaling)
+    #"%s*(scaling-1.0)" % energy_var_name,
+    #ROOT.RooArgList(energy_var,scaling)
+    "scaling",
+    ROOT.RooArgList(scaling)
 )
 
 sigma = ROOT.RooRealVar("sigma","sigma",sigma_guess_keV) #*0.5, 0.0, 200.0)
