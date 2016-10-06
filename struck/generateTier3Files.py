@@ -1106,7 +1106,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
             
             
-            if signal_map[i] > 0.5:
+            if charge_channels_to_use[channel[i]] and signal_map[i] > 0.5:
                 #This is a signal so add to total and figure out the type
                 #Record Energy in  new variable which tracks total energy from 
                 #channels above threshold.
