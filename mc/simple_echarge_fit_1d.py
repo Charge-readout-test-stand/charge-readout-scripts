@@ -10,9 +10,11 @@ created from Caio's test_simple_echarge_fit_1d.py
 https://confluence.slac.stanford.edu/display/exo/MC-Based+Energy+Fit
 """
 
-
+import os
 import sys
 import math
+import commands
+from array import array
 from ROOT import gROOT
 gROOT.SetBatch(True)
 
@@ -21,12 +23,16 @@ import numpy, sys
 import time
 
 import cPickle as pickle
-
 from struck import struck_analysis_parameters
 
 
 # load libraries
 gSystem.Load('$EXOLIB/lib/libEXOUtilities.so')
+
+
+#--------------------------------------------------------------------------------
+# options
+#--------------------------------------------------------------------------------
 
 # pickle usage
 #use_pickle_file = True 
@@ -36,11 +42,11 @@ use_pickle_file = False
 #struck_name = "~/9th_LXe/red_red_overnight_9thLXe_v1.root" # Ubuntu DAQ
 #struck_name = "~/9thLXe/red_red_overnight_9thLXe_v1.root" # LLNL
 #struck_name = "~/9thLXe/red_overnight_9thLXe_v1.root" # LLNL
-#struck_name = "~/9thLXe/overnight_9thLXe_v2.root" # LLNL
+struck_name = "~/9thLXe/overnight_9thLXe_v2.root" # LLNL
 #struck_name = "~/scratch/9thLXe/2016_09_19_overnight/tier3/tier3_SIS3316Raw_20160919225337_9thLXe_126mvDT_cath_1700V_100cg_overnight__1-ngm.root" # LLNL
 #struck_name = "~/scratch/9thLXe/2016_09_19_overnight/tier3/tier3_SIS3316Raw_2016091922*.root" # 4 files, LLNL
 #struck_name = "~/scratch/9thLXe/2016_09_19_overnight/tier3/tier3_SIS3316Raw_201609192*.root" # 33 files, LLNL
-struck_name = "~/scratch/9thLXe/2016_09_19_overnight/tier3/tier3_SIS3316Raw_201609200*.root" # 298 files, LLNL
+#struck_name = "~/scratch/9thLXe/2016_09_19_overnight/tier3/tier3_SIS3316Raw_201609200*.root" # 298 files, LLNL
 
 mc_name = "/p/lscratchd/alexiss/mc_slac/red_jobs_0_to_3399.root" # LLNL, white noise
 #mc_name = "/p/lscratchd/alexiss/mc_slac/no_noise_hadd_0_to_3999.root" # LLNL, no added noise
@@ -53,19 +59,47 @@ sigma_guess_keV = 32.0
 trigger_time = 8.0
 max_drift_time = 9.0
 #max_drift_time = 8.5
-max_drift_time = 8.0
+#max_drift_time = 8.0
+nsignals = 1
+
+n_bins = 100
+bin_min = 300
+bin_max = 1300
+
+#--------------------------------------------------------------------------------
 
 min_rise_time = trigger_time + struck_analysis_parameters.drift_time_threshold
 max_rise_time = trigger_time + max_drift_time
 
+prefix = '%i_signals_%i_%i' % (
+    nsignals,
+    min_rise_time*1e3,
+    max_rise_time*1e3,
+)
 
+cmd = "mkdir -p %s" % prefix
+output = commands.getstatusoutput(cmd)
+print output
+
+prefix = "%s/%s" % (prefix, prefix)
+
+new_calib_file_name = "%s_new_calib.txt" % prefix
+new_calib_file = file(new_calib_file_name,"w")
+new_calib_file.write("# max_drift_time: %f, min_drift_time: %f\n" % (
+    max_drift_time, 
+    struck_analysis_parameters.drift_time_threshold))
+new_calib_file.close()
 
 for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use):
     if not val: continue
-    print channel, struck_analysis_parameters.channel_map[channel]
+    label = struck_analysis_parameters.channel_map[channel]
+    print channel, label
 
     selection = []
-    selection.append("nsignals==1")
+    if nsignals == 0:
+        selection.append("nsignals>%i" % nsignals)
+    else:
+        selection.append("nsignals==%i" % nsignals)
     selection.append("(%s >= %f && %s <= %f)" % (
         rise_time_name,
         min_rise_time,
@@ -75,13 +109,9 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
     selection = " && ".join(selection)
     print "selection", selection
 
-    prefix = '%i_%i_ch%i' % (
-        min_rise_time*1e3,
-        max_rise_time*1e3,
-        channel,
-    )
-    print "prefix", prefix
-    pickle_file_name = '%s_mc_fits_.p' % prefix
+    ch_prefix = "%s_ch%i" % (prefix, channel)
+    print "ch_prefix", ch_prefix
+    pickle_file_name = '%s_mc_fits_.p' % ch_prefix
 
     ch_selection = "signal_map[%i]" % channel
     #mc_ch_selection = "(%s || channel==21)" % ch_selection # X17 & Y17 are symmetric in MC
@@ -100,6 +130,7 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
         use_pickle_file = False
     """
 
+    mc_hist = TH1D("mc_hist","",n_bins, bin_min, bin_max)
     if not use_pickle_file:
         #gROOT.SetBatch(True)
 
@@ -119,9 +150,14 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
         data_tree.SetEstimate(data_tree.GetEntries()+1)
         data_tree.Draw(energy_var_name,data_selection,"para goff")
         
+
         mc_tree.SetEstimate(mc_tree.GetEntries()+1)
         mc_tree.Draw(energy_var_name,mc_selection,"para goff")
         #mc_tree.Draw("energy_mc:weight",mc_selection,"para goff")
+
+        mc_hist.GetDirectory().cd()
+        mc_tree.Draw("%s >> %s" % (energy_var_name, mc_hist.GetName()),mc_selection,"goff")
+        print "%i entries in MC hist" % mc_hist.GetEntries()
 
         data_energy = []
         for i in range(data_tree.GetSelectedRows()):
@@ -177,7 +213,7 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
     resol_func.SetParErrors(error_pars)
     energy_fitter.SetFunction('resol',resol_func)
 
-    energy_fitter.SetDataHisto(100,300,1300)
+    energy_fitter.SetDataHisto(n_bins,bin_min,bin_max)
     energy_fitter.BinMCEnergy(1)
 
     start_time = time.time()
@@ -188,10 +224,6 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
     h = TH1D()
     print 'data energy for E_true = 570 keV is', energy_fitter.GetPeakPosition(570), '+-', energy_fitter.GetPeakPositionError(570)#,1000,h)
     print 'resolution for E_true = 570 keV is', energy_fitter.GetPeakWidth(570), '+-', energy_fitter.GetPeakWidthError(570)#,1000,h)
-    #print 'data energy for E_true = 1173 keV is', energy_fitter.GetPeakPosition(1173), '+-', energy_fitter.GetPeakPositionError(1173)#,1000,h)
-    #print 'resolution for E_true = 1173 keV is', energy_fitter.GetPeakWidth(1173), '+-', energy_fitter.GetPeakWidthError(1173)#,1000,h)
-    #print 'data energy for E_true = 1332 keV is', energy_fitter.GetPeakPosition(1332), '+-', energy_fitter.GetPeakPositionError(1332)#,1000,h)
-    #print 'resolution for E_true = 1332 keV is', energy_fitter.GetPeakWidth(1332), '+-', energy_fitter.GetPeakWidthError(1332)#,1000,h)
     #h.GetFunction('gaus').Print()
 
     #h.Draw()
@@ -211,6 +243,13 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
     hmc = hmc.Clone()
     hmc.Multiply(hscale)
 
+    start_bin = hmc.FindBin(bin_min)
+    stop_bin = hmc.FindBin(bin_max)
+    print hmc.Integral(start_bin, stop_bin)
+    print mc_hist.Integral(start_bin,stop_bin)
+    scale_factor = 1.0*hmc.Integral(start_bin,stop_bin)/mc_hist.Integral(start_bin,stop_bin)
+    mc_hist.Scale(scale_factor)
+
     canvas = TCanvas("canvas","")
     canvas.SetGrid()
 
@@ -218,22 +257,45 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
     legend.SetNColumns(2)
     legend.SetFillColor(0)
 
+    hdata.Sumw2()
     hdata.SetXTitle("%s [keV]" % energy_var_name)
     hdata.SetYTitle("Counts / %s [keV]" % hdata.GetBinWidth(1))
     hdata.GetYaxis().SetTitleOffset(1.3)
     hdata.SetMarkerStyle(8)
     hdata.SetMarkerSize(0.8)
     hdata.Draw("pz")
-    legend.AddEntry(hdata, "Ch %i %s Data" % (channel, struck_analysis_parameters.channel_map[channel]), "p")
+    legend.AddEntry(hdata, "Ch %i %s Data" % (channel, label), "p")
 
     hmc.SetLineColor(kBlue)
     hmc.SetLineWidth(2)
     hmc.Draw('same')
     legend.AddEntry(hmc, "MC", "l")
 
+    mc_hist.SetLineColor(kRed)
+    mc_hist.SetLineWidth(2)
+    mc_hist.Draw('same')
+    hmc.Draw('same')
+    hdata.Draw("pz same")
+
     legend.Draw()
     canvas.Update()
-    canvas.Print("%s_EXOEnergyCalibFitMC1D.pdf" % prefix)
+    canvas.Print("%s_EXOEnergyCalibFitMC1D.pdf" % ch_prefix)
+
+    data_tree.GetEntry(0)
+    calibration = array('d',data_tree.calibration)
+    calibration = calibration[channel]
+
+    new_calibration = "calibration_values[%i] = %.6f # %.6f x %f %s" % (
+        channel, 
+        calibration*calib_func.GetParameter(0),
+        calibration,
+        calib_func.GetParameter(0),
+        label,
+    )
+    new_calib_file = file(new_calib_file_name,"a")
+    new_calib_file.write(new_calibration + "\n")
+    new_calib_file.close()
+
 
     print "calibration pars:"
     for i in xrange(calib_func.GetNpar()):
@@ -258,16 +320,18 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
         ))
     pave_text.AddText(data_selection+"\n")
     pave_text.AddText(mc_selection+"\n")
+    pave_text.AddText(os.path.splitext(os.path.basename(struck_name))[0]+"\n")
+    pave_text.AddText(os.path.splitext(os.path.basename(mc_name))[0]+"\n")
     pave_text.Draw()
 
     canvas.Update()
-    canvas.Print("%s_EXOEnergyCalibFitMC1D_notes.pdf" % prefix)
+    canvas.Print("%s_EXOEnergyCalibFitMC1D_notes.pdf" % ch_prefix)
 
     if not gROOT.IsBatch(): raw_input('combine')
 
     #fit_result.mnprin(5,fit_result.fAmin)
 
-    energy_fitter.SaveHistosIn('ch_%itest_fit_out_echarge_co60.root' % channel,'recreate')
+    #energy_fitter.SaveHistosIn('ch_%itest_fit_out_echarge_co60.root' % channel,'recreate')
     energy_fitter.IsA().Destructor(energy_fitter)
 
     # end loop over channels
