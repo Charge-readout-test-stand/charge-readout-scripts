@@ -1,25 +1,25 @@
 """
-RooFit manual:
-It is not possible to import data from array branches such as Double_t[10]. 
 
 to do:
 * add some energy scaling/calibration
-* select individual channels
 
 done:
+* selecting individual channels; had to switch to binned struck & MC to use channels
 * sigma seems to be working
 * rise-time cuts are working
 * add goodness of fit info
 * fix MC hist pdf binning for plots
 
-starting from these old files:
+RooFit manual:
+It is not possible to import data from array branches such as Double_t[10]. 
 
-/Users/alexis/software/mjSW/MJOrcaAnalysis/MalbekAnalysis/scripts/BkgModelTools/
-    fitPeaks.py
-    fitTests/rooFit.py
-/Users/alexis/ewi/malbekWork/bkgSpectrumPrediction/rooFitHistsFits/
-    performFit.py
-    fitHists.py
+Alexis started from these old files:
+  /Users/alexis/software/mjSW/MJOrcaAnalysis/MalbekAnalysis/scripts/BkgModelTools/
+      fitPeaks.py
+      fitTests/rooFit.py
+  /Users/alexis/ewi/malbekWork/bkgSpectrumPrediction/rooFitHistsFits/
+      performFit.py
+      fitHists.py
 """
 
 import os
@@ -42,63 +42,62 @@ from struck import struck_analysis_parameters
 #struck_name = "~/9thLXe/red_overnight_9thLXe_v1.root" # LLNL
 #struck_name = "~/9thLXe/overnight_9thLXe_v2.root" # LLNL
 #struck_name = "~/scratch/9thLXe/2016_09_19_overnight/tier3/tier3_SIS3316Raw_20160919225337_9thLXe_126mvDT_cath_1700V_100cg_overnight__1-ngm.root" # LLNL
-struck_name = "~/scratch/9thLXe/2016_09_19_overnight/tier3/tier3_SIS3316Raw_201609192*.root" # LLNL
+#struck_name = "~/scratch/9thLXe/2016_09_19_overnight/tier3/tier3_SIS3316Raw_2016091922*.root" # 4 files, LLNL
+#struck_name = "~/scratch/9thLXe/2016_09_19_overnight/tier3/tier3_SIS3316Raw_201609192*.root" # 33 files, LLNL
+struck_name = "~/scratch/9thLXe/2016_09_19_overnight/tier3/tier3_SIS3316Raw_201609200*.root" # 298 files, LLNL
 
-#mc_name = "/p/lscratchd/alexiss/mc_slac/red_jobs_0_to_3399.root" # LLNL, white noise
-mc_name = "/p/lscratchd/alexiss/mc_slac/no_noise_hadd_0_to_3999.root" # LLNL, no added noise
+mc_name = "/p/lscratchd/alexiss/mc_slac/red_jobs_0_to_3399.root" # LLNL, white noise
+#mc_name = "/p/lscratchd/alexiss/mc_slac/no_noise_hadd_0_to_3999.root" # LLNL, no added noise
 
 use_rise_time = True
 sigma_guess_keV = 32.0
 
 energy_var_name = "SignalEnergy"
 rise_time_name = "rise_time_stop95_sum"
-fit_window_min = 200.0
-fit_window_max = 1500.0
+fit_window_min = 300.0
+fit_window_max = 1300.0
+hist_min = 0.0
+hist_max = 3000.0
 bin_width = 10.0
 #n_bins = int((fit_window_max - fit_window_min)/bin_width)
 #print "n_bins", n_bins
 
 trigger_time = 8.0
-max_drift_time = 9.0
+#max_drift_time = 9.0
+max_drift_time = 8.5
+max_drift_time = 8.0
 
 #----------------------------------------------------------
 # variables
 #----------------------------------------------------------
 
+
+selection = []
+selection.append("nsignals==1")
+selection.append("(%s >= %f && %s <= %f)" % (
+    rise_time_name,
+    trigger_time + struck_analysis_parameters.drift_time_threshold,
+    rise_time_name,
+    trigger_time + max_drift_time,
+))
+selection = " && ".join(selection)
+print "selection", selection
+
+ch_selection = "channel==7"
+mc_ch_selection = "(%s || channel==21)" % ch_selection # X17 & Y17 are symmetric in MC
+
 # make the energy variable
 energy_var = ROOT.RooRealVar(
     energy_var_name,
     "%s [keV]" % energy_var_name,
-    0.0,
-    3000.0,
-    #fit_window_min,
-    #fit_window_max,
+    hist_min,
+    hist_max,
 )
 energy_var.Print()
-
-channel_var = ROOT.RooRealVar(
-    "channel",
-    "channel",
-    #6.5,7.5 # making a selection
-    0,60 # all channels
-)
-channel_var.Print()
-
-if use_rise_time:
-    # make the rise time variable
-    rise_time_var = ROOT.RooRealVar(
-        rise_time_name,
-        'Rise time [#us]',
-        trigger_time + struck_analysis_parameters.drift_time_threshold,
-        trigger_time + max_drift_time,
-    )
-    rise_time_var.Print()
-
-    #arg_set = ROOT.RooArgSet(energy_var, rise_time_var, channel_var)
-    arg_set = ROOT.RooArgSet(energy_var, rise_time_var)
-else:
-    arg_set = ROOT.RooArgSet(energy_var)
+arg_set = ROOT.RooArgSet(energy_var)
 arg_set.Print()
+
+n_range_bins = int((energy_var.getMax() - energy_var.getMin())/bin_width)
 
 #----------------------------------------------------------
 # set up Struck Data
@@ -106,28 +105,36 @@ arg_set.Print()
 
 #struck_file = ROOT.TFile(struck_name)
 #struck_tree = struck_file.Get("tree")
-print "\n\n--> creating Struck unbinned data set"
+print "\n\n--> creating Struck data set"
 struck_tree = ROOT.TChain("tree")
 print "n struck files:", struck_tree.Add(struck_name)
-# make only the energy branch active:
+# make only some branches active:
 struck_tree.SetBranchStatus('*',0)
 struck_tree.SetBranchStatus(energy_var_name, 1)
 struck_tree.SetBranchStatus(rise_time_name, 1)
 struck_tree.SetBranchStatus("channel", 1)
+struck_tree.SetBranchStatus("nsignals", 1)
+struck_tree.SetBranchStatus("is_bad", 1)
+struck_tree.SetBranchStatus("is_pulser", 1)
 print "%i entries in struck tree" % struck_tree.GetEntries()
-struck_data = ROOT.RooDataSet(
-    "struck_data",
-    "Struck %s" % energy_var_name,
-    arg_set,
-    ROOT.RooFit.Import(struck_tree),
+
+struck_th1d = ROOT.TH1D("struck_th1d","",n_range_bins, hist_min, hist_max)
+struck_th1d.GetDirectory().cd()
+draw_cmd = "%s >> %s" % (energy_var_name, struck_th1d.GetName())
+print "draw_cmd", draw_cmd
+struck_tree.Draw(
+    draw_cmd, 
+    "%s && %s && !is_bad && !is_pulser" % (ch_selection, selection),
+    "goff"
 )
-struck_data.Print("v")
-ROOT.RooArgSet(energy_var).Print()
-# reduce with cuts on rise time
-struck_data = struck_data.reduce( ROOT.RooArgSet(energy_var))
-struck_data.Print()
-struck_data.Print("v")
-print "--> done creating unbinned Struck data set\n\n"
+print "%i entries in hist" % struck_th1d.GetEntries()
+
+struck_hist = ROOT.RooDataHist("struck_hist", "Struck data", ROOT.RooArgList(energy_var), struck_th1d)
+#struck_hist.Print("v")
+struck_data = struck_hist
+
+print "--> done creating Struck data set\n\n"
+
 
 #----------------------------------------------------------
 # set up MC
@@ -137,29 +144,16 @@ print "--> creating unbinned data set"
 mc_file = ROOT.TFile(mc_name)
 mc_tree = mc_file.Get("tree")
 print "%i entries in MC tree" % mc_tree.GetEntries()
-# make only the energy branch active:
+# make only some branches active:
+struck_tree.SetBranchStatus('*',0)
 mc_tree.SetBranchStatus('*',0)
 mc_tree.SetBranchStatus(energy_var_name, 1)
-if use_rise_time:
-    mc_tree.SetBranchStatus(rise_time_name, 1)
-    struck_tree.SetBranchStatus("channel", 1)
+mc_tree.SetBranchStatus(rise_time_name, 1)
+mc_tree.SetBranchStatus("channel", 1)
+mc_tree.SetBranchStatus("nsignals", 1)
 
-# bin energy_var before we create mc_data, so that the binning is applied to the
-# MC hist
-n_range_bins = int((energy_var.getMax() - energy_var.getMin())/bin_width)
-print "n_range_bins", n_range_bins
-energy_var.setBins(n_range_bins) # ok?
-
-mc_data = ROOT.RooDataSet(
-    "mc_data",
-    "MC %s" % energy_var_name,
-    arg_set,
-    ROOT.RooFit.Import(mc_tree),
-)
-mc_data = mc_data.reduce( ROOT.RooArgSet(energy_var))
-mc_data.Print("v")
-print "--> done creating unbinned data set\n\n"
-
+#print "n_range_bins", n_range_bins
+#energy_var.setBins(n_range_bins) # ok?
 
 # make energy calibration variable
 calibration_var = ROOT.RooRealVar(
@@ -173,17 +167,25 @@ calibration_var = ROOT.RooRealVar(
 # make energy calibration formula
 cal_energy = ROOT.RooFormulaVar(
     "cal_energy",
-    "%s*calibration % energy_var_name",
+    "%s*calibration" % energy_var_name,
     ROOT.RooArgList(energy_var,calibration_var)
 )
 
-#mc_data.addColumn(cal_energy)
-#mc_data.Print("v")
+mc_th1d = ROOT.TH1D("mc_th1d","",n_range_bins, hist_min, hist_max)
+mc_th1d.GetDirectory().cd()
+draw_cmd = "%s*1.04 >> %s" % (energy_var_name, mc_th1d.GetName())
+print "draw_cmd", draw_cmd
+mc_selection = "%s && %s" % (mc_ch_selection, selection)
+print "mc_selection", mc_selection
+mc_tree.Draw(
+    draw_cmd, 
+    mc_selection,
+    "goff"
+)
+print "%i entries in hist" % mc_th1d.GetEntries()
 
-mc_hist = mc_data.binnedClone() # RooDataHist
-
-mc_hist.Print("v")
-#energy_var.setRange(0.0, 3000.0)
+mc_hist = ROOT.RooDataHist("mc_hist", "", ROOT.RooArgList(energy_var), mc_th1d)
+#mc_hist.Print("v")
 
 mc_hist_pdf = ROOT.RooHistPdf(
     "mc_hist_pdf", 
@@ -193,7 +195,8 @@ mc_hist_pdf = ROOT.RooHistPdf(
     mc_hist, 
     0,
     )
-#mc_pdf = mc_hist_pdf
+#mc_hist_pdf.Print("v")
+
 
 #----------------------------------------------------------
 # attempts at convolution
@@ -207,11 +210,12 @@ mean = ROOT.RooRealVar("mean","mean", 0.0) #, -100, 100) # energy shift
 scaling = ROOT.RooRealVar(
     "scaling",
     "scaling",
-    1.2,
-    0.0,
     20.0,
+    0.0,
+    200.0,
 )
 
+# doesn't seem to work...
 mean_shifted = ROOT.RooFormulaVar(
     "mean_shifted",
     #"%s*(scaling-1.0)" % energy_var_name,
@@ -220,9 +224,9 @@ mean_shifted = ROOT.RooFormulaVar(
     ROOT.RooArgList(scaling)
 )
 
-sigma = ROOT.RooRealVar("sigma","sigma",sigma_guess_keV) #*0.5, 0.0, 200.0)
-#gaussm = ROOT.RooGaussModel("gaussm","gaussm",energy_var,mean,sigma) 
-gaussm = ROOT.RooGaussian("gaussm","gaussm",energy_var,mean_shifted,sigma) 
+sigma = ROOT.RooRealVar("sigma","sigma",sigma_guess_keV*0.5, 0.0, 200.0)
+gaussm = ROOT.RooGaussModel("gaussm","gaussm",energy_var,mean,sigma) 
+#gaussm = ROOT.RooGaussian("gaussm","gaussm",energy_var,mean_shifted,sigma) 
 
 
 # from RooFit_Users_Manual_2.91-33.pdf, p. 44:
@@ -252,28 +256,30 @@ struck_data.plotOn(
     frame,
     RooFit.DrawOption('pz'),
     RooFit.MarkerSize(0.8),
-    RooFit.Binning(int((fit_window_max - fit_window_min)/bin_width)),
 )
-legend.AddEntry(struck_data, struck_data.GetTitle(), "pl")
+entry = legend.AddEntry(frame.getHist(struck_data.GetName()), struck_data.GetTitle(), "p")
 
-mc_hist_pdf.plotOn(
-    frame,
-    #RooFit.Binning(int((fit_window_max - fit_window_min)/bin_width), fit_window_min, fit_window_max),
-    #RooFit.Range(fit_window_min, fit_window_max),
-    RooFit.DrawOption("l"),
-    #RooFit.LineStyle(ROOT.kDashed),
-    RooFit.LineColor(ROOT.kGreen+2),
-)
+
+#mc_hist_pdf.plotOn(
+#    frame,
+#    RooFit.DrawOption("l"),
+#    #RooFit.LineStyle(ROOT.kDashed),
+#    RooFit.LineColor(ROOT.kGreen+2),
+#)
 
 mc_pdf.plotOn(
     frame,
     RooFit.Range(fit_window_min, fit_window_max),
     RooFit.DrawOption("l"),
-    #RooFit.LineStyle(ROOT.kDashed),
     RooFit.LineColor(ROOT.kRed),
 )
-legend.AddEntry(mc_pdf, mc_pdf.GetTitle(), "pl")
+entry = legend.AddEntry(mc_pdf, mc_pdf.GetTitle(), "l")
+entry.SetLineColor(ROOT.kRed)
+entry.SetLineWidth(2)
 
+struck_th1d.SetAxisRange(fit_window_min, fit_window_max)
+struck_max = struck_th1d.GetMaximum()*1.1
+frame.SetMaximum(struck_max)
 canvas = ROOT.TCanvas('canvas', 'canvas')
 canvas.SetGrid()
 frame.Draw()
@@ -312,19 +318,23 @@ print "--> done fitting"
 mc_pdf.plotOn(
     frame,
     RooFit.Range(fit_window_min, fit_window_max),
-    RooFit.DrawOption("pzl"),
+    RooFit.DrawOption("l"),
     RooFit.LineColor(ROOT.kBlue),
 )
-#legend.SetNColumns(3)
-legend.AddEntry(mc_pdf, mc_pdf.GetTitle(), "pl")
+legend.SetNColumns(3)
+entry = legend.AddEntry(mc_pdf, mc_pdf.GetTitle(), "l")
+entry.SetLineColor(ROOT.kBlue)
+entry.SetLineWidth(2)
 
+struck_th1d.SetAxisRange(fit_window_min, fit_window_max)
+frame.SetMaximum(struck_max)
 frame.Draw()
 legend.Draw()
 canvas.Update()
 canvas.Print('test_fit.pdf')
 
 frame = energy_var.frame()
-frame.SetTitle('')
+frame.SetTitle(mc_selection)
 frame.SetTitleOffset(1.4, 'y')
 frame.SetYTitle('Counts / %.2f keV' % bin_width)
 
@@ -332,7 +342,7 @@ struck_data.plotOn(
     frame,
     RooFit.DrawOption('pz'),
     RooFit.MarkerSize(0.8),
-    RooFit.Binning(int((fit_window_max - fit_window_min)/bin_width)),
+    #RooFit.Binning(int((fit_window_max - fit_window_min)/bin_width)),
 )
 
 mc_pdf.plotOn(
@@ -342,11 +352,16 @@ mc_pdf.plotOn(
     RooFit.LineColor(ROOT.kBlue),
 )
 
+struck_th1d.SetAxisRange(fit_window_min, fit_window_max)
+struck_max = struck_th1d.GetMaximum()
+frame.SetMaximum(struck_max)
+
 # $ROOTSYS/tutorials/roofit/rf109_chi2residpull.C
 chi2 = frame.chiSquare()
 print "chi2", chi2
 
 hresid = frame.residHist()
+hpull = frame.pullHist()
 status = fit_result.status()
 n_bins = frame.GetNbinsX()
 title = "Residual Distribution: #chi^{2}=%.2f | %i bins | status=%i" % (
@@ -355,7 +370,8 @@ title = "Residual Distribution: #chi^{2}=%.2f | %i bins | status=%i" % (
     status,
 )
 frame2 = energy_var.frame(RooFit.Title(title))
-frame2.addPlotable(hresid, "P")
+#frame2.addPlotable(hresid, "P")
+frame2.addPlotable(hpull, "P")
 
 canvas.Clear()
 canvas.Divide(1,2)
