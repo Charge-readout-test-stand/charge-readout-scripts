@@ -110,7 +110,7 @@ if __name__ == "__main__":
         print "arguments: [*.dat files]"
         sys.exit(1)
 
-    filename = sys.argv[1]
+    for filename in sys.argv[1:]:
 
-    main(filename)
+        main(filename)
 
