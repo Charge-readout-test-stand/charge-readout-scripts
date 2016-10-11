@@ -65,8 +65,12 @@ def process_files(filenames):
         hists.append(hist)
 
         # open the root file and grab the tree
-        root_file = TFile(filename)
-        tree = root_file.Get("tree")
+        #root_file = TFile(filename)
+        #tree = root_file.Get("tree")
+        
+        tree = ROOT.TChain("tree")
+        tree.Add(filename)
+        
         n_entries = tree.GetEntries()
         print "%i entries" % n_entries
         hist = hists[i]

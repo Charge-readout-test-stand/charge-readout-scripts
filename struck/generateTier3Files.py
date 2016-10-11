@@ -87,7 +87,7 @@ import wfmProcessing
 import BundleSignals
 import pmt_reference_signal
 
-def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=False, isMakeNoise=False):
+def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=False, isMakeNoise=False, noise_file=None):
 
     #---------------------------------------------------------------
     # options
@@ -175,7 +175,10 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         #n_channels = struck_analysis_parameters.MCn_channels
         #charge_channels_to_use = struck_analysis_parameters.MCcharge_channels_to_use
         generator = ROOT.TRandom3(0) # random number generator, initialized with TUUID object
-        struck_to_mc_channel_map = struck_analysis_parameters.struck_to_mc_channel_map   
+        struck_to_mc_channel_map = struck_analysis_parameters.struck_to_mc_channel_map
+        if noise_file is not None:
+            noise_file_root = ROOT.TFile(noise_file)
+            noise_tree = noise_file_root.Get("tree")
     if isMakeNoise:
         noise_length = struck_analysis_parameters.noise_length
         noiseLightCut = struck_analysis_parameters.noiseLightCut
@@ -884,6 +887,11 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         #    print "<<<< DEBUGGING >>>>"
         #    break # debugging
 
+        #For MC get a random entry in the noise tree if it exists
+        if isMC and noise_file is not None:
+            rndm_entry = int(generator.Rndm()*noise_tree.GetEntries())
+            noise_tree.GetEntry(rndm_entry)
+
         # print periodic output message
         if i_entry % reporting_period == 0:
             now = time.time()
@@ -1067,13 +1075,20 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
             # add noise to MC
             if isMC and channel[i] is not pmt_channel:
-                try:
-                    sigma = rms_keV[i]/calibration[i] 
-                except KeyError:
-                    sigma = rms_keV[0]/calibration[i] # MC can have more channels than data
-                for i_point in xrange(len(wfm)):
-                    noise = generator.Gaus()*sigma
-                    wfm[i_point]+=noise
+                if noise_file is None:
+                    #No file use gaussian noise
+                    try:
+                        sigma = rms_keV[i]/calibration[i] 
+                    except KeyError:
+                        sigma = rms_keV[0]/calibration[i] # MC can have more channels than data
+                    for i_point in xrange(len(wfm)):
+                        noise = generator.Gaus()*sigma
+                        wfm[i_point]+=noise
+                else:
+                    #Have a noise_file get random event and wfm for that channel
+                    noise_array = getattr(noise_tree, "wfm%i" % channel[i])
+                    for i_point in xrange(len(wfm)):
+                        wfm[i_point] += noise_array[i_point] 
 
                 noise_val[i] = generator.Gaus() # an extra noise value for use with energy smearing
 
@@ -1399,6 +1414,8 @@ if __name__ == "__main__":
                         help="set output directory", metavar="Directory")
     parser.add_option("--Noise", dest="isMakeNoise", default=False,
                        action="store_true", help="are you trying to generate a noise file??")
+    parser.add_option("-n", "--NoiseFile", dest="noise_file", default = None,
+                        help="set noise file", metavar="Directory")
 
     (options, filenames) = parser.parse_args()
 
@@ -1412,9 +1429,21 @@ if __name__ == "__main__":
     
     print "Make Noise is set to", options.isMakeNoise
 
-    for filename in filenames:
-        process_file(filename, dir_name=options.dir_name, verbose=options.verbose, do_overwrite=options.do_overwrite, isMC=options.isMC, isMakeNoise=options.isMakeNoise)
+    noise_file = None
+    
+    test_noise = "/home/teststand/testing/test_noiselib/tier3_SIS3316Raw_20160922143510_9thLXe_126mvDT_cath_1700V_100cg_overnight__1-ngm.root"
+    
+    if options.isMC:
+        if os.path.isfile(options.noise_file):
+            noise_file = options.noise_file
+        elif os.path.isfile(test_noise):
+            noise_file = test_noise
+        else:
+            noise_file = None
+    
 
+    for filename in filenames:
+        process_file(filename, dir_name=options.dir_name, verbose=options.verbose, do_overwrite=options.do_overwrite, isMC=options.isMC, isMakeNoise=options.isMakeNoise, noise_file=noise_file)
 
 
 

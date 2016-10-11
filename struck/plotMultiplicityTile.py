@@ -45,8 +45,11 @@ def process_files(filenames):
         hists.append(hist)
 
         # open the root file and grab the tree
-        root_file = TFile(filename)
-        tree = root_file.Get("tree")
+        #root_file = TFile(filename)
+        #tree = root_file.Get("tree")
+        tree = ROOT.TChain("tree")
+        tree.Add(filename)
+
         n_entries = tree.GetEntries()
         print "%i entries" % n_entries
         hist = hists[i]
@@ -98,7 +101,7 @@ def process_files(filenames):
         TEV.ChangeTitle("Event Fraction")
         print len(hits_per_ch)
         TEV.make_tile_event(hits_per_ch)
-        plt.savefig("TileHits.pdf")
+        plt.savefig("TileHits_new.pdf")
         raw_input()
         print "Tile Draw"
 
@@ -108,9 +111,10 @@ if __name__ == "__main__":
 
 
     filenames = [
-        #"/home/teststand/2016_08_15_8th_LXe_overnight/tier3_added/overnight8thLXe_v4.root"
-        "/p/lscratchd/alexiss/2016_08_15_8th_LXe_overnight/tier3_added/overnight8thLXe_v6.root ", # LLNL
-    ]
+        #"/home/teststand/2016_08_15_8th_LXe_overnight/tier3_added/overnight8thLXe.root"
+        #"/p/lscratchd/alexiss/2016_08_15_8th_LXe_overnight/tier3_added/overnight8thLXe_v6.root ", # LLNL
+        "~/2016_09_19_setup_LXeFull/tier3/*1700V*root"
+        ]
 
     process_files(filenames)
 

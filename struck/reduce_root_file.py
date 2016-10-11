@@ -34,13 +34,15 @@ for filename in filenames:
     print "\t isMC:", isMC
 
     drift_time_low = struck_analysis_parameters.drift_time_threshold
+    drift_time_high= 9.0
 
     # construct some cuts...
     selections = []
     #selections.append("(nsignals==1)") # single-channel cut
     selections.append("(nsignals>0 || is_pulser)") 
-    selections.append("(SignalEnergy>50)")
-    #selections.append("(rise_time_stop95_sum-trigger_time>%.6f)" % drift_time_low)
+    selections.append("(SignalEnergy>100)")
+    selections.append("(rise_time_stop95_sum-trigger_time>%.6f)" % drift_time_low)
+    selections.append("(rise_time_stop95_sum-trigger_time<%.6f)" % drift_time_high)
     #selections.append(struck_analysis_cuts.get_drift_time_cut(isMC=isMC))
     selections = "&&".join(selections)
     print "selections:"
