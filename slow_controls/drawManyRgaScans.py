@@ -27,7 +27,7 @@ def main(filenames):
 
     # use hist to set axis limits
     frame_hist = ROOT.TH1D("hist","",100,0,45)
-    frame_hist.SetMinimum(1e-9)
+    frame_hist.SetMinimum(1e-10)
     frame_hist.SetMaximum(3e-7)
     frame_hist.Draw("axis")
     frame_hist.Draw("axig same")
@@ -44,8 +44,9 @@ def main(filenames):
         tree = tfile.Get("tree")
         data_tree = tfile.Get("data_tree")
         data_tree.GetEntry(0)
-        noise_floor = data_tree.noise_floor # I think this is scan speed
+        noise_floor = data_tree.noise_floor # I think this is related to scan speed
         if noise_floor == 0: continue
+        #if noise_floor == 2: continue
 
         n_entries = tree.GetEntries()
         print "\t %i entries" % n_entries
@@ -69,6 +70,12 @@ def main(filenames):
 
 if __name__ == "__main__":
 
-    filenames = sys.argv[1:]
+
+    filenames = []
+    filenames.append("2016_10_07_before_PCB_samples.root")
+    filenames.append("2016_10_10_AEM_PCB_sample_3.root")
+
+    if len(sys.argv) > 1:
+        filenames = sys.argv[1:]
     main(filenames)
 
