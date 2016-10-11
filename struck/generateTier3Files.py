@@ -87,7 +87,7 @@ import wfmProcessing
 import BundleSignals
 import pmt_reference_signal
 
-def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=False):
+def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=False, isMakeNoise=False):
 
     #---------------------------------------------------------------
     # options
@@ -176,7 +176,10 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         #charge_channels_to_use = struck_analysis_parameters.MCcharge_channels_to_use
         generator = ROOT.TRandom3(0) # random number generator, initialized with TUUID object
         struck_to_mc_channel_map = struck_analysis_parameters.struck_to_mc_channel_map   
-
+    if isMakeNoise:
+        noise_length = struck_analysis_parameters.noise_length
+        noiseLightCut = struck_analysis_parameters.noiseLightCut
+        
     basename = wfmProcessing.create_basename(filename, isMC)
 
     # calculate file start time, in POSIX time, from filename suffix
@@ -494,6 +497,17 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     out_tree.Branch('baseline_rms_file', baseline_rms_file, 'baseline_rms_file[%i]/D' % n_channels)
     run_tree.Branch('baseline_rms_file', baseline_rms_file, 'baseline_rms_file[%i]/D' % n_channels)
 
+    
+    # info for saving the WFMs if we are making a noise library
+    noisewfm = None
+    if isMakeNoise:
+        # Not sure you can do double arrays in a TTree Branch in pyROOT without making a C++ struct
+        # Instead make one branch per WFM called wfm%i
+        noisewfm = []
+        for ichannel in channels:
+            noisewfm.append(array('d', [0]*noise_length))
+            out_tree.Branch('wfm%i' % ichannel, noisewfm[ichannel], 'wfm%i[%i]/D' % (ichannel, noise_length))
+
     #--------------------------------------Info For Multiplicity-------------------------------------
     #--------------------------------------and Signal holding----------------------------------------
     #Reocrd the channels which appear above the RMS noise threshold
@@ -614,6 +628,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     print "calculating mean baseline & baseline RMS for each channel in this file..."
     for (i, i_channel) in enumerate(channels):
         if isMC: continue
+        if isMakeNoise: continue
         print "%i: ch %i" % (i, i_channel)
         if isNGM:
             print "\t skipping NGM for now..."
@@ -1025,6 +1040,10 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 n_channels_in_this_event += 1
 
                 wfm = tree._waveform
+                
+                if isMakeNoise:
+                    for wfm_index in xrange(noise_length):
+                        noisewfm[i][wfm_index] = wfm[wfm_index]
 
             else:
                 channel[i] = tree.channel[i]
@@ -1106,7 +1125,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
             
             
-            if signal_map[i] > 0.5:
+            if charge_channels_to_use[channel[i]] and signal_map[i] > 0.5:
                 #This is a signal so add to total and figure out the type
                 #Record Energy in  new variable which tracks total energy from 
                 #channels above threshold.
@@ -1333,6 +1352,13 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 if nsignals[0] > 0: do_fill = True
                 if is_pulser[0] > 0: do_fill = True
 
+                if isMakeNoise:
+                    if is_pulser[0] and not is_bad[0] and lightEnergy[0]< noiseLightCut and nsignals[0]<1:
+                        #Making Noise library so only save noise triggers with no light signal and no charge signals.
+                        do_fill = True
+                    else:
+                        do_fill = False
+
                 if do_fill:
                     out_tree.Fill()
             n_events+=1
@@ -1371,6 +1397,8 @@ if __name__ == "__main__":
                       action="store_true", help="is this MC or Data")
     parser.add_option("-D", "--directory", dest="dir_name", default = "",
                         help="set output directory", metavar="Directory")
+    parser.add_option("--Noise", dest="isMakeNoise", default=False,
+                       action="store_true", help="are you trying to generate a noise file??")
 
     (options, filenames) = parser.parse_args()
 
@@ -1381,10 +1409,11 @@ if __name__ == "__main__":
     print "%i files to process" % len(filenames)
     
     print "Is MC set to ", options.isMC
+    
+    print "Make Noise is set to", options.isMakeNoise
 
     for filename in filenames:
-        process_file(filename, dir_name=options.dir_name, verbose=options.verbose, do_overwrite=options.do_overwrite, isMC=options.isMC)
-
+        process_file(filename, dir_name=options.dir_name, verbose=options.verbose, do_overwrite=options.do_overwrite, isMC=options.isMC, isMakeNoise=options.isMakeNoise)
 
 
 
