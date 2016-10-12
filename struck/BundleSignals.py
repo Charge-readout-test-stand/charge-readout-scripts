@@ -11,7 +11,15 @@ import sys
 # workaround for systems without EXO offline / CLHEP
 microsecond = 1.0e3
 second = 1.0e9
-if os.getenv("EXOLIB") is not None:
+
+import subprocess
+root_version = subprocess.check_output(['root-config --version'], shell=True)
+isROOT6 = False
+if '6.1.0' in root_version or '6.04/06' in root_version:
+    print "Found ROOT 6"
+    isROOT6 = True
+
+if os.getenv("EXOLIB") is not None and not isROOT6:
     try:
         from ROOT import gSystem
         gSystem.Load("$EXOLIB/lib/libEXOROOT")

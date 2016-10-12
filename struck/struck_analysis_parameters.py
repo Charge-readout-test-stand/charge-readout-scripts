@@ -24,13 +24,21 @@ import ROOT
 
 # workaround for systems without EXO offline / CLHEP
 microsecond = 1.0e3
-if os.getenv("EXOLIB") is not None:
+
+import subprocess
+root_version = subprocess.check_output(['root-config --version'], shell=True)
+isROOT6 = False
+if '6.1.0' in root_version or '6.04/06' in root_version:
+    print "Found ROOT 6"
+    isROOT6 = True
+
+if os.getenv("EXOLIB") is not None and not isROOT6:
     print os.getenv("EXOLIB")
     try:
         ROOT.gSystem.Load("$EXOLIB/lib/libEXOROOT")
         from ROOT import CLHEP
         microsecond = CLHEP.microsecond
-    except ImportError:
+    except ImportError or AttributeError:
         print "couldn't import CLHEP/ROOT"
 
 drift_length = 18.16 # mm, from solidworks for 7th LXe + 

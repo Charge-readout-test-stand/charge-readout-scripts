@@ -54,23 +54,36 @@ import numpy as np
 from optparse import OptionParser
 
 import ROOT
+
 ROOT.gROOT.SetBatch(True) # run in batch mode:
 
-if os.getenv("EXOLIB") is not None:
+import subprocess
+root_version = subprocess.check_output(['root-config --version'], shell=True)
+
+#Works sometimes other times gives 8.0.0????
+#root_version = ROOT.module.__version__
+
+print "ROOT Version is", root_version
+
+print type(root_version)
+print root_version
+print '6.04/06' in root_version
+
+isROOT6 = False
+if '6.1.0' in root_version or '6.04/06' in root_version:
+    print "Found ROOT 6"
+    isROOT6 = True
+
+if os.getenv("EXOLIB") is not None and not isROOT6:
     try:
         print "loading libEXOROOT"
         ROOT.gSystem.Load("$EXOLIB/lib/libEXOROOT")
     except:
         pass
 
-try:
-    from ROOT import CLHEP
-    microsecond = CLHEP.microsecond
-    second = CLHEP.second
-except ImportError:
-    # workaround for our Ubuntu DAQ, which doesn't have CLHEP -- CLHEP unit of time is ns:
-    microsecond = 1.0e3
-    second = 1.0e9
+microsecond = 1.0e3
+second = 1.0e9
+
 from ROOT import EXOBaselineRemover
 from ROOT import EXODoubleWaveform
 from ROOT import EXORisetimeCalculation
