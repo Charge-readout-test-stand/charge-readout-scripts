@@ -1,5 +1,8 @@
 """
 Convert data from SRS RGA ASCII / text file to root format. 
+
+
+Noise floor 0 = scan speed 1 (slowest)
 """
 
 import os
