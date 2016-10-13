@@ -27,12 +27,13 @@ def main(filenames):
 
     # use hist to set axis limits
     frame_hist = ROOT.TH1D("hist","",100,0,80)
-    frame_hist.SetMinimum(1e-10)
+    frame_hist.SetMinimum(1e-11)
     frame_hist.SetMaximum(3e-7)
     frame_hist.Draw("axis")
     frame_hist.Draw("axig same")
     frame_hist.SetYTitle("Pressure [Torr]")
     frame_hist.SetXTitle("Mass")
+    frame_hist.GetYaxis().SetTitleOffset(1.2)
 
     for i, filename in enumerate(filenames):
 
@@ -79,7 +80,10 @@ if __name__ == "__main__":
     #filenames.append("2016_10_07_before_PCB_samples_3.root")
     filenames.append("2016_10_07_before_PCB_samples_4.root")
     filenames.append("2016_10_10_AEM_PCB_sample_4.root")
-    filenames.append("2016_10_12_EEM_PCB_sample_1.root")
+    #filenames.append("2016_10_12_EEM_PCB_sample_1.root")
+    #filenames.append("2016_10_12_EEM_PCB_sample_2.root")
+    filenames.append("2016_10_13_EEM_PCB_sample_3.root")
+    #filenames.append("2016_10_13_EEM_PCB_sample_4.root") # scan speed 3
 
     if len(sys.argv) > 1:
         filenames = sys.argv[1:]
