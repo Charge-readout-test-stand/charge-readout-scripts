@@ -54,7 +54,7 @@ try:
     from ROOT import EXODecayTimeFit
 except ImportError:
     do_decay_time_fit = False
-    print "wfmProcessing.py : couldn't import EXODecayTimeFit"
+    print "wfmProcessing.py : couldn't import EXODecayTimeFit so not doing it (not an error)"
 
 #import struck_analysis_parameters
 from struck import struck_analysis_parameters # testing

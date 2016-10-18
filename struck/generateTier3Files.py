@@ -66,8 +66,7 @@ root_version = subprocess.check_output(['root-config --version'], shell=True)
 print "ROOT Version is", root_version
 
 print type(root_version)
-print root_version
-print '6.04/06' in root_version
+print "Current ROOT Version is", root_version
 
 isROOT6 = False
 if '6.1.0' in root_version or '6.04/06' in root_version:
@@ -1100,7 +1099,13 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 else:
                     #Have a noise_file get random event and wfm for that channel
                     noise_array = getattr(noise_tree, "wfm%i" % channel[i])
-                    for i_point in xrange(len(wfm)):
+                    print "Noise Length", len(noise_array)
+                    print "MC Length", len(wfm)
+                    #MC length is 801 why?????
+
+                    #for i_point in xrange(len(wfm)):
+                    for i_point in xrange(len(noise_array)):
+                        #print i_point
                         wfm[i_point] += noise_array[i_point] 
 
                 noise_val[i] = generator.Gaus() # an extra noise value for use with energy smearing
@@ -1443,13 +1448,15 @@ if __name__ == "__main__":
     print "Make Noise is set to", options.isMakeNoise
 
     noise_file = None
-    
-    test_noise = "/home/teststand/testing/test_noiselib/tier3_SIS3316Raw_20160922143510_9thLXe_126mvDT_cath_1700V_100cg_overnight__1-ngm.root"
-    
+    #test_noise = "/home/teststand/testing/test_noiselib/tier3_SIS3316Raw_20160922143510_9thLXe_126mvDT_cath_1700V_100cg_overnight__1-ngm.root"
+    test_noise = "/p/lscratchd/jewell6/MCData_9thLXe/tier3_SIS3316Raw_20160921080244_9thLXe_126mvDT_cath_1700V_100cg_overnight__1-ngm.root"
     if options.isMC:
-        if os.path.isfile(options.noise_file):
-            noise_file = options.noise_file
+        if options.noise_file is not None:
+            if os.path.isfile(options.noise_file):
+                noise_file = options.noise_file
         elif os.path.isfile(test_noise):
+            print "Using test Noise"
+            #raw_input()
             noise_file = test_noise
         else:
             noise_file = None
