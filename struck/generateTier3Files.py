@@ -65,8 +65,8 @@ root_version = subprocess.check_output(['root-config --version'], shell=True)
 
 print "ROOT Version is", root_version
 
-print type(root_version)
-print root_version
+#print type(root_version)
+#print root_version
 print '6.04/06' in root_version
 
 isROOT6 = False
@@ -1447,7 +1447,7 @@ if __name__ == "__main__":
     test_noise = "/home/teststand/testing/test_noiselib/tier3_SIS3316Raw_20160922143510_9thLXe_126mvDT_cath_1700V_100cg_overnight__1-ngm.root"
     
     if options.isMC:
-        if os.path.isfile(options.noise_file):
+        if noise_file is not None and os.path.isfile(options.noise_file):
             noise_file = options.noise_file
         elif os.path.isfile(test_noise):
             noise_file = test_noise
