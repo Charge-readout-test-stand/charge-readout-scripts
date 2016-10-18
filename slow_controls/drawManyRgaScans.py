@@ -26,13 +26,14 @@ def main(filenames):
     tfiles = []
 
     # use hist to set axis limits
-    frame_hist = ROOT.TH1D("hist","",100,0,45)
-    frame_hist.SetMinimum(1e-10)
+    frame_hist = ROOT.TH1D("hist","",100,0,80)
+    frame_hist.SetMinimum(1e-11)
     frame_hist.SetMaximum(3e-7)
     frame_hist.Draw("axis")
     frame_hist.Draw("axig same")
     frame_hist.SetYTitle("Pressure [Torr]")
     frame_hist.SetXTitle("Mass")
+    frame_hist.GetYaxis().SetTitleOffset(1.2)
 
     for i, filename in enumerate(filenames):
 
@@ -44,17 +45,17 @@ def main(filenames):
         tree = tfile.Get("tree")
         data_tree = tfile.Get("data_tree")
         data_tree.GetEntry(0)
-        noise_floor = data_tree.noise_floor # I think this is related to scan speed
-        if noise_floor == 0: continue
-        #if noise_floor == 2: continue
+        noise_floor = data_tree.noise_floor # scan speed
+        #if noise_floor == 0: continue # noise floor 0 seems to be scan speed 1 (slowest)
+        if noise_floor == 2: continue
 
         n_entries = tree.GetEntries()
         print "\t %i entries" % n_entries
         if n_entries < 1000: continue
 
         print "--> processing", i, filename
-        print i, line_style
-        print color
+        #print i, line_style
+        #print color
 
         tree.SetLineColor(color)
         n_drawn = tree.Draw("pressure:mass","","l same")
@@ -72,8 +73,17 @@ if __name__ == "__main__":
 
 
     filenames = []
-    filenames.append("2016_10_07_before_PCB_samples.root")
-    filenames.append("2016_10_10_AEM_PCB_sample_3.root")
+
+    # Rogers 4003 PCB samples for BNL ASIC tests:
+    #filenames.append("2016_10_07_before_PCB_samples.root")
+    #filenames.append("2016_10_07_before_PCB_samples_2.root")
+    #filenames.append("2016_10_07_before_PCB_samples_3.root")
+    filenames.append("2016_10_07_before_PCB_samples_4.root")
+    filenames.append("2016_10_10_AEM_PCB_sample_4.root")
+    #filenames.append("2016_10_12_EEM_PCB_sample_1.root")
+    #filenames.append("2016_10_12_EEM_PCB_sample_2.root")
+    filenames.append("2016_10_13_EEM_PCB_sample_3.root")
+    #filenames.append("2016_10_13_EEM_PCB_sample_4.root") # scan speed 3
 
     if len(sys.argv) > 1:
         filenames = sys.argv[1:]
