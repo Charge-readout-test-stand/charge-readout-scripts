@@ -2,7 +2,9 @@ import ROOT
 import numpy as np
 import matplotlib.pyplot as plt
 
-tfile = ROOT.TFile("tier3_SIS3316Raw_20160921080244_9thLXe_126mvDT_cath_1700V_100cg_overnight__1-ngm.root")
+#tfile = ROOT.TFile("tier3_SIS3316Raw_20160921080244_9thLXe_126mvDT_cath_1700V_100cg_overnight__1-ngm.root")
+
+tfile = ROOT.TFile("/p/lscratchd/jewell6/MCData_9thLXe/NoiseFiles/noiselib/NoiseLib_9thLXe.root")
 
 tree = tfile.Get("tree")
 events = tree.GetEntries()

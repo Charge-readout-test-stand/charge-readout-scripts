@@ -7,7 +7,8 @@ import struck_analysis_parameters
 def getRMS(calibrate):
 
     #filename = "/home/teststand/2016_08_15_8th_LXe_overnight/tier3_added/overnight8thLXe_v3.root"
-    filename = "/home/teststand/2016_09_13_pulser_tests/tier3_SIS3316Raw_20160913233650_digitizer_noise_tests__1-ngm.root"
+    #filename = "/home/teststand/2016_09_13_pulser_tests/tier3_SIS3316Raw_20160913233650_digitizer_noise_tests__1-ngm.root"
+    filename = "noiselib/NoiseLib_9thLXe.root"
 
     if len(sys.argv) > 1:
         filename = sys.argv[1]
@@ -153,6 +154,7 @@ def plotRMS():
     fname = "/home/teststand/2016_08_15_8th_LXe_overnight/tier3_added/RMSNoise_calibrated_overnight8thLXe_v3.root"
     fname = "/home/teststand/2016_08_15_8th_LXe_overnight/tier3_added/RMSNoise_calibrated_tier3_SIS3316Raw_20160913233650_digitizer_noise_tests__1-ngm.root"
     fname = "/home/teststand/2016_08_15_8th_LXe_overnight/tier3_added/RMSNoise_tier3_SIS3316Raw_20160913233650_digitizer_noise_tests__1-ngm.root"
+    fname = "noiselib/NoiseLib_9thLXe.root"
 
     if len(sys.argv) > 1:
         fname = sys.argv[1]

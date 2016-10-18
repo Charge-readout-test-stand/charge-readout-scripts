@@ -705,7 +705,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     # this -- we should also figure out if any channels are shaped...
 
     calibration_values = struck_analysis_parameters.calibration_values
+    data_calib = None
     if isMC:
+        data_calib = struck_analysis_parameters.calibration_values
         for n in np.arange(n_channels):
             #MC is given in number of e- so need to multiply by Wvalue to get eV
             #Need factor of 1e-3 to get keV
@@ -1105,8 +1107,10 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
                     #for i_point in xrange(len(wfm)):
                     for i_point in xrange(len(noise_array)):
-                        #print i_point
-                        wfm[i_point] += noise_array[i_point] 
+                        #print data_calib applies to the noise in data which is ADC units
+                        #convert to keV using current calib for data
+                        #than convert to #electrons with Wvalue in calibration for MC
+                        wfm[i_point] += (noise_array[i_point]*data_calib[i])/calibration[i]
 
                 noise_val[i] = generator.Gaus() # an extra noise value for use with energy smearing
 
@@ -1449,7 +1453,8 @@ if __name__ == "__main__":
 
     noise_file = None
     #test_noise = "/home/teststand/testing/test_noiselib/tier3_SIS3316Raw_20160922143510_9thLXe_126mvDT_cath_1700V_100cg_overnight__1-ngm.root"
-    test_noise = "/p/lscratchd/jewell6/MCData_9thLXe/tier3_SIS3316Raw_20160921080244_9thLXe_126mvDT_cath_1700V_100cg_overnight__1-ngm.root"
+    #test_noise = "/p/lscratchd/jewell6/MCData_9thLXe/tier3_SIS3316Raw_20160921080244_9thLXe_126mvDT_cath_1700V_100cg_overnight__1-ngm.root"
+    test_noise = "/p/lscratchd/jewell6/MCData_9thLXe/NoiseFiles/noiselib/NoiseLib_9thLXe.root"
     if options.isMC:
         if options.noise_file is not None:
             if os.path.isfile(options.noise_file):

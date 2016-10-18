@@ -42,7 +42,9 @@ for i_color, rgb in enumerate(rgb_json):
     colors.append(val)
 
 
-tfile = ROOT.TFile("tier3_SIS3316Raw_20160921080244_9thLXe_126mvDT_cath_1700V_100cg_overnight__1-ngm.root")
+#tfile = ROOT.TFile("tier3_SIS3316Raw_20160921080244_9thLXe_126mvDT_cath_1700V_100cg_overnight__1-ngm.root")
+
+tfile = ROOT.TFile("/p/lscratchd/jewell6/MCData_9thLXe/NoiseFiles/noiselib/NoiseLib_9thLXe.root")
 
 c1 = ROOT.TCanvas("c1")
 
