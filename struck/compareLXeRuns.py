@@ -28,7 +28,8 @@ drift_time_high = 9.0
 #drift_time_low = 0.0
 nsignals = 0
 # the usual:
-selection = "nsignals>=%i && rise_time_stop95_sum-trigger_time>%s && rise_time_stop95_sum-trigger_time<%s" % ( nsignals, drift_time_low, drift_time_high)
+selection = "nsignals>%i && rise_time_stop95_sum-trigger_time>%s && rise_time_stop95_sum-trigger_time<%s" % ( nsignals, drift_time_low, drift_time_high)
+selection = ""
 #selection = "nsignals==1 && rise_time_stop95_sum-8>8.5&&rise_time_stop95_sum-8<8.9&&rise_time_stop50_sum-8>7" # like Conti
 #selection += "&& rise_time_stop50_sum>8.0"
 #selection += " && signal_map[16]==0 && signal_map[7]==0 && signal_map[21]==0"
@@ -127,10 +128,10 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
     struck1_hist.Scale(scale_factor)
 
     if draw_cmd == "energy1_pz":
-        legend.AddEntry(struck_hist, "Data ch %i %s" % (channel, struck_analysis_parameters.channel_map[channel]), "f")
+        legend.AddEntry(struck_hist, "%s ch %i %s" % (struck_basename, channel, struck_analysis_parameters.channel_map[channel]), "f")
     else:
-        legend.AddEntry(struck_hist, "Data", "f")
-    legend.AddEntry(struck1_hist, "Data 2", "f")
+        legend.AddEntry(struck_hist, struck_basename, "f")
+    legend.AddEntry(struck1_hist, struck1_basename, "f")
 
     # this doesn't work well for low stats:
     #if draw_cmd != "energy1_pz":
