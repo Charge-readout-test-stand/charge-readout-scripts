@@ -19,6 +19,7 @@ for evi in xrange(events):
     for ich in xrange(32):
         wfm_array = getattr(tree, "wfm%i"%ich)
         wfm_current = np.array([wfm_array[wfmi] for wfmi in xrange(800)])
+        print ich, np.std(wfm_current[:200])
         plt.plot(wfm_current)
 
     plt.show()

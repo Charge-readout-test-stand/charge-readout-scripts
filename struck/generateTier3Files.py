@@ -51,6 +51,7 @@ import math
 import datetime
 import commands
 import numpy as np
+import copy
 from optparse import OptionParser
 
 import ROOT
@@ -707,11 +708,13 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     calibration_values = struck_analysis_parameters.calibration_values
     data_calib = None
     if isMC:
-        data_calib = struck_analysis_parameters.calibration_values
+        data_calib = copy.copy(struck_analysis_parameters.calibration_values)
+        print "Test calib", data_calib[7]
         for n in np.arange(n_channels):
             #MC is given in number of e- so need to multiply by Wvalue to get eV
             #Need factor of 1e-3 to get keV
             calibration_values[int(n)] = struck_analysis_parameters.Wvalue*1e-3
+        print "Test calib", data_calib[7]
 
     print "choosing calibration values..."
     for (i, i_channel) in enumerate(channels):
@@ -1101,8 +1104,6 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 else:
                     #Have a noise_file get random event and wfm for that channel
                     noise_array = getattr(noise_tree, "wfm%i" % channel[i])
-                    print "Noise Length", len(noise_array)
-                    print "MC Length", len(wfm)
                     #MC length is 801 why?????
 
                     #for i_point in xrange(len(wfm)):
@@ -1110,6 +1111,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                         #print data_calib applies to the noise in data which is ADC units
                         #convert to keV using current calib for data
                         #than convert to #electrons with Wvalue in calibration for MC
+                        #print "Calib ratio", data_calib[i], calibration[i]
                         wfm[i_point] += (noise_array[i_point]*data_calib[i])/calibration[i]
 
                 noise_val[i] = generator.Gaus() # an extra noise value for use with energy smearing
