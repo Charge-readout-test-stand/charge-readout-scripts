@@ -51,6 +51,7 @@ import math
 import datetime
 import commands
 import numpy as np
+import copy
 from optparse import OptionParser
 
 import ROOT
@@ -65,9 +66,8 @@ root_version = subprocess.check_output(['root-config --version'], shell=True)
 
 print "ROOT Version is", root_version
 
-#print type(root_version)
-#print root_version
-print '6.04/06' in root_version
+print type(root_version)
+print "Current ROOT Version is", root_version
 
 isROOT6 = False
 if '6.1.0' in root_version or '6.04/06' in root_version:
@@ -706,11 +706,15 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     # this -- we should also figure out if any channels are shaped...
 
     calibration_values = struck_analysis_parameters.calibration_values
+    data_calib = None
     if isMC:
+        data_calib = copy.copy(struck_analysis_parameters.calibration_values)
+        print "Test calib", data_calib[7]
         for n in np.arange(n_channels):
             #MC is given in number of e- so need to multiply by Wvalue to get eV
             #Need factor of 1e-3 to get keV
             calibration_values[int(n)] = struck_analysis_parameters.Wvalue*1e-3
+        print "Test calib", data_calib[7]
 
     print "choosing calibration values..."
     for (i, i_channel) in enumerate(channels):
@@ -1100,8 +1104,15 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 else:
                     #Have a noise_file get random event and wfm for that channel
                     noise_array = getattr(noise_tree, "wfm%i" % channel[i])
-                    for i_point in xrange(len(wfm)):
-                        wfm[i_point] += noise_array[i_point] 
+                    #MC length is 801 why?????
+
+                    #for i_point in xrange(len(wfm)):
+                    for i_point in xrange(len(noise_array)):
+                        #print data_calib applies to the noise in data which is ADC units
+                        #convert to keV using current calib for data
+                        #than convert to #electrons with Wvalue in calibration for MC
+                        #print "Calib ratio", data_calib[i], calibration[i]
+                        wfm[i_point] += (noise_array[i_point]*data_calib[i])/calibration[i]
 
                 noise_val[i] = generator.Gaus() # an extra noise value for use with energy smearing
 
@@ -1443,13 +1454,16 @@ if __name__ == "__main__":
     print "Make Noise is set to", options.isMakeNoise
 
     noise_file = None
-    
-    test_noise = "/home/teststand/testing/test_noiselib/tier3_SIS3316Raw_20160922143510_9thLXe_126mvDT_cath_1700V_100cg_overnight__1-ngm.root"
-    
+    #test_noise = "/home/teststand/testing/test_noiselib/tier3_SIS3316Raw_20160922143510_9thLXe_126mvDT_cath_1700V_100cg_overnight__1-ngm.root"
+    #test_noise = "/p/lscratchd/jewell6/MCData_9thLXe/tier3_SIS3316Raw_20160921080244_9thLXe_126mvDT_cath_1700V_100cg_overnight__1-ngm.root"
+    test_noise = "/p/lscratchd/jewell6/MCData_9thLXe/NoiseFiles/noiselib/NoiseLib_9thLXe.root"
     if options.isMC:
-        if noise_file is not None and os.path.isfile(options.noise_file):
-            noise_file = options.noise_file
+        if options.noise_file is not None:
+            if os.path.isfile(options.noise_file):
+                noise_file = options.noise_file
         elif os.path.isfile(test_noise):
+            print "Using test Noise"
+            #raw_input()
             noise_file = test_noise
         else:
             noise_file = None

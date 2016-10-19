@@ -29,18 +29,22 @@ for filename in filenames:
     # open file, grab tree:
     tfile = ROOT.TFile(filename)
     oldtree = tfile.Get("tree")
+    oldruntree = tfile.Get("runtree")
     print "\t %i entries in old tree" % oldtree.GetEntries()
     isMC = struck_analysis_parameters.is_tree_MC(oldtree)
     print "\t isMC:", isMC
 
     drift_time_low = struck_analysis_parameters.drift_time_threshold
-    drift_time_high= 9.0
+    drift_time_high = 9.0
 
     # construct some cuts...
     selections = []
     #selections.append("(nsignals==1)") # single-channel cut
     selections.append("(nsignals>0 || is_pulser)") 
+    #selections.append("(nsignals>0)") 
+    #selections.append("(SignalEnergy>50)")
     selections.append("(SignalEnergy>100)")
+    #selections.append("(SignalEnergy>200)")
     selections.append("(rise_time_stop95_sum-trigger_time>%.6f)" % drift_time_low)
     selections.append("(rise_time_stop95_sum-trigger_time<%.6f)" % drift_time_high)
     #selections.append(struck_analysis_cuts.get_drift_time_cut(isMC=isMC))
@@ -52,6 +56,7 @@ for filename in filenames:
     basename = os.path.basename(filename)
     newfile = ROOT.TFile("red_%s" % basename, "recreate")
     newtree = oldtree.CloneTree(0) # the zero prepares branches but doesn't copy anything yet
+    newruntree = oldtree.CloneTree()
     newtree.SetTitle(selections)
 
     # event list
@@ -106,6 +111,6 @@ for filename in filenames:
 
     print "\t done copying."
 
-    newfile.Write()
+    #newfile.Write()
     print "\t %i entries in new tree" % newtree.GetEntries()
 
