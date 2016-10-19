@@ -39,7 +39,7 @@ def main(EfieldHist):
 	Efieldhist = TH2D("Efieldhist", "", 2900, -145.475, 144.525, 1800, -80, 100)
         #Efieldhist = TH2D("Efieldhist", "", 2100, -105, 105, 250, -5, 20)
         #tree.Draw("y-10.54:x-125.475>>Efieldhist", "(sqrt(Ex*Ex + Ey*Ey)/100)*((sqrt(Ex*Ex + Ey*Ey)/100)>950)", "goff")
-        tree.Draw("y-10.54:x-125.475>>Efieldhist", "(sqrt(Ex*Ex + Ey*Ey)/100)", "goff")
+        tree.Draw("y-10.64:x-125.475>>Efieldhist", "(sqrt(Ex*Ex + Ey*Ey)/100)", "goff")
         tree.Write()
         Efieldhist.Write()
 	Efieldhist.SetXTitle("Rho (mm)")
@@ -60,6 +60,8 @@ def main(EfieldHist):
 	c1.Update()
 	print Efieldhist.GetBinContent(iBin)
 	raw_input("press enter")
+
+
 if __name__ == "__main__":
 
     if len(sys.argv) < 2:
