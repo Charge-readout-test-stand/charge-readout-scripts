@@ -170,7 +170,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 print "==> problem accessing tree -- skipping this file"
                 return
 
-    print "%i tree entries" % n_entries
+    print "%i entries in input tree" % n_entries
     reporting_period = 1000
     if isMC:
         reporting_period = 100
@@ -657,64 +657,66 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     # make a hist for calculating some averages
     hist = ROOT.TH1D("hist","",100, 0, pow(2,14))
     print "calculating mean baseline & baseline RMS for each channel in this file..."
-    for (i, i_channel) in enumerate(channels):
-        if isMC: continue
-        if isMakeNoise: continue
-        print "%i: ch %i" % (i, i_channel)
-        if isNGM:
-            print "\t skipping NGM for now..."
-            continue
-        
-        #if True:
-        if do_debug: 
-            print "\t skipping for debugging"
-            continue
+    if isMC: 
+        print "\t skipping MC for now..."
+    elif isMakeNoise: 
+        print "\t skipping for isMakeNoise"
+    elif isNGM:
+        print "\t skipping NGM for now..."
+    else: 
+        for (i, i_channel) in enumerate(channels):
+            print "%i: ch %i" % (i, i_channel)
             
-        # calculate avg baseline:
-        draw_command = "wfm >> hist"
-        selection = "Iteration$<%i && channel==%i" % (n_baseline_samples[0], i_channel)
-        if not is_tier1:
-            draw_command = "wfm%i >> hist" % i_channel
-        if isMC:
-            #Command that worked
-            #evtTree->Draw("ChannelWaveform[12]:Iteration$","Entry$==10 && Iteration$<300")
-            draw_command = "ChannelWaveform[%i] >> hist" % (i_channel)
-            selection = "Iteration$<%i" % (n_baseline_samples[0])
-        if isNGM:
-            draw_command = "_waveform >> hist"
-            selection = "Iteration$<%i && _channel==%i && _slot==%i" % (n_baseline_samples[0], i_channel%16, i_channel/16)
-        n_drawn = tree.Draw(
-            draw_command,
-            selection,
-            "goff"
-        )
-        baseline_mean_file[i] = hist.GetMean()
-        print "\t draw command: %s | selection: %s | n_drawn: %.2e" % (draw_command, selection, n_drawn)
-        print "\t file baseline mean:", baseline_mean_file[i]
+            #if True:
+            if do_debug: 
+                print "\t skipping for debugging"
+                continue
+                
+            # calculate avg baseline:
+            draw_command = "wfm >> hist"
+            selection = "Iteration$<%i && channel==%i" % (n_baseline_samples[0], i_channel)
+            if not is_tier1:
+                draw_command = "wfm%i >> hist" % i_channel
+            if isMC:
+                #Command that worked
+                #evtTree->Draw("ChannelWaveform[12]:Iteration$","Entry$==10 && Iteration$<300")
+                draw_command = "ChannelWaveform[%i] >> hist" % (i_channel)
+                selection = "Iteration$<%i" % (n_baseline_samples[0])
+            if isNGM:
+                draw_command = "_waveform >> hist"
+                selection = "Iteration$<%i && _channel==%i && _slot==%i" % (n_baseline_samples[0], i_channel%16, i_channel/16)
+            n_drawn = tree.Draw(
+                draw_command,
+                selection,
+                "goff"
+            )
+            baseline_mean_file[i] = hist.GetMean()
+            print "\t draw command: %s | selection: %s | n_drawn: %.2e" % (draw_command, selection, n_drawn)
+            print "\t file baseline mean:", baseline_mean_file[i]
 
-        # calculate baseline RMS:
-        # this is an appxorimation -- we can't calculate the real RMS until we
-        # know the baseline average for each wfm -- it would be better to do
-        # this in the loop over events
-        draw_command = "wfm-wfm[0] >> hist"
-        if not is_tier1:
-            draw_command = "wfm%i-wfm%i[0] >> hist" % (i_channel, i_channel)
-        if isMC:
-            #evtTree->Draw("(ChannelWaveform[12] - ChannelWaveform[12][300]):Iteration$",
-            #                "Entry$==10 && Iteration$<300")
-            draw_command = "(ChannelWaveform[%i] - ChannelWaveform[%i][0]):Iteration$" % (i_channel, i_channel)
-        if isNGM:
-            draw_command = "_waveform-_waveform[0] >> hist"
-        n_drawn = tree.Draw(
-            draw_command,
-            selection,
-            "goff"
-        )
-        baseline_rms_file[i] = hist.GetRMS()
-        print "\t draw command: %s | selection: %s | n_drawn: %.2e" % (draw_command, selection,n_drawn)
-        print "\t file baseline rms:", baseline_rms_file[i]
+            # calculate baseline RMS:
+            # this is an appxorimation -- we can't calculate the real RMS until we
+            # know the baseline average for each wfm -- it would be better to do
+            # this in the loop over events
+            draw_command = "wfm-wfm[0] >> hist"
+            if not is_tier1:
+                draw_command = "wfm%i-wfm%i[0] >> hist" % (i_channel, i_channel)
+            if isMC:
+                #evtTree->Draw("(ChannelWaveform[12] - ChannelWaveform[12][300]):Iteration$",
+                #                "Entry$==10 && Iteration$<300")
+                draw_command = "(ChannelWaveform[%i] - ChannelWaveform[%i][0]):Iteration$" % (i_channel, i_channel)
+            if isNGM:
+                draw_command = "_waveform-_waveform[0] >> hist"
+            n_drawn = tree.Draw(
+                draw_command,
+                selection,
+                "goff"
+            )
+            baseline_rms_file[i] = hist.GetRMS()
+            print "\t draw command: %s | selection: %s | n_drawn: %.2e" % (draw_command, selection,n_drawn)
+            print "\t file baseline rms:", baseline_rms_file[i]
 
-    print "\t done"
+        print "\t done"
 
     # decide whether 2V input was used for the digitizer or not. The
     # file-averaged baseline mean for channel 0 seems like a good indicator of
@@ -733,10 +735,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
     print "choosing calibration values..."
     for (i, i_channel) in enumerate(channels):
-        print "channel %i" % i_channel
 
         try:
-            print "\t original calibration value %.4e" % calibration_values[i_channel]
+            original_calibration = calibration_values[i_channel]
         except KeyError:
             print "\t no calibration data for ch %i" % i_channel
             continue
@@ -754,6 +755,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             if voltage_range_mV == 5000.0:
                 is_2Vinput[i] = 0
         elif is_2Vinput[i]: # don't do this for NGM -- seems like we treated is_2V differently in the past
+            print "channel %i" % i_channel
             print "\t channel %i used 2V input range" % i_channel
             print "\t dividing calibration by 2.5"
             calibration_values[i_channel] /= 2.5
@@ -764,10 +766,15 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
         if is_amplified[i] == 0 and not isMC:
             if i_channel != pmt_channel:
+                print "channel %i" % i_channel
                 calibration_values[i_channel] *= 4.0
                 print "\t multiplying calibration by 4"
                 print "\t channel %i is unamplified" % i_channel
-        print "\t channel %i calibration: %.4e" % (i_channel, calibration_values[i_channel])
+        if original_calibration != calibration_values[i_channel]:
+            print "\t original calibration value %.4e" % calibration_values[i_channel]
+            print "channel %i" % i_channel
+            print "\t channel %i calibration: %.4e" % (i_channel, calibration_values[i_channel])
+    print "\t done"
     
     for (i, i_channel) in enumerate(channels):
         calibration[i] = calibration_values[i_channel]
@@ -897,9 +904,6 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
     if do_debug:
         reporting_period = 1
-
-    print "%i entries" % n_entries
-
 
     run_tree.Fill() # this tree only has one entry with run-level entries
 
@@ -1532,14 +1536,18 @@ if __name__ == "__main__":
     #test_noise = "/home/teststand/testing/test_noiselib/tier3_SIS3316Raw_20160922143510_9thLXe_126mvDT_cath_1700V_100cg_overnight__1-ngm.root"
     #test_noise = "/p/lscratchd/jewell6/MCData_9thLXe/tier3_SIS3316Raw_20160921080244_9thLXe_126mvDT_cath_1700V_100cg_overnight__1-ngm.root"
     test_noise = "/p/lscratchd/jewell6/MCData_9thLXe/NoiseFiles/noiselib/NoiseLib_9thLXe.root"
+    test_noise_slac = "/nfs/slac/g/exo_data4/users/alexis4/test-stand/NoiseLib_9thLXe.root"
     if options.isMC:
         if options.noise_file is not None:
             if os.path.isfile(options.noise_file):
                 noise_file = options.noise_file
         elif os.path.isfile(test_noise):
-            print "Using test Noise"
+            print "Using LLNL test Noise"
             #raw_input()
             noise_file = test_noise
+        elif os.path.isfile(test_noise_slac):
+            print "Using SLAC test Noise"
+            noise_file = test_noise_slac
         else:
             noise_file = None
     
