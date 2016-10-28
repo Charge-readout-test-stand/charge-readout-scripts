@@ -66,8 +66,8 @@ root_version = subprocess.check_output(['root-config --version'], shell=True)
 
 print "ROOT Version is", root_version
 
-print type(root_version)
-print "Current ROOT Version is", root_version
+#print type(root_version)
+#print "Current ROOT Version is", root_version
 
 isROOT6 = False
 if '6.1.0' in root_version or '6.04/06' in root_version:
@@ -84,11 +84,9 @@ if os.getenv("EXOLIB") is not None and not isROOT6:
 microsecond = 1.0e3
 second = 1.0e9
 
+from ROOT import EXOTrapezoidalFilter
 from ROOT import EXOBaselineRemover
 from ROOT import EXODoubleWaveform
-from ROOT import EXORisetimeCalculation
-from ROOT import EXOSmoother
-from ROOT import EXOPoleZeroCorrection
 from ROOT import TObjString
 
 from array import array
@@ -142,8 +140,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     run_number = 0
 
     # a canvas for drawing, if debugging:
-    canvas = ROOT.TCanvas("tier3_canvas","")
-    canvas.SetGrid(1,1)
+    if not ROOT.gROOT.IsBatch():
+        canvas = ROOT.TCanvas("tier3_canvas","")
+        canvas.SetGrid(1,1)
 
     # open the root file and grab the tree
     root_file = ROOT.TFile(filename)
@@ -414,6 +413,11 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     run_tree.Branch('n_baseline_samples', n_baseline_samples, 'n_baseline_samples/i')
     n_baseline_samples[0] = int(baseline_average_time_microseconds*sampling_freq_Hz/1e6)
     print "n_baseline_samples:", n_baseline_samples[0]
+    baseline_remover = EXOBaselineRemover()
+    baseline_remover.SetBaselineSamples(2*n_baseline_samples[0])
+
+    trap_filter = EXOTrapezoidalFilter()
+    trap_filter.SetFlatTime(0.0)
 
     decay_time = array('d', [0]*n_channels_in_event) # double
     out_tree.Branch('decay_time', decay_time, 'decay_time[%i]/D' % n_channels_in_event)
@@ -629,6 +633,17 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
     energy_sum = array('d', [0.0])
     out_tree.Branch('energy_sum', energy_sum, 'energy_sum/D')
+
+    maxCurrent = array('d', [0.0])
+    out_tree.Branch('maxCurrent', maxCurrent, 'maxCurrent/D')
+    maxCurrent1 = array('d', [0.0])
+    out_tree.Branch('maxCurrent1', maxCurrent1, 'maxCurrent1/D')
+    maxCurrent2 = array('d', [0.0])
+    out_tree.Branch('maxCurrent2', maxCurrent2, 'maxCurrent2/D')
+    maxCurrent3 = array('d', [0.0])
+    out_tree.Branch('maxCurrent3', maxCurrent3, 'maxCurrent3/D')
+    maxCurrent4 = array('d', [0.0])
+    out_tree.Branch('maxCurrent4', maxCurrent4, 'maxCurrent4/D')
 
     #Store the total energy on all MC channels even ones that 
     #Are missing in real life
@@ -1254,7 +1269,6 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
                 canvas.Update()
                 val = raw_input("enter to continue (q=quit, b=batch, p=print) ")
-
                 print val
                 if (val == 'q' or val == 'Q'): sys.exit(1) 
                 if val == 'b': ROOT.gROOT.SetBatch(True)
@@ -1321,6 +1335,11 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             rise_time_stop90_sum[0] = 0.0
             rise_time_stop95_sum[0] = 0.0
             rise_time_stop99_sum[0] = 0.0
+            maxCurrent[0] = 0.0
+            maxCurrent1[0] = 0.0
+            maxCurrent2[0] = 0.0
+            maxCurrent3[0] = 0.0
+            maxCurrent4[0] = 0.0
 
         else:
             (
@@ -1344,14 +1363,70 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 label="Event %i Sum %i keV" % (n_events, SignalEnergy[0]),
             )
  
-            baseline_remover = EXOBaselineRemover()
-            baseline_remover.SetBaselineSamples(2*n_baseline_samples[0])
             baseline_remover.SetStartSample(wfm_length[0] - 2*n_baseline_samples[0] - 1)
             baseline_remover.Transform(sum_wfm)
             energy_sum[0] = baseline_remover.GetBaselineMean()
             energy_rms_sum[0] = baseline_remover.GetBaselineRMS()
-            sum_wfm.IsA().Destructor(sum_wfm)
+            baseline_remover.SetStartSample(0)
+            baseline_remover.Transform(sum_wfm)
 
+            trap_wfm = EXODoubleWaveform(sum_wfm)
+            trap_wfm2 = EXODoubleWaveform(sum_wfm)
+            trap_filter.SetRampTime(280) # ns
+            trap_filter.Transform(sum_wfm, trap_wfm)
+            maxCurrent[0] = trap_wfm.GetMaxValue()
+            trap_filter.SetRampTime(280*2) # ns
+            trap_filter.Transform(sum_wfm, trap_wfm2)
+            maxCurrent1[0] = trap_wfm2.GetMaxValue()
+            trap_filter.SetRampTime(280*3) # ns
+            trap_filter.Transform(sum_wfm, trap_wfm2)
+            maxCurrent2[0] = trap_wfm2.GetMaxValue()
+            trap_filter.SetRampTime(280*4) # ns
+            trap_filter.Transform(sum_wfm, trap_wfm2)
+            maxCurrent3[0] = trap_wfm2.GetMaxValue()
+            trap_filter.SetRampTime(280*5) # ns
+            trap_filter.Transform(sum_wfm, trap_wfm2)
+            maxCurrent4[0] = trap_wfm2.GetMaxValue()
+
+            if not ROOT.gROOT.IsBatch() and SignalEnergy[0]>200:
+                if signal_map[16]: continue # exclude noisy X1-12
+                hist = sum_wfm.GimmeHist("sum1")
+                hist.SetLineColor(ROOT.kRed)
+                hist.SetLineWidth(2)
+                hist.Draw()
+
+                hist2 = trap_wfm.GimmeHist("trap")
+                hist2.SetLineColor(ROOT.kBlue)
+                hist2.SetLineWidth(2)
+                hist2.Draw("same")
+
+                hist2 = trap_wfm2.GimmeHist("trap2")
+                hist2.SetLineColor(ROOT.kGreen+2)
+                hist2.SetLineWidth(2)
+                hist2.Draw("same")
+
+                canvas.Update()
+                print "maxCurrent:", maxCurrent[0]
+                print "SignalEnergy:", SignalEnergy[0]
+                print "A/E:", maxCurrent[0]/SignalEnergy[0]
+                print "nsignals:", nsignals[0]
+                for i_ch, val in enumerate(signal_map):
+                    if val: print "\t", i_ch, channel_map[i_ch]
+                print "rise_time_stop95_sum:", rise_time_stop95_sum[0]
+                print "rise_time_stop50_sum:", rise_time_stop50_sum[0]
+                print "95 - 50:", rise_time_stop95_sum[0]-rise_time_stop50_sum[0]
+                print sum_wfm.GetSamplingPeriod()
+                val = raw_input("enter to continue (q=quit, b=batch, p=print) ")
+                print val
+                if (val == 'q' or val == 'Q'): sys.exit(1) 
+                if val == 'b': ROOT.gROOT.SetBatch(True)
+                if val == 'p': canvas.Print("entry_%i_current_wfm_%s.pdf" % (i_entry, basename,))
+                canvas.Clear()
+
+            sum_wfm.IsA().Destructor(sum_wfm)
+            trap_wfm.IsA().Destructor(trap_wfm)
+            trap_wfm2.IsA().Destructor(trap_wfm2)
+            # end sum wfm calcs
 
         # check for bad conditions:
         high_baseline_rms = False
