@@ -203,6 +203,20 @@ def get_single_strip_cut(n_sigma=5.0, isMC=False):
     selection = "(%s==1)" % get_multiplicity_cmd(n_sigma=n_sigma, isMC=isMC)
     return selection
 
+def get_nstrips_events(nstrips=1):
+    """
+    select events that only include nstrips channels, e.g. only events that
+    include 1-strip channels
+    """
+    strips_excluded = []
+    for channel, val in struck_analysis_parameters.struck_to_mc_channel_map.items():
+        if len(val) != nstrips:
+            strips_excluded.append("signal_map[%i]" % channel)
+    strips_excluded = "+".join(strips_excluded)
+    strips_excluded = "(%s==0)" % strips_excluded
+    return strips_excluded
+
+
 def get_few_one_strip_channels(
     n_sigma=5.0,
     energy_var="energy1_pz",
@@ -425,7 +439,7 @@ def get_standard_cut(
         drift_time_high=drift_time_high)
     if nsignals != None:
         selection += " && nsignals==%i" % nsignals
-    selection += " && !is_bad $$ !is_pulser"
+    selection += " && !is_bad && !is_pulser"
     return selection
 
 
@@ -492,6 +506,9 @@ if __name__ == "__main__":
     print "\n get_few_channels_cmd: \n" + get_few_channels_cmd()
 
     print "\n get_drift_time_cut:", get_drift_time_cut(is_single_channel=True)
+
+    print "\n get_nstrips_events(nstrips=1):", get_nstrips_events(nstrips=1)
+    print "\n get_nstrips_events(nstrips=2):", get_nstrips_events(nstrips=2)
 
     print "\n get_standard_cut:", get_standard_cut()
 
