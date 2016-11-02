@@ -50,84 +50,38 @@ def get_negative_energy_cut(threshold=-20.0, isMC=False):
 
 
 def get_drift_time_selection(
-    energy_threshold=200.0,
+    energy_threshold=200.0, # not used anymore
     drift_time_low=struck_analysis_parameters.drift_time_threshold,
     drift_time_high=None,
-    isMC=False,
+    isMC=False, # not used anymore
     is_single_channel=False,
 ):
     """
     KEEP -- Select events with energy above threshold and long enough drift time
     """
 
+    selection = []
     if is_single_channel:
-        selection = []
         if drift_time_low != None:
             selection.append("(rise_time_stop95-trigger_time>%s)" % drift_time_low)
         if drift_time_high != None:
             selection.append("(rise_time_stop95-trigger_time<%s)" % drift_time_high)
-        selection = " && ".join(selection)
-        return selection
-
-
-    selection = []
-    if isMC:
-        charge_channels_to_use = struck_analysis_parameters.MCcharge_channels_to_use
     else:
-        charge_channels_to_use = struck_analysis_parameters.charge_channels_to_use
-    for channel, value  in enumerate(charge_channels_to_use): 
-        if value:
-            cut = []
-            cut2 = []
-            if drift_time_low != None:
-                cut1 = []
-                if energy_threshold != None:
-                    part = "(energy1_pz[%i]>%s)" % (
-                        channel, 
-                        energy_threshold,
-                    )
-                    cut1.append(part)
-                part = "(rise_time_stop95[%i]-trigger_time>%s)" % (
-                    channel, 
-                    drift_time_low,
-                )
-                cut1.append(part)
-                cut.append("&&".join(cut1))
-            if drift_time_high != None:
-                cut2 = []
-                if energy_threshold != None:
-                    part = "(energy1_pz[%i]>%s)" % (
-                        channel, 
-                        energy_threshold,
-                    )
-                    cut2.append(part)
-                part = "(rise_time_stop95[%i]-trigger_time<%s)" % (
-                    channel,
-                    drift_time_high,
-                )
-                cut2.append(part)
-                cut.append("&&".join(cut2))
-            #print cut
-            cut = "&&".join(cut)
-            selection.append(cut)
-            
-    # join each channel requirement with or
-    selection = " || ".join(selection)
 
-    # enclose in parentheses
-    selection = "(%s)" % selection
-
+        if drift_time_low != None:
+            selection.append("rise_time_stop95_sum-trigger_time >= %s" % drift_time_low)
+        if drift_time_high != None:
+            selection.append("rise_time_stop95_sum-trigger_time <= %s" % drift_time_high)
+     
+    selection = " && ".join(selection) # join each channel requirement with and
     return selection
 
 
-
-
-
 def get_drift_time_cut(
-    energy_threshold=200.0,
+    energy_threshold=200.0, # not used anymore
     drift_time_low=struck_analysis_parameters.drift_time_threshold,
     drift_time_high=None,
-    isMC=False,
+    isMC=False, # not used anymore
     is_single_channel=False,
 ):
     """
@@ -458,6 +412,21 @@ def pmt_chisq_per_dof(pmt_hist, wfm_hist, electronics_noise=0.0):
             chisq_per_dof += val*val/(error*error)
     return chisq_per_dof/i
 
+def get_standard_cut(
+    nsignals=1,
+    drift_time_low=struck_analysis_parameters.drift_time_threshold,
+    drift_time_high=struck_analysis_parameters.max_drift_time,
+    ):
+    """
+    standard cuts, current for 9th LXe
+    """
+    selection = get_drift_time_selection(
+        drift_time_low=drift_time_low,
+        drift_time_high=drift_time_high)
+    if nsignals != None:
+        selection += " && nsignals==%i" % nsignals
+    selection += " && !is_bad $$ !is_pulser"
+    return selection
 
 
 
@@ -523,5 +492,7 @@ if __name__ == "__main__":
     print "\n get_few_channels_cmd: \n" + get_few_channels_cmd()
 
     print "\n get_drift_time_cut:", get_drift_time_cut(is_single_channel=True)
+
+    print "\n get_standard_cut:", get_standard_cut()
 
 
