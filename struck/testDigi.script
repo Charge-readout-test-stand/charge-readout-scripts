@@ -1,0 +1,14 @@
+#!/bin/csh
+
+
+pushd /nfs/slac/g/exo/software/ROOT/rhel6/root/5.34.21/
+source bin/thisroot.csh
+
+cd /afs/slac.stanford.edu/u/xo/mjj46/Test_Stand/charge-readout-scripts/struck/
+
+setenv nEXODataDir /nfs/slac/g/exo_data4/users/mjewell/nEXO_MC/digitization_NEW/
+
+time python generateTier3Files.py --MC -D $nEXODataDir/Bi207_Full_Ralph/out/  $nEXODataDir/Bi207_Full_Ralph/out/digi1_Bi207_Full_Ralph_dcoef0.root > $nEXODataDir/Bi207_Full_Ralph/log/tier3_1.log
+
+
+

@@ -1,0 +1,29 @@
+XP4 (cold cathode gauge) pressure [Torr]: 1.11e-06 
+LN time remaining [hours]: -0.97 
+LN consumption rate [lb/hour]: 28.82 
+LN consumption rate [L/hour]: 16.19 
+LN total mass [lb]: -11.837 
+LN tare mass [lb]: 16.000 
+LN mass [lb]: -27.837 
+Xenon bottle mass [kg]: 94.933 
+Xenon cell capacitance [pF]: 0.000 
+HP2 HFE Pressure [torr]: 76.6 (1.5 psia, -13.2 psig)
+dP (Xenon XP3 - HFE XP2) [torr]: -81.8 
+RMS noise [mV]: 0.0 
+Xenon mass in cell (integrated mass flow) [g]: 94.9330 
+XP5 Vacuum system pressure (1k Torr Baratron) [Torr]: -3.65 
+XP3 Xenon system pressure (10k Torr Baratron) [Torr]: -5.14 
+Cu top [K]: 299.912 (used for temp control) 
+Cu bot [K]: 299.862 
+Cell top [K]: 299.113 
+Cell mid [K]: 298.771 
+Cell bot [K]: 298.976 
+Ambient [K]: 297.773 
+LN F/T inlet [K]: 298.643 
+LN F/T outlet [K]: 298.655 
+Xe bottle [K]: 296.964 
+Setpoint max [K]: 169.000 - 0.100 
+Setpoint min [K]: 155.000 + 0.100 
+Run duration: 08-07-15 03:16PM to 08-11-15 05:45PM 
+Plotting script run time: 2015-10-20 11:31:58.971732 
+Last LabView time stamp: 2015-08-11 17:45:26.098000 
