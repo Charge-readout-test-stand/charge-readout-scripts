@@ -199,8 +199,26 @@ Double_t TwoPCDsOneZ(Double_t *var, Double_t *par) {
 
   Double_t amplitude = OnePCDWithOptions(var, par, 0, false) + OnePCDWithOptions(var, par, 1, true); 
   return amplitude; 
-
 }
+
+Double_t TwoPCDs(Double_t *var, Double_t *par) {
+  // reponse of the strip (30 pads in x direction) to two ionizations 
+  // with the same z, different q, x, y. 
+  // 1 variable: t=time in microseconds
+  // 7 parameters:
+  //    0: x for PCD 0
+  //    1: y for PCD 0
+  //    2: z for PCDs 0 and 1
+  //    3: q for PCD 0
+  //    4: x for PCD 1
+  //    5: y for PCD 1
+  //    6: z for PCD 1
+  //    7: q for PCD 1
+
+  Double_t amplitude = OnePCDWithOptions(var, par, 0, false) + OnePCDWithOptions(var, par, 1, false); 
+  return amplitude; 
+}
+
 
 
 Double_t simple_ralphWF() {
