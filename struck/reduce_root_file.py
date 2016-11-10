@@ -41,6 +41,8 @@ for filename in filenames:
     selections = []
     #selections.append("(nsignals==1)") # single-channel cut
     selections.append("(nsignals>0 || is_pulser)") 
+    #selections.append("(nXsignals==1 && nYsignals==1)") # for twoSignals
+    #selections.append("(!is_pulser || !is_bad)") 
     #selections.append("(nsignals>0)") 
     #selections.append("(SignalEnergy>50)")
     selections.append("(SignalEnergy>100)")
@@ -55,6 +57,7 @@ for filename in filenames:
     # make new tree
     basename = os.path.basename(filename)
     newfile = ROOT.TFile("red_%s" % basename, "recreate")
+    #newfile = ROOT.TFile("twoSignals_%s" % basename, "recreate")
     newtree = oldtree.CloneTree(0) # the zero prepares branches but doesn't copy anything yet
     newruntree = oldtree.CloneTree()
     newtree.SetTitle(selections)
@@ -63,36 +66,6 @@ for filename in filenames:
     oldtree.Draw(">>elist", selections)
     elist = ROOT.gDirectory.Get("elist")
     print "\t %i entries to copy" % elist.GetN()
-
-
-    """
-    # turn on selected branches -- this isn't working... 
-    oldtree.SetBranchStatus("*",0) # first turn off all branches
-    oldtree.SetBranchStatus("SignalEnergy",1)
-    oldtree.SetBranchStatus("nsignals",1)
-    oldtree.SetBranchStatus("nXsignals",1)
-    oldtree.SetBranchStatus("nYsignals",1)
-    oldtree.SetBranchStatus("energy1_pz",1)
-    oldtree.SetBranchStatus("channel",1)
-    oldtree.SetBranchStatus("rise_time_stop95",1)
-
-    # sum wfm
-    oldtree.SetBranchStatus("rise_time_stop10_sum",1)
-    oldtree.SetBranchStatus("rise_time_stop20_sum",1)
-    oldtree.SetBranchStatus("rise_time_stop30_sum",1)
-    oldtree.SetBranchStatus("rise_time_stop40_sum",1)
-    oldtree.SetBranchStatus("rise_time_stop50_sum",1)
-    oldtree.SetBranchStatus("rise_time_stop60_sum",1)
-    oldtree.SetBranchStatus("rise_time_stop70_sum",1)
-    oldtree.SetBranchStatus("rise_time_stop80_sum",1)
-    oldtree.SetBranchStatus("rise_time_stop90_sum",1)
-    oldtree.SetBranchStatus("rise_time_stop95_sum",1)
-    oldtree.SetBranchStatus("rise_time_stop99_sum",1)
-    oldtree.SetBranchStatus("energy_rms_sum",1)
-
-    if isMC:
-        oldtree.SetBranchStatus("noise",1) # MC only 
-    """
 
     reporting_percent = 1
     reporting_period = elist.GetN() * reporting_percent / 100
