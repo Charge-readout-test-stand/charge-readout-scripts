@@ -4,11 +4,14 @@ Convert COMSOL output from Qidong's detailed simulation of cathode.
 Modified from Mike's script. 
 
 still to do:
-    * use "nearest" option for more accuracy
-    * get rid of points where field is 0 -- these are inside the solids
-    * choose appropriate step size -- same in x, y, z?
+* use "linear" option for more accuracy?
+* choose appropriate step size -- same in x, y, z?
 
 notes:
+* excluded points at z=18.16mm. Also exclude z=0?
+* 0.1mm step size gives memory error
+* "nearest" option: 0.2-mm grid takes 2.5 minutes 
+* "linear" option: 0.2-mm grid takes ~2 minutes 
 * "nearest" option: takes 5s for 1-mm spacing
 
 """
@@ -22,16 +25,20 @@ import ROOT
 ROOT.gROOT.SetBatch(True)
 
 # dimensions
-step_size = 0.1/1e3 # mm
+step_size = 0.2/1e3 # mm
+#step_size = 0.5/1e3 # mm
 half_width = 50.0/1e3 # mm
 #height = 18.2/1e3 # mm
 height = 20.0/1e3 # mm
 z_offset = 3.81/1e3
 
+option = "nearest"
+#option = "linear"
+
 nbinsx = int(half_width/step_size*2)+1
 nbinsz = int(height/step_size)+1
 
-print nbinsx, nbinsz
+print "nbinsx:", nbinsx, "nbinsz:", nbinsz
 
 
 # Qidong's sim on ubuntu DAQ
@@ -67,6 +74,9 @@ for i in xrange(len(old_x1)):
     if Ex[i] == 0 and Ey[i] == 0 and Ez[i] == 0:
         n_cut += 1
 
+    elif math.sqrt((old_x1[i]*1e3)**2 + (old_y1[i]*1e3)**2) > 80:
+        n_out_of_range += 1
+
     # points above the anode and below the cathode shouldn't be used
     elif old_z1[i] < z_offset or old_z1[i] >= 18.15/1e3+z_offset:
         n_out_of_range += 1
@@ -90,19 +100,18 @@ points = np.swapaxes(points_inverted, 0, 1)
 print "\tDone Invert"
 print "N points (should be ~1 million):", len(points)
 print "Dimensions (should be 3):", len(points[0])
-print points[0]
+print "points[0]:", points[0]
 
 print "Gridding it up..."
 #Function to get values on the grid
-#grid_E = griddata(points, EValues, (grid_x, grid_y, grid_z), method='linear')
-grid_E = griddata(points, EValues, (grid_x, grid_y, grid_z), method='nearest') # faster
+grid_E = griddata(points, EValues, (grid_x, grid_y, grid_z), method=option)
 print "\tGrid Made"
 
 print "grid size:"
 print len(grid_E), len(grid_E[0]), len(grid_E[0,0])
 
 basename = os.path.basename(file_name)
-tfile = ROOT.TFile("%s.root" % basename, "recreate")
+tfile = ROOT.TFile("%s_%s.root" % (basename, option), "recreate")
 
 # introduce an offset so that hist bin centers are at grid points
 offset = step_size*1e3/2.0
@@ -112,15 +121,25 @@ hist = ROOT.TH3F("hist","",
     nbinsx, -half_width*1e3-offset, half_width*1e3+offset, 
     nbinsz, -offset, height*1e3+offset)
 
-slice_hist = ROOT.TH2F("slice_hist","2D projection of E-field", 
+slice_hist = ROOT.TH2F("slice_hist",
+    "2D projection of E-field at y=0, %.1f-mm step size" % (step_size*1e3), 
     nbinsx, -half_width*1e3-offset, half_width*1e3+offset, 
     #nbinsx, -half_width*1e3-offset, half_width*1e3+offset, 
     nbinsz, -offset, height*1e3+offset)
 slice_hist.SetXTitle("x [mm]")
 slice_hist.SetYTitle("z [mm]")
 
+slice_histz = ROOT.TH2F("slice_histz",
+    "2D projection of E-field at z=%.1fmm, %.1f-mm step size" % (step_size*1e3, step_size*1e3), 
+    nbinsx, -half_width*1e3-offset, half_width*1e3+offset, 
+    nbinsx, -half_width*1e3-offset, half_width*1e3+offset) 
+slice_histz.SetXTitle("x [mm]")
+slice_histz.SetYTitle("y [mm]")
 
-print "\n\nx | y | z | E"
+
+
+print "filling hist..."
+#print "\n\nx | y | z | E"
 for nx in np.arange(len(grid_E)):
     for ny in np.arange(len(grid_E[nx])):
         for nz in np.arange(len(grid_E[nx,ny])):
@@ -142,17 +161,47 @@ for nx in np.arange(len(grid_E)):
             if ypos == 0.0: # fill slice_hist
                 slice_hist.Fill(xpos*1e3, zpos*1e3-z_offset*1e3, EField)
 
+            if math.fabs(zpos-z_offset-step_size)<step_size*0.5: # fill slice_hist
+                #print zpos*1e3
+                slice_histz.Fill(xpos*1e3, ypos*1e3, EField)
+
 # write hists to file
 hist.Write()
 slice_hist.Write()
+slice_histz.Write()
 
 # make a plot
 canvas = ROOT.TCanvas("canvas","")
 canvas.SetRightMargin(0.15)
 canvas.SetGrid()
+
 slice_hist.Draw("colz")
 canvas.Update()
-canvas.Print("%s_EField.pdf" % basename)
+canvas.Print("%s_EField_%s.pdf" % (basename, option))
+if not ROOT.gROOT.IsBatch():
+    raw_input("enter to continue ")
+
+slice_hist.SetAxisRange(-15, 15)
+slice_hist.SetAxisRange(0, 5, "Y")
+slice_hist.Draw("colz")
+canvas.Update()
+canvas.Print("%s_EField_%s_zoom.pdf" % (basename, option))
+
+if not ROOT.gROOT.IsBatch():
+    raw_input("enter to continue ")
+
+slice_histz.Draw("colz")
+canvas.Update()
+canvas.Print("%sz_EField_%s.pdf" % (basename, option))
+if not ROOT.gROOT.IsBatch():
+    raw_input("enter to continue ")
+
+print "entries in sliced hist:", slice_histz.GetEntries()
+slice_histz.SetAxisRange(-5, 15)
+slice_histz.SetAxisRange(-5, 15, "Y")
+slice_histz.Draw("colz")
+canvas.Update()
+canvas.Print("%sz_EField_%s_zoom.pdf" % (basename, option))
 
 if not ROOT.gROOT.IsBatch():
     raw_input("enter to continue ")
