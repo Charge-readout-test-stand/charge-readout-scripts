@@ -1,3 +1,6 @@
+"""
+this script converts COMSOL E-Field data to a tree. Takes ~ 5s on DAQ. 
+"""
 
 import os
 import sys
@@ -11,7 +14,7 @@ def get_output_filename(filename):
     """
     basename = os.path.basename(filename)
     basename = os.path.splitext(basename)[0]
-    output_filename = "%s.root" % basename
+    output_filename = "%s_tree.root" % basename
     print output_filename
     return output_filename
 
@@ -46,17 +49,6 @@ def make_tree(filename):
     output_file.Close()
 
 
-def make_hist(filename):
-    print "making hist from:", filename
-    return
-    output_filename = get_output_filename(filename)
-    output_filename = "hist_" + output_filename
-    output_file = TFile(output_filename, "recreate")
-
-
-
-
-
 if __name__ == "__main__":
 
     # Qidong's file on Ubuntu DAQ:
@@ -66,6 +58,4 @@ if __name__ == "__main__":
         filename = sys.argv[1]
 
     make_tree(filename)
-    make_hist(filename)
-
 
