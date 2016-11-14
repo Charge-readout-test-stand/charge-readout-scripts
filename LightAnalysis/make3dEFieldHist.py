@@ -33,6 +33,7 @@ def make_tree(filename):
         "Ey",
         "Ez",
         "V",
+        "E",
         ]
 
     branchDescriptor = ":".join(branchList)
@@ -52,7 +53,8 @@ def make_tree(filename):
 if __name__ == "__main__":
 
     # Qidong's file on Ubuntu DAQ:
-    filename = "/home/teststand/20161103_cathode_simulation/ExEyEz_V_large_simp"
+    #filename = "/home/teststand/20161103_cathode_simulation/ExEyEz_V_large_simp"
+    filename = "/home/teststand/2016_11_11_cathode_simulation/ExEyEz_V_ver2"
 
     if len(sys.argv) > 1:
         filename = sys.argv[1]
