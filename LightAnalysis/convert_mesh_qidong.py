@@ -26,9 +26,9 @@ import ROOT
 ROOT.gROOT.SetBatch(True)
 
 # dimensions
-step_size = 0.15/1e3 # mm
-half_width = 46.0/1e3 # mm
-height = 18.15/1e3 # mm
+step_size = 0.15/1e3 # m
+half_width = 46.05/1e3 # m
+height = 18.15/1e3 # m
 z_offset = 3.81/1e3
 
 method = "nearest"
@@ -39,9 +39,9 @@ nbinsz = int(height/step_size)+1
 
 print "nbinsx:", nbinsx, "nbinsz:", nbinsz
 
-
 # Qidong's sim on ubuntu DAQ
-file_name = "/home/teststand/20161103_cathode_simulation/ExEyEz_V_large_simp"
+#file_name = "/home/teststand/20161103_cathode_simulation/ExEyEz_V_large_simp"
+file_name = "/home/teststand/2016_11_11_cathode_simulation/ExEyEz_V_ver2"
 
 # x, y, z are in meters. E-field components are in V/m. 
 
@@ -54,7 +54,7 @@ grid_x, grid_y, grid_z = np.mgrid[
 
 #Qidong's z is our y
 print "Loading text file..."
-old_x1,old_z1,old_y1,Ex,Ey,Ez,V = np.loadtxt(file_name, unpack = True, comments = "%")
+old_x1,old_z1,old_y1,Ex,Ey,Ez,V,E = np.loadtxt(file_name, unpack = True, comments = "%")
 print "\tLoaded"
 print "nPoints = ", len(old_x1)
 
@@ -161,7 +161,7 @@ for nx in np.arange(len(grid_E)):
 
             hist.SetBinContent(ibin, EField) # Set hist bin content
 
-            if math.fabs(ypos-0.0)<step_size*0.5: # fill slice_hist
+            if math.fabs(ypos)<step_size*0.5: # fill slice_hist
                 slice_hist.Fill(xpos*1e3, zpos*1e3-z_offset*1e3, EField)
 
             if math.fabs(zpos-z_offset-step_size)<step_size*0.5: # fill z slice_hist
