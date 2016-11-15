@@ -255,6 +255,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             print "file exists!"
             return 0
     out_file = ROOT.TFile(out_filename, "recreate")
+    gout = out_file.GetDirectory("")
     out_tree = ROOT.TTree("tree", "%s processed wfm tree" % basename)
     out_tree.SetLineColor(ROOT.kBlue)
     out_tree.SetLineWidth(2)
@@ -890,6 +891,19 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     energy_rms1_pz = array('d', [0]*n_channels_in_event) # double
     out_tree.Branch('energy_rms1_pz', energy_rms1_pz, 'energy_rms1_pz[%i]/D' % n_channels_in_event)
     
+    #matched filter and derivitive filter
+    dfilter_max = array('d', [0]*n_channels_in_event)
+    out_tree.Branch('dfilter_max', dfilter_max, 'dfilter_max[%i]/D' % n_channels_in_event)
+    dfilter_time = array('d', [0]*n_channels_in_event)
+    out_tree.Branch('dfilter_time', dfilter_time, 'dfilter_time[%i]/D' % n_channels_in_event)
+
+    mfilter_max = array('d', [0]*n_channels_in_event)
+    out_tree.Branch('mfilter_max', mfilter_max, 'mfilter_max[%i]/D' % n_channels_in_event)
+    mfilter_time = array('d', [0]*n_channels_in_event)
+    out_tree.Branch('mfilter_time', mfilter_time, 'mfilter_time[%i]/D' % n_channels_in_event)
+
+    
+
     #Decay Constat Fit in WFM Processing
     decay_fit = array('d', [0]*n_channels_in_event) # double
     out_tree.Branch('decay_fit', decay_fit, 'decay_fit[%i]/D' % n_channels_in_event)
@@ -1168,7 +1182,11 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 decay_fit[i],
                 decay_error[i],
                 decay_chi2[i],
-                signal_map[i]
+                signal_map[i],
+                dfilter_max[i],
+                dfilter_time[i],
+                mfilter_max[i],
+                mfilter_time[i]
             ) = wfmProcessing.get_wfmparams(
                 exo_wfm=exo_wfm, 
                 wfm_length=wfm_length[i], 
@@ -1177,6 +1195,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 calibration=calibration[i], 
                 decay_time=decay_time[i], 
                 is_pmtchannel=channel[i]==pmt_channel,
+                channel=channel[i],
                 isMC=isMC,
                 label=label,
             )
@@ -1487,6 +1506,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         i_entry += 1
         # end loop over tree entries
     
+    gout.cd("")
+    #out_file = ROOT.TFile(out_filename, "recreate")
     run_tree.Write()
 
     print "done processing %i events in %.1e seconds" % (

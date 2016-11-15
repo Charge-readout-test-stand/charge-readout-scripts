@@ -18,6 +18,7 @@ from ROOT import TLegend
 from ROOT import TH1D
 from ROOT import TLine
 from ROOT import gSystem
+from ROOT import TFile
 from ROOT import *
 
 # workaround for systems without EXO offline / CLHEP
@@ -48,6 +49,7 @@ from ROOT import EXOSmoother
 from ROOT import EXOPoleZeroCorrection
 from ROOT import EXOExtremumFinder
 from ROOT import EXOTrapezoidalFilter
+from ROOT import EXOMatchedFilter
 
 do_decay_time_fit = True
 try:
@@ -148,6 +150,85 @@ def create_outfile_name(filename, isMC=False):
     return out_filename
 
 
+def ApplyFilter(exowfm, channel, wfm_length, filter_type="deriv"):
+
+    # Load the derivative template.
+    # function is the deriv of gaussian x*exp(-x^2/2*sigma^2)
+    # sigma is the width and sets the 
+    tfile = TFile(" ~/software/charge-readout-scripts/struck/templateWF_MatchedFilter.root")
+    template = None
+    #print tfile.ls()
+    if filter_type == "matched":
+        template = tfile.Get("CollectionTemplate")
+    elif filter_type == "deriv":
+        template = tfile.Get("DerivTemplate")
+    else:
+        print "Not valid type"
+        return 0.0, 0.0
+
+    template.SetSamplingFreq(exowfm.GetSamplingFreq())
+    NoisePSFile = TFile("~/testing/test_matchfilter/AvgNoisePS.root")
+    
+    #Bad channels
+    if channel == 16 or channel == 27:
+        return 0.0, 0.0
+ 
+    avg_noise = NoisePSFile.Get("PSwfm%i" % channel)
+    avg_noise.SetSamplingFreq(exowfm.GetSamplingFreq())
+    
+
+    matched_result = exowfm.Clone() #create shell for the result
+    temp_offset = 0 #no offseet
+ 
+    #print exowfm.GetLength() , template.GetLength(), wfm_length
+    #print exowfm.GetSamplingFreq(), template.GetSamplingFreq()
+
+    #Apply the filter which is just a convolution
+    match_filter = EXOMatchedFilter()
+    match_filter.SetNoisePowerSqrMag(avg_noise)
+    match_filter.SetTemplateToMatch(template, int(wfm_length), temp_offset)
+    match_filter.Transform(matched_result)
+    
+    baseline_remover = EXOBaselineRemover()
+    baseline_remover.SetBaselineSamples(150)
+    baseline_remover.SetStartSample(50)
+    baseline_remover.Transform(matched_result)
+    baseline_rms = baseline_remover.GetBaselineRMS()
+
+    #Need max/min, sigma, sign
+    #print "Max", matched_result.GetMaxValue()/baseline_rms, matched_result.GetMaxTime()
+    #print "Min", matched_result.GetMinValue()/baseline_rms, matched_result.GetMinTime()
+    
+    #The WF is padded on the sides so it gets negative sometimes
+    #only care about the center
+    matched_result_trim = matched_result.SubWaveform(50,750)
+    ratio_max = matched_result_trim.GetMaxValue()/baseline_rms
+    time_max  = matched_result_trim.GetMaxTime()
+    if abs(matched_result_trim.GetMinValue()) > matched_result_trim.GetMaxValue():
+        ratio_max = matched_result_trim.GetMinValue()/baseline_rms
+        time_max =  matched_result_trim.GetMinTime()
+
+    #if not gROOT.IsBatch():
+    if False:
+    #if True and filter_type=="deriv" and abs(ratio_max) > 10.0:
+        #Gets negative on hits since the edges are negtive
+        gROOT.SetBatch(False)
+        print ratio_max, matched_result_trim.GetMinValue()/baseline_rms, matched_result_trim.GetMaxValue()/baseline_rms 
+        c2 = TCanvas("can","")
+        exowfm.GimmeHist().Draw("L")
+        c2.Update()
+        raw_input()
+
+        matched_result_trim.SubWaveform(50,750).GimmeHist().Draw("L")
+        c2.Update()
+        raw_input()
+        gROOT.SetBatch(True)
+    
+    tfile.Close()
+    return ratio_max, time_max
+    
+
+
 def get_wfmparams(
     exo_wfm, 
     wfm_length, 
@@ -156,6 +237,7 @@ def get_wfmparams(
     calibration, 
     decay_time, 
     is_pmtchannel,
+    channel,
     isMC=False,
     label="",
 ):
@@ -280,6 +362,18 @@ def get_wfmparams(
             #PMT can't be a signal because by default it has to have triggered
             isSignal = 1
 
+    
+    #Apply Matched Filter currently in testing
+    if not is_pmtchannel:
+    #if False:
+        dfilter_max, dfilter_time = ApplyFilter(energy_wfm, channel, wfm_length, filter_type="deriv")
+        mfilter_max, mfilter_time = ApplyFilter(energy_wfm, channel, wfm_length, filter_type="matched")
+    else:
+        dfilter_max  =  0.0 
+        dfilter_time = 0.0
+        mfilter_max  =  0.0
+        mfilter_time = 0.0
+
     if is_pmtchannel: # for PMT channel, use GetMaxValue()
         extremum_finder = EXOExtremumFinder()
         extremum_finder.SetFindMaximum(True)
@@ -363,7 +457,11 @@ def get_wfmparams(
         decay_fit,
         decay_error,
         decay_chi2,
-        isSignal
+        isSignal,
+        dfilter_max,
+        dfilter_time,
+        mfilter_max,
+        mfilter_time
     )
 
 def do_risetime_calc(rise_time_calculator, threshold_percent, wfm, max_val, period):
