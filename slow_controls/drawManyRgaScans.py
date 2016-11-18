@@ -26,7 +26,7 @@ def main(filenames):
     tfiles = []
 
     # use hist to set axis limits
-    frame_hist = ROOT.TH1D("hist","",100,0,80)
+    frame_hist = ROOT.TH1D("hist","",100,0,165)
     frame_hist.SetMinimum(1e-11)
     frame_hist.SetMaximum(3e-7)
     frame_hist.Draw("axis")
@@ -47,7 +47,7 @@ def main(filenames):
         data_tree.GetEntry(0)
         noise_floor = data_tree.noise_floor # scan speed
         #if noise_floor == 0: continue # noise floor 0 seems to be scan speed 1 (slowest)
-        if noise_floor == 2: continue
+        #if noise_floor == 2: continue
 
         n_entries = tree.GetEntries()
         print "\t %i entries" % n_entries
@@ -66,6 +66,10 @@ def main(filenames):
     legend.Draw()
     canvas.Update()
     canvas.Print("RGA_scans.pdf")
+    raw_input("enter to continue...")
+    frame_hist.SetAxisRange(0,65)
+    canvas.Update()
+    canvas.Print("RGA_scans_zoom.pdf")
     raw_input("enter to continue...")
 
 
