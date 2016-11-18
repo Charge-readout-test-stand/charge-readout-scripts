@@ -535,6 +535,10 @@ def main(
             full_bottle_mass = 94.6
             empty_bottle_mass = full_bottle_mass - 6.5
 
+        if time_stamp > 3562286046: # after new hanging bottles
+            full_bottle_mass = 55.05
+            empty_bottle_mass = full_bottle_mass - 8.75
+
         TC0.append(float(split_line[1]))
         TC1.append(float(split_line[2]))
         TC2.append(float(split_line[3]))
