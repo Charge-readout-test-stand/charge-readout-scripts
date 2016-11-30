@@ -539,6 +539,10 @@ def main(
             full_bottle_mass = 55.05
             empty_bottle_mass = full_bottle_mass - 8.75
 
+        if time_stamp > 3563225481: # after adding LN level sensor
+            full_bottle_mass = 55.54
+            empty_bottle_mass = full_bottle_mass - 8.75
+
         TC0.append(float(split_line[1]))
         TC1.append(float(split_line[2]))
         TC2.append(float(split_line[3]))
@@ -644,6 +648,7 @@ def main(
         try:
             mass_flow_valve_closed.append(float(split_line[23+column_offset]))
         except:
+            mass_flow_valve_closed.append(0.0)
             pass
 
         # end loop over lines in input file
@@ -964,7 +969,11 @@ def main(
       plt.setp(mfline1, color = 'b', linewidth = linewidth, 
       label="Mass flow rate: %.2f g/min" % mass_flow_rate[last_index])
       ymin, ymax = plt.gca().get_ylim() # record y axis limits now
-      label_val = mass_flow_valve_closed[last_index]
+      label_val = -1.0
+      try:
+          label_val = mass_flow_valve_closed[last_index]
+      except IndexError:
+          label_val = -1
       mass_flow_valve_closed = np.array(mass_flow_valve_closed[first_index:last_index])
       mass_flow_valve_closed[ mass_flow_valve_closed==0 ] = np.nan #if valve state is closed, set to nan so point won't be drawn
       mfline1 = plt.plot(time_hours[first_index:last_index],np.array(mass_flow_rate[first_index:last_index])*mass_flow_valve_closed)
