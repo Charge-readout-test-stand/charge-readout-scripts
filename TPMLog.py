@@ -1004,10 +1004,10 @@ def main(
       plt.figure()
       plt.grid(b=True)
       line = plt.plot(time_hours[first_index:last_index], xenon_bottle_pressure[first_index:last_index])
-      plt.setp(line, color = 'b', linewidth=linewidth, 
-          label="Xenon bottle pressure: %.1f psia = %i torr" %
+      plt.title("Xenon bottle pressure: %.1f psia = %i torr" %
           (xenon_bottle_pressure[last_index],
           xenon_bottle_pressure[last_index]*51.7149))
+      plt.setp(line, color = 'b', linewidth=linewidth) 
       plt.xlabel('Time [hours] %s' % time_string)
       plt.ylabel('Pressure [psia]')
       plt.savefig(xeppath)
