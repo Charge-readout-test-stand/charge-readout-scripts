@@ -41,6 +41,7 @@ Plot names = DataType_Date_Index*.jpeg
 28: LN tare mass (hooks + dewar tare) [lbs]
 29: Recovery LN valve after 30 Sept 2016 (RMS noise [mV] from 19 Mar 2015 to 30 Sept 2016)
 30: mass flow valve closed
+31: hanging xenon bottle pressure [psia]
 """
 
 
@@ -381,6 +382,7 @@ def main(
     ppath3 = os.path.join(directory, "04-Pressure-Baratrons_%s.%s" % (basename, filetype))
     ppath4 = os.path.join(directory, "04-Pressure-Baratrons-Recent_%s.%s" % (basename, filetype))
     mfrpath = os.path.join(directory, "09-MassFlowRate_%s.%s" % (basename, filetype))
+    xeppath = os.path.join(directory, "10-XenonBottlePressure_%s.%s" % (basename, filetype))
     ccgpath = os.path.join(directory, "91-CCGauge_%s.%s" % (basename, filetype))
     rccgpath = os.path.join(directory, "91-CCGauge-recent_%s.%s" % (basename, filetype))
     ccgpath_log = os.path.join(directory, "92-CCGauge-log_%s.%s" % (basename, filetype))
@@ -427,6 +429,7 @@ def main(
     hfe_pressure = []
     recovery_LN_valve = []
     mass_flow_valve_closed = []
+    xenon_bottle_pressure = []
 
     # open the input file
     testfile = file(filename)
@@ -649,6 +652,12 @@ def main(
             mass_flow_valve_closed.append(float(split_line[23+column_offset]))
         except:
             mass_flow_valve_closed.append(0.0)
+            pass
+
+        try:
+            xenon_bottle_pressure.append(float(split_line[24+column_offset]))
+        except:
+            xenon_bottle_pressure.append(0.0)
             pass
 
         # end loop over lines in input file
@@ -989,6 +998,20 @@ def main(
 
       plt.savefig(mfrpath)
       print "printed %s" % mfrpath
+      plt.clf()
+
+    if len(xenon_bottle_pressure) > 0:
+      plt.figure()
+      plt.grid(b=True)
+      line = plt.plot(time_hours[first_index:last_index], xenon_bottle_pressure[first_index:last_index])
+      plt.setp(line, color = 'b', linewidth=linewidth, 
+          label="Xenon bottle pressure: %.1f psia = %i torr" %
+          (xenon_bottle_pressure[last_index],
+          xenon_bottle_pressure[last_index]*51.7149))
+      plt.xlabel('Time [hours] %s' % time_string)
+      plt.ylabel('Pressure [psia]')
+      plt.savefig(xeppath)
+      print "printed %s" % xeppath
       plt.clf()
 
     if len(ccg_Pressure) > 0:
