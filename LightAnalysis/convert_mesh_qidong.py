@@ -29,10 +29,10 @@ ROOT.gROOT.SetBatch(True)
 step_size = 0.15/1e3 # m
 half_width = 46.05/1e3 # m
 height = 18.15/1e3 # m
-z_offset = 3.81/1e3
+z_offset = 3.8/1e3
 
-method = "nearest"
-#method = "linear"
+#method = "nearest"
+method = "linear"
 
 nbinsx = int(half_width/step_size*2)+1
 nbinsz = int(height/step_size)+1
@@ -71,9 +71,11 @@ n_out_of_z_range = 0
 for i in xrange(len(old_x1)):
 
     # points where E is zero are in the solid
-    if Ex[i] == 0 and Ey[i] == 0 and Ez[i] == 0:
+    #if Ex[i] == 0 and Ey[i] == 0 and Ez[i] == 0:
+    if E[i] == 0:
         n_cut += 1
 
+    # radius cut
     #elif math.sqrt(old_x1[i]**2 + old_y1[i]**2) > math.sqrt(2)*half_width:
     #    n_out_of_r_range += 1
 
@@ -84,7 +86,9 @@ for i in xrange(len(old_x1)):
         x1.append(old_x1[i])
         y1.append(-old_y1[i]) # I don't think it matters, but since z -> y
         z1.append(old_z1[i])
-        EValues.append(math.sqrt(Ex[i]**2 + Ey[i]**2 +  Ez[i]**2))
+        #EValues.append(math.sqrt(Ex[i]**2 + Ey[i]**2 +  Ez[i]**2))
+        EValues.append(math.fabs(E[i]))
+
 print "\t%i cut points" % n_cut
 print "\t%i points out of r range" % n_out_of_r_range
 print "\t%i points out of z range" % n_out_of_z_range
@@ -112,7 +116,7 @@ print "grid size:"
 print "\t x: %i | y: %i | z: %i" % (len(grid_E), len(grid_E[0]), len(grid_E[0,0]))
 
 basename = os.path.basename(file_name)
-tfile = ROOT.TFile("%s_%s_%imicron.root" % (basename, method, step_size*1e6), "recreate")
+tfile = ROOT.TFile("%s_%s_%imicron_%imicronZoffset.root" % (basename, method, step_size*1e6, z_offset*1e6), "recreate")
 
 # introduce an offset so that hist bin centers are at grid points
 offset = step_size*1e3/2.0
@@ -181,11 +185,12 @@ canvas.SetRightMargin(0.15)
 canvas.SetGrid()
 
 # draw y slice
-plot_name = "%s_EField_%s_%imicron" % (basename, method, step_size*1e6)
+plot_name = "%s_EField_%s_%imicron_%imicronZOffset" % (basename, method, step_size*1e6, z_offset*1e6)
 print "entries in slice_hist:", slice_hist.GetEntries()
 slice_hist.Draw("colz")
 canvas.Update()
-canvas.Print("%s.pdf" % plot_name)
+#canvas.Print("%s.pdf" % plot_name)
+canvas.Print("%s.png" % plot_name)
 if not ROOT.gROOT.IsBatch():
     raw_input("enter to continue ")
 
@@ -194,15 +199,17 @@ slice_hist.SetAxisRange(-15, 15)
 slice_hist.SetAxisRange(0, 5, "Y")
 slice_hist.Draw("colz")
 canvas.Update()
-canvas.Print("%s_zoom.pdf" % plot_name)
+#canvas.Print("%s_zoom.pdf" % plot_name)
+canvas.Print("%s_zoom.png" % plot_name)
 if not ROOT.gROOT.IsBatch():
     raw_input("enter to continue ")
 
 # draw z slice
-plot_name = "%sz_EField_%s_%imicron" % (basename, method, step_size*1e6)
+plot_name = "%sz_EField_%s_%imicron_%imicronZOffset" % (basename, method, step_size*1e6, z_offset*1e6)
 slice_histz.Draw("colz")
 canvas.Update()
-canvas.Print("%s.pdf" % plot_name)
+#canvas.Print("%s.pdf" % plot_name)
+canvas.Print("%s.png" % plot_name)
 if not ROOT.gROOT.IsBatch():
     raw_input("enter to continue ")
 
@@ -212,7 +219,8 @@ slice_histz.SetAxisRange(-5, 15)
 slice_histz.SetAxisRange(-5, 15, "Y")
 slice_histz.Draw("colz")
 canvas.Update()
-canvas.Print("%s_zoom.pdf" % plot_name)
+#canvas.Print("%s_zoom.pdf" % plot_name)
+canvas.Print("%s_zoom.png" % plot_name)
 if not ROOT.gROOT.IsBatch():
     raw_input("enter to continue ")
 
