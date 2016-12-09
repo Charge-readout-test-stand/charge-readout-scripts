@@ -78,16 +78,25 @@ if __name__ == "__main__":
 
     filenames = []
 
+
+    # empty chamber:
+    filenames.append("2016_10_07_before_PCB_samples_4.root")
+
     # Rogers 4003 PCB samples for BNL ASIC tests:
     #filenames.append("2016_10_07_before_PCB_samples.root")
     #filenames.append("2016_10_07_before_PCB_samples_2.root")
     #filenames.append("2016_10_07_before_PCB_samples_3.root")
-    filenames.append("2016_10_07_before_PCB_samples_4.root")
-    filenames.append("2016_10_10_AEM_PCB_sample_4.root")
+    #filenames.append("2016_10_10_AEM_PCB_sample_4.root") # good
     #filenames.append("2016_10_12_EEM_PCB_sample_1.root")
     #filenames.append("2016_10_12_EEM_PCB_sample_2.root")
-    filenames.append("2016_10_13_EEM_PCB_sample_3.root")
+    filenames.append("2016_10_13_EEM_PCB_sample_3.root") # good
     #filenames.append("2016_10_13_EEM_PCB_sample_4.root") # scan speed 3
+
+    # Dec 2016 BNL Kapton sample
+    #filenames.append("2016_12_07_16_34_kapton_sample.root")
+    #filenames.append("2016_12_08_12_22_kapton_sample.root")
+    filenames.append("2016_12_08_12_40_kapton_sample.root")
+
 
     if len(sys.argv) > 1:
         filenames = sys.argv[1:]
