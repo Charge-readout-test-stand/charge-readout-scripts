@@ -66,6 +66,8 @@ def main(filename):
 
     if n_cols > len(branchList): 
         branchList.append("massFlowValveClosed")
+    if n_cols > len(branchList): 
+        branchList.append("pXeBottles")
 
     # for any extra columns, add some extra arbitrary variable names to make
     # this work:
