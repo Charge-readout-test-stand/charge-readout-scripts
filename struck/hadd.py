@@ -2,12 +2,11 @@
 Add all tier3 together to make 1 file
 
 add files with hadd, then hadd -O to optimize branches. 
-
 """
 
 import commands
 
-basename = "overnight_9thLXe_v3.root"
+basename = "overnight_9thLXe_v4.root"
 no_opt_name = "no_opt_%s" % basename
 
 # hadd, but don't reoptimize TTree branches:
