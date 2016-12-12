@@ -18,8 +18,11 @@ import submitPythonJobsLLNL
 def process_files(filenames):
 
     i_loop = 0
+    script_name = "%s.py" % os.path.splitext(inspect.getfile(generateTier3Files))[0]
+    filenames.sort()
+
     while True:
-        print "---> loop %i: %i files to process" % (i_loop, len(filenames))
+        print "---> loop %i: %i tier1 files to consider" % (i_loop, len(filenames))
 
         # check whether this user already has any jobs in the queue
         cmd = "showq | grep %s | wc -l" % os.getlogin()
@@ -28,13 +31,13 @@ def process_files(filenames):
         if n_jobs > 0:
             print "\t ==> %i jobs already in the queue." % n_jobs
 
-        print "--> checking %i files" % len(filenames)
         n_submitted = 0
-        script_name = "%s.py" % os.path.splitext(inspect.getfile(generateTier3Files))[0]
 
-        for i, filename in enumerate(filenames):
+        for i in xrange(len(filenames)):
+
+            filename = filenames[0]
             
-            #print "--> processing file %i of %i: %s" % (i, len(filenames), filename)
+            print "--> processing file %i of %i: %s" % (i, len(filenames), filename)
 
             basename = os.path.basename(filename) # drop the directory structure
             basename = "_".join(basename.split("_")[1:])  # drop the tier1_
@@ -42,8 +45,11 @@ def process_files(filenames):
 
             # if tier3 file exists, skip it, otherwise create it:
             if os.path.isfile(tier3_name):
-                continue
                 print "\t==> skipping %s" % tier3_name
+                popped_filename = filenames.pop(0)
+                print "\t\tpopped_filename:", os.path.basename(popped_filename)
+                print "\t\tfilename:", os.path.basename(filename)
+                continue
 
             else:
                 # limit jobs in queue to follow good neighbor policy
@@ -60,14 +66,18 @@ def process_files(filenames):
                     filenames=[filename],
                 )
                 popped_filename = filenames.pop(0)
-                print popped_filename, filename
-                if popped_filename != filename:
+                print "popped_filename:", os.path.basename(popped_filename)
+                print "filename:", os.path.basename(filename)
+                if os.path.basename(popped_filename) != os.path.basename(filename):
                     print "popped_filename != filename"
                     sys.exit(1)
+
+            #sys.exit(1) # debugging
 
         print "\t====> %i jobs submitted" % n_submitted
         i_loop += 1
 
+        print "\t sleeping..."
         time.sleep(60)
             
 
