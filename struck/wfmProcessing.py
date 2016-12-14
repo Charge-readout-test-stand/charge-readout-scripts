@@ -226,6 +226,10 @@ def ApplyFilter(exowfm, channel, wfm_length, filter_type="deriv"):
         gROOT.SetBatch(True)
     
     tfile.Close()
+    NoisePSFile.Close()
+
+    matched_result.IsA().Destructor(matched_result)
+
     return ratio_max, time_max
     
 
