@@ -12,14 +12,14 @@ def takeData(doLoop=False, n_hours=10.0):
   # options
   # ---------------------------------------------------------------------------
 
-  #file_suffix = "_test" # this gets appended to the file name
+  file_suffix = "_test" # this gets appended to the file name
   #file_suffix = "_digitizer_noise_tests_" # this gets appended to the file name
   #file_suffix = "_8thLXe_126mvDT_cell_full_cath_1700V_100cg_overnight_" # 126-mV discrim threshold, 1700 cathode bias, 100x PMT coarse gain
   #file_suffix = "_9thLXe_126mvDT_cath_1700V_100cg_setup_" # 126-mV discrim threshold, 1700 cathode bias, 100x PMT coarse gain
   #file_suffix = "_9thLXe_126mvDT_cath_1700V_100cg_overnight_" # 126-mV discrim threshold, 1700 cathode bias, 100x PMT coarse gain
   #file_suffix = "_9thLXe_126mvDT_cath_1700V_100cg_warmup_before_recovery_" # 126-mV discrim threshold, 1700 cathode bias, 100x PMT coarse gain
   #file_suffix = "_PMT_Xe_gas_126mvDT__" # 126-mV discrim threshold, 1700 cathode bias, 100x PMT coarse gain
-  file_suffix = "_PMT_Xe_gas_32mvDT__" # 126-mV discrim threshold, 1700 cathode bias, 100x PMT coarse gain
+  #file_suffix = "_PMT_Xe_gas_32mvDT__" # 126-mV discrim threshold, 1700 cathode bias, 100x PMT coarse gain
   #file_suffix = "_9thLXe_pulsar_cooldown_notFull_pulsarisX23_24_"
   runDuration = 2*60 # seconds
   #runDuration = 10 # seconds -- debugging! FIXME
@@ -31,7 +31,8 @@ def takeData(doLoop=False, n_hours=10.0):
   #termination = 1 # 1 = 50 ohm?
   nimtriginput = 0x10 # Bit0 Enable : Bit1 Invert , we use 0x10 (from struck root gui)
   trigconf = 0x8 # default = 0x5, we use 0x8 Bit0:Invert, Bit1:InternalBlockSum, Bit2:Internal, Bit3:External                       
-  dacoffset = 32768 # default = 32768 
+  #dacoffset = 32768 # default = 32768 
+  dacoffset = 24768 # default = 32768 # FIXME -- for warm cell
 
   # could have a few other clock freqs if we define them, look to struck root gui for info
   clock_source_choice = 3 # 0: 250MHz, 1: 125MHz, 2=62.5MHz 3: 25 MHz (we use 3) 
@@ -59,11 +60,11 @@ def takeData(doLoop=False, n_hours=10.0):
   sis = ROOT.SIS3316SystemMT()
   sis.setDebug() # NGMModuleBase/NGMModule::setDebug()
   sis.initModules() # NGMModuleBase/NGMModule::initModules()
-  sis.SetNumberOfSlots(2) # SIS3316SystemMT::SetNumberOfSlots()
+  sis.SetNumberOfSlots(1) # SIS3316SystemMT::SetNumberOfSlots()
   sis.CreateDefaultConfig("SIS3316") # SIS3316SystemMT _config = new NGMSystemConfigurationv1
 
-  sis.SetInterfaceType("sis3316_eth")
-  #sis.SetInterfaceType("sis3316_ethb") # SIS3316SystemMT testing this one since it has VME_FPGA_VERSION_IS_0008_OR_HIGHER
+  #sis.SetInterfaceType("sis3316_eth")
+  sis.SetInterfaceType("sis3316_ethb") # SIS3316SystemMT testing this one since it has VME_FPGA_VERSION_IS_0008_OR_HIGHER
 
   # NGMSystem::GetConfiguration returns NGMSystemConfiguration, in NGMData/
   # NGMSystemConfiguration::GetSystemParameters() returns
@@ -72,14 +73,14 @@ def takeData(doLoop=False, n_hours=10.0):
   sis.GetConfiguration().GetSystemParameters().SetParameterS("OutputFileSuffix",0,file_suffix) 
   sis.GetConfiguration().GetSlotParameters().AddParameterS("IPaddr")
   sis.GetConfiguration().GetSlotParameters().SetParameterS("IPaddr",0,"192.168.1.100")
-  sis.GetConfiguration().GetSlotParameters().SetParameterS("IPaddr",1,"192.168.2.100")
+  #sis.GetConfiguration().GetSlotParameters().SetParameterS("IPaddr",1,"192.168.2.100")
 
   print "\n----> calling InitializeSystem()"
   sis.InitializeSystem() # this also calls ConfigureSystem()
   print "----> done InitializeSystem()\n"
 
   # Adjust trigger thresholds etc. See sis3316card.{h,cc}
-  for icard in xrange(2): # loop over cards:
+  for icard in xrange(1): # loop over cards:
     sis0 = sis.GetConfiguration().GetSlotParameters().GetParValueO("card",icard)
 
     sis0.nimtriginput = nimtriginput 
@@ -113,7 +114,7 @@ def takeData(doLoop=False, n_hours=10.0):
 
       #sis0.firthresh[i] = threshold # set threshold
 
-      if icard == 1 and i == 15: 
+      if icard == 0 and i == 0: 
           sis0.gain[i] = 0 # 5V for PMT
       else:
           sis0.gain[i] = gain # set gain
@@ -160,7 +161,7 @@ def takeData(doLoop=False, n_hours=10.0):
           )
           last_time = now
   else:
-      "\n===> starting single run, %.1f seconds" % runDuration
+      print "\n===> starting single run, %.1f seconds" % runDuration
       sis.StartAcquisition() 
 
 
