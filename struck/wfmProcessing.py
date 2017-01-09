@@ -155,7 +155,8 @@ def ApplyFilter(exowfm, channel, wfm_length, filter_type="deriv"):
     # Load the derivative template.
     # function is the deriv of gaussian x*exp(-x^2/2*sigma^2)
     # sigma is the width and sets the 
-    tfile = TFile(" ~/software/charge-readout-scripts/struck/templateWF_MatchedFilter.root")
+    directory = os.path.dirname(struck_analysis_parameters.__file__)
+    tfile = TFile("%s/templateWF_MatchedFilter.root" % directory)
     template = None
     #print tfile.ls()
     if filter_type == "matched":
@@ -167,7 +168,7 @@ def ApplyFilter(exowfm, channel, wfm_length, filter_type="deriv"):
         return 0.0, 0.0
 
     template.SetSamplingFreq(exowfm.GetSamplingFreq())
-    NoisePSFile = TFile("~/testing/test_matchfilter/AvgNoisePS.root")
+    NoisePSFile = TFile("%s/AvgNoisePS.root" % directory)
     
     #Bad channels
     if channel == 16 or channel == 27:
@@ -225,6 +226,10 @@ def ApplyFilter(exowfm, channel, wfm_length, filter_type="deriv"):
         gROOT.SetBatch(True)
     
     tfile.Close()
+    NoisePSFile.Close()
+
+    matched_result.IsA().Destructor(matched_result)
+
     return ratio_max, time_max
     
 

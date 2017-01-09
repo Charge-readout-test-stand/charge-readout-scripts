@@ -51,7 +51,7 @@ def process_files(filenames):
             n_submitted += 1
             filename = os.path.abspath(filename)
             log_name = "log_%s.out" % os.path.splitext(tier3_name)[0]
-            print "processing!", filename
+            print "processing job %i" % n_submitted
             submitPythonJobsLLNL.main(
                 python_script=script_name,
                 filenames=[filename],

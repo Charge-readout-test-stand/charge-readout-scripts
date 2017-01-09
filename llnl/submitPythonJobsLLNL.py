@@ -22,8 +22,8 @@ def main(python_script, filenames, options="", verbose=True):
 
     # options:
     queue = "pbatch" 
-    hours = 0
-    minutes = 30
+    hours = 2
+    minutes = 00
 
 
     #print "\n".join(filenames)
@@ -47,7 +47,8 @@ def main(python_script, filenames, options="", verbose=True):
 
         basename = os.path.basename(filename)
         basename = os.path.splitext(basename)[0]
-        #print basename
+        print basename
+        basename = "_".join(basename.split("_")[2:])
 
 # sample LLNL command (from nEXO MC)
 #msub -A afqn -m abe -V -N mc$j -o $OUT_DIR/log/blog_$DIFF.job${j} -j oe -q pbatch -l walltime=12:00:00 $OUT_DIR/jobs_hold/doall${j}.script
