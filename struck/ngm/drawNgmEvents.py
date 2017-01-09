@@ -274,7 +274,10 @@ def process_file(filename=None, n_plots_total=0):
                 baseline_avg_sq += y*y/n_samples_to_avg
                 energy_avg_sq += y2*y2/n_samples_to_avg
             rms_noise = math.sqrt(baseline_avg_sq-baseline*baseline)*multiplier
-            energy_noise = math.sqrt(energy_avg_sq-energy*energy)*multiplier
+            try:
+                energy_noise = math.sqrt(energy_avg_sq-energy*energy)*multiplier
+            except ValueError:
+                energy_noise = 0.0
             energy = (energy - baseline)*multiplier
 
             if channel == pmt_channel:
@@ -308,7 +311,7 @@ def process_file(filename=None, n_plots_total=0):
                     sum_energy += energy
                 if rms_noise >  rms_threshold:
                     n_high_rms += 1
-                    graph.SetLineColor(ROOT.kBlack)
+                    #graph.SetLineColor(ROOT.kBlack)
 
             graph.Draw("l")
             #print "\t entry %i, ch %i, slot %i" % ( i_entry-1, channel, slot,)
