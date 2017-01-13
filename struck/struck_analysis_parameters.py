@@ -44,6 +44,9 @@ if os.getenv("EXOLIB") is not None and not isROOT6:
 
 drift_length = 18.16 # mm, from solidworks for 7th LXe + 
 drift_velocity = 2.0 # mm / microsecond  
+if is_10th_LXe:
+    drift_length = 33.23 # new anode standoffs Dec 2016
+    drift_velocity = 1.85 # mm / microsecond  
 max_drift_time = drift_length/drift_velocity
 
 # drift time threshold for 99% signal collection, determined from ion screening
@@ -103,7 +106,7 @@ elif is_10th_LXe:
     for i_channel, val in enumerate(charge_channels_to_use):
         if i_channel < 16:
             channels.append(i_channel)
-        if i_channel < 14:
+        if i_channel > 1:
             charge_channels_to_use[i_channel] = 1
 
 else:
@@ -243,6 +246,22 @@ if is_10th_LXe:
     channel_map[2] = "Y20"
     channel_map[1] = "pulser"
     channel_map[0] = "PMT"
+
+    struck_to_mc_channel_map[2] = [49]
+    struck_to_mc_channel_map[3] = [48]
+    struck_to_mc_channel_map[4] = [47]
+    struck_to_mc_channel_map[5] = [46]
+    struck_to_mc_channel_map[6] = [45]
+    struck_to_mc_channel_map[7] = [44]
+    struck_to_mc_channel_map[8] = [43]
+
+    struck_to_mc_channel_map[9] = [19]
+    struck_to_mc_channel_map[10] = [18]
+    struck_to_mc_channel_map[11] = [17]
+    struck_to_mc_channel_map[12] = [16]
+    struck_to_mc_channel_map[13] = [15]
+    struck_to_mc_channel_map[14] = [14]
+    struck_to_mc_channel_map[15] = [13]
 
 
 #MC Channels index starts at 0 so X26 = 25
@@ -652,7 +671,10 @@ def get_colors():
 
 # from tier2to3_overnight.root, baseline_rms
 n_baseline_samples = 200.0
+# this is not really microseconds, but samples:
 energy_gap_time_microseconds = 450*40/1000 # energy calc starts 450 samples after wfm start, in a normal 25-MS/s run
+print "energy_gap_time_microseconds:", energy_gap_time_microseconds
+print "energy_gap_time_samples:", energy_gap_time_microseconds*sampling_freq_Hz/1e6
 baseline_average_time_microseconds = 4.0 # 100 samples at 25 MHz
 rms_keV = {}
 rms_keV_sigma = {}
