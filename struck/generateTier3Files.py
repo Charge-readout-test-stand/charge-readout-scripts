@@ -1200,7 +1200,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 label=label,
             )
 
-            
+            #print "Using Decay Time %f for chan %i" % (decay_time[i], i)
             
             if charge_channels_to_use[channel[i]] and signal_map[i] > 0.5:
                 #This is a signal so add to total and figure out the type
@@ -1208,7 +1208,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 #channels above threshold.
                 nsignals[0]+=1
                 SignalEnergy[0] += energy1_pz[i]
-                
+
+                #print "Event %i Ch %i has Signal Energy %f" %(n_events, i,energy1_pz[i])
+
                 if 'X' in channel_map[i]:
                     nXsignals[0]+=1
                     SignalEnergyX[0] += energy1_pz[i]
@@ -1478,6 +1480,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
         if pulser_channel:
             if wfm_min[pulser_channel] < 3000: # 9th LXe value
+                is_pulser[0] = 1
+            if struck_analysis_parameters.is_10th_LXe and (wfm_max[pulser_channel] - baseline_mean[pulser_channel]) > 3000:
                 is_pulser[0] = 1
 
         if isNGM: # check that event contains all channels:
