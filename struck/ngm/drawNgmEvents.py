@@ -42,12 +42,13 @@ canvas.SetRightMargin(0.12)
 
 ROOT.gStyle.SetTitleFontSize(0.04)
 
+nchannels = 16
 
 def process_file(filename=None, n_plots_total=0):
 
     # options ------------------------------------------
-    threshold = 50 # keV
-    #threshold = 500
+    #threshold = 50 # keV
+    threshold = 450
     #threshold = 1250 # keV
     #threshold = 570 # keV, for generating multi-page PDF
     #threshold = 50 # ok for unshaped, unamplified data
@@ -74,8 +75,8 @@ def process_file(filename=None, n_plots_total=0):
     elif units_to_use == 2:
         y_min = -5 # mV
 
-    y_max = 31500 # keV
-    y_max = 31*500+250 # keV
+    #y_max = 31500 # keV
+    y_max = nchannels*500+250 # keV
     if units_to_use == 1:
         y_max = 200 # ADC units
     elif units_to_use == 2:
@@ -140,8 +141,8 @@ def process_file(filename=None, n_plots_total=0):
     trigger_time = card0.pretriggerdelay_block[0]/sampling_freq_Hz*1e6
     print "trigger time: [microseconds]", trigger_time
 
-    #frame_hist = ROOT.TH1D("hist", "", int(tree.HitTree.GetNSamples()*33.0/32.0), 0, trace_length_us+1)
-    frame_hist = ROOT.TH1D("hist", "", int(tree.HitTree.GetNSamples()*33.0/32.0), 0, 25.0)
+    frame_hist = ROOT.TH1D("hist", "", int(tree.HitTree.GetNSamples()*33.0/32.0), 0, trace_length_us+1)
+    #frame_hist = ROOT.TH1D("hist", "", int(tree.HitTree.GetNSamples()*33.0/32.0), 0, 25.0)
     frame_hist.SetXTitle("Time [#mus]")
     sum_offset = 400
     frame_hist.SetYTitle("Energy (with arbitrary offsets) [keV]")
@@ -220,12 +221,12 @@ def process_file(filename=None, n_plots_total=0):
         #print "==> entry %i of %i | charge energy: %i" % ( i_entry, n_entries, chargeEnergy,)
       
         legend.Clear()
-        legend_entries = [""]*32
+        legend_entries = [""]*nchannels
 
         # loop over all channels in the event:
         sum_energy = 0.0
         n_high_rms = 0
-        for i in xrange(32):
+        for i in xrange(nchannels):
             
             tree.GetEntry(i_entry)
             i_entry += 1
@@ -268,7 +269,7 @@ def process_file(filename=None, n_plots_total=0):
             energy_avg_sq = 0.0
             for i_sample in xrange(n_samples_to_avg):
                 y = graph.GetY()[i_sample]
-                y2 = graph.GetY()[i_sample+450]
+                y2 = graph.GetY()[i_sample+850]
                 baseline += y / n_samples_to_avg
                 energy += y2 / n_samples_to_avg
                 baseline_avg_sq += y*y/n_samples_to_avg
@@ -285,7 +286,10 @@ def process_file(filename=None, n_plots_total=0):
                 energy = (graph.GetY()[227]-baseline)*multiplier
 
             # add an offset so the channels are drawn at different levels
-            offset = channel*500
+            if struck_analysis_parameters.n_channels <= 16:
+                offset = channel*500
+            else:
+                offset = channel*1000
 
             graph.SetLineColor(color)
             fcn_string = "(y - %s)*%s + %s" % ( baseline, multiplier, offset)
@@ -336,12 +340,13 @@ def process_file(filename=None, n_plots_total=0):
             # end loop over channels
 
         print "---------> entry %i of %i (%.1f percent), %i plots so far" % (
-            i_entry/32,  # current event
-            n_entries/32,  # n events in file                       
+            i_entry/nchannels,  # current event
+            n_entries/nchannels,  # n events in file                       
             100.0*i_entry/n_entries, # percent done
             n_plots,
         ) 
         #if n_high_rms <= 0: continue
+        #if sum_energy < threshold or sum_energy > 650: continue
         if sum_energy < threshold: continue
 
         # create sum graphs; add offsets & set x-coords
@@ -397,7 +402,7 @@ def process_file(filename=None, n_plots_total=0):
         """
 
         pave_text.Clear()
-        pave_text.AddText("page %i, event %i" % (n_plots+1, i_entry/32))
+        pave_text.AddText("page %i, event %i" % (n_plots+1, i_entry/nchannels))
         pave_text.AddText("%s" % basename)
         #pave_text.Draw()
 
@@ -410,11 +415,15 @@ def process_file(filename=None, n_plots_total=0):
 
         frame_hist.SetMinimum(y_min)
         frame_hist.SetMaximum(y_max)
-        frame_hist.SetTitle("Event %i | Sum Ionization Energy: %.1f keV" % ((i_entry-1)/32, sum_energy))
+        frame_hist.SetTitle("Event %i | Sum Ionization Energy: %.1f keV | time stamp: %i" % (
+            (i_entry-1)/nchannels, 
+            sum_energy,
+            tree.HitTree.GetRawClock(),
+            ))
         frame_hist.SetTitleSize(0.2, "t")
 
-        for i in xrange(32):
-            index = 31 - i # fill from top down
+        for i in xrange(nchannels):
+            index = (nchannels-1) - i # fill from top down
             if legend_entries[index] != "":
                 legend.AddEntry( hists[index], legend_entries[index], "f")
 
@@ -429,7 +438,8 @@ def process_file(filename=None, n_plots_total=0):
         line.SetLineStyle(7)
         line.Draw()
 
-        line1 = ROOT.TLine(trigger_time+9.09, y_min, trigger_time+9.09,y_max)
+        max_drift_time = struck_analysis_parameters.max_drift_time
+        line1 = ROOT.TLine(trigger_time+max_drift_time, y_min, trigger_time+max_drift_time,y_max)
         line1.SetLineWidth(2)
         line1.SetLineStyle(7)
         line1.Draw()
@@ -438,7 +448,7 @@ def process_file(filename=None, n_plots_total=0):
         frame_hist.SetTitleSize(0.02, "t")
         canvas.Update()
         n_plots += 1
-        print "--> Event %i, %i of %i plots so far" % (i_entry/32, n_plots, n_plots_total)
+        print "--> Event %i, %i of %i plots so far" % (i_entry/nchannels, n_plots, n_plots_total)
 
         if not ROOT.gROOT.IsBatch(): 
 
@@ -537,7 +547,7 @@ def process_file(filename=None, n_plots_total=0):
 
 if __name__ == "__main__":
 
-    n_plots_total = 500
+    n_plots_total = 50
     n_plots_so_far = 0
     if len(sys.argv) > 1:
         for filename in sys.argv[1:]:
