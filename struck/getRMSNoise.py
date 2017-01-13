@@ -103,9 +103,10 @@ def getRMS(calibrate):
         mean_error = hist.GetMeanError()
         sigma = hist.GetRMS()
         sigma_error = hist.GetRMSError()
+        label = struck_analysis_parameters.channel_map[channel]
         
-        log_out =  "rms_keV[%i] = %f*calibration_values[%i]  # +/- %f \n" %(channel, mean, channel, mean_error)
-        log_out += "rms_keV_sigma[%i] = %f*calibration_values[%i] # +/- %f\n" % (channel, sigma, channel, sigma_error)
+        log_out =  "rms_keV[%i] = %f*calibration_values[%i]  # +/- %f %s\n" %(channel, mean, channel, mean_error, label)
+        log_out += "rms_keV_sigma[%i] = %f*calibration_values[%i] # +/- %f %s\n" % (channel, sigma, channel, sigma_error, label)
 
         if calibrate:
             log_out =  "rms_keV[%i] = %f # +/- %f  \n" %(channel, mean, mean_error)
@@ -115,7 +116,6 @@ def getRMS(calibrate):
         print log_out
         log.write(log_out)
 
-        label = struck_analysis_parameters.channel_map[channel]
         title = "ch %i: %s | %.2e counts | RMS = %f #pm %f" % (channel, label, n_drawn, mean, mean_error)
         hist.SetTitle(title)
         legend.AddEntry(hist, label, "p")
@@ -214,8 +214,9 @@ def plotRMS():
     legend.Draw()
     canvas.Update()
     canvas.Print("CombinedNoise.pdf")
-    print "Holding"
-    raw_input("Hold Enter")
+    if not ROOT.gROOT.IsBatch():
+        print "Holding"
+        raw_input("Hold Enter")
     
     print "Doing Noise"
     canvas.SetGrid(False)
@@ -228,8 +229,9 @@ def plotRMS():
     noise_hist.GetXaxis().SetTitle("Channel")
     canvas.Update()
     canvas.Print("Noise_vs_Channel.pdf")
-    print "Noise Plot"
-    raw_input("Hold Enter")
+    if not ROOT.gROOT.IsBatch():
+        print "Noise Plot"
+        raw_input("Hold Enter")
 
 
 if __name__ == "__main__":
