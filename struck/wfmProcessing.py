@@ -261,6 +261,10 @@ def get_wfmparams(
     exo_wfm.SetSamplingFreq(sampling_freq_Hz/second)
     energy_wfm = EXODoubleWaveform(exo_wfm)
 
+    # FIXME -- this should come from struck_analysis_parameters
+    #energy_start_sample = 450 # < 10th LXe
+    energy_start_sample = 850 # 10th LXe 
+
     # calculate wfm max and min:
     wfm_max = exo_wfm.GetMaxValue()
     wfm_min = exo_wfm.GetMinValue()
@@ -275,7 +279,7 @@ def get_wfmparams(
 
     # measure energy before PZ correction -- use baseline_remover for this
     #baseline_remover.SetStartSample(wfm_length - n_baseline_samples - 1)
-    baseline_remover.SetStartSample(450)
+    baseline_remover.SetStartSample(energy_start_sample)
     baseline_remover.Transform(exo_wfm, energy_wfm)
     energy = baseline_remover.GetBaselineMean()*calibration
     energy_rms = baseline_remover.GetBaselineRMS()*calibration
@@ -294,7 +298,7 @@ def get_wfmparams(
 
     # measure energy before PZ correction, use 2x n_baseline_samples
     #baseline_remover.SetStartSample(wfm_length - 2*n_baseline_samples - 1)
-    baseline_remover.SetStartSample(450)
+    baseline_remover.SetStartSample(energy_start_sample)
     baseline_remover.Transform(exo_wfm, energy_wfm)
     energy1 = baseline_remover.GetBaselineMean()*calibration
     energy_rms1 = baseline_remover.GetBaselineRMS()*calibration
@@ -331,7 +335,7 @@ def get_wfmparams(
     # measure energy after PZ correction -- use baseline remover
     baseline_remover.SetBaselineSamples(n_baseline_samples) # remove baseline
     #baseline_remover.SetStartSample(wfm_length - n_baseline_samples - 1)
-    baseline_remover.SetStartSample(450)
+    baseline_remover.SetStartSample(energy_start_sample)
     baseline_remover.Transform(energy_wfm)
     energy_pz = baseline_remover.GetBaselineMean()*calibration
     energy_rms_pz = baseline_remover.GetBaselineRMS()*calibration
@@ -353,7 +357,7 @@ def get_wfmparams(
     calibrated_wfm *= calibration
 
     #baseline_remover.SetStartSample(wfm_length - 2*n_baseline_samples - 1)
-    baseline_remover.SetStartSample(450)
+    baseline_remover.SetStartSample(energy_start_sample)
     baseline_remover.Transform(energy_wfm)
     energy1_pz = baseline_remover.GetBaselineMean()*calibration
     energy_rms1_pz = baseline_remover.GetBaselineRMS()*calibration
@@ -369,8 +373,8 @@ def get_wfmparams(
 
     
     #Apply Matched Filter currently in testing
-    if not is_pmtchannel:
-    #if False:
+    #if not is_pmtchannel:
+    if False:
         dfilter_max, dfilter_time = ApplyFilter(energy_wfm, channel, wfm_length, filter_type="deriv")
         mfilter_max, mfilter_time = ApplyFilter(energy_wfm, channel, wfm_length, filter_type="matched")
     else:
