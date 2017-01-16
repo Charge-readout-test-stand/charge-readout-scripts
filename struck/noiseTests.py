@@ -9,7 +9,8 @@ import commands
 import ROOT
 
 import struck_analysis_parameters
-import generateTier3Files
+#import generateTier3Files
+import my_generateTier3Files as generateTier3Files
 import wfmProcessing
 
 def baseline_process_file(filename):
@@ -87,6 +88,7 @@ if __name__ == "__main__":
     filename = "/g/g17/alexiss/scratch/2016_09_13_pulser_tests/tier1_SIS3316Raw_20160914184725_digitizer_noise_tests__1-ngm.root"
     filename = "/g/g17/alexiss/scratch/2016_08_15_8th_LXe/tier1/tier1_SIS3316Raw_20160816180708_8thLXe_126mvDT_cell_full_cath_1700V_HVOn_Noise_100cg__1-ngm.root"
     filename = "tier1_SIS3316Raw_20160815193659_8thLXe_30mvDT_filling_1-ngm.root"
+    filename = "/g/g17/alexiss/scratch/9thLXe/2016_09_19_overnight/tier1/tier1_SIS3316Raw_20160922140455_9thLXe_126mvDT_cath_1700V_100cg_overnight__1-ngm.root"
 
     results = baseline_process_file(filename) # generate new results
 

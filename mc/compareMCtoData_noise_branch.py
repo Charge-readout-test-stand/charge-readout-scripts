@@ -21,6 +21,7 @@ draw_cmd = "SignalEnergy" # the usual
 
 drift_time_high = struck_analysis_parameters.max_drift_time
 drift_time_low = struck_analysis_parameters.drift_time_threshold
+#drift_time_low = 0.0
 #drift_time_high = 8.0
 #drift_time_low = 6.4 # Gaosong's cut
 #drift_time_high = 8.4 # Gaosong's cut
@@ -147,7 +148,7 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
         multiplier = 1.0 
         selection = struck_selection
         if struck_analysis_parameters.is_tree_MC(tree):
-            multiplier = 1.02
+            multiplier = 1.01
         else: selection += " && !is_bad && !is_pulser"
         this_draw_cmd = "%s*%s" % (draw_cmd, multiplier)
 
@@ -166,8 +167,8 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
 
         label = "Data"
         if struck_analysis_parameters.is_tree_MC(tree): label = "MC"
-        #legend.AddEntry(hist, label, "f")
-        legend.AddEntry(hist, basenames[i], "f")
+        legend.AddEntry(hist, label, "f")
+        #legend.AddEntry(hist, basenames[i], "f")
 
         print "\n"
         # end loop filling hists

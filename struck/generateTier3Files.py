@@ -1520,11 +1520,14 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     print "writing", out_filename
     out_tree.Write()
 
-    # change file permissions -- for LLNL aztec:
-    cmd = "chmod 644 %s" % out_filename
-    output = commands.getstatusoutput(cmd)
-    if output[0] != 0:
-        print output[1]
+    try:
+        # change file permissions -- for LLNL aztec:
+        cmd = "chmod 644 %s" % out_filename
+        output = commands.getstatusoutput(cmd)
+        if output[0] != 0:
+            print output[1]
+    except OSError:
+        print "WARNING: Could not chmod!!"
 
 
 if __name__ == "__main__":
