@@ -17,6 +17,8 @@ def getRMS(calibrate):
 
     tree = ROOT.TChain("tree")
     tree.Add(filename)
+    tree.SetBranchStatus("*",0) # first turn off all branches
+    tree.SetBranchStatus("baseline_rms",1) 
 
     basename = os.path.splitext(os.path.basename(filename))[0]
     print "basename:", basename
