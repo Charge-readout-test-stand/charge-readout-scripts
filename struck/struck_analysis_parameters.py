@@ -429,6 +429,25 @@ if is_8th_LXe or is_9th_LXe:
     decay_time_values[30] =  359.754388*microsecond # +/- 0.040198  
     decay_time_values[31] =  10000000000.000000*microsecond # Not Used  
 
+if is_10th_LXe:
+    # Fits are in DecayTime_overnight10thLXe_v0.pdf 
+    decay_time_values[0] =  10000000000.000000*microsecond # Not Used  
+    decay_time_values[1] =  10000000000.000000*microsecond # Not Used  
+    decay_time_values[2] =  236.893539*microsecond # +/- 0.013181 Y20
+    decay_time_values[3] =  253.714660*microsecond # +/- 0.016932 Y19
+    decay_time_values[4] =  255.360950*microsecond # +/- 0.018271 Y18
+    decay_time_values[5] =  282.257052*microsecond # +/- 0.026356 Y17
+    decay_time_values[6] =  258.114972*microsecond # +/- 0.022540 Y16
+    decay_time_values[7] =  281.065714*microsecond # +/- 0.030285 Y15
+    decay_time_values[8] =  279.427253*microsecond # +/- 0.039799 Y14
+    decay_time_values[9] =  276.248221*microsecond # +/- 0.021130 X20
+    decay_time_values[10] =  293.851494*microsecond # +/- 0.039216 X19
+    decay_time_values[11] =  264.758934*microsecond # +/- 0.023681 X18
+    decay_time_values[12] =  326.539151*microsecond # +/- 0.058670 X17
+    decay_time_values[13] =  276.215795*microsecond # +/- 0.031555 X16
+    decay_time_values[14] =  272.667102*microsecond # +/- 0.022886 X15
+    decay_time_values[15] =  267.351244*microsecond # +/- 0.023210 X14
+
 
 # charge calbration from these files for 5th LXe:
 # tier3_LXe_Run1_1700VC_2chargechannels_609PM_60thresh_NotShaped_Amplified_GapTime20_2_0.root
