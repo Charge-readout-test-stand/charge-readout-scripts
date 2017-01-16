@@ -49,7 +49,11 @@ import commands
 
 #filenames = glob.glob("/p/lscratchd/alexiss/9thLXe/2016_09_19_overnight/tier0/SIS3316Raw_201609212*") # 22 Sept 2016 -- 238 files
 
-filenames = glob.glob("/p/lscratchd/alexiss/9thLXe/2016_09_19_overnight/tier0/SIS3316Raw_2016*") # 23 Sept 2016 -- all 9th LXe overnight tier0 files
+#filenames = glob.glob("/p/lscratchd/alexiss/9thLXe/2016_09_19_overnight/tier0/SIS3316Raw_2016*") # 23 Sept 2016 -- all 9th LXe overnight tier0 files
+
+
+# 10th LXe
+filenames = glob.glob("/p/lscratchd/alexiss/2017_01_10_10th_LXe/tier0/SIS3316Raw_*") # 16 Jan 2016 -- all 10th LXe tier0 files
 
 
 
@@ -70,7 +74,7 @@ for i_file, filename in enumerate(filenames):
     #break # debugging
 
     #cmd = "htar -c -v -f %s %s" % (tar_name, filename) 
-    cmd = "htar -c -v -Y dualcopy -f %s %s" % (tar_name, filename) 
+    cmd = "htar -c -P -v -Y dualcopy -f %s %s" % (tar_name, filename) 
     print "\t", cmd
     output = commands.getstatusoutput(cmd)
     print "\n",output[1]
