@@ -1,18 +1,22 @@
 import ROOT
 import struck_analysis_parameters
 import os
+import sys
 ROOT.gROOT.SetBatch(True)
 
 def getDecayTimes():
     
     filename = "/home/teststand/2016_08_15_8th_LXe_overnight/tier3_added/overnight8thLXe_v3.root"
+    if len(sys.argv) > 1:
+        filename = sys.argv[1]
     tree = ROOT.TChain("tree")
     tree.Add(filename)
 
     basename = os.path.splitext(os.path.basename(filename))[0]
     print "basename:", basename
 
-    plot_name = "/home/teststand/2016_08_15_8th_LXe_overnight/tier3_added/DecayTime_%s.pdf" % basename
+    #plot_name = "/home/teststand/2016_08_15_8th_LXe_overnight/tier3_added/DecayTime_%s.pdf" % basename
+    plot_name = "DecayTime_%s.pdf" % basename
 
     canvas = ROOT.TCanvas("canvas")
     canvas.SetTopMargin(0.15)
@@ -31,7 +35,8 @@ def getDecayTimes():
     landau = ROOT.TF1("landau","[0]*TMath::Landau(x,[1],[2],0)", 0, decay_max)
     mygaus   = ROOT.TF1("mygaus", "[0]*TMath::Exp(-0.5*((x-[1])/[2])^2)", 0, decay_max)
 
-    decay_log = open('/home/teststand/2016_08_15_8th_LXe_overnight/tier3_added/decay_log_%s.txt' % basename, 'w')
+    #decay_log = open('/home/teststand/2016_08_15_8th_LXe_overnight/tier3_added/decay_log_%s.txt' % basename, 'w')
+    decay_log = open('decay_log_%s.txt' % basename, 'w')
 
     decay_log.write("# Fits are in %s \n" % plot_name)
     for (channel, value) in enumerate(struck_analysis_parameters.charge_channels_to_use):
@@ -78,11 +83,11 @@ def getDecayTimes():
             fit_result = hist.Fit("mygaus", "QWBRS")
             mean = mygaus.GetParameter(1)
             mean_error = mygaus.GetParError(1)
-        log_out =  "decay_time_values[%i] =  %f*microsecond # +/- %f  \n" %(channel, mean, mean_error)
+        label = struck_analysis_parameters.channel_map[channel]
+        log_out =  "decay_time_values[%i] =  %f*microsecond # +/- %f %s\n" %(channel, mean, mean_error, label)
         print log_out
         decay_log.write(log_out)
 
-        label = struck_analysis_parameters.channel_map[channel]
         title = "ch %i: %s | %.2e counts | %s | #tau = %f #pm %f" % (channel, label, n_drawn, selection, mean, mean_error)
         hist.SetTitle(title)
 
