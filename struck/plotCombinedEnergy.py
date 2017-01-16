@@ -2,7 +2,7 @@
 import os
 import sys
 import ROOT
-ROOT.gROOT.SetBatch(True)
+#ROOT.gROOT.SetBatch(True)
 
 import struck_analysis_cuts
 import struck_analysis_parameters
@@ -23,6 +23,8 @@ def get_hist(tree, draw_cmd, selection, name="hist"):
     hist.SetXTitle("Energy [keV]")
     hist.SetYTitle("Counts / %s keV" % (energy_max/n_bins))
     hist.GetYaxis().SetTitleOffset(1.5)
+    hist.SetMarkerStyle(21)
+    hist.SetMarkerSize(0.9)
 
     print "--> making hist", name
     print "\t draw_cmd:", draw_cmd
@@ -112,35 +114,40 @@ n_entries = tree.GetEntries()
 print "%i entries in tree" % n_entries
 
 hists = []
+hist_stack = ROOT.THStack("hist_stack","")
 
 #-------------------------------------------------------------------------------
 # current tests
 #-------------------------------------------------------------------------------
 
+#hists.append(get_hist(tree, struck_analysis_cuts.get_few_channels_cmd_baseline_rms(),"","5x_baseline_rms"))
+
+#hists.append(get_hist(tree, "SignalEnergy","", "SignalEnergy"))
+
+drift_cut = struck_analysis_cuts.get_drift_time_cut(drift_time_high=struck_analysis_parameters.max_drift_time)
+
 # current best:
-hists.append(get_hist(tree, struck_analysis_cuts.get_few_channels_cmd_baseline_rms(),"","5x_baseline_rms"))
+#hists.append(get_hist(tree, "SignalEnergy", struck_analysis_cuts.get_drift_time_selection(drift_time_high=struck_analysis_parameters.max_drift_time), "SignalEnergy_drift_sel"))
 
-hists.append(get_hist(tree, "SignalEnergy","", "SignalEnergy"))
-
-hists.append(get_hist(tree, "SignalEnergy",
-    struck_analysis_cuts.get_drift_time_selection(drift_time_high=struck_analysis_parameters.max_drift_time), "SignalEnergy_dt_cut"))
-
-hists.append(get_hist(tree, "SignalEnergy",
-    struck_analysis_cuts.get_drift_time_cut(drift_time_high=struck_analysis_parameters.max_drift_time), "SignalEnergy_dt_sel"))
+#hists.append(get_hist(tree, "SignalEnergy", drift_cut, "drift_cut"))
+hist_stack.Add(get_hist(tree, "SignalEnergy", drift_cut, "drift_cut"))
 
 #hists.append(get_hist(tree, "Sum$(bundle_energy)","", "bundle_energy")) # same as SignalEnergy
 
-hists.append(get_hist(tree, "Sum$(bundle_energy)","nbundlesX<2 && nbundlesY<2", "bundle_energy_1"))
+#hists.append(get_hist(tree, "Sum$(bundle_energy)","nbundlesX<2 && nbundlesY<2", "bundle_energy_1"))
 
-hists.append(get_hist(tree, "Sum$(bundle_energy)",
-    "nbundlesX<2 && nbundlesY<2 && %s" % struck_analysis_cuts.get_drift_time_cut(drift_time_high=struck_analysis_parameters.max_drift_time), 
-    "bundle_energy_1_dt_cut"))
+#hists.append(get_hist(tree, "SignalEnergy", "nsignals==1 && %s" % drift_cut, "single_strip_drift_cut"))
+hist_stack.Add(get_hist(tree, "SignalEnergy", "nsignals==1 && %s" % drift_cut, "single_strip_drift_cut"))
 
-hists.append(get_hist(tree, "Sum$(bundle_energy)",
-    "nbundlesX<2 && nbundlesY<2 && %s" % struck_analysis_cuts.get_drift_time_selection(drift_time_high=struck_analysis_parameters.max_drift_time), 
-    "bundle_energy_1_dt_sel"))
+#hists.append(get_hist(tree, "SignalEnergy", "nbundlesX<2 && nbundlesY<2 && %s" % drift_cut, "1_x_or_y_drift_cut"))
+hist_stack.Add(get_hist(tree, "SignalEnergy", "nbundlesX<2 && nbundlesY<2 && %s" % drift_cut, "1_x_or_y_drift_cut"))
 
-hists.append(get_hist(tree, "Sum$(bundle_energy)","nbundlesX>1 || nbundlesY>1", "bundle_energy_2"))
+#hists.append(get_hist(tree, "Sum$(bundle_energy)",
+#    "nbundlesX<2 && nbundlesY<2 && %s" % struck_analysis_cuts.get_drift_time_selection(drift_time_high=struck_analysis_parameters.max_drift_time), 
+#    "bundle_energy_1_dt_sel"))
+
+#hists.append(get_hist(tree, "SignalEnergy", "(nbundlesX>1 || nbundlesY>1) && %s" % drift_cut, "up_to_1_x_or_y_drift_cut"))
+hist_stack.Add(get_hist(tree, "SignalEnergy", "(nbundlesX>1 || nbundlesY>1) && %s" % drift_cut, "up_to_1_x_or_y_drift_cut"))
 
 # doesn't work! too many operators:
 #hists.append(get_hist(tree, struck_analysis_cuts.get_few_channels_cmd_baseline_rms(),
@@ -183,8 +190,18 @@ hists.append(get_hist(tree, "Sum$(bundle_energy)","nbundlesX>1 || nbundlesY>1", 
 
 legend = ROOT.TLegend(canvas.GetLeftMargin(), 0.9, 0.9, 0.99)
 legend.SetNColumns(2)
+# add entry to legend for each hist...
+hist_list = hist_stack.GetHists() # a TList
+for i in xrange(hist_list.GetEntries()):
+    hist = hist_list.At(i) 
+    hist.SetLineColor(struck_analysis_parameters.colors[i])
+    hist.SetMarkerColor(struck_analysis_parameters.colors[i])
+    entry = " ".join(hist.GetName().split("_"))
+    legend.AddEntry(hist, "%s: %.3e" % (entry, hist.GetEntries()), "p")
 
 # draw hists
+hist_stack.Draw("nostack")
+"""
 hists[0].SetAxisRange(200, 1400.0)
 y_max = hists[0].GetMaximum()
 hists[0].SetAxisRange(0, 3000.0)
@@ -193,13 +210,16 @@ hists[0].SetMaximum(y_max*1.2)
 for i, hist in enumerate(hists):
     hist.Draw("same")
     hist.SetLineColor(struck_analysis_parameters.colors[i])
-    hist.SetMarkerStyle(21)
-    hist.SetMarkerSize(0.9)
     hist.SetMarkerColor(struck_analysis_parameters.colors[i])
-    legend.AddEntry(hist, "%s: %.3e" % (hist.GetName(), hist.GetEntries()), "p")
-
+    entry = " ".join(hist.GetName().split("_"))
+    legend.AddEntry(hist, "%s: %.3e" % (entry, hist.GetEntries()), "p")
+"""
 legend.Draw()
-hists[0].SetAxisRange(0, 2000.0)
+
+#hists[0].SetAxisRange(0, 2000.0)
+hist_stack.Draw("nostack")
+hist_stack.GetXaxis().SetRange(50, 2000)
+hist_stack.GetHistogram().SetAxisRange(50,2000)
 canvas.Update()
 canvas.Print("energies.pdf")
 
@@ -208,12 +228,28 @@ canvas.Update()
 canvas.Print("energies_log.pdf")
 canvas.SetLogy(0)
 
-hists[0].SetAxisRange(400, 750.0)
+#hists[0].SetAxisRange(400, 750.0)
+hist_stack.Draw("nostack")
+hist_stack.GetXaxis().SetRange(200, 1400)
+hist_stack.GetHistogram().SetAxisRange(400,750)
 canvas.Update()
 canvas.Print("energies_zoom_peak.pdf")
 
-hists[0].SetAxisRange(200, 1400.0)
+canvas.SetLogy(1)
+canvas.Update()
+canvas.Print("energies_zoom_peak_log.pdf")
+canvas.SetLogy(0)
+
+
+#hists[0].SetAxisRange(200, 1400.0)
+hist_stack.Draw("nostack")
+hist_stack.GetXaxis().SetRange(200, 1400)
+hist_stack.GetHistogram().SetAxisRange(200,1400)
 canvas.Update()
 canvas.Print("energies_zoom.pdf")
+canvas.SetLogy(1)
+canvas.Update()
+canvas.Print("energies_zoom_log.pdf")
+
 if not ROOT.gROOT.IsBatch(): raw_input("any key to continue... ")
 
