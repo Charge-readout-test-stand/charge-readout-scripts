@@ -22,9 +22,10 @@ def get_graph(energy_var, selection, filenames, color):
     graph.SetMarkerSize(1.0)
     graph.SetTitle(energy_var)
     print "--> making %s graph" % energy_var
-    #print selection
+    print selection
 
     for i_file, filename in enumerate(results):
+        i_selection = selection
         print "--> processing file",i_file, filename
         tfile = ROOT.TFile(filename)
         tree = tfile.Get("tree")
@@ -33,6 +34,10 @@ def get_graph(energy_var, selection, filenames, color):
         except:
             print "skipping file"
             continue
+        if "9thLXe" in filename:
+            i_selection += "&& is_pulser && !(is_bad & 25)" # 25 = 31 - 4 -2(all except high-noise)
+            #i_selection += "&& is_pulser"
+        print i_selection
         #n_entries = tree.GetEntries()
         #print "\t %i entries in tree" % n_entries
         tree.GetEntry(0)
@@ -48,7 +53,8 @@ def get_graph(energy_var, selection, filenames, color):
         # make and fill hist:
         hist = ROOT.TH1D("hist_%i" % i_file,"%s: %.1f #mus" % (energy_var, baseline_average_time), 10000,-2000,2000)
         hist.GetDirectory().cd()
-        n_drawn = tree.Draw("%s >> %s" % (energy_var, hist.GetName()), selection,) # "goff")
+        n_drawn = tree.Draw("%s >> %s" % (energy_var, hist.GetName()), i_selection,) # "goff")
+        print "%i drawn" % n_drawn
         mean = hist.GetMean()
         rms = hist.GetRMS()
         i_point = graph.GetN()
@@ -81,8 +87,8 @@ def plot_results(results):
     results.sort()
 
     #selection = "channel != %i" % struck_analysis_parameters.pmt_channel
-    #selection = "channel==2 && lightEnergy/calibration<20"
-    selection = "channel==2" # during filling
+    selection = "channel==2 && lightEnergy/calibration<20"
+    #selection = "channel==7" # during filling
 
     graphs = []
     #graphs.append(get_graph("energy_rms1", results, ROOT.kRed)) # just a test
@@ -99,8 +105,8 @@ def plot_results(results):
     tree = tfile.Get("tree")
     hist = ROOT.TH1D("hist","White noise approx",200,0,100)
     hist.GetDirectory().cd()
-    #n_drawn = tree.Draw("baseline_rms*calibration >> %s" % hist.GetName(), selection,) # "goff")
-    n_drawn = tree.Draw("energy_rms1 >> %s" % hist.GetName(), selection,) # "goff")
+    n_drawn = tree.Draw("baseline_rms*calibration >> %s" % hist.GetName(), selection,) # "goff")
+    #n_drawn = tree.Draw("energy_rms1 >> %s" % hist.GetName(), selection,) # "goff")
     print "%i drawn, %i in hist" % (n_drawn, hist.GetEntries())
     baseline_rms = hist.GetMean()
     print "simple approx: baseline_rms", baseline_rms
