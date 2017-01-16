@@ -41,11 +41,12 @@ for filename in filenames:
     selections = []
     #selections.append("(nsignals==1)") # single-channel cut
     selections.append("(nsignals>0 || is_pulser)") 
+    selections.append("((nsignals>0  && SignalEnergy>100)|| is_pulser)") 
     #selections.append("(nXsignals==1 && nYsignals==1)") # for twoSignals
     #selections.append("(!is_pulser || !is_bad)") 
     #selections.append("(nsignals>0)") 
     #selections.append("(SignalEnergy>50)")
-    selections.append("(SignalEnergy>100)")
+    #selections.append("(SignalEnergy>100)")
     #selections.append("(SignalEnergy>200)")
     selections.append("(rise_time_stop95_sum-trigger_time>%.6f)" % drift_time_low)
     selections.append("(rise_time_stop95_sum-trigger_time<%.6f)" % drift_time_high)
