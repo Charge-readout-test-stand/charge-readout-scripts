@@ -79,7 +79,7 @@ def do_draw(
     hist = exo_wfm.GimmeHist("hist")
     hist.SetTitle(title)
     hist.SetLineWidth(2)
-    hist.SetAxisRange(6.0,19.0) # zoom to interesting times
+    #hist.SetAxisRange(6.0,19.0) # zoom to interesting times
     if vlines != None:
         #hist.SetAxisRange(vlines[1]-2.0,vlines[-1]+2.0) # zoom to interesting times
         pass
