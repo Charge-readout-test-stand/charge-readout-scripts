@@ -1576,6 +1576,9 @@ if __name__ == "__main__":
     #test_noise = "/p/lscratchd/jewell6/MCData_9thLXe/tier3_SIS3316Raw_20160921080244_9thLXe_126mvDT_cath_1700V_100cg_overnight__1-ngm.root"
     test_noise = "/p/lscratchd/jewell6/MCData_9thLXe/NoiseFiles/noiselib/NoiseLib_9thLXe.root"
     test_noise_slac = "/nfs/slac/g/exo_data4/users/alexis4/test-stand/NoiseLib_9thLXe.root"
+    if struck_analysis_parameters.is_10th_LXe:
+        test_noise = "/p/lscratchd/jewell6/MCData_9thLXe/NoiseFiles/noiselib/NoiseLib_10thLXe.root"
+        test_noise_slac = "/nfs/slac/g/exo_data4/users/alexis4/test-stand/NoiseLib_10thLXe.root"
     if options.isMC:
         if options.noise_file is not None:
             if os.path.isfile(options.noise_file):
@@ -1588,6 +1591,7 @@ if __name__ == "__main__":
             print "Using SLAC test Noise"
             noise_file = test_noise_slac
         else:
+            print "Noise file is set to none"
             noise_file = None
     
 
