@@ -303,6 +303,11 @@ if is_8th_LXe or is_9th_LXe:
     MCcharge_channels_to_use[38] = 0
     MCcharge_channels_to_use[39] = 0
 
+if is_10th_LXe:
+    for struck_channel, mc_channel in struck_to_mc_channel_map.items():
+        MCcharge_channels_to_use[mc_channel[0]] = 1
+        mc_channel_map[mc_channel[0]] = channel_map[struck_channel]
+
 n_MCchargechannels = sum(MCcharge_channels_to_use)
 
 def is_tree_MC(tree):
