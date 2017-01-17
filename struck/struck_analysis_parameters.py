@@ -950,8 +950,8 @@ nest_resolution_570 = 1.46847e+03/2.71292e+04
 
 noiseLightCut = 20.0
 noise_length = int(800)
-if is_9th_LXe: 
-    noise_length = int(800)
+if is_10th_LXe: 
+    noise_length = int(1050)
     noiseLightCut = 20.0
 
 def is_2Vinput(baseline_mean_file): #FIXME--will be included in the tree so no longer needed
