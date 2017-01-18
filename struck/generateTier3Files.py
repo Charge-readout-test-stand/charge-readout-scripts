@@ -1050,18 +1050,28 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             elif isMC:
                 #Some channels are grouped together so for those sum each channel in the gropu
                 #First always get the one channel that has to exist
-                if i == pmt_channel: 
+                if i == pmt_channel or i == pulser_channel: 
                     #print "Skip pmt", i, pmt_channel
                     continue
 
                 #print i, pmt_channel
                 wfm = [wfmp for wfmp in tree.ChannelWaveform[struck_to_mc_channel_map[i][0]]]
+                if not ROOT.gROOT.IsBatch(): print "channel %i %s -- adding MC ch %s" % (
+                    i, 
+                    channel_map[i],
+                    struck_to_mc_channel_map[i][0],
+                )
                 
                 #Now check if a multi strip and if it is loop over the channels and add
                 #their wfms to the sum wfm
                 if len(struck_to_mc_channel_map[i]) > 1.5:
                     for mcch in struck_to_mc_channel_map[i][1:]:
                         #print "MC=", i, mcch
+                        if not ROOT.gROOT.IsBatch(): print "channel %i %s-- adding MC ch %s" % (
+                            i, 
+                            channel_map[i],
+                            struck_to_mc_channel_map[i][0],
+                        )
                         for index, wfmi in enumerate(tree.ChannelWaveform[mcch]):
                             wfm[index] += wfmi
                 channel[i] = i
@@ -1127,6 +1137,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             if isMC and channel[i] is not pmt_channel:
                 if noise_file is None:
                     #No file use gaussian noise
+                    if not ROOT.gROOT.IsBatch(): print "no noise file, using gaussian noise"
                     try:
                         sigma = rms_keV[i]/calibration[i] 
                     except KeyError:
@@ -1135,6 +1146,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                         noise = generator.Gaus()*sigma
                         wfm[i_point]+=noise
                 else:
+                    if not ROOT.gROOT.IsBatch(): print "noise file found"
                     #Have a noise_file get random event and wfm for that channel
                     noise_array = getattr(noise_tree, "wfm%i" % channel[i])
                     #MC length is 801 why?????
@@ -1160,10 +1172,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
             
             label = "Event %i " % n_events
-            if not isMC:
-                label += struck_analysis_parameters.channel_map[i]
-            else:
-                label += " MC ch %i" % i
+            if isMC:
+                label += " MC ch %i " % i 
+            label += struck_analysis_parameters.channel_map[i]
             # use wfmProcessing to get most wfm parameters
             (
                 baseline_mean[i], 
@@ -1382,13 +1393,13 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 rise_time_stop99_sum[0]
             ) = wfmProcessing.get_risetimes(
                 sum_wfm, 
-                wfm_length[0], 
+                sum_wfm.size(), 
                 sampling_frequency_Hz[0],
                 skip_short_risetimes,
                 label="Event %i Sum %i keV" % (n_events, SignalEnergy[0]),
             )
- 
-            baseline_remover.SetStartSample(wfm_length[0] - 2*n_baseline_samples[0] - 1)
+
+            baseline_remover.SetStartSample(sum_wfm.size() - 2*n_baseline_samples[0] - 1)
             baseline_remover.Transform(sum_wfm)
             energy_sum[0] = baseline_remover.GetBaselineMean()
             energy_rms_sum[0] = baseline_remover.GetBaselineRMS()
@@ -1499,6 +1510,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                         do_fill = True
                     else:
                         do_fill = False
+                    if struck_analysis_parameters.is_10th_LXe and out_tree.GetEntries() >= 20: break # 20 events x 1181 files 
 
                 if do_fill:
                     out_tree.Fill()

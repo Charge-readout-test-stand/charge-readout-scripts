@@ -303,6 +303,11 @@ if is_8th_LXe or is_9th_LXe:
     MCcharge_channels_to_use[38] = 0
     MCcharge_channels_to_use[39] = 0
 
+if is_10th_LXe:
+    for struck_channel, mc_channel in struck_to_mc_channel_map.items():
+        MCcharge_channels_to_use[mc_channel[0]] = 1
+        mc_channel_map[mc_channel[0]] = channel_map[struck_channel]
+
 n_MCchargechannels = sum(MCcharge_channels_to_use)
 
 def is_tree_MC(tree):
@@ -945,8 +950,8 @@ nest_resolution_570 = 1.46847e+03/2.71292e+04
 
 noiseLightCut = 20.0
 noise_length = int(800)
-if is_9th_LXe: 
-    noise_length = int(800)
+if is_10th_LXe: 
+    noise_length = int(1050)
     noiseLightCut = 20.0
 
 def is_2Vinput(baseline_mean_file): #FIXME--will be included in the tree so no longer needed
