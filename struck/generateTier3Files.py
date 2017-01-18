@@ -1510,6 +1510,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                         do_fill = True
                     else:
                         do_fill = False
+                    if struck_analysis_parameters.is_10th_LXe and out_tree.GetEntries() >= 20: break # 20 events x 1181 files 
 
                 if do_fill:
                     out_tree.Fill()
