@@ -696,9 +696,10 @@ def get_colors():
 # from tier2to3_overnight.root, baseline_rms
 n_baseline_samples = 200.0
 # this is not really microseconds, but samples:
-energy_gap_time_microseconds = 450*40/1000 # energy calc starts 450 samples after wfm start, in a normal 25-MS/s run
-print "energy_gap_time_microseconds:", energy_gap_time_microseconds
-print "energy_gap_time_samples:", energy_gap_time_microseconds*sampling_freq_Hz/1e6
+energy_start_time_microseconds = 450.0*40/1000 # energy calc starts 450 samples after wfm start, in a normal 25-MS/s run
+if is_10th_LXe:
+    energy_start_time_microseconds = 850.0*40/1000 # energy calc starts 850 samples
+print "energy_start_time_microseconds:", energy_start_time_microseconds
 baseline_average_time_microseconds = 4.0 # 100 samples at 25 MHz
 rms_keV = {}
 rms_keV_sigma = {}

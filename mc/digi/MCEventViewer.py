@@ -57,13 +57,14 @@ def PCDViewer(tData, eventN):
     x = []
     y = []
     z = []
+    Wvalue = 22.0043657088/1e3 # keV
     for pcdn in np.arange(tData.NumPCDs):
         print "PCD pos (x,y,z)", tData.PCDx[int(pcdn)], tData.PCDy[int(pcdn)], tData.PCDz[int(pcdn)], 
-        print "PCDQ = ", tData.PCDq[int(pcdn)]
+        print "PCDQ = ", tData.PCDq[int(pcdn)]*Wvalue
         x.append(tData.PCDx[int(pcdn)])
         y.append(tData.PCDy[int(pcdn)])
         z.append(tData.PCDz[int(pcdn)])
-        total_q += tData.PCDq[int(pcdn)]
+        total_q += tData.PCDq[int(pcdn)]*Wvalue
 
     make_tile()
     plt.scatter(x,y, c= 'r', s=100.0)
@@ -85,17 +86,19 @@ def PCDViewer(tData, eventN):
 
 def SignalViewer(tData, eventN):
     WF = np.zeros((num_channels,len_WF))
+    Wvalue = 22.0043657088/1e3 # keV
     for nch in np.arange(num_channels):
         if tData.NumPCDs == 0: continue
         for i in np.arange(len_WF):
             #WF[nch][i] = tData.ChannelWaveform[int(nch)][int(i)]+47.5*rand.Gaus(0,17.805) #value from RMS in ch2 converted in num electrons
-            WF[nch][i] = tData.ChannelWaveform[int(nch)][int(i)]
+            WF[nch][i] = tData.ChannelWaveform[int(nch)][int(i)]*Wvalue
         if WF[nch][-1] > 0:
             print "Hit Ch = ", nch, " Qvalue = ", WF[nch][-1]
         plt.plot(t, WF[nch], label='Sim Ch='+str(nch))
     plt.title("Channel Signals")
     plt.xlabel("time[$\mu$s]")
-    plt.ylabel("Q[#e-]")
+    #plt.ylabel("Q[#e-]")
+    plt.ylabel("E[keV]")
     save = raw_input("Save figure? (y or n, q to quit)")
     if save == 'y':
         #plt.savefig("./plots/signal_event"+str(eventN)+".png")
@@ -113,6 +116,7 @@ def EventViewer(tData):
     print "There are nEvents = ", nEvents
 
     for ev in np.arange(nEvents):
+        if ev < 40: continue # testing PCDz
         print "Event", ev
         tData.GetEntry(ev)
         if tData.NumPCDs == 0: continue

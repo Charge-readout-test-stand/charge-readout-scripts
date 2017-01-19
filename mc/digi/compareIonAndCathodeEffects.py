@@ -17,13 +17,16 @@ def make_graph(
     e_lifetime=None, # microseconds
 ):
 
+    cathodeToAnodeDistance = RalphWF.cathodeToAnodeDistance
     # options
     x = 1.5 # mm
     y = 0.0 # mm
-    z = 0.16 # distance from cathode
+    z = 0.23 # distance from cathode
     q = 1.0 # arbitrary
     dz = 0.25 # mm -- for nice plots -- takes ~1.5 minutes
     #dz = 1.0 # mm -- quick & dirty
+    #z = cathodeToAnodeDistance # mm
+    z = 0
 
     print "--> making graph: %i, %i" % (RalphWF.posion, RalphWF.cathsupress)
 
@@ -32,13 +35,14 @@ def make_graph(
     integral_efficiency = 0.0
     integral_distance = 0.0
     graph = TGraph()
-    cathodeToAnodeDistance = RalphWF.cathodeToAnodeDistance
+    dz = (cathodeToAnodeDistance - z)/100.0
+    #dz = 0.5
     while z < cathodeToAnodeDistance:
         WF = RalphWF.make_WF(x, y, z, q, 15)
         val = WF[-1]
         integral_distance += dz
         integral_efficiency += val*dz
-        print "\t %i, z=%.1f, val=%.3f" % (graph.GetN(), z, val)
+        print "\t %i, z=%.1f, val=%.5f" % (graph.GetN(), z, val)
         graph.SetPoint(graph.GetN(), cathodeToAnodeDistance-z, val)
         z += dz
     graph.SetLineWidth(2)
@@ -83,6 +87,7 @@ def main():
     RalphWF.cathsupress = False
     graph2 = make_graph()
     graph2.SetLineColor(TColor.kBlue)
+    graph2.SetLineWidth(4)
     graph2.Draw("l")
     legend.AddEntry(graph2, "Ion screening only", "l")
  
@@ -102,7 +107,7 @@ def main():
     graph4.SetLineColor(TColor.kRed)
     graph4.Draw("l")
     legend.AddEntry(graph4, "Ion screening + cathode effect", "l")
-    
+
     cathodeToAnodeDistance = RalphWF.cathodeToAnodeDistance
     line = TLine(cathodeToAnodeDistance, hist.GetMinimum(), 
         cathodeToAnodeDistance, hist.GetMaximum())
@@ -113,8 +118,9 @@ def main():
     legend.Draw()
     canvas.Update()
     canvas.Print("ionAndCathodeEffect.pdf")
-    canvas.Print("ionAndCathodeEffect.png")
+    #canvas.Print("ionAndCathodeEffect.png")
 
+    """
     print "e- lifetime"
     RalphWF.posion = False
     RalphWF.cathsupress = False
@@ -147,12 +153,13 @@ def main():
     canvas.Update()
     canvas.Print("ionAndCathodeEffectWithTau.pdf")
     canvas.Print("ionAndCathodeEffectWithTau.png")
+    """
 
     if not gROOT.IsBatch():
         val = raw_input("press enter to continue") # pause
 
-    graph4.Write("graphIonAndCathode")
-    graph5.Write("graphIonAndCathode%iusTau" % RalphWF.e_lifetime)
+    #graph4.Write("graphIonAndCathode")
+    #graph5.Write("graphIonAndCathode%iusTau" % RalphWF.e_lifetime)
     outfile.Close()
 
 if __name__ == "__main__":

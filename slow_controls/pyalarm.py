@@ -2,7 +2,9 @@
 The environment variable LXEPASS should be set to the password for the gmail
 account. 
 
-** run this script with "python -u" to pipe output to a log file... 
+** run this script with "python -u" to pipe output to a log file. Usually
+something like this, in a screen session:
+  python -u pyalarm.py --lxe >& py_log.out
 
 This script sends email if one of these conditions is met: 
 * Unable to ping IP address of Omega LN controller (power may be out)
@@ -24,6 +26,8 @@ To do: FIXME
 
 * send heart beat email info?
 
+FIXME -- output thresholds & settings (lxe or not) in heartbeat email
+
 
 Modified from Brian Mong's monitoring of EXO-200. 
 05 May 2016
@@ -38,9 +42,9 @@ import commands
 import smtplib
 
 # options -- monitoring thresholds:
-temperature_threshold = 167.0 # LXe & Cu operating threshold, K
-dp_threshold = 400.0 # xenon - HFE, torr
-ln_mass_threshold = 80.0 # lbs of LN needed
+temperature_threshold = 173.0 # LXe & Cu operating threshold, K
+dp_threshold = 700.0 # xenon - HFE, torr
+ln_mass_threshold = 70.0 # lbs of LN needed
 ln_hours_left_threshold = 1.0 # at least 1 hour of LN must remain! 
 lookback_time_minutes = 10.0 # LabView plots shouldn't be older than this, minutes
 sleep_seconds = 60*5 # sleep for this many seconds between tests
@@ -340,11 +344,13 @@ class LXeMonitoring:
 
         if self.lxe:
 
+            # check time until LN runs out:
             #if data['ln_hours_left'] < ln_hours_left_threshold:
             #    message = "hours of LN remaining: %.2f" % data['ln_hours_left']
             #    messages.append(message)
             #    print_warning(message)
 
+            # check remaining LN mass:
             if data['ln_mass_lbs'] < ln_mass_threshold:
                 message = "hours of LN remaining: %.2f" % data['ln_mass_lbs']
                 messages.append(message)
