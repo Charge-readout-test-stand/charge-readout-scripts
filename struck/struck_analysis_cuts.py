@@ -216,6 +216,18 @@ def get_nstrips_events(nstrips=1):
     strips_excluded = "(%s==0)" % strips_excluded
     return strips_excluded
 
+def get_nstrips_energy(nstrips=1, energy_var="energy1_pz"):
+    """
+    construct sum energy from nstrips channels that are hit
+    """
+    energy = []
+    for channel, val in struck_analysis_parameters.struck_to_mc_channel_map.items():
+        if len(val) == nstrips:
+            energy.append("signal_map[%i]*%s[%s]" % (channel, energy_var, channel))
+    energy = "+".join(energy)
+    return energy
+
+
 
 def get_few_one_strip_channels(
     n_sigma=5.0,
@@ -509,6 +521,7 @@ if __name__ == "__main__":
 
     print "\n get_nstrips_events(nstrips=1):", get_nstrips_events(nstrips=1)
     print "\n get_nstrips_events(nstrips=2):", get_nstrips_events(nstrips=2)
+    print "\n get_nstrips_energy(nstrips=1):", get_nstrips_energy(nstrips=1)
 
     print "\n get_standard_cut:", get_standard_cut()
 
