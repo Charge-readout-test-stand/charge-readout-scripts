@@ -1489,7 +1489,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         if wfm_too_low: is_bad[0] += 8
         if wfm_too_high: is_bad[0] += 16
 
-        if pulser_channel:
+        if not isMC and pulser_channel:
             if wfm_min[pulser_channel] < 3000: # 9th LXe value
                 is_pulser[0] = 1
             if struck_analysis_parameters.is_10th_LXe and (wfm_max[pulser_channel] - baseline_mean[pulser_channel]) > 3000:
