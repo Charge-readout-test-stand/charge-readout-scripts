@@ -6,7 +6,9 @@ import math
 
 posion  = True #Use Positive Ion
 cathsupress = True #Use Cathode Supression
-cathodeToAnodeDistance = 18.16 # mm
+cathodeToAnodeDistance = 18.16 # + 16 # mm
+#cathodeToAnodeDistance = 1000.0 # mm
+#cathodeToAnodeDistance = 33.23 # mm
 drift_velocity = 2.0 # mm/microsecond
 e_lifetime=None # e- lifetime, microseconds
 consider_capturedQ=False # electrons captured on impurities
@@ -74,6 +76,7 @@ def make_WF(xpcd, ypcd, zpcd, Epcd, chID):
 
     xch_list, ych_list =  np.loadtxt("/nfs/slac/g/exo/mjewell/nEXO/nEXO_Analysis/utilities/scripts/localChannelsMap.txt", usecols = (1,2) ,unpack=True)
     dZ = 0.04 * 0.2 * 10
+    dZ = cathodeToAnodeDistance/100.0
     
     chx = xch_list[chID]
     chy = ych_list[chID]
@@ -95,13 +98,13 @@ def make_WF(xpcd, ypcd, zpcd, Epcd, chID):
 
     #cathodeToAnodeDistance is top in Daves
     #0 is top in Ralphs??
-    ki = 200
-    for k in np.arange(ki,800,1):    
+    ki = 0
+    for k in np.arange(ki,len(WF),1):    
         zpcd -= dZ
         if zpcd < 0: zpcd = 0.0
-        if e_lifetime:
+        if e_lifetime != None:
             drift_time = (z0-zpcd)/drift_velocity # so far
-            exp_factor = math.exp(-drift_time/e_lifetime)
+            #exp_factor = math.exp(-drift_time/e_lifetime)
             frac_captured = 1.0 - math.exp(-dZ/drift_velocity/e_lifetime)
             if False: # debugging
                 print "z: %.1f | drift_time: %.1f | exp_factor: %.3f | frac_captured: %.3f | capturedQ: %.3f" % (
@@ -113,9 +116,9 @@ def make_WF(xpcd, ypcd, zpcd, Epcd, chID):
                 )
         if(zpcd <= 0.0):
             Q = sum_channel(xpcd,ypcd,0.00001,chID,chx,chy) 
-            if e_lifetime: Q = Q*exp_factor
+            if e_lifetime != None: Q = Q*exp_factor
             if cathsupress: Q = Q*(cathodeToAnodeDistance-zpcd)/cathodeToAnodeDistance
-            if e_lifetime and consider_capturedQ: 
+            if e_lifetime != None and consider_capturedQ: 
                 capturedQ += Q*frac_captured
                 Q += capturedQ
             if posion: Q -= ionQ
@@ -160,7 +163,8 @@ if __name__ == "__main__":
     plt.plot(sample_times, WF)
     plt.ylim([-np.max(WF)*0.1, np.max(WF)*1.1])
     plt.savefig("./plots/collect_X16.png")
-
+    
+    """
     plt.figure(2)
     #Induction signal X15
     plt.title("Induciton siganl X15")
@@ -180,7 +184,7 @@ if __name__ == "__main__":
     plt.plot(sample_times, WF)
     plt.ylim([-np.max(WF)*0.1,np.max(WF)*1.1])
     plt.savefig("./plots/induct_Y16.png")
-    
+
     pcdx= 1.5
     pcdy = 0.0
     pcdz = 15.0
@@ -194,9 +198,10 @@ if __name__ == "__main__":
     plt.plot(sample_times, WF)
     plt.ylim([np.min(WF)*1.1,np.max(WF)*1.1])
     plt.savefig("./plots/induct_Y16_neg.png")
+    """
 
     plt.show()
-    raw_input()
+    raw_input("any key to continue")
 
    
 
