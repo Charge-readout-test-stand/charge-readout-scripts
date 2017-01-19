@@ -119,7 +119,7 @@ def process_files(filenames):
 
             ##selection = "energy1_pz>%s" % (threshold/multiplier)
             sel = "signal_map==1 && %s" % selection 
-            n_drawn = tree.Draw("channel >> %s" % ch_hist.GetName(), sel, "norm")
+            n_drawn = tree.Draw("channel >> %s" % ch_hist.GetName(), sel,)
 
 
             for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use):
@@ -161,7 +161,7 @@ def process_files(filenames):
         print "\tdraw_cmd:", draw_cmd
         print "\tselection", selection
 
-        options = "goff norm"
+        options = "goff"
 
         n_entries = tree.Draw(
             draw_cmd,
@@ -178,27 +178,32 @@ def process_files(filenames):
 
     y_max = 0
     for hist in hists:
+        n_entries = hist.GetEntries()
+        print "scale_factor:", 1.0/n_entries
+        hist.Scale(1.0/n_entries)
         if hist.GetMaximum() > y_max: y_max = hist.GetMaximum()
 
 
-    hists[0].SetMaximum(y_max*1.2)
+    hists[0].SetMaximum(y_max*1.05)
     hists[0].SetTitle("")
-    hists[0].Draw("b norm")
+    hists[0].Draw("b")
     for hist in hists:
-        hist.Draw("b same norm")
+        hist.Draw("b same")
+
+    n_files = len(filenames)
 
     canvas.SetLogy(1)
     legend.Draw()
     canvas.Update()
-    canvas.Print("multiplicity.pdf")
+    canvas.Print("multiplicity_%i.pdf" % n_files)
 
     canvas.SetLogy(0)
     canvas.Update()
-    canvas.Print("multiplicity_lin.pdf")
+    canvas.Print("multiplicity_lin_%i.pdf" % n_files)
 
     hists[0].SetAxisRange(0, 7.5)
     canvas.Update()
-    canvas.Print("multiplicity_lin_zoom.pdf")
+    canvas.Print("multiplicity_lin_zoom_%i.pdf" % n_files)
 
     if not ROOT.gROOT.IsBatch(): raw_input("any key to continue  ")
 
@@ -206,9 +211,10 @@ def process_files(filenames):
 
     if len(ch_hists) > 0:
         ch_hists[0].SetTitle("")
-        ch_hists[0].Draw("b norm")
+        #ch_hists[0].Draw("b norm")
+        ch_hists[0].Draw("b")
         for hist in ch_hists:
-            hist.Draw("b same norm")
+            hist.Draw("b same")
 
         canvas.SetLogy(1)
         legend.Draw()
