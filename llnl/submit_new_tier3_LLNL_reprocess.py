@@ -2,6 +2,10 @@
 A new script, trying to process existing files in a loop that keeps 200 jobs
 running at once. 
 
+This script builds a list of the tier1 root files and processes each one once.
+This is suitale for reprocessing, when all of the tier1 files are already at
+LLNL. If tier1 is still transferring, use submit_new_tier3_LLNL.py.  
+
 12 Dec 2016 AGS
 """
 

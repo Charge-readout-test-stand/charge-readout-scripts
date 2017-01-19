@@ -1,6 +1,11 @@
 """
 A new script to submit only up to 200 jobs at a time for processing at LLNL. 
 29 Aug 2016 AGS
+
+This script will not submit new jobs if any jobs from this user are already in
+the queue. This is useful if tier1 data files are still transferring; otherwise
+use submit_new_tier3_LLNL_reprocess.py. 
+
 """
 
 import os
@@ -56,6 +61,8 @@ def process_files(filenames):
                 python_script=script_name,
                 filenames=[filename],
             )
+
+        #break # debugging
 
     print "====> %i jobs submitted" % n_submitted
             
