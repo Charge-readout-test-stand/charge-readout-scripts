@@ -44,14 +44,19 @@ if os.getenv("EXOLIB") is not None and not isROOT6:
 
 drift_length = 18.16 # mm, from solidworks for 7th LXe + 
 drift_velocity = 2.0 # mm / microsecond  
+max_drift_time = drift_length/drift_velocity
+#print "max_drift_time:", max_drift_time
 if is_10th_LXe:
+    drift_velocity = 1.79 # mm / microsecond  
+    max_drift_time = drift_length/drift_velocity
+    #print "max_drift_time:", max_drift_time
     drift_length = 33.23 # new anode standoffs Dec 2016
-    drift_velocity = 1.85 # mm / microsecond  
 max_drift_time = drift_length/drift_velocity
 
 # drift time threshold for 99% signal collection, determined from ion screening
 # and cathode effects:
 drift_time_threshold = (drift_length - 5.3)/drift_velocity # microsecond
+#print "max_drift_time:", max_drift_time
 
 
 sampling_freq_Hz = 25.0e6 # digitizer sampling frequency, Hz
@@ -699,7 +704,7 @@ n_baseline_samples = 200.0
 energy_start_time_microseconds = 450.0*40/1000 # energy calc starts 450 samples after wfm start, in a normal 25-MS/s run
 if is_10th_LXe:
     energy_start_time_microseconds = 850.0*40/1000 # energy calc starts 850 samples
-print "energy_start_time_microseconds:", energy_start_time_microseconds
+#print "energy_start_time_microseconds:", energy_start_time_microseconds
 baseline_average_time_microseconds = 4.0 # 100 samples at 25 MHz
 rms_keV = {}
 rms_keV_sigma = {}
@@ -988,6 +993,10 @@ if __name__ == "__main__":
     print "\t drift_velocity:", drift_velocity
     print "\t drift_time_threshold:", drift_time_threshold
     print "\t max_drift_time:", max_drift_time
+
+    print "\nprocessing parameters:"
+    print "\t baseline_average_time_microseconds:", baseline_average_time_microseconds
+    print "\t energy_start_time_microseconds:", energy_start_time_microseconds
 
     #print "\nchannels used:"
     #for channel in channels:
