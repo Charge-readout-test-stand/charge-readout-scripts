@@ -48,6 +48,7 @@ def process_file(filenames):
         ROOT.kGreen+2,
         ROOT.kViolet,
         ROOT.kCyan+3,
+        ROOT.kOrange+1,
     ]
     legend = ROOT.TLegend(0.1, 0.91, 0.9, 0.99)
     legend.SetNColumns(2)
@@ -78,6 +79,12 @@ def process_file(filenames):
         tfile = ROOT.TFile(filename)
         tree = tfile.Get("tree")
         print "\tEntries in tree:", tree.GetEntries()
+
+        tree.SetBranchStatus("*",0)
+        tree.SetBranchStatus("rise_time_stop95_sum",1)
+        tree.SetBranchStatus("trigger_time",1)
+        tree.SetBranchStatus("SignalEnergy",1)
+
         hist.GetDirectory().cd()
 
         isMC = struck_analysis_parameters.is_tree_MC(tree)
@@ -100,11 +107,6 @@ def process_file(filenames):
         legend.AddEntry(hist, basename, "f")
         hists.append(hist)
 
-    # set up a canvas
-    canvas = ROOT.TCanvas("canvas","")
-    canvas.SetLogy(1)
-    canvas.SetGrid(1,1)
-
     hists[0].SetXTitle("Drift time [#mus]")
     hists[0].SetYTitle("Counts  / %.2f #mus" % (
         hists[0].GetBinWidth(1),
@@ -114,6 +116,8 @@ def process_file(filenames):
     for hist in hists:
         if hist.GetMaximum() > y_max: y_max = hist.GetMaximum()
 
+    hists[0].SetMaximum(y_max*1.1)
+    hists[0].SetMinimum(1e-4)
     hists[0].Draw("")
     for hist in hists:
         hist.Draw("same")
