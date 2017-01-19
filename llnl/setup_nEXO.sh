@@ -4,6 +4,13 @@
 # Borax commands
 #-------------------------------------------------------------------------------
 
+export CC=gcc
+export CXX=g++
+unset LD_LIBRARY_PATH
+
+# per Samuele, 18 Jan 2017:
+export LD_LIBRARY_PATH=/usr/tce/packages/gcc/gcc-4.9.3/lib64:$LD_LIBRARY_PATH
+
 # SET UP ROOT 5
 export ROOTSYS=/usr/gapps/cern/root_v5.34.36/toss_3_x86_64/
 source $ROOTSYS/bin/thisroot.sh
