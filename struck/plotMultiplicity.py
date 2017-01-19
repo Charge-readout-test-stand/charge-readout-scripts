@@ -34,6 +34,7 @@ def process_files(filenames):
         ROOT.kGreen+2,
         ROOT.kViolet,
         ROOT.kCyan+3,
+        ROOT.kOrange+1,
     ]
     legend = ROOT.TLegend(0.1, 0.91, 0.9, 0.99)
     legend.SetNColumns(2)
@@ -54,14 +55,14 @@ def process_files(filenames):
         n_bins = max_bin*2
 
         hist = ROOT.TH1D("hist%i" % len(hists), basename, n_bins, -0.25, max_bin-0.25)
-        print "hist:", hist.GetName()
+        print "\thist:", hist.GetName()
         color = colors[len(hists)]
         hist.SetLineColor(color)
         hist.SetFillColor(color)
         bar_width = 1.0/len(filenames)-0.1
-        print "bar_width:", bar_width
+        print "\tbar_width:", bar_width
         bar_offset = (0.1+bar_width)*i
-        print "bar_offset:", bar_offset
+        print "\tbar_offset:", bar_offset
         hist.SetBarWidth(bar_width)
         hist.SetBarOffset(bar_offset)
         #hist.SetFillStyle(3004)
@@ -87,7 +88,7 @@ def process_files(filenames):
         tree.SetBranchStatus("channel",1)
         
         n_entries = tree.GetEntries()
-        print "%i entries" % n_entries
+        print "\t%i entries" % n_entries
         hist = hists[i]
         hist.GetDirectory().cd()
 
@@ -97,55 +98,58 @@ def process_files(filenames):
             tree.MCchargeEnergy
         except:
             is_MC = False
-        print "is_MC:", is_MC
+        print "\tis_MC:", is_MC
 
         multiplier = 1.0
         if is_MC:
             multiplier = 1.15
 
-        # draw channels hit:    
-        #ch_hist = ROOT.TH1D("ch_hist%i" % len(hists), basename,n_bins, -0.25, max_bin-0.25)
-        ch_hist = hist.Clone("ch_hist%i" % len(hists))
-        #ch_hist.SetLineColor(color)
-        #ch_hist.SetLineWidth(2)
-        #ch_hist.SetFillColor(color)
-        #ch_hist.SetFillStyle(3004)
-        #ch_hist.SetBarWidth(bar_width)
-        #ch_hist.SetBarOffset(bar_offset)
-        ch_hist.SetXTitle("Channel hit")
-        ##selection = "energy1_pz>%s" % (threshold/multiplier)
-        sel = "signal_map==1 && %s" % selection 
-        n_drawn = tree.Draw("channel >> %s" % ch_hist.GetName(), sel, "norm")
+        if False: # ch hist doesn't work for comparing 9th and 10th LXe
+
+            # draw channels hit:    
+            #ch_hist = ROOT.TH1D("ch_hist%i" % len(hists), basename,n_bins, -0.25, max_bin-0.25)
+            ch_hist = hist.Clone("ch_hist%i" % len(hists))
+            #ch_hist.SetLineColor(color)
+            #ch_hist.SetLineWidth(2)
+            #ch_hist.SetFillColor(color)
+            #ch_hist.SetFillStyle(3004)
+            #ch_hist.SetBarWidth(bar_width)
+            #ch_hist.SetBarOffset(bar_offset)
+            ch_hist.SetXTitle("Channel hit")
+
+            ##selection = "energy1_pz>%s" % (threshold/multiplier)
+            sel = "signal_map==1 && %s" % selection 
+            n_drawn = tree.Draw("channel >> %s" % ch_hist.GetName(), sel, "norm")
 
 
-        for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use):
+            for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use):
 
-            i_bin = ch_hist.FindBin(channel)
-            n_strips = struck_analysis_parameters.channel_to_n_strips_map[channel]
-            label = struck_analysis_parameters.channel_map[channel]
-            print "ch %i | %s | %i strips" % (channel, label, n_strips)
-            ch_hist.GetXaxis().SetBinLabel(i_bin, label)
-            if n_strips>1:
-                ch_hist.SetBinContent(i_bin, ch_hist.GetBinContent(i_bin)/n_strips)
+                i_bin = ch_hist.FindBin(channel)
+                n_strips = struck_analysis_parameters.channel_to_n_strips_map[channel]
+                label = struck_analysis_parameters.channel_map[channel]
+                print "\t\tch %i | %s | %i strips" % (channel, label, n_strips)
+                ch_hist.GetXaxis().SetBinLabel(i_bin, label)
+                if n_strips>1:
+                    ch_hist.SetBinContent(i_bin, ch_hist.GetBinContent(i_bin)/n_strips)
 
-            # set contents to 0 for unused channels
-            if val == 0:
-                if channel == struck_analysis_parameters.pmt_channel: continue
-                content = ch_hist.GetBinContent(i_bin)
-                ch_hist.SetBinContent(i_bin, 0.0)
-                print "set ch %i %s bin %i from %i to 0" % (channel, struck_analysis_parameters.channel_map[channel], i_bin, content)
+                # set contents to 0 for unused channels
+                if val == 0:
+                    if channel == struck_analysis_parameters.pmt_channel: continue
+                    content = ch_hist.GetBinContent(i_bin)
+                    ch_hist.SetBinContent(i_bin, 0.0)
+                    print "\t\t\tset ch %i %s bin %i from %i to 0" % (channel, struck_analysis_parameters.channel_map[channel], i_bin, content)
 
 
-        canvas.SetLogy(1)
-        canvas.Update()
-        canvas.Print("hitChannels_%s.pdf" % basename)
-        ch_hists.append(ch_hist)
+            canvas.SetLogy(1)
+            canvas.Update()
+            canvas.Print("hitChannels_%s.pdf" % basename)
+            ch_hists.append(ch_hist)
 
-        canvas.SetLogy(0)
-        canvas.Update()
-        canvas.Print("hitChannels_%s_lin.pdf" % basename)
+            canvas.SetLogy(0)
+            canvas.Update()
+            canvas.Print("hitChannels_%s_lin.pdf" % basename)
 
-        if not ROOT.gROOT.IsBatch(): raw_input("any key to continue  ")
+            if not ROOT.gROOT.IsBatch(): raw_input("any key to continue  ")
 
 
 
@@ -154,8 +158,8 @@ def process_files(filenames):
         draw_cmd = "%s >> %s" % (draw_cmd, hist.GetName())
 
         title = selection[:100] + "..."
-        print "draw_cmd:", draw_cmd
-        print "selection", selection
+        print "\tdraw_cmd:", draw_cmd
+        print "\tselection", selection
 
         options = "goff norm"
 
@@ -165,14 +169,19 @@ def process_files(filenames):
             options,
         )
 
-        print "%i drawn entries" % n_entries
+        print "\t%i drawn entries" % n_entries
         n_entries = hist.GetEntries()
-        print "%i hist entries" % n_entries
-        print "mean", hist.GetMean()
+        print "\t%i hist entries" % n_entries
+        print "\tmean", hist.GetMean()
 
         legend.AddEntry(hist, hist.GetTitle(), "f")
 
+    y_max = 0
+    for hist in hists:
+        if hist.GetMaximum() > y_max: y_max = hist.GetMaximum()
 
+
+    hists[0].SetMaximum(y_max*1.2)
     hists[0].SetTitle("")
     hists[0].Draw("b norm")
     for hist in hists:
@@ -186,25 +195,31 @@ def process_files(filenames):
     canvas.SetLogy(0)
     canvas.Update()
     canvas.Print("multiplicity_lin.pdf")
+
+    hist[0].SetAxisRange(0, 7.5)
+    canvas.Update()
+    canvas.Print("multiplicity_lin_zoom.pdf")
+
     if not ROOT.gROOT.IsBatch(): raw_input("any key to continue  ")
 
 
 
-    ch_hists[0].SetTitle("")
-    ch_hists[0].Draw("b norm")
-    for hist in ch_hists:
-        hist.Draw("b same norm")
+    if len(ch_hists) > 0:
+        ch_hists[0].SetTitle("")
+        ch_hists[0].Draw("b norm")
+        for hist in ch_hists:
+            hist.Draw("b same norm")
 
-    canvas.SetLogy(1)
-    legend.Draw()
-    canvas.Update()
-    canvas.Print("hitChannels.pdf")
+        canvas.SetLogy(1)
+        legend.Draw()
+        canvas.Update()
+        canvas.Print("hitChannels.pdf")
 
-    canvas.SetLogy(0)
-    canvas.Update()
-    canvas.Print("hitChannels_lin.pdf")
+        canvas.SetLogy(0)
+        canvas.Update()
+        canvas.Print("hitChannels_lin.pdf")
 
-    if not ROOT.gROOT.IsBatch(): raw_input("any key to continue  ")
+        if not ROOT.gROOT.IsBatch(): raw_input("any key to continue  ")
 
 
 
