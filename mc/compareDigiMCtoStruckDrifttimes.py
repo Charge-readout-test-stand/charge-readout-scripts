@@ -130,6 +130,10 @@ def process_file(filenames):
     canvas.Update()
     canvas.Print("drift_times_lin_%i.pdf" % len(filenames))
 
+    hists[0].SetAxisRange(5,15)
+    canvas.Update()
+    canvas.Print("drift_times_lin_zoom_%i.pdf" % len(filenames))
+
     if not ROOT.gROOT.IsBatch():
         canvas.Update()
         raw_input("pause...")
