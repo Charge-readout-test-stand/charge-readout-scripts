@@ -2,30 +2,28 @@
 Draw multiplicity plot
 """
 
-
 import os
 import sys
 
 import ROOT
-from ROOT import gROOT
-gROOT.SetBatch(True)
-from ROOT import TH1D
-from ROOT import TFile
-from ROOT import TCanvas
-from ROOT import TLegend
-from ROOT import gStyle
+ROOT.gROOT.SetBatch(True)
 
-
-gROOT.SetStyle("Plain")     
-gStyle.SetOptStat(0)        
-gStyle.SetPalette(1)        
-gStyle.SetTitleStyle(0)     
-gStyle.SetTitleBorderSize(0)       
+ROOT.gROOT.SetStyle("Plain")     
+ROOT.gStyle.SetOptStat(0)        
+ROOT.gStyle.SetPalette(1)        
+ROOT.gStyle.SetTitleStyle(0)     
+ROOT.gStyle.SetTitleBorderSize(0)       
 
 import struck_analysis_cuts
 import struck_analysis_parameters
 
 def process_files(filenames):
+
+    #selection = "chargeEnergy*%s>1000 & chargeEnergy*%s<1200" % (multiplier, multiplier)
+    #selection = ""
+    #selection = "%s > 200" % struck_analysis_cuts.get_few_channels_cmd_baseline_rms()
+    selection = "SignalEnergy>200 && SignalEnergy<1500"
+
 
     hists = []
     ch_hists = []
@@ -36,12 +34,12 @@ def process_files(filenames):
         ROOT.kGreen+2,
         ROOT.kViolet,
     ]
-    legend = TLegend(0.1, 0.91, 0.9, 0.99)
+    legend = ROOT.TLegend(0.1, 0.91, 0.9, 0.99)
     legend.SetNColumns(2)
-    threshold = 10
+    #threshold = 10
 
     # set up a canvas
-    canvas = TCanvas("canvas","")
+    canvas = ROOT.TCanvas("canvas","")
     canvas.SetLogy(1)
     canvas.SetGrid(1,1)
 
@@ -51,25 +49,41 @@ def process_files(filenames):
         basename = os.path.splitext(basename)[0]
         print "processing file: ", filename
 
-        hist = TH1D("hist%i" % len(hists), basename,64, -0.25, 31.75)
+        max_bin = len(struck_analysis_parameters.charge_channels_to_use)
+        n_bins = max_bin*2
+
+        hist = ROOT.TH1D("hist%i" % len(hists), basename, n_bins, -0.25, max_bin-0.25)
         print "hist:", hist.GetName()
         color = colors[len(hists)]
         hist.SetLineColor(color)
         hist.SetFillColor(color)
-        #hist.SetLineWidth(2)
-        hist.SetLineStyle(len(hists)+1)
+        bar_width = 1.0/len(filenames)-0.1
+        print "bar_width:", bar_width
+        bar_offset = (0.1+bar_width)*i
+        print "bar_offset:", bar_offset
+        hist.SetBarWidth(bar_width)
+        hist.SetBarOffset(bar_offset)
+        #hist.SetFillStyle(3004)
+        hist.SetLineWidth(2)
+        #hist.SetLineStyle(len(hists)+1)
         hist.SetMarkerColor(color)
         hist.SetMarkerStyle(21)
         hist.SetMarkerSize(1.5)
-        hist.SetXTitle("Multiplicity [channels above %.1f keV]" % threshold)
+        #hist.SetXTitle("Multiplicity [channels above %.1f keV]" % threshold)
+        hist.SetXTitle("Multiplicity")
         hists.append(hist)
 
         # open the root file and grab the tree
-        #root_file = TFile(filename)
+        #root_file = ROOT.TFile(filename)
         #tree = root_file.Get("tree")
         
         tree = ROOT.TChain("tree")
         tree.Add(filename)
+        tree.SetBranchStatus("*",0)
+        tree.SetBranchStatus("SignalEnergy",1)
+        tree.SetBranchStatus("signal_map",1)
+        tree.SetBranchStatus("nsignals",1)
+        tree.SetBranchStatus("channel",1)
         
         n_entries = tree.GetEntries()
         print "%i entries" % n_entries
@@ -89,15 +103,18 @@ def process_files(filenames):
             multiplier = 1.15
 
         # draw channels hit:    
-        ch_hist = TH1D("ch_hist%i" % len(hists), basename,64, -0.25, 31.75)
-        ch_hist.SetLineColor(color)
+        #ch_hist = ROOT.TH1D("ch_hist%i" % len(hists), basename,n_bins, -0.25, max_bin-0.25)
+        ch_hist = hist.Clone("ch_hist%i" % len(hists))
+        #ch_hist.SetLineColor(color)
         #ch_hist.SetLineWidth(2)
-        ch_hist.SetFillColor(color)
-        #ch_hist.SetXTitle("Channel hit [above %.1f keV]" % threshold)
-        #selection = "energy1_pz>%s" % (threshold/multiplier)
-        selection = "signal_map==1"
-        n_drawn = tree.Draw("channel >> %s" % ch_hist.GetName(), selection)
-        ch_hist.Scale(1.0/n_entries)
+        #ch_hist.SetFillColor(color)
+        #ch_hist.SetFillStyle(3004)
+        #ch_hist.SetBarWidth(bar_width)
+        #ch_hist.SetBarOffset(bar_offset)
+        ##ch_hist.SetXTitle("Channel hit [above %.1f keV]" % threshold)
+        ##selection = "energy1_pz>%s" % (threshold/multiplier)
+        sel = "signal_map==1 && %s" % selection 
+        n_drawn = tree.Draw("channel >> %s" % ch_hist.GetName(), sel, "norm")
 
 
         for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use):
@@ -120,21 +137,17 @@ def process_files(filenames):
 
         canvas.SetLogy(1)
         canvas.Update()
-        canvas.Print("hitChannels.pdf")
+        canvas.Print("hitChannels_%s.pdf" % basename)
         ch_hists.append(ch_hist)
 
         canvas.SetLogy(0)
         canvas.Update()
-        canvas.Print("hitChannels_lin.pdf")
+        canvas.Print("hitChannels_%s_lin.pdf" % basename)
 
         if not ROOT.gROOT.IsBatch(): raw_input("any key to continue  ")
 
 
 
-        #selection = "chargeEnergy*%s>1000 & chargeEnergy*%s<1200" % (multiplier, multiplier)
-        #selection = ""
-        #selection = "%s > 200" % struck_analysis_cuts.get_few_channels_cmd_baseline_rms()
-        selection = "SignalEnergy > 200"
         #draw_cmd = struck_analysis_cuts.get_multiplicity_cmd(energy_threshold=threshold/multiplier, isMC=is_MC)
         draw_cmd = "nsignals"
         draw_cmd = "%s >> %s" % (draw_cmd, hist.GetName())
@@ -143,7 +156,7 @@ def process_files(filenames):
         print "draw_cmd:", draw_cmd
         print "selection", selection
 
-        options = "goff"
+        options = "goff norm"
 
         n_entries = tree.Draw(
             draw_cmd,
@@ -154,19 +167,18 @@ def process_files(filenames):
         print "%i drawn entries" % n_entries
         n_entries = hist.GetEntries()
         print "%i hist entries" % n_entries
-        hist.Scale(1.0/n_entries)
         print "mean", hist.GetMean()
 
-        legend.AddEntry(hist, hist.GetTitle(), "p")
+        legend.AddEntry(hist, hist.GetTitle(), "f")
 
 
     hists[0].SetTitle("")
-    hists[0].Draw()
+    hists[0].Draw("b norm")
     for hist in hists:
-        hist.Draw("same")
+        hist.Draw("b same norm")
 
     canvas.SetLogy(1)
-    #legend.Draw()
+    legend.Draw()
     canvas.Update()
     canvas.Print("multiplicity.pdf")
 
@@ -174,6 +186,25 @@ def process_files(filenames):
     canvas.Update()
     canvas.Print("multiplicity_lin.pdf")
     if not ROOT.gROOT.IsBatch(): raw_input("any key to continue  ")
+
+
+
+    ch_hists[0].SetTitle("")
+    ch_hists[0].Draw("b norm")
+    for hist in ch_hists:
+        hist.Draw("b same norm")
+
+    canvas.SetLogy(1)
+    legend.Draw()
+    canvas.Update()
+    canvas.Print("hitChannels.pdf")
+
+    canvas.SetLogy(0)
+    canvas.Update()
+    canvas.Print("hitChannels_lin.pdf")
+
+    if not ROOT.gROOT.IsBatch(): raw_input("any key to continue  ")
+
 
 
 if __name__ == "__main__":
@@ -193,6 +224,9 @@ if __name__ == "__main__":
         #"~/2016_08_15_8th_LXe_overnight/tier3_added/overnight8thLXe_v3.root", # ubuntu DAQ
         "/p/lscratchd/alexiss/2016_08_15_8th_LXe_overnight/tier3_added/overnight8thLXe_v4.root ", # LLNL
     ]
+
+    if len(sys.argv) > 1:
+        filenames = sys.argv[1:]
 
     process_files(filenames)
 
