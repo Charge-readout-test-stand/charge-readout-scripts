@@ -196,7 +196,7 @@ def process_files(filenames):
     canvas.Update()
     canvas.Print("multiplicity_lin.pdf")
 
-    hist[0].SetAxisRange(0, 7.5)
+    hists[0].SetAxisRange(0, 7.5)
     canvas.Update()
     canvas.Print("multiplicity_lin_zoom.pdf")
 
