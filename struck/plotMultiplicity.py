@@ -33,6 +33,7 @@ def process_files(filenames):
         ROOT.kRed,
         ROOT.kGreen+2,
         ROOT.kViolet,
+        ROOT.kCyan+3,
     ]
     legend = ROOT.TLegend(0.1, 0.91, 0.9, 0.99)
     legend.SetNColumns(2)
@@ -111,7 +112,7 @@ def process_files(filenames):
         #ch_hist.SetFillStyle(3004)
         #ch_hist.SetBarWidth(bar_width)
         #ch_hist.SetBarOffset(bar_offset)
-        ##ch_hist.SetXTitle("Channel hit [above %.1f keV]" % threshold)
+        ch_hist.SetXTitle("Channel hit")
         ##selection = "energy1_pz>%s" % (threshold/multiplier)
         sel = "signal_map==1 && %s" % selection 
         n_drawn = tree.Draw("channel >> %s" % ch_hist.GetName(), sel, "norm")
