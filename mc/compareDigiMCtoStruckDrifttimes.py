@@ -23,7 +23,7 @@ ROOT.gStyle.SetTitleBorderSize(0)
 
 def process_file(filenames):
 
-    selection = "SignalEnergy>300"
+    selection = "SignalEnergy>300 && !is_bad && !is_pulser"
     draw_cmd = "rise_time_stop95_sum-trigger_time+0.020"
 
     print "draw_cmd:", draw_cmd
@@ -84,6 +84,8 @@ def process_file(filenames):
         tree.SetBranchStatus("rise_time_stop95_sum",1)
         tree.SetBranchStatus("trigger_time",1)
         tree.SetBranchStatus("SignalEnergy",1)
+        tree.SetBranchStatus("is_pulser",1)
+        tree.SetBranchStatus("is_bad",1)
 
         hist.GetDirectory().cd()
 
@@ -95,10 +97,19 @@ def process_file(filenames):
         this_selection = selection
         #if not isMC:
         #    this_selection = selection+"&&!is_pulser&&pmt_chi2<=3"
+        new_drift_velocity = 1.79
+        my_draw_cmd = draw_cmd
+
+        # testing new drift velocities for low fields
+        #if basename == "mc_dcoeff50_10thLXe_wn_2":
+        #    my_draw_cmd = "(%s)*1.85/%f" % (draw_cmd, new_drift_velocity)
+        #if basename == "jobs_0_to_3399":
+        #    my_draw_cmd = "(%s)*2.0/%f" % (draw_cmd, new_drift_velocity)
+        print "\tmy_draw_cmd:", my_draw_cmd
 
         print "\tthis_selection:", this_selection
         entries = tree.Draw(
-            "%s >> %s" % (draw_cmd, hist.GetName()),
+            "%s >> %s" % (my_draw_cmd, hist.GetName()),
             this_selection,
             "goff norm"
         )

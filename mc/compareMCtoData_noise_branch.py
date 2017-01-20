@@ -17,14 +17,16 @@ from struck import struck_analysis_parameters
 # options
 #draw_cmd = "energy1_pz" # individual channel spectra
 #draw_cmd = "Sum$(energy_pz*signal_map)" # testing
-draw_cmd = "SignalEnergy" # the usual
+#draw_cmd = "SignalEnergy" # the usual
+draw_cmd = "energy1" 
 
 drift_time_high = struck_analysis_parameters.max_drift_time
 drift_time_low = struck_analysis_parameters.drift_time_threshold
 #drift_time_low = 0.0
 #drift_time_high = 8.0
 #drift_time_low = 6.4 # Gaosong's cut
-#drift_time_high = 8.4 # Gaosong's cut
+#drift_time_high = 8.4 # Gaosong's cut, down from 9.08
+drift_time_high = drift_time_high - 1.0
 nsignals = 0 # only consider events where one strip is hit
 #nstrips = 1 # only use single-strip channels
 #nsignals = 0
@@ -114,6 +116,10 @@ for i, filename in enumerate(filenames):
         print "\t tree is NOT MC"
         tree.SetBranchStatus("is_pulser",1) 
         tree.SetBranchStatus("is_bad",1) 
+    if "energy1" in draw_cmd:
+        tree.SetBranchStatus("channel",1) 
+        tree.SetBranchStatus(draw_cmd,1) 
+
     else:
         print "\t tree is MC"
     print "\n"
@@ -126,12 +132,8 @@ print "basename:", basename, "\n"
 for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use):
     if val == 0: continue
 
-    # if draw_cmd is energy1_pz, we are drawing different hists for each
-    # channel, so construct selection for that:
-    if draw_cmd == "energy1_pz":
-        print "--> channel", channel, struck_analysis_parameters.channel_map[channel]
-        struck_selection = " && ".join([selection, "channel==%i" % channel])
-
+    selection = struck_selection
+    
     # set up the legend
     legend = ROOT.TLegend(canvas.GetLeftMargin(), 0.91, 0.9, 0.99)
     legend.SetNColumns(2)
@@ -144,19 +146,28 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
         print "file", i, ":", os.path.basename(filenames[i])
         print "tree", i, ":", tree.GetTitle()
 
+        isMC = struck_analysis_parameters.is_tree_MC(tree)
+
         # construct draw command
         multiplier = 1.0 
-        selection = struck_selection
-        if struck_analysis_parameters.is_tree_MC(tree):
-            multiplier = 1.01
+        if isMC:
+            #multiplier = 1.01
+            multiplier = 0.95 # 10th LXe 
         else: selection += " && !is_bad && !is_pulser"
         this_draw_cmd = "%s*%s" % (draw_cmd, multiplier)
 
         mc_noise = 0.0 # keV
-        if struck_analysis_parameters.is_tree_MC(tree) and mc_noise > 0.0:
+        if isMC and mc_noise > 0:
             print "--> adding noise"
-            if draw_cmd == "energy1_pz": mc_noise = struck_analysis_parameters.rms_keV[channel]
+            if "energy1" in draw_cmd: mc_noise = struck_analysis_parameters.rms_keV[channel]
             this_draw_cmd = "%s*%s + %s*noise[0]" % (draw_cmd, multiplier, mc_noise)
+
+        # if draw_cmd is energy1_pz, we are drawing different hists for each
+        # channel, so construct selection for that:
+        if "energy1" in draw_cmd:
+            print "--> channel", channel, struck_analysis_parameters.channel_map[channel]
+            selection = " && ".join([struck_selection, "channel==%i" % channel])
+
 
         # draw hist
         hist.GetDirectory().cd()
@@ -202,9 +213,9 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
     plotname = "comparison_%s" % draw_cmd
     if "Sum" in draw_cmd:
         plotname = "comparison_test" 
-    if draw_cmd == "energy1_pz":
+    if "energy1" in draw_cmd:
         plotname += "_ch%i" % channel
-    plotname += "%ikeV_bins" % bin_width
+    plotname += "_%ikeV_bins" % bin_width
 
     # print one "clean" plot
     canvas.Print("%s_%s.pdf" % (plotname, basename))
@@ -212,7 +223,7 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
     # draw some info about cuts on next plot
     pavetext = ROOT.TPaveText(0.12, 0.8, 0.9, 0.9, "ndc")
     pavetext.AddText(struck_selection[:200])
-    pavetext.AddText("\nMC amplitude x %.2f, %.1f-keV add'l noise" % (scale_factor, mc_noise))
+    pavetext.AddText("\nMC amplitude x %.3e, %.1f-keV add'l noise" % (scale_factor, mc_noise))
     pavetext.SetBorderSize(0)
     pavetext.SetFillStyle(0)
     pavetext.Draw()
@@ -230,7 +241,7 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
     if not ROOT.gROOT.IsBatch(): raw_input("any key to continue... ")
 
     # if we are not looping over all channels, break
-    if draw_cmd != "energy1_pz": break
+    if not "energy1" in draw_cmd: break
 
     # end loop over channels
 
