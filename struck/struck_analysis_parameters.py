@@ -580,22 +580,25 @@ if is_10th_LXe:
     for i_channel in xrange(len(channels)):
         calibration_values[i_channel] = 0.92 # initial guess
 
-    # copied from 9th LXe for now
-    calibration_values[8] = 2.428339 # +/- 0.006286 Y14
-    calibration_values[7] = 1.912586 # +/- 0.003041 Y15
-    calibration_values[6] = 1.818427 # +/- 0.002093 Y16
-    calibration_values[5] = 1.914533 # +/- 0.002280 Y17
-    calibration_values[4] = 0.964218 # +/- 0.001111 Y18
-    calibration_values[3] = 0.917491 # +/- 0.001353 Y19
-    calibration_values[2] = 0.955506 # +/- 0.001737 Y20
+    # basename: 570_No_cuts_overnight10thLXe_v1_2017_01_20_13_59_31_ 
+    # selection: (nsignals==1) && (!(rise_time_stop95_sum-trigger_time < 10.5754189944 || rise_time_stop95_sum-trigger_time > 20.0)) 
+    # channel_selection: (nsignals==1) && (!(rise_time_stop95_sum-trigger_time < 10.5754189944 || rise_time_stop95_sum-trigger_time > 20.0)) 
+    # calibration_values[all] = 1.000163 # +/- 0.002924 all
+    calibration_values[2] = 0.920205 # +/- 0.005547 Y20
+    calibration_values[3] = 0.897660 # +/- 0.003838 Y19
+    calibration_values[4] = 0.942238 # +/- 0.004160 Y18
+    calibration_values[5] = 1.823772 # +/- 0.008439 Y17
+    calibration_values[6] = 1.735314 # +/- 0.007285 Y16
+    calibration_values[7] = 1.894545 # +/- 0.010724 Y15
+    calibration_values[8] = 2.172412 # +/- 0.030666 Y14
+    calibration_values[9] = 0.866036 # +/- 0.004423 X20
+    calibration_values[10] = 1.799525 # +/- 0.007884 X19
+    calibration_values[11] = 1.843981 # +/- 0.008291 X18
+    calibration_values[12] = 1.940034 # +/- 0.010628 X17
+    calibration_values[13] = 1.745394 # +/- 0.006663 X16
+    calibration_values[14] = 0.927497 # +/- 0.005200 X15
+    calibration_values[15] = 0.941125 # +/- 0.006729 X14
 
-    calibration_values[15] = 0.939369 # +/- 0.002229 X14
-    calibration_values[14] = 0.951769 # +/- 0.001637 X15
-    calibration_values[13] = 1.836569 # +/- 0.002156 X16
-    calibration_values[12] = 1.917633 # +/- 0.002155 X17
-    calibration_values[11] = 1.911182 # +/- 0.002107 X18
-    calibration_values[10] = 1.892692 # +/- 0.002967 X19
-    calibration_values[9] = 0.936823 # +/- 0.001890 X20
 
 
 
