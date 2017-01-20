@@ -16,6 +16,7 @@ import json
 import math
 import commands
 import datetime
+from array import array
 
 import ROOT
 ROOT.gROOT.SetBatch(True) # run in batch mode
@@ -39,9 +40,10 @@ def fit_channel(
     all_energy_var, # used if channel==None, usually "SignalEnergy"
     selection, # selection for draw commands
     do_use_step=False, # whether to use Erfc step
-    min_bin=300, # just for drawing plots
+    min_bin=200, # just for drawing plots
     max_bin=1200, # just for plotting
-    line_energy = 570, # center of fit range
+    line_energy = 487, # center of fit range
+    #line_energy = 530, # 10th LXe
     #line_energy = 565,
     fit_half_width=170, # half width for fit range
     do_use_exp=True, # whether to use exponential function in the fit
@@ -114,8 +116,10 @@ def fit_channel(
         if channel_selection != None: selection_list.append(channel_selection)
         selection = " && ".join(selection_list)
 
-    fit_start_energy = line_energy - fit_half_width
-    fit_stop_energy = line_energy + fit_half_width
+    fit_center = line_energy
+    fit_center = 530
+    fit_start_energy = fit_center - fit_half_width
+    fit_stop_energy = fit_center + fit_half_width
     print "fit_start_energy", fit_start_energy
     print "fit_stop_energy", fit_stop_energy
 
@@ -157,6 +161,9 @@ def fit_channel(
 
     # test new calibration:
     if channel != None:
+        tree.GetEntry(0)
+        cal_vals = array('d',tree.calibration)
+        print "calibration:", cal_vals[channel]
         draw_cmd = "%s*%s/calibration >> fit_hist" % (
             energy_var,
             struck_analysis_parameters.calibration_values[channel], 
@@ -485,6 +492,7 @@ def fit_channel(
 
     # save some results
     result = {}
+    result["a_label"] = channel_name
     result["channel"] = channel
     result["calibration_value"] = "%.6e" % new_calibration_value
     result["peak_counts"] = "%.2f" % n_peak_counts
@@ -607,6 +615,15 @@ def process_file(
         print "%i entries" % n_entries
     except AttributeError:
         print "could not get entries from tree"
+    tree.SetBranchStatus("*",0)
+    tree.SetBranchStatus(all_energy_var,1)
+    tree.SetBranchStatus("nsignals",1)
+    tree.SetBranchStatus("channel",1)
+    tree.SetBranchStatus("calibration",1)
+    tree.SetBranchStatus("energy1_pz",1)
+    tree.SetBranchStatus("trigger_time",1)
+    tree.SetBranchStatus("rise_time_stop95_sum",1)
+    tree.SetBranchStatus("rise_time_stop95",1)
 
     # start the calibration file
     new_calib_file = file("%s/new_calib_%s.txt" % (basename, basename),"w")
@@ -650,7 +667,10 @@ if __name__ == "__main__":
     tree = tfile.Get("tree")
     isMC = struck_analysis_parameters.is_tree_MC(tree)
 
+
     drift_time_high=9.0 # microseconds
+    if struck_analysis_parameters.is_10th_LXe:
+        drift_time_high = 20.0
 
     nc = struck_analysis_cuts.get_negative_energy_cut(isMC=isMC)
     sc = struck_analysis_cuts.get_drift_time_cut()
@@ -673,7 +693,7 @@ if __name__ == "__main__":
     #selections.append(["(nbundlesX<2&&nbundlesY<2)",dc])
 
     channel_selections = []
-    channel_selections.append(struck_analysis_cuts.get_drift_time_cut(is_single_channel=True, drift_time_high=drift_time_high))
+    #channel_selections.append(struck_analysis_cuts.get_drift_time_cut(is_single_channel=True, drift_time_high=drift_time_high))
     channel_selections.append(struck_analysis_cuts.get_single_strip_cut())
     channel_selection = " && ".join(channel_selections)
     #channel_selection = None
@@ -692,7 +712,7 @@ if __name__ == "__main__":
         all_energy_var = "SignalEnergy"
         if isMC: all_energy_var = "SignalEnergy*1.02"
         print "all_energy_var:", all_energy_var
-        do_use_step=True
+        do_use_step=False
         do_use_exp=True
 
         process_file(sys.argv[1], False, all_energy_var, selection, channel_selection, do_use_step=do_use_step, energy_var="energy1_pz", do_use_exp=do_use_exp)
