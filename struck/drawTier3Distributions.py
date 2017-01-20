@@ -69,12 +69,19 @@ def process_files(filenames):
     xUnits = ""
     prefix = "plots"
     selections = []
-    #selections.append("Entry$<50") # debugging
+    selections.append("!is_pulser") # debugging
+    selections.append("!is_bad") # debugging
+    selections.append("nsignals==1") # debugging
+    #selections.append("Entry$<500") # debugging
+    sum_selections = []
+    ch_selections = []
+    sum_draw_cmd = None # will be set to draw_cmd by default
 
     if do_draw_energy:
         print "---> drawing energies... "
         #draw_command = "energy1_pz"
         draw_command = "energy1"
+        sum_draw_cmd = "SignalEnergy"
         min_bin = 50
         max_bin = 2000
         bin_width = 10
@@ -105,15 +112,17 @@ def process_files(filenames):
         print "---> drawing drift times"
         #draw_command = "rise_time_stop99 - trigger_time"
         draw_command = "rise_time_stop95 - trigger_time"
+        sum_draw_cmd = "rise_time_stop95_sum-trigger_time"
         #min_bin = -10.02
         #max_bin = 30.02
-        min_bin = -5.02
-        max_bin = 25.02
+        min_bin = -8.02
+        max_bin = 34.02
         bin_width = 0.04
         xUnits = "#mus"
         xtitle = "Drift time"
-        selections.append("energy1>200")
         do_draw_sum=True
+        sum_selections.append("SignalEnergy>200")
+        ch_selections.append("energy1>200")
 
     elif do_draw_rms_keV:
         print "---> drawing RMS noise [keV]"
@@ -244,6 +253,10 @@ def process_files(filenames):
         print "--> processing",filename
         root_file = ROOT.TFile(filename)
         tree = root_file.Get("tree")
+        tree.SetBranchStatus("*",0)
+        tree.SetBranchStatus("is_pulser",1)
+        tree.SetBranchStatus("is_bad",1)
+        #tree.SetBranchStatus("nsignals",1)
         try:
             n_entries = tree.GetEntries()
             print "\t %i tree entries, file %i of %i" % (n_entries, i_file, len(filenames))
@@ -272,21 +285,22 @@ def process_files(filenames):
             channel_map = struck_analysis_parameters.mc_channel_map
 
         frame_hist.GetDirectory().cd()
+        if do_draw_drift_times:
+            tree.SetBranchStatus("rise_time_stop95",1)
+            tree.SetBranchStatus("rise_time_stop95_sum",1)
+            tree.SetBranchStatus("channel",1)
+            tree.SetBranchStatus("trigger_time",1)
+            tree.SetBranchStatus("energy1",1)
+            tree.SetBranchStatus("SignalEnergy",1)
+
+        if do_draw_energy:
+            tree.SetBranchStatus("SignalEnergy",1)
+            tree.SetBranchStatus(draw_command,1)
+            tree.SetBranchStatus("channel",1)
+
 
         if do_draw_sum:
-            if do_draw_energy:
-                selection = " && ".join(selections)
-                print "sum selection:", selection
-                #energy_cmd = "chargeEnergy"
-                energy_cmd = struck_analysis_cuts.get_few_channels_cmd_baseline_rms()
-                print "sum energy cmd:"
-                print energy_cmd
-                print "%i entries in sum hist" % tree.Draw(
-                    "%s >>+ frame_hist" % energy_cmd, 
-                    selection, 
-                    ""
-                    )
-            elif do_draw_one_strip_channels:
+            if do_draw_one_strip_channels:
                 energy_cmd = struck_analysis_cuts.get_few_one_strip_channels()
                 print "sum energy cmd:"
                 print energy_cmd
@@ -296,11 +310,12 @@ def process_files(filenames):
                     ""
                     )
             else:
-                selection = " && ".join(selections + [struck_analysis_cuts.get_channel_selection(isMC)])
-                print "selection:", selection
-                print "sum draw_command:", draw_command
+                if sum_draw_cmd == None:
+                    sum_draw_cmd = draw_command
+                selection = " && ".join(selections + sum_selections)
+                print "sum draw_command:", sum_draw_cmd
                 print "sum selection:", selection
-                print "%i entries in sum hist" % tree.Draw("%s >>+ frame_hist" % draw_command, selection)
+                print "%i entries in sum hist" % tree.Draw("%s >>+ frame_hist" % sum_draw_cmd, selection)
             setup_hist(frame_hist, ROOT.kBlack, xtitle, xUnits)
 
             canvas.SetLogy(0)
@@ -310,7 +325,6 @@ def process_files(filenames):
             canvas.Update()
             canvas.Print("%s_log_sum.pdf" % basename)
 
-        y_max = 0
 
         i_channel = 0
         for (channel, value) in enumerate(charge_channels_to_use):
@@ -337,19 +351,20 @@ def process_files(filenames):
                 #"(rise_time_stop95 - trigger_time) >6",
                 #"(adc_max_time - adc_max_time[5])*40.0/1000 < 15"
             ]
-            selection = " && ".join(selections + extra_selections)
+            selection = " && ".join(selections + extra_selections + ch_selections)
 
             n_entries = tree.Draw(draw_cmd, selection)
 
-            title = "ch %i: %s {%s}" % (channel, channel_map[channel], selection)
-            hist.SetTitle(title)
-            canvas.SetLogy(0)
-            canvas.Update()
-            canvas.Print("%s_lin_ch%i.pdf" % (basename, channel))
-            canvas.SetLogy(1)
-            canvas.Update()
-            canvas.Print("%s_log_ch%i.pdf" % (basename, channel))
-            hist.SetTitle("")
+            if False: # draw individual channel plots
+                title = "ch %i: %s {%s}" % (channel, channel_map[channel], selection)
+                hist.SetTitle(title)
+                canvas.SetLogy(0)
+                canvas.Update()
+                canvas.Print("%s_lin_ch%i.pdf" % (basename, channel))
+                canvas.SetLogy(1)
+                canvas.Update()
+                canvas.Print("%s_log_ch%i.pdf" % (basename, channel))
+                hist.SetTitle("")
 
             hist_mean = hist.GetMean()
             hist_rms = hist.GetRMS()
@@ -361,7 +376,9 @@ def process_files(filenames):
             # end loop over files
     
     
+    y_max = 0
     for hist in hists:
+        hist.Draw()
         if y_max < hist.GetMaximum(): y_max = hist.GetMaximum()
         print "\t hist %s | max: %.2e | mean: %.4f | sigma: %.4f" % (
             hist.GetName(),
@@ -401,7 +418,8 @@ def process_files(filenames):
     canvas.SetLogy(0)
     if do_draw_energy:
         # set maximum to the bin content at XXX keV
-        y_max = frame_hist.GetBinContent(frame_hist.FindBin(570))
+        #y_max = frame_hist.GetBinContent(frame_hist.FindBin(570))
+        y_max = frame_hist.GetBinContent(frame_hist.FindBin(300))
         frame_hist.SetMaximum(y_max*1.2)
     elif do_draw_drift_times:
         print "frame hist max:", frame_hist.GetMaximum()
