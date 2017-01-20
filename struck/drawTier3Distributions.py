@@ -71,7 +71,7 @@ def process_files(filenames):
     selections = []
     selections.append("!is_pulser") # debugging
     selections.append("!is_bad") # debugging
-    selections.append("nsignals==1") # debugging
+    #selections.append("nsignals==1") # debugging
     #selections.append("Entry$<500") # debugging
     sum_selections = []
     ch_selections = []
@@ -82,8 +82,9 @@ def process_files(filenames):
         #draw_command = "energy1_pz"
         draw_command = "energy1"
         sum_draw_cmd = "SignalEnergy"
-        min_bin = 50
-        max_bin = 2000
+        min_bin = 200
+        #max_bin = 2000
+        max_bin = 1400
         bin_width = 10
 
         xUnits = "keV"
@@ -256,7 +257,7 @@ def process_files(filenames):
         tree.SetBranchStatus("*",0)
         tree.SetBranchStatus("is_pulser",1)
         tree.SetBranchStatus("is_bad",1)
-        #tree.SetBranchStatus("nsignals",1)
+        tree.SetBranchStatus("nsignals",1)
         try:
             n_entries = tree.GetEntries()
             print "\t %i tree entries, file %i of %i" % (n_entries, i_file, len(filenames))
