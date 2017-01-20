@@ -44,6 +44,11 @@ if os.getenv("EXOLIB") is not None and not isROOT6:
 
 drift_length = 18.16 # mm, from solidworks for 7th LXe + 
 drift_velocity = 2.0 # mm / microsecond  
+
+# drift time threshold for 99% signal collection, determined from ion screening
+# and cathode effects:
+drift_time_threshold = (drift_length - 5.3)/drift_velocity # microsecond
+
 max_drift_time = drift_length/drift_velocity
 #print "max_drift_time:", max_drift_time
 if is_10th_LXe:
@@ -51,11 +56,9 @@ if is_10th_LXe:
     max_drift_time = drift_length/drift_velocity
     #print "max_drift_time:", max_drift_time
     drift_length = 33.23 # new anode standoffs Dec 2016
+    drift_time_threshold = (drift_length - 14.3)/drift_velocity # microsecond
 max_drift_time = drift_length/drift_velocity
 
-# drift time threshold for 99% signal collection, determined from ion screening
-# and cathode effects:
-drift_time_threshold = (drift_length - 5.3)/drift_velocity # microsecond
 #print "max_drift_time:", max_drift_time
 
 
@@ -399,10 +402,6 @@ if is_7th_LXe:
     decay_time_values[9] = 1.5*microsecond 
 
 
-decay_start_time = 20 #sample 500
-decay_end_time = 32   #sample 800
-decay_tau_guess = 200 #us
-
 if is_8th_LXe or is_9th_LXe: 
     
     # vales from Mike's fits on 01 Sep 2016:
@@ -440,24 +439,23 @@ if is_8th_LXe or is_9th_LXe:
     decay_time_values[31] =  10000000000.000000*microsecond # Not Used  
 
 if is_10th_LXe:
-    # Fits are in DecayTime_overnight10thLXe_v0.pdf 
+    # Fits are in DecayTime_overnight10thLXe_v1.pdf 
     decay_time_values[0] =  10000000000.000000*microsecond # Not Used  
     decay_time_values[1] =  10000000000.000000*microsecond # Not Used  
-    decay_time_values[2] =  236.893539*microsecond # +/- 0.013181 Y20
-    decay_time_values[3] =  253.714660*microsecond # +/- 0.016932 Y19
-    decay_time_values[4] =  255.360950*microsecond # +/- 0.018271 Y18
-    decay_time_values[5] =  282.257052*microsecond # +/- 0.026356 Y17
-    decay_time_values[6] =  258.114972*microsecond # +/- 0.022540 Y16
-    decay_time_values[7] =  281.065714*microsecond # +/- 0.030285 Y15
-    decay_time_values[8] =  279.427253*microsecond # +/- 0.039799 Y14
-    decay_time_values[9] =  276.248221*microsecond # +/- 0.021130 X20
-    decay_time_values[10] =  293.851494*microsecond # +/- 0.039216 X19
-    decay_time_values[11] =  264.758934*microsecond # +/- 0.023681 X18
-    decay_time_values[12] =  326.539151*microsecond # +/- 0.058670 X17
-    decay_time_values[13] =  276.215795*microsecond # +/- 0.031555 X16
-    decay_time_values[14] =  272.667102*microsecond # +/- 0.022886 X15
-    decay_time_values[15] =  267.351244*microsecond # +/- 0.023210 X14
-
+    decay_time_values[2] =  238.222300*microsecond # +/- 0.013730 Y20
+    decay_time_values[3] =  256.336860*microsecond # +/- 0.017528 Y19
+    decay_time_values[4] =  258.168966*microsecond # +/- 0.018641 Y18
+    decay_time_values[5] =  290.006861*microsecond # +/- 0.027398 Y17
+    decay_time_values[6] =  264.624952*microsecond # +/- 0.023073 Y16
+    decay_time_values[7] =  289.166104*microsecond # +/- 0.031369 Y15
+    decay_time_values[8] =  285.922276*microsecond # +/- 0.041862 Y14
+    decay_time_values[9] =  278.646341*microsecond # +/- 0.021896 X20
+    decay_time_values[10] =  303.790081*microsecond # +/- 0.041161 X19
+    decay_time_values[11] =  272.132876*microsecond # +/- 0.024614 X18
+    decay_time_values[12] =  335.789178*microsecond # +/- 0.060775 X17
+    decay_time_values[13] =  285.551993*microsecond # +/- 0.033051 X16
+    decay_time_values[14] =  275.061863*microsecond # +/- 0.023535 X15
+    decay_time_values[15] =  271.053057*microsecond # +/- 0.023854 X14
 
 # charge calbration from these files for 5th LXe:
 # tier3_LXe_Run1_1700VC_2chargechannels_609PM_60thresh_NotShaped_Amplified_GapTime20_2_0.root
@@ -706,6 +704,11 @@ if is_10th_LXe:
     energy_start_time_microseconds = 850.0*40/1000 # energy calc starts 850 samples
 #print "energy_start_time_microseconds:", energy_start_time_microseconds
 baseline_average_time_microseconds = 4.0 # 100 samples at 25 MHz
+
+decay_start_time = energy_start_time_microseconds #sample 500
+decay_end_time = energy_start_time_microseconds + baseline_average_time_microseconds   #sample 800
+decay_tau_guess = 200 #us
+
 rms_keV = {}
 rms_keV_sigma = {}
 rms_keV[0] = 18.137
@@ -997,6 +1000,8 @@ if __name__ == "__main__":
     print "\nprocessing parameters:"
     print "\t baseline_average_time_microseconds:", baseline_average_time_microseconds
     print "\t energy_start_time_microseconds:", energy_start_time_microseconds
+    print "\t decay_start_time [microseconds]:", decay_start_time
+    print "\t decay_end_time [microseconds]:", decay_end_time
 
     #print "\nchannels used:"
     #for channel in channels:
