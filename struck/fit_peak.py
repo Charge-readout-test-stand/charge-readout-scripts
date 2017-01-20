@@ -42,8 +42,8 @@ def fit_channel(
     do_use_step=False, # whether to use Erfc step
     min_bin=200, # just for drawing plots
     max_bin=1200, # just for plotting
-    line_energy = 487, # center of fit range
-    #line_energy = 530, # 10th LXe
+    #line_energy = 570, # calibrated energy
+    line_energy = 487, # 10th LXe
     #line_energy = 565,
     fit_half_width=170, # half width for fit range
     do_use_exp=True, # whether to use exponential function in the fit
@@ -57,30 +57,14 @@ def fit_channel(
     # options
     #-------------------------------------------------------------------------------
 
-
-    do_debug = True
-    do_individual_channels = True
+    do_debug = False # print some debugging info
+    do_individual_channels = True # whether to fit individual channels
 
     # defaults for 570-keV
     bin_width = 5
     #line_energy = 620
+
     sigma_guess = 40
-    if channel != None:
-        sigma_guess = (
-            (struck_analysis_parameters.rms_keV[channel]*math.sqrt(2.0/struck_analysis_parameters.n_baseline_samples))**2 + \
-            struck_analysis_parameters.resolution_guess**2
-        )**0.5
-
-    # gaus + exponential
-    step_amplitude_index = 6
-    if do_use_exp:
-        fit_formula = "gausn(0) + [3]*TMath::Exp(-[4]*x) + [5]"
-    else:
-        fit_formula = "gausn(0) + pol1(3)" # 1st-degree polynomial
-        #step_amplitude_index = 5
-        #fit_formula = "gausn(0) + pol2(3)" # 1st-degree polynomial
-        #fit_formula = "gausn(0)" 
-
     if do_1064_fit: # 1064-keV peak fit
         min_bin = 500
         max_bin = 2000
@@ -91,6 +75,30 @@ def fit_channel(
         fit_half_width = 300
         do_use_step = True
 
+
+    #fit_center = line_energy
+    fit_center = 530 # FIXME for 10th LXe
+    fit_start_energy = fit_center - fit_half_width
+    fit_stop_energy = fit_center + fit_half_width
+    print "fit_start_energy", fit_start_energy
+    print "fit_stop_energy", fit_stop_energy
+
+
+    #-------------------------------------------------------------------------------
+    # form strings for the TFormula to describe the fit function
+    #-------------------------------------------------------------------------------
+
+    # main part: gaus + exponential bkg or linear bkg
+    step_amplitude_index = 6
+    if do_use_exp:
+        fit_formula = "gausn(0) + [3]*TMath::Exp(-[4]*x) + [5]"
+    else:
+        fit_formula = "gausn(0) + pol1(3)" # 1st-degree polynomial
+        #step_amplitude_index = 5
+        #fit_formula = "gausn(0) + pol2(3)" # 2nd-degree polynomial
+        #fit_formula = "gausn(0)" 
+
+    # add a compton shoulder/step
     if do_use_step:
         # http://radware.phy.ornl.gov/gf3/gf3.html#Fig.2.
         fit_formula += " + [%i]*TMath::Erfc((x-[1])/sqrt(2)/[2])" % step_amplitude_index
@@ -100,32 +108,21 @@ def fit_channel(
         #fit_formula += " + [%i]*exp((x-[1])/[%i])*TMath::Erfc((x-[1])/sqrt(2)/[2] + [2]/sqrt(2)/[%i])" % (
         #    step_amplitude_index, step_amplitude_index+1, step_amplitude_index+1)
             
-    if channel != None:
-        plot_name = "%s/fit_ch%i_%s" % (basename, channel, basename)
-    else:
+    if channel == None: # this is the sum energy
         plot_name = "%s/fit_all_%s" % (basename, basename)
-
-
-    n_bins = int((max_bin-min_bin)/bin_width)
-
-    if channel == None:
         energy_var = all_energy_var
-    else:
+    else: # this is an individual channel
+        plot_name = "%s/fit_ch%i_%s" % (basename, channel, basename)
         selection_list = []
         selection_list.append("(channel==%i)" % channel)
         if channel_selection != None: selection_list.append(channel_selection)
         selection = " && ".join(selection_list)
 
-    fit_center = line_energy
-    fit_center = 530
-    fit_start_energy = fit_center - fit_half_width
-    fit_stop_energy = fit_center + fit_half_width
-    print "fit_start_energy", fit_start_energy
-    print "fit_stop_energy", fit_stop_energy
+    n_bins = int((max_bin-min_bin)/bin_width)
 
+    #-------------------------------------------------------------------------------
 
     isMC = struck_analysis_parameters.is_tree_MC(tree)
-    #-------------------------------------------------------------------------------
 
     if not do_individual_channels and channel != None:
         print "==> skipping individual channel %i" % channel
@@ -181,6 +178,9 @@ def fit_channel(
     print "tree entries: %i" % entries
     print "hist entries: %i" % hist.GetEntries()
 
+    #-------------------------------------------------------------------------------
+    # parameter estimates
+    #-------------------------------------------------------------------------------
 
     # setup the fit function, assuming things are already close to calibrated:
     testfit = ROOT.TF1("testfit", fit_formula, fit_start_energy, fit_stop_energy)
@@ -207,6 +207,14 @@ def fit_channel(
         bkg_height = const_guess + line_energy*slope_guess 
     print "\tbackground height under peak:", bkg_height
     gaus_height_guess = hist.GetBinContent(hist.FindBin(line_energy)) - bkg_height
+
+    # estimate the peak width, sigma
+    if channel != None:
+        sigma_guess = (
+            (struck_analysis_parameters.rms_keV[channel]*math.sqrt(2.0/struck_analysis_parameters.n_baseline_samples))**2 + \
+            struck_analysis_parameters.resolution_guess**2
+        )**0.5
+
     gaus_integral_guess = gaus_height_guess*math.sqrt(2*math.pi)*sigma_guess
     if gaus_integral_guess < 0:
         print "\t gaus_integral_guess was less than 0:", gaus_integral_guess
@@ -242,8 +250,9 @@ def fit_channel(
         testfit.SetParameter(step_amplitude_index, step_height_guess)
         testfit.SetParameter(step_amplitude_index+1, 20.0)
 
+    original_max = hist.GetMaximum()
     
-    if do_debug:
+    if do_debug: # show functions before fit
 
         if do_use_exp:
             bestfit_exp = ROOT.TF1("bestfite","[0]*TMath::Exp(-[1]*x) + [2]", fit_start_energy, fit_stop_energy)
@@ -269,7 +278,6 @@ def fit_channel(
 
         pad1 = canvas.cd(1)
         pad1.SetGrid(1,1)
-        original_max = hist.GetMaximum()
         hist.SetMaximum(1.2*fit_start_height)
         peak_height = hist.GetBinContent(hist.FindBin(line_energy))
         if peak_height > fit_start_height:
@@ -281,7 +289,6 @@ def fit_channel(
         bestfit_exp.Draw("same")
         if do_use_step: bestfit_step.Draw("same")
         hist.Draw("same")
-
 
 
         leg = ROOT.TLegend(0.49, 0.7, 0.99, 0.9)
@@ -305,8 +312,7 @@ def fit_channel(
         leg.Draw()
         hist.SetMinimum(0)
         canvas.Update()
-        #canvas.Print("%s_pre_lin.pdf" % plot_name)
-
+        canvas.Print("%s_pre_lin.pdf" % plot_name)
 
         if not ROOT.gROOT.IsBatch():
             value = raw_input("any key to continue (b = batch, q to quit) ")
@@ -314,7 +320,6 @@ def fit_channel(
                 sys.exit()
             if value == 'b':
                 ROOT.gROOT.SetBatch(True)
-
 
 
     # do the fit
@@ -333,7 +338,7 @@ def fit_channel(
     x = fit_start_energy
     resid_min = -3.5
     resid_max = 3.5
-    while x < fit_stop_energy:
+    while x < fit_stop_energy: # loop over bins
 
         # calculate values from hist:
         i_bin = hist.FindBin(x)
@@ -349,7 +354,7 @@ def fit_channel(
         else:
             residual = diff / error
 
-        if do_debug and False:
+        if do_debug:
             print "bin: %i | low edge: %.1f | counts: %i +/- %.1f | fit counts: %.1f | diff:  %.1f | resid: %.1f" % (
                 i_bin,
                 hist.GetBinLowEdge(i_bin),
@@ -372,6 +377,7 @@ def fit_channel(
         x += bin_width
 
 
+    # grab fit parameters
     centroid = testfit.GetParameter(1)
     centroid_err = testfit.GetParError(1)
     calibration_ratio = line_energy/centroid
@@ -381,6 +387,7 @@ def fit_channel(
     n_peak_counts = testfit.GetParameter(0)/bin_width
     n_peak_counts_err = testfit.GetParError(0)/bin_width
 
+    # set up some functions
     if do_use_exp:
         bestfit_exp = ROOT.TF1("bestfite","[0]*TMath::Exp(-[1]*x) + [2]", fit_start_energy, fit_stop_energy)
         bestfit_exp.SetParameters(testfit.GetParameter(3), testfit.GetParameter(4), testfit.GetParameter(5))
@@ -405,12 +412,12 @@ def fit_channel(
 
     if channel != None:
 
-        tree.GetEntry(0)
-
+        # grab old calibration values:
         if isMC:
             calibration_value = struck_analysis_parameters.Wvalue
         else:
             calibration_value = struck_analysis_parameters.calibration_values[channel]
+
         new_calibration_value = calibration_value*calibration_ratio
         new_calibration_value_err = calibration_value*calibration_ratio_err
     else:
@@ -418,6 +425,7 @@ def fit_channel(
         new_calibration_value_err = calibration_ratio_err
 
 
+    # draw the fit results
     pad1 = canvas.cd(1)
     pad1.SetGrid(1,1)
     hist.SetMaximum(1.2*fit_start_height)
@@ -431,7 +439,6 @@ def fit_channel(
     bestfit_exp.Draw("same")
     if do_use_step: bestfit_step.Draw("same")
     hist.Draw("same")
-
 
 
     leg = ROOT.TLegend(0.49, 0.7, 0.99, 0.9)
@@ -451,6 +458,7 @@ def fit_channel(
     leg.SetFillColor(0)
     leg.Draw()
 
+    # draw residuals
     resid_hist.SetMaximum(resid_max+0.1)
     resid_hist.SetMinimum(resid_min-0.1)
     pad2 = canvas.cd(2)
@@ -615,9 +623,13 @@ def process_file(
         print "%i entries" % n_entries
     except AttributeError:
         print "could not get entries from tree"
+
+    # speed things up by only turning on the branches we need
     tree.SetBranchStatus("*",0)
     tree.SetBranchStatus(all_energy_var,1)
     tree.SetBranchStatus("nsignals",1)
+    tree.SetBranchStatus("is_bad",1)
+    tree.SetBranchStatus("is_pulser",1)
     tree.SetBranchStatus("channel",1)
     tree.SetBranchStatus("calibration",1)
     tree.SetBranchStatus("energy1_pz",1)
@@ -679,41 +691,30 @@ if __name__ == "__main__":
     dc = struck_analysis_cuts.get_drift_time_cut( drift_time_high=drift_time_high, isMC=isMC)
     ds = struck_analysis_cuts.get_drift_time_selection( drift_time_high=drift_time_high, isMC=isMC)
 
-    # sets of selections 
-    # we will loop over each list in selections, join each list in selections[i] with "&&"
+    # selections for the SignalEnergy plot
+    selection = []
+    selection.append(struck_analysis_cuts.get_single_strip_cut())
+    selection.append(struck_analysis_cuts.get_drift_time_selection( drift_time_high=drift_time_high, isMC=isMC))
+    selection.append("!is_pulser")
+    selection.append("!is_bad")
+    selection = " && ".join(selection)
 
-    selections = []
+    # selections for individual channels
+    channel_selection = selection
 
-    # best so far:
-    selections.append([struck_analysis_cuts.get_single_strip_cut(), dc])
-    #selections.append([dc])
-    #selections.append(["rise_time_stop95_sum-trigger_time>8.5 && rise_time_stop95_sum-trigger_time<9.0", "rise_time_stop50_sum-trigger_time>7.0"])
+    #channel_selection = []
+    ##channel_selection.append(struck_analysis_cuts.get_drift_time_cut(is_single_channel=True, drift_time_high=drift_time_high))
+    #channel_selection.append(struck_analysis_cuts.get_single_strip_cut())
+    #channel_selection.append("!is_pulser")
+    #channel_selection.append("!is_bad")
+    #channel_selection = " && ".join(channel_selection)
+    ##channel_selection = None
 
-    #selections.append([struck_analysis_cuts.get_single_strip_cut(), ds])
-    #selections.append(["(nbundlesX<2&&nbundlesY<2)",dc])
+    all_energy_var = "SignalEnergy"
+    if isMC: all_energy_var = "SignalEnergy*1.02"
+    print "all_energy_var:", all_energy_var
+    do_use_step=False
+    do_use_exp=True
 
-    channel_selections = []
-    #channel_selections.append(struck_analysis_cuts.get_drift_time_cut(is_single_channel=True, drift_time_high=drift_time_high))
-    channel_selections.append(struck_analysis_cuts.get_single_strip_cut())
-    channel_selection = " && ".join(channel_selections)
-    #channel_selection = None
-
-    # loop over all selections
-    # selection affects the all_energy_var
-    for i,selection in enumerate(selections):
-
-        selection = " && ".join(selection)
-        print "----> selection %i of %i: %s" % (
-            i,
-            len(selections),
-            selection,
-        )
-
-        all_energy_var = "SignalEnergy"
-        if isMC: all_energy_var = "SignalEnergy*1.02"
-        print "all_energy_var:", all_energy_var
-        do_use_step=False
-        do_use_exp=True
-
-        process_file(sys.argv[1], False, all_energy_var, selection, channel_selection, do_use_step=do_use_step, energy_var="energy1_pz", do_use_exp=do_use_exp)
+    process_file(sys.argv[1], False, all_energy_var, selection, channel_selection, do_use_step=do_use_step, energy_var="energy1_pz", do_use_exp=do_use_exp)
 
