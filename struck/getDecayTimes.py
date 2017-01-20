@@ -57,8 +57,9 @@ def getDecayTimes():
         hist.SetMarkerStyle(21)
         hist.SetMarkerSize(0.8)
 
-        draw_cmd = "decay_fit[%i] >> %s" % (channel, hist.GetName())
-        selection = ""
+        draw_cmd = "decay_fit >> %s" % hist.GetName()
+        # decay_chi2 is reduced chi^2
+        selection = "!is_pulser && !is_bad && decay_chi2>0 && channel==%i" % channel
         if fitter < 0.5:
             #If Gaus try to cut bad fits
             selection = "decay_error[%i]/decay_fit[%i] < 0.015" % (channel, channel)
