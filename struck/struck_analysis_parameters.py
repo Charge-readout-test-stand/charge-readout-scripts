@@ -708,8 +708,8 @@ if is_10th_LXe:
 #print "energy_start_time_microseconds:", energy_start_time_microseconds
 baseline_average_time_microseconds = 4.0 # 100 samples at 25 MHz
 
-decay_start_time = energy_start_time_microseconds #sample 500
-decay_end_time = energy_start_time_microseconds + baseline_average_time_microseconds   #sample 800
+decay_start_time = int(energy_start_time_microseconds) #sample 500
+decay_end_time = int(energy_start_time_microseconds + baseline_average_time_microseconds)   #sample 800
 decay_tau_guess = 200 #us
 
 rms_keV = {}
