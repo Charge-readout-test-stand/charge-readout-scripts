@@ -372,6 +372,15 @@ def get_cuts_label(draw_cmd, selection):
         label.append("NC")
     if get_drift_time_cut() in selection:
         label.append("LC")
+    if get_drift_time_selection() in selection:
+        label.append("DC")
+    if "nsignals==" in selection:
+        n = int(selection.split("nsignals==")[1][0])
+        label.append("nsig%i" % n)
+    if "!is_pulser" in selection:
+        label.append("noPulser")
+    if "!is_bad" in selection:
+        label.append("noBad")
     label = "+".join(label)
     if label == "": label = "No_cuts"
     return label
@@ -467,7 +476,7 @@ if __name__ == "__main__":
     print "\ndrift time selection:"
     print "\t" + "\n\t ||".join(get_drift_time_selection().split("||"))
 
-    print "\ndrift time selection:"
+    print "\ndrift time selection(drift_time_high=struck_analysis_parameters.max_drift_time):"
     print "\t" + "\n\t ||".join(get_drift_time_selection(drift_time_high=struck_analysis_parameters.max_drift_time).split("||"))
 
     print "\nget_few_channels_cmd:"
@@ -503,10 +512,10 @@ if __name__ == "__main__":
     #print "\n"+ get_drift_time_cut(energy_threshold=200,drift_time_low=7.0,drift_time_high=8.5)
     #print "\n"+ get_drift_time_cut(drift_time_low=7.0,drift_time_high=8.0)
     print "\n get_drift_time_cut(): \n"+ get_drift_time_cut()
-    print "\n get_drift_time_cut(drift_time_high=9.0): \n"+ get_drift_time_cut(drift_time_high=9.0)
-    print "\n get_drift_time_cut(drift_time_high=9.0, isMC=True): \n"+ get_drift_time_cut(drift_time_high=9.0,isMC=True)
-    print "\n get_drift_time_cut(drift_time_high=9.0, is_single_channel=True): \n"+ get_drift_time_cut(drift_time_high=9.0,is_single_channel=True)
-    print "\n get_drift_time_selection(drift_time_high=9.0, is_single_channel=True): \n" + get_drift_time_selection(drift_time_high=9.0,is_single_channel=True)
+    #print "\n get_drift_time_cut(drift_time_high=9.0): \n"+ get_drift_time_cut(drift_time_high=9.0)
+    #print "\n get_drift_time_cut(drift_time_high=9.0, isMC=True): \n"+ get_drift_time_cut(drift_time_high=9.0,isMC=True)
+    #print "\n get_drift_time_cut(drift_time_high=9.0, is_single_channel=True): \n"+ get_drift_time_cut(drift_time_high=9.0,is_single_channel=True)
+    #print "\n get_drift_time_selection(drift_time_high=9.0, is_single_channel=True): \n" + get_drift_time_selection(drift_time_high=9.0,is_single_channel=True)
     print "\n"+ get_single_strip_cut(isMC=True)
 
     #print "\n" + get_negative_energy_cut()
@@ -524,5 +533,7 @@ if __name__ == "__main__":
     print "\n get_nstrips_energy(nstrips=1):", get_nstrips_energy(nstrips=1)
 
     print "\n get_standard_cut:", get_standard_cut()
+
+    print get_cuts_label("",get_standard_cut())
 
 
