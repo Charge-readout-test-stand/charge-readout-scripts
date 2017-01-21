@@ -116,6 +116,7 @@ elif is_10th_LXe:
             channels.append(i_channel)
         if i_channel > 1:
             charge_channels_to_use[i_channel] = 1
+    charge_channels_to_use[8] = 0 # Y14 changed mid-run
 
 else:
     # channels for 5th LXe
