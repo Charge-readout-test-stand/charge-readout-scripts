@@ -21,10 +21,10 @@ drift_time_low = struck_analysis_parameters.drift_time_threshold
 #drift_time_low = 8.0
 #drift_time_low = 3.0
 #drift_time_high = 8.5
-drift_time_high = 9.0
+#drift_time_high = 9.0
 #drift_time_high = 0.0
 #drift_time_low = 0.0
-nsignals = 2
+nsignals = 15
 # the usual:
 selection = "nsignals<=%i && rise_time_stop95_sum-trigger_time>%s && rise_time_stop95_sum-trigger_time<%s" % ( nsignals, drift_time_low, drift_time_high)
 #selection = ""
@@ -60,8 +60,9 @@ struck_file = ROOT.TFile(struck_filename)
 struck_tree = struck_file.Get("tree")
 
 struck_tree.SetBranchStatus("*",0) # first turn off all branches
-struck_tree.SetBranchStatus("SignalEnergy",1) 
+struck_tree.SetBranchStatus(draw_cmd,1) 
 struck_tree.SetBranchStatus("nsignals",1) 
+struck_tree.SetBranchStatus("channel",1) 
 struck_tree.SetBranchStatus("rise_time_stop95_sum",1) 
 struck_tree.SetBranchStatus("trigger_time",1) 
 struck_tree.SetBranchStatus("is_pulser",1) 
@@ -117,16 +118,16 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
     legend.SetFillColor(0)
 
     struck_hist2.GetDirectory().cd()
-    selection = "%s && %s" % (last_times, struck_selection)
-    print "selection:", selection
-    struck_tree.Draw("%s >> %s" % (draw_cmd, struck_hist2.GetName()),selection)
+    this_selection = "%s && %s" % (last_times, struck_selection)
+    print "this_selection:", this_selection
+    struck_tree.Draw("%s >> %s" % (draw_cmd, struck_hist2.GetName()),this_selection)
     print "\t %i entries in hist" % struck_hist2.GetEntries()
 
     struck_hist.GetDirectory().cd()
     print "draw_cmd:", draw_cmd
-    selection = "%s && %s" % (first_times, struck_selection)
-    print "selection:", selection
-    struck_tree.Draw("%s >> %s" % (draw_cmd, struck_hist.GetName()),selection)
+    this_selection = "%s && %s" % (first_times, struck_selection)
+    print "selection:", this_selection
+    struck_tree.Draw("%s >> %s" % (draw_cmd, struck_hist.GetName()),this_selection)
     print "\t %i entries in hist" % struck_hist.GetEntries()
 
     start_bin = struck_hist.FindBin(300.0)
@@ -141,7 +142,7 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
     struck_hist2.Scale(scale_factor)
 
     if draw_cmd == "energy1_pz":
-        legend.AddEntry(struck_hist, "%s ch %i %s" % (struck_basename, channel, struck_analysis_parameters.channel_map[channel]), "f")
+        legend.AddEntry(struck_hist, "First 10 hours ch %i %s" % (channel, struck_analysis_parameters.channel_map[channel]), "f")
     else:
         legend.AddEntry(struck_hist, "First 10 hours (%.1e)" % struck_hist.GetEntries(), "f")
     legend.AddEntry(struck_hist2, "Last 10 hours (%.1e)" % struck_hist2.GetEntries(), "f")
