@@ -12,6 +12,16 @@ def getDecayTimes():
     tree = ROOT.TChain("tree")
     tree.Add(filename)
 
+
+    # speed things up:
+    tree.SetBranchStatus("*",0)
+    tree.SetBranchStatus("decay_fit",1)
+    tree.SetBranchStatus("decay_chi2",1)
+    tree.SetBranchStatus("decay_error",1)
+    tree.SetBranchStatus("channel",1)
+    tree.SetBranchStatus("is_pulser",1)
+    tree.SetBranchStatus("is_bad",1)
+
     basename = os.path.splitext(os.path.basename(filename))[0]
     print "basename:", basename
 
