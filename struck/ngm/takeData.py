@@ -31,8 +31,8 @@ def takeData(doLoop=False, n_hours=10.0):
   #termination = 1 # 1 = 50 ohm?
   nimtriginput = 0x10 # Bit0 Enable : Bit1 Invert , we use 0x10 (from struck root gui)
   trigconf = 0x8 # default = 0x5, we use 0x8 Bit0:Invert, Bit1:InternalBlockSum, Bit2:Internal, Bit3:External                       
-  #dacoffset = 32768 # default = 32768 
-  dacoffset = 24768 # default = 32768 # FIXME -- for warm cell
+  dacoffset = 32768 # default = 32768 
+  #dacoffset = 24768 # default = 32768 # FIXME -- for warm cell
 
   # could have a few other clock freqs if we define them, look to struck root gui for info
   clock_source_choice = 3 # 0: 250MHz, 1: 125MHz, 2=62.5MHz 3: 25 MHz (we use 3) 
