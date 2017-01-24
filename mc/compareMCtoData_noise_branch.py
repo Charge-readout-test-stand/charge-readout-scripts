@@ -18,11 +18,13 @@ from struck import struck_analysis_parameters
 # options
 #-------------------------------------------------------------------------------
 
-#draw_cmd = "SignalEnergy" # the usual
+is_noise_study = False
+
+draw_cmd = "SignalEnergy" # the usual
 #draw_cmd = "energy1_pz" # individual channel spectra
 #draw_cmd = "Sum$(energy_pz*signal_map)" # testing
 #draw_cmd = "energy1" 
-draw_cmd = "energy_rms1" 
+#draw_cmd = "energy_rms1" 
 #draw_cmd = "baseline_rms*calibration" 
 
 drift_time_high = struck_analysis_parameters.max_drift_time
@@ -42,9 +44,8 @@ drift_time_high = drift_time_high - 2.0
 #nsignals = 1 # only consider events where one strip is hit
 #nstrips = 1 # only use single-strip channels
 nsignals = 0
-#nsignals = 2
+nsignals = 2
 
-is_noise_study = True
 
 #-------------------------------------------------------------------------------
 
@@ -198,7 +199,8 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
         multiplier = 1.0 
         if isMC:
             #multiplier = 1.01 # 8th & 9th LXe
-            multiplier = 0.96 # 10th LXe 
+            #multiplier = 0.96 # 10th LXe 
+            multiplier = 0.94 # 10th LXe v3
             if is_noise_study:
                 multiplier = 1.0
         else:
