@@ -65,13 +65,15 @@ def process_files(filenames):
     #do_draw_sum = False # sum energy
     do_draw_sum = True # sum energy
 
+    draw_channels = True # print individual channel plots
+
     # default values:
     xUnits = ""
     prefix = "plots"
     selections = []
     selections.append("!is_pulser") # debugging
     selections.append("!is_bad") # debugging
-    #selections.append("nsignals==1") # debugging
+    selections.append("nsignals==1") # debugging
     #selections.append("Entry$<500") # debugging
     sum_selections = []
     ch_selections = []
@@ -82,7 +84,7 @@ def process_files(filenames):
         #draw_command = "energy1_pz"
         draw_command = "energy1"
         sum_draw_cmd = "SignalEnergy"
-        min_bin = 200
+        min_bin = 100
         #max_bin = 2000
         max_bin = 1400
         bin_width = 10
@@ -356,7 +358,7 @@ def process_files(filenames):
 
             n_entries = tree.Draw(draw_cmd, selection)
 
-            if False: # draw individual channel plots
+            if draw_channels: # draw individual channel plots
                 title = "ch %i: %s {%s}" % (channel, channel_map[channel], selection)
                 hist.SetTitle(title)
                 canvas.SetLogy(0)
