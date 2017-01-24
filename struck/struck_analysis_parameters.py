@@ -440,23 +440,24 @@ if is_8th_LXe or is_9th_LXe:
     decay_time_values[31] =  10000000000.000000*microsecond # Not Used  
 
 if is_10th_LXe:
-    # Fits are in DecayTime_overnight10thLXe_v1.pdf 
+    # Fits are in DecayTime_overnight10thLXe_v3.pdf 
     decay_time_values[0] =  10000000000.000000*microsecond # Not Used  
     decay_time_values[1] =  10000000000.000000*microsecond # Not Used  
-    decay_time_values[2] =  238.222300*microsecond # +/- 0.013730 Y20
-    decay_time_values[3] =  256.336860*microsecond # +/- 0.017528 Y19
-    decay_time_values[4] =  258.168966*microsecond # +/- 0.018641 Y18
-    decay_time_values[5] =  290.006861*microsecond # +/- 0.027398 Y17
-    decay_time_values[6] =  264.624952*microsecond # +/- 0.023073 Y16
-    decay_time_values[7] =  289.166104*microsecond # +/- 0.031369 Y15
-    decay_time_values[8] =  285.922276*microsecond # +/- 0.041862 Y14
-    decay_time_values[9] =  278.646341*microsecond # +/- 0.021896 X20
-    decay_time_values[10] =  303.790081*microsecond # +/- 0.041161 X19
-    decay_time_values[11] =  272.132876*microsecond # +/- 0.024614 X18
-    decay_time_values[12] =  335.789178*microsecond # +/- 0.060775 X17
-    decay_time_values[13] =  285.551993*microsecond # +/- 0.033051 X16
-    decay_time_values[14] =  275.061863*microsecond # +/- 0.023535 X15
-    decay_time_values[15] =  271.053057*microsecond # +/- 0.023854 X14
+    decay_time_values[2] =  130.661344*microsecond # +/- 0.006022 Y20
+    decay_time_values[3] =  133.947099*microsecond # +/- 0.005033 Y19
+    decay_time_values[4] =  132.431729*microsecond # +/- 0.003500 Y18
+    decay_time_values[5] =  150.581211*microsecond # +/- 0.001877 Y17
+    decay_time_values[6] =  137.815828*microsecond # +/- 0.004132 Y16
+    decay_time_values[7] =  141.324616*microsecond # +/- 0.006453 Y15
+    decay_time_values[8] =  10000000000.000000*microsecond # Not Used  
+    decay_time_values[9] =  137.174582*microsecond # +/- 0.007347 X20
+    decay_time_values[10] =  141.004072*microsecond # +/- 0.006563 X19
+    decay_time_values[11] =  139.068536*microsecond # +/- 0.003624 X18
+    decay_time_values[12] =  126.817805*microsecond # +/- 0.002625 X17
+    decay_time_values[13] =  139.283740*microsecond # +/- 0.003826 X16
+    decay_time_values[14] =  135.320872*microsecond # +/- 0.009996 X15
+    decay_time_values[15] =  136.730159*microsecond # +/- 0.008309 X14
+
 
 # charge calbration from these files for 5th LXe:
 # tier3_LXe_Run1_1700VC_2chargechannels_609PM_60thresh_NotShaped_Amplified_GapTime20_2_0.root
