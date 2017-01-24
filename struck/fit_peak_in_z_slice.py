@@ -21,22 +21,29 @@ from ROOT import TCanvas
 def process_file(filename):
 
     # options 
-    do_fit = True # whether to do fits of z slices
+    do_fit = False # whether to do fits of z slices
     max_drift_length = 18.0 # for Liang
+    max_drift_length = struck_analysis_parameters.drift_length+2
+    drift_velocity = struck_analysis_parameters.drift_velocity
     n_slices = 9 # for Liang
-    all_energy_var = "chargeEnergy*%s" % struck_analysis_parameters.struck_energy_multiplier # for Liang
+    #all_energy_var = "chargeEnergy*%s" % struck_analysis_parameters.struck_energy_multiplier # for Liang
+    all_energy_var = "SignalEnergy"
     #all_energy_var = "energy1_pz"
     #max_drift_length = 19.0 # mm
     #n_slices = 19 # 1-mm slices
     #n_slices = 8 # ~2-mm slices
     #n_slices = 3 # 3 detector regions
     #n_slices = 4 # 3 detector regions
-    single_strip_cut = struck_analysis_cuts.get_single_strip_cut(energy_threshold=10.0)
+    #single_strip_cut = struck_analysis_cuts.get_single_strip_cut(energy_threshold=10.0)
+    single_strip_cut = "!is_bad && !is_pulser"
     n_bins = 160
     min_bin = 0
     max_bin = 1600
     fit_half_width=200
     #fit_half_width=170
+
+    print "max_drift_length:", max_drift_length
+    print "max_drift_time:", max_drift_length/drift_velocity
 
     selections = []
     #selections.append(single_strip_cut) # ignore for Liang's plot
@@ -53,7 +60,6 @@ def process_file(filename):
     basename = "z_slices_" + basename
     all_results = {}
 
-    drift_velocity = struck_analysis_parameters.drift_velocity
     dt = max_drift_length/drift_velocity/n_slices # microsecond
     print "dt [microsecond]: %.3f" % dt
 
@@ -65,11 +71,19 @@ def process_file(filename):
     except AttributeError:
         print "could not get entries from tree"
 
+    tree.SetBranchStatus("*",0)
+    tree.SetBranchStatus(all_energy_var,1)
+    tree.SetBranchStatus("rise_time_stop95_sum",1)
+    tree.SetBranchStatus("rise_time_stop99_sum",1)
+    tree.SetBranchStatus("trigger_time",1)
+    tree.SetBranchStatus("is_bad",1)
+    tree.SetBranchStatus("is_pulser",1)
+
     legend = TLegend(0.1, 0.9, 0.9, 0.99)
     legend.SetNColumns(5)
 
     hists = []
-    out_file = TFile("%s_%i.root" % (basename, n_slices), "recreate")
+    #out_file = TFile("%s_%i.root" % (basename, n_slices), "recreate")
 
     hist = TH1D("hist_all", "",n_bins,min_bin,max_bin)
     tree.Draw("%s >> %s" % (all_energy_var, hist.GetName()),"","goff")
@@ -83,7 +97,7 @@ def process_file(filename):
     hists.append(hist)
     legend.AddEntry(hist,"single-strip","l")
 
-    t = 8.0
+    t = 0.0
     i = 0
     if n_slices == 4:
         legend.SetNColumns(3)
@@ -113,7 +127,8 @@ def process_file(filename):
             
         
         print "---> %i: t=%.2f microseconds, dt=%.2f" % (i,t, dt)
-        drift_time_cut = "(rise_time_stop99-trigger_time>%s)&&(rise_time_stop99-trigger_time<%s)" % (t, t+dt)
+        #drift_time_cut = "(rise_time_stop99-trigger_time>%s)&&(rise_time_stop99-trigger_time<%s)" % (t, t+dt)
+        drift_time_cut = "(rise_time_stop95_sum-trigger_time>%s)&&(rise_time_stop95_sum-trigger_time<%s)" % (t, t+dt)
         if "chargeEnergy" in all_energy_var:
             drift_time_cut = struck_analysis_cuts.get_drift_time_cut(
                 drift_time_low=t,
@@ -209,15 +224,16 @@ def process_file(filename):
 
     legend.Draw()
     c1.Update()
-    c1.Print("z_slices_%i.pdf" % (len(hists)-2))
+    n_slices = len(hists)-2
+    c1.Print("%i_%s.pdf" % (n_slices, basename))
     c1.SetLogy(0)
     c1.Update()
-    c1.Print("z_slices_%i_lin.pdf" % (len(hists)-2))
+    c1.Print("%i_%s_lin.pdf" % (n_slices, basename))
 
     if not gROOT.IsBatch():
         raw_input("enter to continue ")
 
-    out_file.Write()
+    #out_file.Write()
 
 
 if __name__ == "__main__":
