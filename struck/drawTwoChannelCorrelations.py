@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Draw diagnostic plots
+Draw correlations between hit channels
 
 arguments [tier3 root files]
 """
