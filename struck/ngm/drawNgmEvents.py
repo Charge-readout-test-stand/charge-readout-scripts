@@ -38,7 +38,7 @@ canvas.SetBottomMargin(0.12)
 # for RHS legend:
 canvas.SetTopMargin(0.05)
 canvas.SetBottomMargin(0.1)
-canvas.SetRightMargin(0.12)
+canvas.SetRightMargin(0.15)
 
 ROOT.gStyle.SetTitleFontSize(0.04)
 
@@ -76,7 +76,8 @@ def process_file(filename=None, n_plots_total=0):
         y_min = -5 # mV
 
     #y_max = 31500 # keV
-    y_max = nchannels*500+250 # keV
+    #y_max = nchannels*500+250 # keV
+    y_max = nchannels*500 #+250 # keV
     if units_to_use == 1:
         y_max = 200 # ADC units
     elif units_to_use == 2:
@@ -141,7 +142,7 @@ def process_file(filename=None, n_plots_total=0):
     trigger_time = card0.pretriggerdelay_block[0]/sampling_freq_Hz*1e6
     print "trigger time: [microseconds]", trigger_time
 
-    frame_hist = ROOT.TH1D("hist", "", int(tree.HitTree.GetNSamples()*33.0/32.0), 0, trace_length_us+1)
+    frame_hist = ROOT.TH1D("hist", "", tree.HitTree.GetNSamples(), 0, trace_length_us+1)
     #frame_hist = ROOT.TH1D("hist", "", int(tree.HitTree.GetNSamples()*33.0/32.0), 0, 25.0)
     frame_hist.SetXTitle("Time [#mus]")
     sum_offset = 400
@@ -249,6 +250,8 @@ def process_file(filename=None, n_plots_total=0):
                 multiplier = 1.0
             elif units_to_use == 2: # mV
                 multiplier = voltage_range_mV/pow(2,14)
+            #if channel == pmt_channel:
+            #    multiplier /= 10.0
 
 
             if False: # print debug output
@@ -301,7 +304,7 @@ def process_file(filename=None, n_plots_total=0):
                 x = graph.GetX()[i_point]
                 y = graph.GetY()[i_point]
                 if y > y_max: y_max = y
-                if y < y_min: y_min = y
+                #if y < y_min: y_min = y
 
                 graph.SetPoint(i_point, x/sampling_freq_Hz*1e6, y)
 
@@ -311,7 +314,7 @@ def process_file(filename=None, n_plots_total=0):
             rms_threshold = struck_analysis_parameters.rms_keV[channel] + struck_analysis_parameters.rms_keV_sigma[channel]*4.0
             if charge_channels_to_use[channel] > 0:
                 if energy > signal_threshold:
-                    graph.SetLineWidth(5)
+                    graph.SetLineWidth(4)
                     sum_energy += energy
                 if rms_noise >  rms_threshold:
                     n_high_rms += 1
@@ -331,11 +334,18 @@ def process_file(filename=None, n_plots_total=0):
                         sum_wfm1[i_point] = sum_wfm1[i_point] + y - offset
                     
             # legend uses hists for color/fill info
-            legend_entries[channel] = "%s  %.1f" % (
+            leg_entry= "%s  %.1f" % (
                 channel_map[channel], 
                 energy,
                 #rms_noise,
             ) 
+            if charge_channels_to_use[channel] > 0:
+                if energy > signal_threshold:
+                    #leg_entry = "#bf{%s}" % leg_entry
+                    leg_entry = "%s #leftarrow" % leg_entry
+
+            legend_entries[channel] = leg_entry
+
 
             # end loop over channels
 
@@ -415,10 +425,11 @@ def process_file(filename=None, n_plots_total=0):
 
         frame_hist.SetMinimum(y_min)
         frame_hist.SetMaximum(y_max)
-        frame_hist.SetTitle("Event %i | Sum Ionization Energy: %.1f keV | time stamp: %i" % (
+        frame_hist.SetTitle("Event %i | Sum Ionization Energy: %.1f keV | time stamp: %i | page %i" % (
             (i_entry-1)/nchannels, 
             sum_energy,
             tree.HitTree.GetRawClock(),
+            n_plots+1,
             ))
         frame_hist.SetTitleSize(0.2, "t")
 
@@ -548,6 +559,7 @@ def process_file(filename=None, n_plots_total=0):
 if __name__ == "__main__":
 
     n_plots_total = 50
+    #n_plots_total = 3
     n_plots_so_far = 0
     if len(sys.argv) > 1:
         for filename in sys.argv[1:]:
