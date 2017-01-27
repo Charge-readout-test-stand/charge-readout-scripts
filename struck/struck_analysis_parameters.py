@@ -17,7 +17,8 @@ is_6th_LXe = False
 is_7th_LXe = False # March 2016
 is_8th_LXe = False # August 2016
 is_9th_LXe = False # Sept 2016
-is_10th_LXe = True
+is_10th_LXe = False # Jan 2017
+is_11th_LXe = True # Jan/Feb 2017
 
 import os
 import math
@@ -51,7 +52,7 @@ drift_time_threshold = (drift_length - 5.3)/drift_velocity # microsecond
 
 max_drift_time = drift_length/drift_velocity
 #print "max_drift_time:", max_drift_time
-if is_10th_LXe:
+if is_10th_LXe or is_11th_LXe:
     drift_velocity = 1.79 # mm / microsecond  
     max_drift_time = drift_length/drift_velocity
     #print "max_drift_time:", max_drift_time
@@ -108,7 +109,7 @@ elif is_8th_LXe or is_9th_LXe:
     charge_channels_to_use[0] = 0 # Y1-10 is dead
     #charge_channels_to_use[16] = 0 # X1-12 is noisy !!
     charge_channels_to_use[27] = 0 # X23/24 is dead
-elif is_10th_LXe:
+elif is_10th_LXe or is_11th_LXe:
     pmt_channel = 0
     channels = []
     for i_channel, val in enumerate(charge_channels_to_use):
@@ -116,7 +117,7 @@ elif is_10th_LXe:
             channels.append(i_channel)
         if i_channel > 1:
             charge_channels_to_use[i_channel] = 1
-    charge_channels_to_use[8] = 0 # Y14 changed mid-run
+    #charge_channels_to_use[8] = 0 # Y14 changed mid-run
 
 else:
     # channels for 5th LXe
@@ -237,7 +238,7 @@ if is_9th_LXe:
     pulser_channel = 27
     channel_map[pulser_channel] = "pulser"
 
-if is_10th_LXe:
+if is_10th_LXe or is_11th_LXe:
     pulser_channel = 1
     channel_map[15] = "X14"
     channel_map[14] = "X15"
@@ -283,7 +284,7 @@ MCn_channels = len(MCchannels)
 MCcharge_channels_to_use = [0]*MCn_channels
 mc_channel_map = {} # map MC channel to label
 for struck_channel, label in channel_map.items():
-    if is_8th_LXe or is_9th_LXe or is_10th_LXe: break # FIXME -- skip this for now
+    if is_8th_LXe or is_9th_LXe or is_10th_LXe or is_11th_LXe: break # FIXME -- skip this for now
     is_y = False
     if "Y" in label:
         is_y = True
@@ -312,7 +313,7 @@ if is_8th_LXe or is_9th_LXe:
     MCcharge_channels_to_use[38] = 0
     MCcharge_channels_to_use[39] = 0
 
-if is_10th_LXe:
+if is_10th_LXe or is_11th_LXe:
     for struck_channel, mc_channel in struck_to_mc_channel_map.items():
         MCcharge_channels_to_use[mc_channel[0]] = 1
         mc_channel_map[mc_channel[0]] = channel_map[struck_channel]
@@ -439,7 +440,7 @@ if is_8th_LXe or is_9th_LXe:
     decay_time_values[30] =  359.754388*microsecond # +/- 0.040198  
     decay_time_values[31] =  10000000000.000000*microsecond # Not Used  
 
-if is_10th_LXe:
+if is_10th_LXe or is_11th_LXe:
     # Fits are in DecayTime_overnight10thLXe_v3.pdf 
     decay_time_values[0] =  10000000000.000000*microsecond # Not Used  
     decay_time_values[1] =  10000000000.000000*microsecond # Not Used  
@@ -578,9 +579,10 @@ if is_9th_LXe:
     calibration_values[29] = 0.966761 # +/- 0.001092 X27/28
     calibration_values[30] = 1.926988 # +/- 0.003290 X29/30
 
-if is_10th_LXe: 
+if is_10th_LXe or is_11th_LXe: 
     for i_channel in xrange(len(channels)):
         calibration_values[i_channel] = 0.92 # initial guess
+    calibration_values[pulser_channel] = 0.018511 # make the pulser 100 keV when warm 24 Jan 2017
 
     # basename: 570_No_cuts_overnight10thLXe_v1_2017_01_20_13_59_31_ 
     # selection: (nsignals==1) && (!(rise_time_stop95_sum-trigger_time < 10.5754189944 || rise_time_stop95_sum-trigger_time > 20.0)) 
@@ -600,6 +602,7 @@ if is_10th_LXe:
     calibration_values[13] = 1.745394 # +/- 0.006663 X16
     calibration_values[14] = 0.927497 # +/- 0.005200 X15
     calibration_values[15] = 0.941125 # +/- 0.006729 X14
+
 
 
 
@@ -654,7 +657,7 @@ if is_7th_LXe:
     ]
 
 # construct colors from RGB vals:
-if is_8th_LXe or is_9th_LXe or is_10th_LXe:
+if is_8th_LXe or is_9th_LXe or is_10th_LXe or is_11th_LXe:
 
     # http://tools.medialab.sciences-po.fr/iwanthue
     rgb_json = \
@@ -701,14 +704,26 @@ if is_8th_LXe or is_9th_LXe or is_10th_LXe:
 def get_colors():
     return colors
 
+
+noiseLightCut = 20.0
+noise_length = int(800)
+if is_10th_LXe or is_11th_LXe: 
+    noise_length = int(1050)
+    noiseLightCut = 20.0
+
+
 # from tier2to3_overnight.root, baseline_rms
 n_baseline_samples = 200.0
 # this is not really microseconds, but samples:
 energy_start_time_microseconds = 450.0*40/1000 # energy calc starts 450 samples after wfm start, in a normal 25-MS/s run
 if is_10th_LXe:
     energy_start_time_microseconds = 850.0*40/1000 # energy calc starts 850 samples
-#print "energy_start_time_microseconds:", energy_start_time_microseconds
 baseline_average_time_microseconds = 4.0 # 100 samples at 25 MHz
+if is_11th_LXe:
+    n_baseline_samples = 275.0
+    energy_start_time_microseconds = (1050.0 - n_baseline_samples)*40/1000 # energy calc starts 850 samples
+baseline_average_time_microseconds = (n_baseline_samples/2.0*40.0) # 100 samples at 25 MHz
+#print "energy_start_time_microseconds:", energy_start_time_microseconds
 
 decay_start_time = int(energy_start_time_microseconds) #sample 500
 decay_end_time = int(energy_start_time_microseconds + baseline_average_time_microseconds)   #sample 800
@@ -841,7 +856,7 @@ if is_9th_LXe:
     rms_keV[31] = 2.829068*calibration_values[31]  # +/- 0.000609 
     rms_keV_sigma[31] = 3.021563*calibration_values[31] # +/- 0.000431
 
-if is_10th_LXe:
+if is_10th_LXe or is_11th_LXe:
     # Fits are in RMSNoise_overnight10thLXe_v0.pdf 
     rms_keV[0] = 2.942688*calibration_values[0]  # +/- 0.000961 PMT
     rms_keV_sigma[0] = 3.384893*calibration_values[0] # +/- 0.000680 PMT
@@ -962,12 +977,6 @@ energy1_pz_digitization_noise_keV = math.sqrt(energy1_pz_digitization_noise_keV)
 # /nfs/slac/g/exo_data4/users/mjewell/nEXO_MC/digitization/electron_570keV_Ralph/MC/
 nest_resolution_570 = 1.46847e+03/2.71292e+04
 
-noiseLightCut = 20.0
-noise_length = int(800)
-if is_10th_LXe: 
-    noise_length = int(1050)
-    noiseLightCut = 20.0
-
 def is_2Vinput(baseline_mean_file): #FIXME--will be included in the tree so no longer needed
     """
     If using 2V input (instead of 5V), divide calibration by 2.5
@@ -1043,7 +1052,7 @@ if __name__ == "__main__":
 
     print "\nlinear calibration info:"
     for (channel, value) in calibration_values.items():
-        print "\t channel %i: %.6f" % (channel, value)
+        print "\t channel %i %s: %.6f" % (channel, channel_map[channel], value)
 
     print "\ndecay times:"
     for (channel, value) in decay_time_values.items():
