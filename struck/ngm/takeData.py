@@ -1,3 +1,12 @@
+"""
+
+This script is for taking data with the 32-channel (2 x 16) pizza-box VME
+digitizers, with the 2004 version of the firmware. 
+
+For the DT unit with 2008 version of firmware, use the script takeData_16ch_DT.py. 
+
+"""
+
 # modified from Jason Newby, email 16 June 2016, subject:SIS3316
 
 

@@ -1,5 +1,22 @@
-# modified from Jason Newby, email 16 June 2016, subject:SIS3316
+"""
 
+This script is for taking data with the 16-channel desktop unit, with these
+firmware versions:
+
+  VME FPGA firmware: 33162008
+  ADC FPGA firmware: 02500008
+
+For the 32-channel VME unit, use the script takeData.py. 
+
+
+to run in a loop, run from the command line like this:
+
+  while true; do time python takeData.py ; done
+
+
+
+modified from Jason Newby, email 16 June 2016, subject:SIS3316
+"""
 
 # from test.C
 import time
