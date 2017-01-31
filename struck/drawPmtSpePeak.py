@@ -14,16 +14,52 @@ print basename
 
 max_bin = 600
 peak_loc = 150
-selection = "wfm_max_time>675 && wfm_max_time<685" # direct to shaper
+min_time = 675
+max_time = 685
+
 if "sig_chain" in basename:
+    min_time = 630
+    max_time = 638
     print "this is the usual sig_chain!"
-    selection = "wfm_max_time>630 && wfm_max_time<638" # full sig chain
-    max_bin = 16000
-    peak_loc = 1000 # ~ location of spe
+    peak_loc = 50
+    if "500cg" in basename:
+        print "---> this is 500 cg"
+        min_time = 632
+        max_time = 642
+    if "_0dB" in basename:
+        print "---> this is 0 dB"
+        max_bin = 16000
+        peak_loc = 1000 # ~ location of spe
+        min_time = 630
+        max_time = 638
+    if "cold" in basename:
+        print "---> this is cold"
+        min_time = 634
+        max_time = 644
+    if "_20dB" in basename:
+        print "---> this is 20 dB"
+        min_time = 638
+        max_time = 648
+        max_bin = 2000
+        peak_loc = 150 # ~ location of spe
+    if "_100cg" in basename:
+        print "---> this is 100 cg"
+        max_bin = 150
+        peak_loc = 40 # ~ location of spe
+    if "25MHz" in basename:
+        print "---> this is 25 MHz"
+        min_time = 530
+        max_time = 540
+selection = "wfm_max_time>=%i && wfm_max_time<=%i" % (min_time, max_time) 
+#selection = "wfm_max_time>=100 && wfm_max_time<=1000" # test -- accept all
 
 
 # pulser is ch1 in Struck gui data
-tree = ROOT.TChain("tree1")
+if "cold" in basename:
+    tree = ROOT.TChain("tree0")
+else:
+    tree = ROOT.TChain("tree1")
+
 
 print "--> adding files to chain"
 for filename in filenames:
@@ -73,12 +109,18 @@ print title
 
 
 wfm_len = 1060
-max_time_hist = ROOT.TH1D("max_time_hist","",wfm_len,0,wfm_len)
+max_time_hist = ROOT.TH1D("max_time_hist","",wfm_len+10,-10,wfm_len)
 max_time_hist.SetLineColor(ROOT.kGreen+2)
 max_time_hist.SetLineWidth(2)
+max_time_hist_sel = max_time_hist.Clone("max_time_hist_sel")
+max_time_hist_sel.SetLineColor(ROOT.kBlue)
+max_time_hist_sel.SetFillColor(ROOT.kBlue)
+max_time_hist.SetTitle(selection)
 
-n_drawn = tree.Draw("wfm_max_time >> max_time_hist","", "goff")
+n_drawn = tree.Draw("wfm_max_time+0.5 >> max_time_hist","", "goff")
 print "%i drawn into max_time_hist" % n_drawn
+n_drawn = tree.Draw("wfm_max_time+0.5 >> max_time_hist_sel", selection, "goff")
+print "%i drawn into max_time_hist_sel" % n_drawn
 
 
 #-------------------------------------------------------------------------------
@@ -94,13 +136,14 @@ canvas.SetLogy(1)
 #-------------------------------------------------------------------------------
 
 max_time_hist.Draw()
+max_time_hist_sel.Draw("same")
 canvas.Update()
 canvas.Print("%s_max_time_log.pdf" % basename)
 canvas.SetLogy(0)
 canvas.Print("%s_max_time_lin.pdf" % basename)
-max_time_hist.SetAxisRange(580,680)
+max_time_hist.SetAxisRange(min_time - 50,max_time + 50)
 canvas.Print("%s_max_time_zoom.pdf" % basename)
-max_time_hist.SetAxisRange(0,wfm_len) # reset axis
+max_time_hist.SetAxisRange(-10,wfm_len) # reset axis
 
 #-------------------------------------------------------------------------------
 # draw SPE hist
