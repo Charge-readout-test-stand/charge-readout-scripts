@@ -104,7 +104,7 @@ def process_files(filenames):
         if is_MC:
             multiplier = 1.15
 
-        if False: # ch hist doesn't work for comparing 9th and 10th LXe
+        if True: # ch hist doesn't work for comparing 9th and 10th LXe
 
             # draw channels hit:    
             #ch_hist = ROOT.TH1D("ch_hist%i" % len(hists), basename,n_bins, -0.25, max_bin-0.25)
@@ -186,9 +186,11 @@ def process_files(filenames):
 
     hists[0].SetMaximum(y_max*1.05)
     hists[0].SetTitle("")
-    hists[0].Draw("b")
+    #hists[0].Draw("b")
+    hists[0].Draw("hist")
     for hist in hists:
-        hist.Draw("b same")
+        #hist.Draw("b same")
+        hist.Draw("hist same")
 
     n_files = len(filenames)
 
@@ -212,9 +214,11 @@ def process_files(filenames):
     if len(ch_hists) > 0:
         ch_hists[0].SetTitle("")
         #ch_hists[0].Draw("b norm")
-        ch_hists[0].Draw("b")
+        #ch_hists[0].Draw("b")
+        ch_hists[0].Draw("hist")
         for hist in ch_hists:
-            hist.Draw("b same")
+            #hist.Draw("b same")
+            hist.Draw("hist same")
 
         canvas.SetLogy(1)
         legend.Draw()
