@@ -1492,8 +1492,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         if not isMC and pulser_channel:
             if wfm_min[pulser_channel] < 3000: # 9th LXe value
                 is_pulser[0] = 1
-            if struck_analysis_parameters.is_10th_LXe and (wfm_max[pulser_channel] - baseline_mean[pulser_channel]) > 3000:
-                is_pulser[0] = 1
+            if struck_analysis_parameters.is_10th_LXe or struck_analysis_parameters.is_11th_LXe:
+                if (wfm_max[pulser_channel] - baseline_mean[pulser_channel]) > 3000:
+                    is_pulser[0] = 1
 
         if isNGM: # check that event contains all channels:
             if (n_channels_in_this_event != len(charge_channels_to_use)):
