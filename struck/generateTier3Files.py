@@ -337,8 +337,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     out_tree.Branch('time_stampDouble', time_stampDouble, 'time_stampDouble/D')
 
     if isNGM: # keep time stamp info for individual channels
-        time_stamp_diff = array('L', [0]*n_channels) # timestamp for each event, unsigned long
-        out_tree.Branch('time_stamp_diff', time_stamp_diff, 'time_stamp_diff[%i]/l' % n_channels)
+        time_stamp_diff = array('l', [0]*n_channels) # timestamp for each event, unsigned long
+        out_tree.Branch('time_stamp_diff', time_stamp_diff, 'time_stamp_diff[%i]/L' % n_channels)
 
         time_stampDouble_diff = array('d', [0]*n_channels) # double
         out_tree.Branch('time_stampDouble_diff', time_stampDouble_diff, 'time_stampDouble_diff[%i]/D' % n_channels)
