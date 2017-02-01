@@ -20,7 +20,7 @@ max_time = 685
 if "sig_chain" in basename:
     min_time = 630
     max_time = 638
-    print "this is the usual sig_chain!"
+    print "--> this is the usual sig_chain!"
     peak_loc = 50
     if "500cg" in basename:
         print "---> this is 500 cg"
@@ -48,7 +48,14 @@ if "sig_chain" in basename:
         peak_loc = 40 # ~ location of spe
     if "25MHz" in basename:
         print "---> this is 25 MHz"
-        min_time = 530
+        min_time = 531
+        max_time = 538
+        peak_loc = 20.0
+else:
+    print "---> this is not sig_chain"
+    if "25MHz" in basename:
+        print "---> this is 25 MHz"
+        min_time = 534
         max_time = 540
 selection = "wfm_max_time>=%i && wfm_max_time<=%i" % (min_time, max_time) 
 #selection = "wfm_max_time>=100 && wfm_max_time<=1000" # test -- accept all
@@ -78,6 +85,7 @@ out_file = ROOT.TFile("hists_%s.root" % basename,"recreate")
 
 # make a hist
 hist = ROOT.TH1D("hist","",200,0,max_bin)
+hist.GetXaxis().SetTitleOffset(1.8)
 hist.SetLineColor(ROOT.kBlue)
 if "no_sig" in basename:
     hist.SetLineColor(ROOT.kRed)
@@ -141,7 +149,7 @@ canvas.Update()
 canvas.Print("%s_max_time_log.pdf" % basename)
 canvas.SetLogy(0)
 canvas.Print("%s_max_time_lin.pdf" % basename)
-max_time_hist.SetAxisRange(min_time - 50,max_time + 50)
+max_time_hist.SetAxisRange(min_time-20,max_time+20)
 canvas.Print("%s_max_time_zoom.pdf" % basename)
 max_time_hist.SetAxisRange(-10,wfm_len) # reset axis
 
