@@ -543,8 +543,11 @@ def main(
             empty_bottle_mass = full_bottle_mass - 8.75
 
         if time_stamp > 3563225481: # after adding LN level sensor
-            full_bottle_mass = 55.54
+            full_bottle_mass = 55.77
             empty_bottle_mass = full_bottle_mass - 8.75
+            full_mass_integral = 8750.0
+            full_capacitance = 37.2
+            empty_capacitance = 24.5
 
         TC0.append(float(split_line[1]))
         TC1.append(float(split_line[2]))
@@ -857,7 +860,7 @@ def main(
     try:
         length = len(duty_cycle[first_index:last_index])
         vline4 = plt.plot(time_hours[last_index-length:last_index], duty_cycle[first_index:last_index])
-        plt.setp(vline4, color = 'black', linewidth = 2.0, label = 'LN duty cycle: %.1f' % duty_cycle[-1])
+        plt.setp(vline4, color = 'black', linewidth = 2.0, label = 'LN duty cycle: %.2f' % duty_cycle[-1])
     except:
         print "--> issue with plotting LN duty cycle"
 
@@ -1119,7 +1122,7 @@ def main(
             ln_hours_remaining,
             empty_time.strftime("%m-%d-%y %I:%M%p"),
         )
-        title += "LN mass = %.1f lb (%.1f  L), %.1f lb/hr (%.1f L/hr) in past hour" % ( 
+        title += "LN mass = %.1f lb (%.1f L), %.1f lb/hr (%.1f L/hr) in past hour" % ( 
             new_amt_ln,
             new_amt_ln/ln_density,
             ln_consumption_rate,
@@ -1195,7 +1198,7 @@ def main(
         plt.grid(b=True)
         mfline1 = plt.plot(time_hours[first_index:last_index], bottle_mass[first_index:last_index])
         plt.setp(mfline1, color = 'b', linewidth = linewidth, 
-        label="Xe bottle mass: %.2f kg (%.1f kg in cell)" % (bottle_mass[-1], full_bottle_mass - bottle_mass[last_index]))
+        label="Xe bottle mass: %.2f kg (%.1f kg in cell)" % (bottle_mass[last_index], full_bottle_mass - bottle_mass[last_index]))
 
         ymin, ymax = plt.gca().get_ylim() # record y axes now
 
