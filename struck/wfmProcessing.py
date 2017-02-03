@@ -321,7 +321,7 @@ def get_wfmparams(
         decay_fitter.SetTauGuess(struck_analysis_parameters.decay_tau_guess)
         decay_fitter.Transform(exo_wfm, exo_wfm)
         decay_fit = decay_fitter.GetDecayTime()
-        decay_chi2 = decay_fitter.GetDecayTimeChi2()/baseline_rms**2
+        decay_chi2 = decay_fitter.GetDecayTimeChi2()
         decay_error = decay_fitter.GetDecayTimeError()
     
 
