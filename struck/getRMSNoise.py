@@ -180,6 +180,7 @@ def plotRMS():
     drawn = False
     nchs = len(struck_analysis_parameters.charge_channels_to_use)
     noise_hist = ROOT.TH1F("nhist","nhist", nchs, 0, nchs)
+    y_max = 0
 
     for (channel, value) in enumerate(struck_analysis_parameters.charge_channels_to_use):
         
@@ -202,6 +203,8 @@ def plotRMS():
             hist.Draw()
             drawn=True
         
+        if hist.GetMaximum() > y_max: y_max = hist.GetMaximum()
+
         #canvas.Update()
         mean = hist.GetMean()
         mean_error = hist.GetMeanError()
@@ -212,6 +215,8 @@ def plotRMS():
         noise_hist.SetBinError(bini, mean_error)
 
         legend.AddEntry(hist, label, "p")
+    hist = rfile.Get("hist_0")
+    hist.SetMaximum(y_max*1.1)
 
     legend.Draw()
     canvas.Update()
@@ -227,8 +232,13 @@ def plotRMS():
     noise_hist.SetMarkerColor(ROOT.kRed)
     noise_hist.Draw()
     noise_hist.SetTitle("Channel RMS Noise")
-    noise_hist.GetYaxis().SetTitle("RMS Noise[keV]")
+    if calibrate:
+        noise_hist.GetYaxis().SetTitle("RMS Noise [keV]")
+    else:
+        noise_hist.GetYaxis().SetTitle("RMS Noise [ADC units]")
     noise_hist.GetXaxis().SetTitle("Channel")
+    canvas.SetTopMargin(0.1)
+    canvas.SetBottomMargin(0.15)
     canvas.Update()
     canvas.Print("Noise_vs_Channel.pdf")
     if not ROOT.gROOT.IsBatch():
