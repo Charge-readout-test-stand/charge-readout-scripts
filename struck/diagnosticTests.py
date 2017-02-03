@@ -8,6 +8,7 @@ arguments [tier3 root files]
 
 import os
 import sys
+import commands
 
 import ROOT
 ROOT.gROOT.SetBatch(True)
@@ -74,7 +75,7 @@ def draw_channel_plots(
         # set up the hist:
         hist = ROOT.TH2D("hist_%i" % channel, "", 50, 0, n_hours, 50, min_bin, max_bin)
         hist.SetXTitle("Time [hours]")
-        hist.GetXaxis().SetTitleOffset(1.2)
+        hist.GetYaxis().SetTitleOffset(1.4)
         ytitle = var
         if units != None:
             ytitle += " [%s]" % units
@@ -88,23 +89,27 @@ def draw_channel_plots(
         n_drawn =  tree.Draw(ch_draw_cmd, ch_selection, "goff") 
         print "\t %i entries drawn" % n_drawn
         print "\t %i entries in hist" % hist.GetEntries()
-        
+
+        y_proj = hist.ProjectionY()
 
         # add more details to the title
-        title = " channel %i: %s | %.2e counts | mean: %.2f | rms: %.2f" % (
+        title = " ch %i: %s | %.2e counts | mean: %.2f | rms: %.2f | %s" % (
             channel, 
             label,
             n_drawn,
-            hist.GetMean(),
-            hist.GetRMS(),
+            y_proj.GetMean(),
+            y_proj.GetRMS(),
+            selection,
         )
         print "\t %s" %  title
         hist.SetTitle(title)
 
         hist.Draw("colz")
-        canvas.Update()
-        ch_plot_name = "diagnostic_%s_%s_ch_%i.png" % (basename, plot_name, channel)
-        canvas.Print(ch_plot_name)
+        n_entries = hist.GetEntries()
+        if n_entries > 0:
+            canvas.Update()
+            ch_plot_name = "diagnosticPlots_%s/%s_ch_%i.png" % (basename, plot_name, channel)
+            canvas.Print(ch_plot_name)
 
         if not ROOT.gROOT.IsBatch():
             raw_input("any key to continue... ")
@@ -129,6 +134,11 @@ def process_file(filenames):
     tree = ROOT.TChain("tree")
     for filename in filenames:
         tree.Add(filename)
+
+    print "%i files" % len(filenames)
+    if len(filenames) == 0: 
+        sys.exit()
+
     print "%i entries in tree" % tree.GetEntries()
 
     tree.SetBranchStatus("*",0)
@@ -141,25 +151,41 @@ def process_file(filenames):
     tree.SetBranchStatus("sampling_freq_Hz",1) 
     tree.SetBranchStatus("time_stampDouble",1) 
 
+    cmd = "mkdir diagnosticPlots_%s" % basename
+    output = commands.getstatusoutput(cmd)
+    if output[0]:
+        print cmd
+        print output[1]
 
     #tree.SetBranchStatus("energy1_pz")
     #tree.SetBranchStatus("SignalEnergy",1)
     #tree.SetBranchStatus("signal_map",1)
 
-
     if True:
-        # baseline_rms
-        tree.SetBranchStatus("baseline_rms",1)
-        tree.SetBranchStatus("calibration",1)
-        draw_channel_plots(tree, "baseline_rms*calibration", "baseline_rms_x_calibration", 0.0, 30.0, "keV", basename)
+        # wfm_min
+        tree.SetBranchStatus("wfm_min",1)
+        draw_channel_plots(tree, "wfm_min", "wfm_min", 0.0, pow(2,14), "ADC units", basename)
+
+        # wfm_max
+        tree.SetBranchStatus("wfm_max",1)
+        draw_channel_plots(tree, "wfm_max", "wfm_max", 0.0, pow(2,14), "ADC units", basename)
+
+        # baseline_mean
+        tree.SetBranchStatus("baseline_mean",1)
+        draw_channel_plots(tree, "baseline_mean", "baseline_mean", 0.0, pow(2,14), "ADC units", basename)
 
         # energy1
         tree.SetBranchStatus("energy1",1)
         draw_channel_plots(tree, "energy1", "energy1", 0.0, 1000.0, "keV", basename)
 
-    # baseline_mean
-    tree.SetBranchStatus("baseline_mean",1)
-    draw_channel_plots(tree, "baseline_mean", "baseline_mean", 0.0, pow(2,14), "ADC units", basename)
+    # rise_time_stop95
+    tree.SetBranchStatus("rise_time_stop95",1)
+    draw_channel_plots(tree, "rise_time_stop95", "rise_time_stop95", 0.0, 43.0, "#us", basename)
+
+    # baseline_rms
+    tree.SetBranchStatus("baseline_rms",1)
+    tree.SetBranchStatus("calibration",1)
+    draw_channel_plots(tree, "baseline_rms*calibration", "baseline_rms_x_calibration", 0.0, 55.0, "keV", basename)
 
 
 if __name__ == "__main__":
