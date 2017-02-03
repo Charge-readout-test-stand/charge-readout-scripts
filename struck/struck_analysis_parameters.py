@@ -18,7 +18,8 @@ is_7th_LXe = False # March 2016
 is_8th_LXe = False # August 2016
 is_9th_LXe = False # Sept 2016
 is_10th_LXe = False # Jan 2017
-is_11th_LXe = True # Jan/Feb 2017
+is_11th_LXe = False # Jan/Feb 2017, with DT
+is_11th_LXeB = True # Feb 2017, with VME
 
 import os
 import math
@@ -52,7 +53,7 @@ drift_time_threshold = (drift_length - 5.3)/drift_velocity # microsecond
 
 max_drift_time = drift_length/drift_velocity
 #print "max_drift_time:", max_drift_time
-if is_10th_LXe or is_11th_LXe:
+if is_10th_LXe or is_11th_LXe or is_11th_LXeB:
     drift_velocity = 1.79 # mm / microsecond  
     max_drift_time = drift_length/drift_velocity
     #print "max_drift_time:", max_drift_time
@@ -71,7 +72,7 @@ one_strip_channels = [0]*32
 two_strip_channels = [0]*32
 channel_to_n_strips_map = [1.0]*32
 struck_to_mc_channel_map = {} # map struck channel to MC channel
-if is_8th_LXe or is_9th_LXe:
+if is_8th_LXe or is_9th_LXe or is_11th_LXeB:
     charge_channels_to_use = [0]*32
 
 # in software, struck channels start from 0, not 1
@@ -99,16 +100,17 @@ elif is_7th_LXe:
     charge_channels_to_use[6] = 1
     charge_channels_to_use[7] = 1
 
-elif is_8th_LXe or is_9th_LXe:
+elif is_8th_LXe or is_9th_LXe or is_11th_LXeB:
     pmt_channel = 31
     channels = []
     for i_channel, val in enumerate(charge_channels_to_use):
         channels.append(i_channel)
         charge_channels_to_use[i_channel] = 1
     charge_channels_to_use[pmt_channel] = 0
-    charge_channels_to_use[0] = 0 # Y1-10 is dead
-    #charge_channels_to_use[16] = 0 # X1-12 is noisy !!
-    charge_channels_to_use[27] = 0 # X23/24 is dead
+    if is_9th_LXe:
+        charge_channels_to_use[0] = 0 # Y1-10 is dead
+        #charge_channels_to_use[16] = 0 # X1-12 is noisy !!
+        charge_channels_to_use[27] = 0 # X23/24 is dead
 elif is_10th_LXe or is_11th_LXe:
     pmt_channel = 0
     channels = []
@@ -157,7 +159,7 @@ if is_7th_LXe:
     channel_map[6] = "Y18"
     channel_map[7] = "Y19"
 
-if is_8th_LXe or is_9th_LXe: 
+if is_8th_LXe or is_9th_LXe or is_11th_LXeB:
 
     # S/N 97, slot 0, Y channels
     struck_to_mc_channel_map[0] = [30,31,32,33,34,35,36,37,38,39]
@@ -237,6 +239,10 @@ if is_8th_LXe or is_9th_LXe:
 if is_9th_LXe:
     pulser_channel = 27
     channel_map[pulser_channel] = "pulser"
+if is_11th_LXeB:
+    pulser_channel = 30
+    channel_map[pulser_channel] = "pulser"
+    charge_channels_to_use[pulser_channel] = 0
 
 if is_10th_LXe or is_11th_LXe:
     pulser_channel = 1
@@ -284,7 +290,7 @@ MCn_channels = len(MCchannels)
 MCcharge_channels_to_use = [0]*MCn_channels
 mc_channel_map = {} # map MC channel to label
 for struck_channel, label in channel_map.items():
-    if is_8th_LXe or is_9th_LXe or is_10th_LXe or is_11th_LXe: break # FIXME -- skip this for now
+    if is_8th_LXe or is_9th_LXe or is_10th_LXe or is_11th_LXe or is_11th_LXeB: break # FIXME -- skip this for now
     is_y = False
     if "Y" in label:
         is_y = True
@@ -404,7 +410,7 @@ if is_7th_LXe:
     decay_time_values[9] = 1.5*microsecond 
 
 
-if is_8th_LXe or is_9th_LXe: 
+if is_8th_LXe or is_9th_LXe or is_11th_LXeB: 
     
     # vales from Mike's fits on 01 Sep 2016:
     decay_time_values[0] =  10000000000.000000*microsecond # Not Used  
@@ -604,8 +610,53 @@ if is_10th_LXe or is_11th_LXe:
     calibration_values[15] = 0.941125 # +/- 0.006729 X14
 
 
+if is_11th_LXeB: 
 
+    for i_channel in xrange(len(channels)):
+        calibration_values[i_channel] = 0.92 # initial guess
 
+    # can 7 (channels 4, 5, 6, 7 = Y14, Y15, Y16, Y17) is old preamps
+    # can 2 (channels 20, 21, 22, 23 = X16, X17, X18, X19) is old preamps
+
+    # basename: 570_DC_nsig1_noPulser_overnight_11thLXe_v1_2017_02_03_15_18_05_ 
+    # selection: (nsignals==1) && rise_time_stop95_sum-trigger_time >= 10.5754189944
+    # && rise_time_stop95_sum-trigger_time <= 20.5642458101 && !is_pulser 
+    # channel_selection: (nsignals==1) && rise_time_stop95_sum-trigger_time >=
+    # 10.5754189944 && rise_time_stop95_sum-trigger_time <= 20.5642458101 &&
+    # !is_pulser 
+    # calibration_values[all] = 1.071396 # +/- 0.001313 all
+    calibration_values[0] = 1.124574 # +/- 0.008460 Y1-10
+    calibration_values[1] = 0.999629 # +/- 0.007652 Y11
+    calibration_values[2] = 0.985199 # +/- 0.011359 Y12
+    calibration_values[3] = 1.035688 # +/- 0.005218 Y13
+    calibration_values[4] = 2.570478 # +/- 0.022494 Y14
+    calibration_values[5] = 2.057025 # +/- 0.011570 Y15
+    calibration_values[6] = 1.961670 # +/- 0.008979 Y16
+    calibration_values[7] = 2.023030 # +/- 0.011141 Y17
+    calibration_values[8] = 1.034512 # +/- 0.004743 Y18
+    calibration_values[9] = 0.989389 # +/- 0.005858 Y19
+    calibration_values[10] = 1.013754 # +/- 0.005928 Y20
+    calibration_values[11] = 1.024040 # +/- 0.004533 Y21/22
+    calibration_values[12] = 1.130982 # +/- 0.007040 Y23/24
+    calibration_values[13] = 1.038541 # +/- 0.005904 Y25/26
+    calibration_values[14] = 1.069890 # +/- 0.008625 Y27/28
+    calibration_values[15] = 0.947477 # +/- 0.008198 Y29/30
+    calibration_values[16] = 1.080784 # +/- 0.006723 X1-12
+    calibration_values[17] = 1.006839 # +/- 0.004704 X13
+    calibration_values[18] = 0.988350 # +/- 0.005978 X14
+    calibration_values[19] = 1.026779 # +/- 0.006602 X15
+    calibration_values[20] = 1.949497 # +/- 0.007094 X16
+    calibration_values[21] = 2.066524 # +/- 0.008312 X17
+    calibration_values[22] = 2.030872 # +/- 0.008091 X18
+    calibration_values[23] = 2.018855 # +/- 0.008083 X19
+    calibration_values[24] = 0.971441 # +/- 0.004438 X20
+    calibration_values[25] = 0.984041 # +/- 0.004598 X21
+    calibration_values[26] = 1.043984 # +/- 0.005659 X22
+    calibration_values[27] = 1.041238 # +/- 0.006443 X23/24
+    calibration_values[28] = 1.082616 # +/- 0.004944 X25/26
+    calibration_values[29] = 1.019562 # +/- 0.003483 X27/28
+
+    calibration_values[pulser_channel] = 0.018511 # make the pulser 100 keV when warm 24 Jan 2017
 
 resolution_guess = 0.06*570.0 #Instrinsic Charge Resolution at the 570 guess for fitting peak
 
@@ -657,8 +708,7 @@ if is_7th_LXe:
     ]
 
 # construct colors from RGB vals:
-if is_8th_LXe or is_9th_LXe or is_10th_LXe or is_11th_LXe:
-
+else:
     # http://tools.medialab.sciences-po.fr/iwanthue
     rgb_json = \
     [[255,122,158],
@@ -891,6 +941,74 @@ if is_10th_LXe or is_11th_LXe:
     rms_keV[15] = 20.543442*calibration_values[15]  # +/- 0.000324 X14
     rms_keV_sigma[15] = 1.139844*calibration_values[15] # +/- 0.000229 X14
      
+if is_11th_LXeB: 
+
+    # Fits are in RMSNoise_overnight_11thLXe_v1.pdf 
+    rms_keV[0] = 38.427647*calibration_values[0]  # +/- 0.001051 Y1-10
+    rms_keV_sigma[0] = 2.888755*calibration_values[0] # +/- 0.000743 Y1-10
+    rms_keV[1] = 20.427801*calibration_values[1]  # +/- 0.000405 Y11
+    rms_keV_sigma[1] = 1.114368*calibration_values[1] # +/- 0.000287 Y11
+    rms_keV[2] = 21.353911*calibration_values[2]  # +/- 0.000411 Y12
+    rms_keV_sigma[2] = 1.130243*calibration_values[2] # +/- 0.000291 Y12
+    rms_keV[3] = 20.443485*calibration_values[3]  # +/- 0.000412 Y13
+    rms_keV_sigma[3] = 1.131377*calibration_values[3] # +/- 0.000291 Y13
+    rms_keV[4] = 7.574701*calibration_values[4]  # +/- 0.000162 Y14
+    rms_keV_sigma[4] = 0.444984*calibration_values[4] # +/- 0.000114 Y14
+    rms_keV[5] = 8.640510*calibration_values[5]  # +/- 0.000203 Y15
+    rms_keV_sigma[5] = 0.557909*calibration_values[5] # +/- 0.000144 Y15
+    rms_keV[6] = 9.159058*calibration_values[6]  # +/- 0.000206 Y16
+    rms_keV_sigma[6] = 0.566259*calibration_values[6] # +/- 0.000146 Y16
+    rms_keV[7] = 8.740374*calibration_values[7]  # +/- 0.000263 Y17
+    rms_keV_sigma[7] = 0.723035*calibration_values[7] # +/- 0.000186 Y17
+    rms_keV[8] = 21.398611*calibration_values[8]  # +/- 0.000435 Y18
+    rms_keV_sigma[8] = 1.195448*calibration_values[8] # +/- 0.000308 Y18
+    rms_keV[9] = 20.882513*calibration_values[9]  # +/- 0.000432 Y19
+    rms_keV_sigma[9] = 1.186432*calibration_values[9] # +/- 0.000305 Y19
+    rms_keV[10] = 21.770624*calibration_values[10]  # +/- 0.000423 Y20
+    rms_keV_sigma[10] = 1.161899*calibration_values[10] # +/- 0.000299 Y20
+    rms_keV[11] = 24.990441*calibration_values[11]  # +/- 0.000511 Y21/22
+    rms_keV_sigma[11] = 1.404009*calibration_values[11] # +/- 0.000361 Y21/22
+    rms_keV[12] = 23.780802*calibration_values[12]  # +/- 0.000510 Y23/24
+    rms_keV_sigma[12] = 1.400996*calibration_values[12] # +/- 0.000360 Y23/24
+    rms_keV[13] = 25.045486*calibration_values[13]  # +/- 0.000513 Y25/26
+    rms_keV_sigma[13] = 1.410798*calibration_values[13] # +/- 0.000363 Y25/26
+    rms_keV[14] = 23.916775*calibration_values[14]  # +/- 0.000490 Y27/28
+    rms_keV_sigma[14] = 1.346593*calibration_values[14] # +/- 0.000346 Y27/28
+    rms_keV[15] = 20.805862*calibration_values[15]  # +/- 0.000429 Y29/30
+    rms_keV_sigma[15] = 1.178856*calibration_values[15] # +/- 0.000303 Y29/30
+    rms_keV[16] = 43.001056*calibration_values[16]  # +/- 0.001174 X1-12
+    rms_keV_sigma[16] = 3.227455*calibration_values[16] # +/- 0.000830 X1-12
+    rms_keV[17] = 20.401463*calibration_values[17]  # +/- 0.000406 X13
+    rms_keV_sigma[17] = 1.114925*calibration_values[17] # +/- 0.000287 X13
+    rms_keV[18] = 20.924138*calibration_values[18]  # +/- 0.000413 X14
+    rms_keV_sigma[18] = 1.135735*calibration_values[18] # +/- 0.000292 X14
+    rms_keV[19] = 20.451969*calibration_values[19]  # +/- 0.000405 X15
+    rms_keV_sigma[19] = 1.111658*calibration_values[19] # +/- 0.000286 X15
+    rms_keV[20] = 8.854004*calibration_values[20]  # +/- 0.000205 X16
+    rms_keV_sigma[20] = 0.564320*calibration_values[20] # +/- 0.000145 X16
+    rms_keV[21] = 8.830371*calibration_values[21]  # +/- 0.000222 X17
+    rms_keV_sigma[21] = 0.610696*calibration_values[21] # +/- 0.000157 X17
+    rms_keV[22] = 8.898265*calibration_values[22]  # +/- 0.000207 X18
+    rms_keV_sigma[22] = 0.569978*calibration_values[22] # +/- 0.000147 X18
+    rms_keV[23] = 8.610739*calibration_values[23]  # +/- 0.000191 X19
+    rms_keV_sigma[23] = 0.524468*calibration_values[23] # +/- 0.000135 X19
+    rms_keV[24] = 20.090180*calibration_values[24]  # +/- 0.000396 X20
+    rms_keV_sigma[24] = 1.087208*calibration_values[24] # +/- 0.000280 X20
+    rms_keV[25] = 20.767843*calibration_values[25]  # +/- 0.000400 X21
+    rms_keV_sigma[25] = 1.099497*calibration_values[25] # +/- 0.000283 X21
+    rms_keV[26] = 21.655278*calibration_values[26]  # +/- 0.000419 X22
+    rms_keV_sigma[26] = 1.152086*calibration_values[26] # +/- 0.000296 X22
+    rms_keV[27] = 20.806659*calibration_values[27]  # +/- 0.000402 X23/24
+    rms_keV_sigma[27] = 1.103967*calibration_values[27] # +/- 0.000284 X23/24
+    rms_keV[28] = 23.729976*calibration_values[28]  # +/- 0.000480 X25/26
+    rms_keV_sigma[28] = 1.319759*calibration_values[28] # +/- 0.000340 X25/26
+    rms_keV[29] = 24.925436*calibration_values[29]  # +/- 0.000527 X27/28
+    rms_keV_sigma[29] = 1.449296*calibration_values[29] # +/- 0.000373 X27/28
+    rms_keV[30] = 2.623402*calibration_values[30]  # +/- 0.000074 pulser
+    rms_keV_sigma[30] = 0.202326*calibration_values[30] # +/- 0.000052 pulser
+    rms_keV[31] = 2.861805*calibration_values[31]  # +/- 0.001108 PMT
+    rms_keV_sigma[31] = 3.044990*calibration_values[31] # +/- 0.000784 PMT
+
 
 tileCh_to_PreCh = {}
 if is_8th_LXe or is_9th_LXe:
