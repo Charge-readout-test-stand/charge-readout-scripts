@@ -42,8 +42,8 @@ def fit_channel(
     do_use_step=False, # whether to use Erfc step
     min_bin=200, # just for drawing plots
     max_bin=1200, # just for plotting
-    #line_energy = 570, # calibrated energy
-    line_energy = 487, # 10th LXe
+    line_energy = 570, # calibrated energy
+    #line_energy = 487, # 10th LXe FIXME
     #line_energy = 565,
     fit_half_width=170, # half width for fit range
     do_use_exp=True, # whether to use exponential function in the fit
@@ -76,8 +76,8 @@ def fit_channel(
         do_use_step = True
 
 
-    #fit_center = line_energy
-    fit_center = 530 # FIXME for 10th LXe
+    fit_center = line_energy # the usual
+    #fit_center = 530 # FIXME for 10th LXe
     fit_start_energy = fit_center - fit_half_width
     fit_stop_energy = fit_center + fit_half_width
     print "fit_start_energy", fit_start_energy
@@ -279,7 +279,8 @@ def fit_channel(
         pad1 = canvas.cd(1)
         pad1.SetGrid(1,1)
         hist.SetMaximum(1.2*fit_start_height)
-        peak_height = hist.GetBinContent(hist.FindBin(line_energy))
+        #peak_height = hist.GetBinContent(hist.FindBin(line_energy))
+        peak_height = testfit.Eval(testfit.GetParameter(1))
         if peak_height > fit_start_height:
             hist.SetMaximum(1.2*peak_height)
             print "peak height:", peak_height
@@ -292,7 +293,7 @@ def fit_channel(
 
 
         leg = ROOT.TLegend(0.49, 0.7, 0.99, 0.9)
-        leg.AddEntry(hist, "Data")
+        leg.AddEntry(hist, "Data (%i entries)" % hist.GetEntries())
         leg.AddEntry(testfit, "Total Fit fcn before fit","l")
         leg.AddEntry(bestfit_gaus, 
             "Gaus Peak: #sigma=%.1f, centroid = %.1f" % (
@@ -680,9 +681,8 @@ if __name__ == "__main__":
     isMC = struck_analysis_parameters.is_tree_MC(tree)
 
 
-    drift_time_high=9.0 # microseconds
-    if struck_analysis_parameters.is_10th_LXe:
-        drift_time_high = 20.0
+    #drift_time_high=9.0 # microseconds
+    drift_time_high = struck_analysis_parameters.max_drift_time+2.0
 
     nc = struck_analysis_cuts.get_negative_energy_cut(isMC=isMC)
     sc = struck_analysis_cuts.get_drift_time_cut()
@@ -696,7 +696,7 @@ if __name__ == "__main__":
     selection.append(struck_analysis_cuts.get_single_strip_cut())
     selection.append(struck_analysis_cuts.get_drift_time_selection( drift_time_high=drift_time_high, isMC=isMC))
     selection.append("!is_pulser")
-    selection.append("!is_bad")
+    #selection.append("!is_bad") # still working on 11th LXe
     selection = " && ".join(selection)
 
     # selections for individual channels
@@ -713,7 +713,7 @@ if __name__ == "__main__":
     all_energy_var = "SignalEnergy"
     if isMC: all_energy_var = "SignalEnergy*1.02"
     print "all_energy_var:", all_energy_var
-    do_use_step=False
+    do_use_step=True
     do_use_exp=True
 
     process_file(sys.argv[1], False, all_energy_var, selection, channel_selection, do_use_step=do_use_step, energy_var="energy1_pz", do_use_exp=do_use_exp)
