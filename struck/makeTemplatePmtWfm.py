@@ -39,13 +39,26 @@ basename = os.path.splitext(os.path.basename(filename))[0]
 plot_name = "pmt_ref_wfm_%s" % basename
 canvas.Print("%s.pdf[" % plot_name) # open multi-page PDF
 
+
 n_baseline_samples = int(struck_analysis_parameters.n_baseline_samples)
 
 baseline_remover = ROOT.EXOBaselineRemover()
 baseline_remover.SetBaselineSamples(n_baseline_samples)
 
+
+# retrieve NGM config info:
+ngm_config = tfile.Get("NGMSystemConfiguration")
+card = ngm_config.GetSlotParameters().GetParValueO("card",0)
+sampling_frequency_Hz = struck_analysis_parameters.get_clock_frequency_Hz_ngm(card.clock_source_choice)
+pretriggerdelay = card.pretriggerdelay_block[0] 
+gate_window_length_block = card.gate_window_length_block[0]
+print "pretriggerdelay:", pretriggerdelay
+print "trigger_time:", pretriggerdelay/sampling_frequency_Hz*1e6
+
+max_time_hist = ROOT.TH1D("max_time_hist","",gate_window_length_block,0,gate_window_length_block)
+
 for i_entry in xrange(n_entries):
-    if n_sum >= 5000: break # debugging, 5000 events takes ~5 minutes
+    #if n_sum >= 5000: break # debugging, 5000 events takes ~5 minutes
 
     tree.GetEntry(i_entry)
 
@@ -57,18 +70,21 @@ for i_entry in xrange(n_entries):
 
     graph = tree.HitTree.GetGraph()
     wfm = ROOT.EXODoubleWaveform(graph.GetY(),graph.GetN())
-    wfm.SetSamplingFreq(struck_analysis_parameters.sampling_freq_Hz/1e9)
+    wfm.SetSamplingFreq(sampling_frequency_Hz/1e9)
     baseline_remover.Transform(wfm)
+    baseline_rms = baseline_remover.GetBaselineRMS()
     max_val = wfm.GetMaxValue()
     energy = max_val*calibration
-    if energy < 10: continue # too much noise!
+    if max_val/baseline_rms < 10: continue # too much noise!
+    #if energy < 10: continue # too much noise!
     wfm/=max_val # normalize to 1
     wfm_hist = wfm.GimmeHist("wfm_hist")
     n_bins = wfm_hist.GetNbinsX()
     bin_width = wfm_hist.GetBinWidth(1)
     max_bin = wfm_hist.GetMaximumBin()
+    max_time_hist.Fill(max_bin)
     is_skipped = 0
-    if max_bin < 225 or max_bin > 235: # skip pulser triggers
+    if max_bin < pretriggerdelay+25 or max_bin > pretriggerdelay+35: # skip pulser triggers
         print "--> skipping this wfm, max_bin=", max_bin
         continue
         is_skipped = 1
@@ -222,7 +238,7 @@ if __name__ == '__main__':
 text_file.close()
 print "results written to", text_file_name
 
-# add a final page to the pdf
+# Print the sum hist
 canvas.cd(1)
 sum_hist.SetTitle("sum hist after %i wfms" % n_sum)
 sum_hist.Draw()
@@ -230,5 +246,30 @@ canvas.cd(2)
 diff_hist.SetTitle("errors on sum hist")
 diff_hist.Draw()
 canvas.Update()
-canvas.Print("%s_%i.pdf" % (plot_name, n_sum)) # add to multi-page PDF
+canvas.Print("%s_%i.pdf" % (plot_name, n_sum)) 
+
+# draw max times
+canvas = ROOT.TCanvas("canvas2","")
+canvas.SetGrid()
+max_time_hist.SetLineColor(ROOT.kBlue)
+max_time_hist.SetLineWidth(2)
+mean = max_time_hist.GetMean()
+rms = max_time_hist.GetRMS()
+title = "Max time hist: %i entries, mean: %.1f, RMS: %.1f" % (max_time_hist.GetEntries(), mean, rms)
+max_time_hist.SetTitle(title)
+line = ROOT.TLine(pretriggerdelay, 0, pretriggerdelay, max_time_hist.GetMaximum()*1.1)
+line.SetLineWidth(2)
+line.SetLineStyle(2)
+max_time_hist.SetMaximum(max_time_hist.GetMaximum()*1.1)
+max_time_hist.Draw()
+max_time_hist.SetXTitle("PMT max time [sample]")
+line.Draw()
+canvas.Update()
+canvas.Print("%s_max_times_lin.pdf" % plot_name) 
+canvas.SetLogy(1)
+canvas.Update()
+canvas.Print("%s_max_times_log.pdf" % plot_name) 
+max_time_hist.SetAxisRange(pretriggerdelay-10, pretriggerdelay+70)
+canvas.Update()
+canvas.Print("%s_max_times_zoom.pdf" % plot_name) 
 
