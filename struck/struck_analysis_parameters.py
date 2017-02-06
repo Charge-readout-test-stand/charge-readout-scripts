@@ -42,7 +42,8 @@ if os.getenv("EXOLIB") is not None and not isROOT6:
         ROOT.gSystem.Load("$EXOLIB/lib/libEXOROOT")
         from ROOT import CLHEP
         microsecond = CLHEP.microsecond
-        second = CLHEP.microsecond
+        second = CLHEP.second
+        print "imported CLHEP/ROOT"
     except ImportError or AttributeError:
         print "couldn't import CLHEP/ROOT"
 
