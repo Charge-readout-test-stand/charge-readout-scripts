@@ -39,6 +39,7 @@ def process_files(filenames):
             print "\t ==> %i jobs already in the queue." % n_jobs
 
         n_submitted = 0
+        n_total_filenames = len(filenames)
 
         for i in xrange(len(filenames)):
 
@@ -48,7 +49,7 @@ def process_files(filenames):
                 break
 
             filename = filenames[0]
-            print "--> processing file %i of %i: %s" % (i, len(filenames), filename)
+            print "--> processing file %i of %i: %s" % (i, n_total_filenames, filename)
 
             basename = os.path.basename(filename) # drop the directory structure
             basename = "_".join(basename.split("_")[1:])  # drop the tier1_
@@ -81,6 +82,7 @@ def process_files(filenames):
             #sys.exit(1) # debugging
 
         print "\t====> %i jobs submitted" % n_submitted
+        if n_submitted == 0: break
         i_loop += 1
 
         sleep_time = 60 # seconds
