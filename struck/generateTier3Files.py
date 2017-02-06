@@ -56,7 +56,7 @@ from optparse import OptionParser
 
 import ROOT
 
-ROOT.gROOT.SetBatch(True) # run in batch mode:
+ROOT.gROOT.SetBatch(True) # run in batch mode
 
 import subprocess
 root_version = subprocess.check_output(['root-config --version'], shell=True)
@@ -96,7 +96,6 @@ import struck_analysis_parameters
 import struck_analysis_cuts
 import wfmProcessing
 import BundleSignals
-import pmt_reference_signal
 
 def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=False, isMakeNoise=False, noise_file=None):
 
@@ -382,7 +381,21 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         trigger_time[0] = 200/sampling_freq_Hz*1e6
     elif isNGM:
         ngm_config = root_file.Get("NGMSystemConfiguration")
-        trigger_time[0] = ngm_config.GetSlotParameters().GetParValueO("card",0).pretriggerdelay_block[0]/sampling_freq_Hz*1e6 
+        card = sys_config.GetSlotParameters().GetParValueO("card",0)
+        trigger_time[0] = card.pretriggerdelay_block[0]/sampling_freq_Hz*1e6 
+        gate_window_length_block = card.gate_window_length_block[0]
+        pmt_hist = None
+        if trigger_time[0] == 11.0:
+            import pmt_reference_signal_11th_LXe
+            pmt_hist = pmt_reference_signal_11th_LXe.hist
+            print "using PMT reference signal from 11th LXe"
+        elif trigger_time[0] == 8.0:
+            import pmt_reference_signal
+            pmt_hist = pmt_reference_signal.hist
+            print "using PMT reference signal from 9th LXe"
+        else:
+            print "WARNING: no pmt reference signal found for trigger_time of %i!!" % trigger_time[0]
+
         print "NGM trigger_time [microseconds]:", trigger_time[0]
     elif do_debug:
         print "--> debugging -- skipping trigger_time calc"
@@ -909,7 +922,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     out_tree.Branch('decay_fit', decay_fit, 'decay_fit[%i]/D' % n_channels_in_event)
     decay_error = array('d', [0]*n_channels_in_event) # double
     out_tree.Branch('decay_error', decay_error, 'decay_error[%i]/D' % n_channels_in_event)
-    decay_chi2 = array('d', [0]*n_channels_in_event) # double
+    decay_chi2 = array('d', [0]*n_channels_in_event) # double, this is the reduced chi^2
     out_tree.Branch('decay_chi2', decay_chi2, 'decay_chi2[%i]/D' % n_channels_in_event)
 
     fname = TObjString(os.path.abspath(filename))
@@ -925,7 +938,6 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     
     if isNGM:
         n_channels_in_this_event = 0
-        pmt_hist = pmt_reference_signal.hist
 
     # loop over all entries in tree
     i_entry = 0
@@ -1310,7 +1322,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 if val == 'b': ROOT.gROOT.SetBatch(True)
                 if val == 'p': canvas.Print("entry_%i_proc_wfm_%s.png" % (i_entry, basename,))
                 
-            if isNGM and i == pmt_channel:
+            if isNGM and i == pmt_channel and pmt_hist:
             
                 # check scaling of PMT hist and baseline of exo_wfm
                 wfm_hist = exo_wfm.GimmeHist("wfm_hist")
@@ -1320,18 +1332,22 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 )
     
                 # testing chi2 calc
-                #if not ROOT.gROOT.IsBatch():
-                #    pmt_hist.SetTitle("event %i, entry %i" % (i_entry/32, i_entry))
-                #    pmt_hist.SetLineColor(ROOT.kBlue)
-                #    wfm_hist.SetLineColor(ROOT.kRed)
-                #    canvas.cd()
-                #    pmt_hist.Draw()
-                #    wfm_hist.Draw("same")
-                #    #wfm_hist.Draw()
-                #    #pmt_hist.Draw("same")
-                #    print calibration_values[pmt_channel], lightEnergy[0], wfm_hist.GetMaximum()*calibration_values[pmt_channel]
-                #    canvas.Update()
-                #    raw_input("lightEnergy: %i, pmt_chi2: %.2f " % (lightEnergy[0], pmt_chi2[0]))
+                if not ROOT.gROOT.IsBatch() and True:
+                    print "--> PMT signal"
+                    pmt_hist.SetTitle("event %i, entry %i" % (i_entry/32, i_entry))
+                    pmt_hist.SetLineColor(ROOT.kBlue)
+                    wfm_hist.SetLineColor(ROOT.kRed)
+                    canvas.cd()
+                    pmt_hist.Draw()
+                    wfm_hist.Draw("same")
+                    #wfm_hist.Draw()
+                    #pmt_hist.Draw("same")
+                    print calibration_values[pmt_channel], lightEnergy[0], wfm_hist.GetMaximum()*calibration_values[pmt_channel]
+                    canvas.Update()
+                    print "\t PMT electronics noise:", rms_keV[pmt_channel]/calibration_values[pmt_channel]
+                    print "\t lightEnergy:", lightEnergy[0]
+                    print "\t pmt_chi2:", pmt_chi2[0]
+                    raw_input("enter to continue")
 
             exo_wfm.IsA().Destructor(exo_wfm)      
             calibrated_wfm.IsA().Destructor(calibrated_wfm)
@@ -1424,8 +1440,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             trap_filter.Transform(sum_wfm, trap_wfm2)
             maxCurrent4[0] = trap_wfm2.GetMaxValue()
 
-            if not ROOT.gROOT.IsBatch() and SignalEnergy[0]>200:
-                if signal_map[16]: continue # exclude noisy X1-12
+            if not ROOT.gROOT.IsBatch() and SignalEnergy[0]>200 and False:
                 hist = sum_wfm.GimmeHist("sum1")
                 hist.SetLineColor(ROOT.kRed)
                 hist.SetLineWidth(2)
