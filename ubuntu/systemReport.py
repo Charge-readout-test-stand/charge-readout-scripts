@@ -199,14 +199,24 @@ def get_struck_temperature(data_dir):
 
     # fill lists from file
     temperatures = []
+    temperatures2 = []
     runs = []
     #print "lines in file"
     for i_line, line in enumerate(log_file):
         #print "\t %i %s" % (i_line, line)
+
+        # get T1
         try:
             temperature = float(line.split()[2])
             temperatures.append(temperature)
             runs.append(i_line)
+        except:
+            print "\t %i %s" % (i_line, line)
+            continue
+
+        try:
+            temperature = float(line.split()[3])
+            temperatures2.append(temperature)
         except:
             print "\t %i %s" % (i_line, line)
             continue
@@ -221,13 +231,22 @@ def get_struck_temperature(data_dir):
     plt.ylabel("Temperature [C] (from sisreadthread.log)")
 
     now = datetime.datetime.now()
-    label = "latest temperature: %.1f C at %s" % (
+    #label = "latest T1: %.1f C at %s" % (
+    label = "latest T1: %.1f C" % (
         temperatures[-1],
-        now.strftime("%m-%d-%y %I:%M %p"), 
+        #now.strftime("%m-%d-%y %I:%M %p"), 
     )
-
     pts = plt.plot(runs, temperatures)
     plt.setp(pts, color='r', label=label)
+
+    try:
+        label2 = "latest T2: %.1f C" % (
+            temperatures2[-1],
+        )
+        pts = plt.plot(runs, temperatures2)
+        plt.setp(pts, color='b', label=label2)
+    except:
+        print "\t couldn't plot temps from 2nd digitizer"
 
     plt.grid(b=True)
     #plt.legend(loc='best', shadow=False, ncol=3)
@@ -260,7 +279,9 @@ def main():
     #data_dir = "/home/teststand/2016_08_15_8th_LXe_overnight/tier3/"
     #data_dir = "/home/teststand/2016_09_19_overnight/tier0/"
     #data_dir = "/home/teststand/2017_01_10_10th_LXe/tier0/"
-    data_dir = "/home/teststand/11th_LXe/2017_01_24_tests/tier0/"
+    #data_dir = "/home/teststand/11th_LXe/2017_01_24_tests/tier0/"
+    #data_dir = "/home/teststand/11th_LXe/2017_01_31_overnight/tier0/" # 11th LXe
+    data_dir = "/home/teststand/11th_LXe/2017_02_01_overnight_vme/tier0/" # 11th LXe VME
 
     #-------------------------------------------------------------------------------
 
