@@ -9,16 +9,9 @@ import os
 import sys
 import math
 
-from ROOT import gROOT
-from ROOT import TFile
-from ROOT import TTree
-from ROOT import TCanvas
-from ROOT import TColor
-from ROOT import TLegend
+# somehow these 2 are important?!
 from ROOT import TH1D
 from ROOT import TLine
-from ROOT import gSystem
-from ROOT import TFile
 from ROOT import *
 
 # workaround for systems without EXO offline / CLHEP
@@ -38,6 +31,7 @@ if os.getenv("EXOLIB") is not None and not isROOT6:
         from ROOT import CLHEP
         microsecond = CLHEP.microsecond
         second = CLHEP.second
+        print "imported CLHEP/ROOT"
     except ImportError:
         print "couldn't import CLHEP/ROOT"
 
@@ -58,9 +52,8 @@ except ImportError:
     do_decay_time_fit = False
     print "wfmProcessing.py : couldn't import EXODecayTimeFit so not doing it (not an error)"
 
-#import struck_analysis_parameters
-from struck import struck_analysis_parameters # testing
-
+#from struck import struck_analysis_parameters # testing
+import struck_analysis_parameters
 
 
 def do_draw(
@@ -317,15 +310,63 @@ def get_wfmparams(
     decay_error = -999.0
     if do_decay_time_fit and not isMC and energy_rms1 > 0.0 and energy1/energy_rms1 > 10.0:
         decay_fitter = EXODecayTimeFit()
-        decay_fitter.SetStartSample(struck_analysis_parameters.decay_start_time_microseconds*microsecond*sampling_freq_Hz/second)
-        decay_fitter.SetEndSample(struck_analysis_parameters.decay_end_time_microseconds*microsecond*sampling_freq_Hz/second)
-        decay_fitter.SetMaxValGuess(energy1/calibration)
+        # start and end sample need to be size_t; after sampling freq is set exo_wfm.GimmeHist() x-axis ranges from 0 to max time, in microseconds
+        decay_fitter.SetStartSample(int(struck_analysis_parameters.decay_start_time_microseconds))
+        decay_fitter.SetEndSample(int(struck_analysis_parameters.decay_end_time_microseconds))
+        # estimate the exp parameters; compensate for the decay that has already happened
+        max_val_guess = energy1/calibration
+        max_val_guess *= 2.0-math.exp(-struck_analysis_parameters.decay_start_time_microseconds/struck_analysis_parameters.decay_tau_guess)
+        decay_fitter.SetMaxValGuess(max_val_guess)
         decay_fitter.SetTauGuess(struck_analysis_parameters.decay_tau_guess)
         decay_fitter.Transform(exo_wfm, exo_wfm)
         decay_fit = decay_fitter.GetDecayTime()
-        decay_chi2 = decay_fitter.GetDecayTimeChi2()
+        # decay_chi2 is the reduced chi^2. Divide by baseline_rms^2, since this
+        # is the error on the wfm, except if baseline_rms is zero, which
+        # happens sometimes but rarely. 
+        try:
+            decay_chi2 = decay_fitter.GetDecayTimeChi2()/baseline_rms**2
+        except ZeroDivisionError:
+            decay_chi2 = decay_fitter.GetDecayTimeChi2()
         decay_error = decay_fitter.GetDecayTimeError()
-    
+
+        if not gROOT.IsBatch() and False:
+
+            # reproduce what happens in EXODecayTimeFit and draw result, for debugging:
+            print "decay_fit:", decay_fit
+            print "decay_start_time_microseconds:", struck_analysis_parameters.decay_start_time_microseconds
+            print "decay_end_time_microseconds:", struck_analysis_parameters.decay_end_time_microseconds
+
+            canvas = TCanvas("decay_canvas","")
+            canvas.SetGrid()
+            hist = exo_wfm.GimmeHist()
+            exp_decay = TF1("exp_decay_test","[0]*exp(-x/[1])", 
+                    struck_analysis_parameters.decay_start_time_microseconds, 
+                    struck_analysis_parameters.decay_end_time_microseconds)
+            exp_decay.SetParameters(
+                    max_val_guess,
+                    struck_analysis_parameters.decay_tau_guess)
+            print "[0]:", exp_decay.GetParameter(0)
+            print "[1]:", exp_decay.GetParameter(1)
+            if False: # draw before fit:
+                exp_decay.SetLineColor(kRed)
+                hist.Draw("l")
+                exp_decay.Draw("l same")
+                canvas.Update()
+                raw_input("before fit -- press enter")
+            fit_result = hist.Fit(exp_decay, "WBRS")
+            print "energy1/calibration:", energy1/calibration
+            print "[0]:", exp_decay.GetParameter(0)
+            print "[1]:", exp_decay.GetParameter(1)
+            print "chi2:", exp_decay.GetChisquare()
+            print "ndf:", exp_decay.GetNDF()
+            print "chi2/ndf:", exp_decay.GetChisquare()/exp_decay.GetNDF()
+            hist.Draw("l")
+            exp_decay.SetLineColor(kBlue)
+            exp_decay.Draw("l same")
+            canvas.Update()
+            val = raw_input("press enter (or q to quit) ")
+            if val == 'q': sys.exit()
+
 
     # correct for exponential decay
     pole_zero = EXOPoleZeroCorrection()
@@ -596,7 +637,7 @@ def get_risetimes(
         print "\trise_time_stop95:", rise_time_stop95
         print "\trise_time_stop99:", rise_time_stop99
 
-    if max_val > 100 and not "PMT" in label: do_draw(exo_wfm, "%s after rise-time calc" % label, new_wfm, maw_wfm, vlines=[
+    if max_val > 100 and not "PMT" in label and False: do_draw(exo_wfm, "%s after rise-time calc" % label, new_wfm, maw_wfm, vlines=[
         rise_time_stop10,
         rise_time_stop20,
         rise_time_stop30,
