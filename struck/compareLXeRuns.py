@@ -15,7 +15,8 @@ from struck import struck_analysis_parameters
 # options
 #draw_cmd = "energy1_pz" # individual channel spectra
 #draw_cmd = "Sum$(energy_pz*signal_map)" # testing
-draw_cmd = "SignalEnergy" # the usual
+#draw_cmd = "SignalEnergy" # the usual
+draw_cmd = "is_bad"
 
 drift_time_high = struck_analysis_parameters.max_drift_time
 drift_time_low = struck_analysis_parameters.drift_time_threshold
@@ -41,6 +42,12 @@ selection = ""
 min_bin = 300.0
 max_bin = 1400.0
 bin_width = 5 # keV
+
+if draw_cmd == "is_bad":
+  min_bin = 0.0
+  max_bin = 34.0
+  bin_width = 0.5
+
 n_bins = int((max_bin - min_bin)/bin_width)
 
 
@@ -107,13 +114,13 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
     struck1_hist.GetDirectory().cd()
     print "struck1_draw_cmd:", draw_cmd
     print "struck1_selection:", struck_selection
-    struck1_tree.Draw("%s >> %s" % (draw_cmd, struck1_hist.GetName()),struck_selection)
+    struck1_tree.Draw("%s >> %s" % (draw_cmd, struck1_hist.GetName()),struck_selection,"goff norm")
     print "\t %i entries in hist" % struck1_hist.GetEntries()
 
     struck_hist.GetDirectory().cd()
     print "draw_cmd:", draw_cmd
     print "struck_selection:", struck_selection
-    struck_tree.Draw("%s >> %s" % (draw_cmd, struck_hist.GetName()),struck_selection)
+    struck_tree.Draw("%s >> %s" % (draw_cmd, struck_hist.GetName()),struck_selection, "goff norm")
     print "\t %i entries in hist" % struck_hist.GetEntries()
 
     start_bin = struck_hist.FindBin(300.0)
@@ -141,9 +148,9 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
         if struck1_hist.GetMaximum() > y_max: y_max = struck1_hist.GetMaximum()
         struck_hist.SetMaximum(y_max*1.1)
 
-    struck_hist.Draw()
+    struck_hist.Draw("hist")
     struck1_hist.Draw("hist same")
-    struck_hist.Draw("same")
+    #struck_hist.Draw("same")
     legend.Draw()
     canvas.Update()
     plotname = "comparison_%s" % draw_cmd
@@ -155,6 +162,10 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
 
     canvas.Print("%s_%s.pdf" % (plotname, basename))
 
+    canvas.SetLogy(1)
+    canvas.Print("%s_%s_log.pdf" % (plotname, basename))
+    canvas.SetLogy(0)
+
     pavetext = ROOT.TPaveText(0.12, 0.8, 0.9, 0.9, "ndc")
     pavetext.AddText(struck_selection[:200])
     pavetext.AddText("\nstruck 2 amplitude x %.2f" % (scale_factor, ))
@@ -162,8 +173,10 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
     pavetext.SetFillStyle(0)
     pavetext.Draw()
 
-    plotname += "_drift_%i_to_%i_" % (drift_time_low*1e3, drift_time_high*1e3)
-    plotname += "%i_signals_" % nsignals
+    if "rise_time_stop" in selection:
+        plotname += "_drift_%i_to_%i_" % (drift_time_low*1e3, drift_time_high*1e3)
+    if "nsignals" in selection:
+        plotname += "%i_signals_" % nsignals
     canvas.Update()
     canvas.Print("%s_%s_cuts.pdf" % (plotname, basename))
 
