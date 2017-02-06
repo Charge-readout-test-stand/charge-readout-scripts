@@ -28,7 +28,8 @@ def takeData(doLoop=False, n_hours=10.0):
   #file_suffix = "_9thLXe_126mvDT_cath_1700V_100cg_overnight_" # 126-mV discrim threshold, 1700 cathode bias, 100x PMT coarse gain
   #file_suffix = "_9thLXe_126mvDT_cath_1700V_100cg_warmup_before_recovery_" # 126-mV discrim threshold, 1700 cathode bias, 100x PMT coarse gain
   #file_suffix = "_PMT_Xe_gas_126mvDT__" # 126-mV discrim threshold, 1700 cathode bias, 100x PMT coarse gain
-  file_suffix = "_PMT_Xe_gas_32mvDT__" # 126-mV discrim threshold, 1700 cathode bias, 100x PMT coarse gain
+  #file_suffix = "_11thLXe_pulser_off_noise" # 126-mV discrim threshold, 1700 cathode bias, 100x PMT coarse gain
+  file_suffix = "_11thLXe_124mVDT_1250VPMT_recovery_cathode_pulser_higher_inhibit2"
   #file_suffix = "_9thLXe_pulsar_cooldown_notFull_pulsarisX23_24_"
   runDuration = 2*60 # seconds
   #runDuration = 10 # seconds -- debugging! FIXME
@@ -44,8 +45,8 @@ def takeData(doLoop=False, n_hours=10.0):
 
   # could have a few other clock freqs if we define them, look to struck root gui for info
   clock_source_choice = 3 # 0: 250MHz, 1: 125MHz, 2=62.5MHz 3: 25 MHz (we use 3) 
-  gate_window_length = 800 #800 (normal)
-  pretriggerdelay = 200 
+  gate_window_length = 1050 #800 (normal)
+  pretriggerdelay = 275 
   if clock_source_choice == 0: # preserve length of wfm in microseconds
       gate_window_length = 8000
       pretriggerdelay = 2000
