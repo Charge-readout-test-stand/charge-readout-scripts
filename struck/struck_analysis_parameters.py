@@ -27,6 +27,7 @@ import ROOT
 
 # workaround for systems without EXO offline / CLHEP
 microsecond = 1.0e3
+second = 1.0e9
 
 import subprocess
 root_version = subprocess.check_output(['root-config --version'], shell=True)
@@ -41,6 +42,7 @@ if os.getenv("EXOLIB") is not None and not isROOT6:
         ROOT.gSystem.Load("$EXOLIB/lib/libEXOROOT")
         from ROOT import CLHEP
         microsecond = CLHEP.microsecond
+        second = CLHEP.microsecond
     except ImportError or AttributeError:
         print "couldn't import CLHEP/ROOT"
 
@@ -763,20 +765,19 @@ if is_10th_LXe or is_11th_LXe:
 
 
 # from tier2to3_overnight.root, baseline_rms
-n_baseline_samples = 200.0
-# this is not really microseconds, but samples:
+n_baseline_samples = 200.0 # 2x n samples
 energy_start_time_microseconds = 450.0*40/1000 # energy calc starts 450 samples after wfm start, in a normal 25-MS/s run
 if is_10th_LXe:
     energy_start_time_microseconds = 850.0*40/1000 # energy calc starts 850 samples
-baseline_average_time_microseconds = 4.0 # 100 samples at 25 MHz
-if is_11th_LXe:
-    n_baseline_samples = 275.0
+baseline_average_time_microseconds = 4.0 # 100 samples at 25 MHz = 4 microsecond
+if is_11th_LXe or is_11th_LXeB:
+    n_baseline_samples = 275.0 # 2x n samples
     energy_start_time_microseconds = (1050.0 - n_baseline_samples)*40/1000 # energy calc starts 850 samples
-baseline_average_time_microseconds = (n_baseline_samples/2.0*40.0) # 100 samples at 25 MHz
+baseline_average_time_microseconds = (n_baseline_samples/2.0*40.0/1000) # 200 samples at 25 MHz = 8 microseconds
 #print "energy_start_time_microseconds:", energy_start_time_microseconds
 
-decay_start_time = int(energy_start_time_microseconds) #sample 500
-decay_end_time = int(energy_start_time_microseconds + baseline_average_time_microseconds)   #sample 800
+decay_start_time_microseconds = energy_start_time_microseconds #sample 500 for 800-sample wfm
+decay_end_time_microseconds = (energy_start_time_microseconds + baseline_average_time_microseconds*2) #sample 800
 decay_tau_guess = 200 #us
 
 rms_keV = {}
@@ -1131,9 +1132,13 @@ if __name__ == "__main__":
 
     print "\nprocessing parameters:"
     print "\t baseline_average_time_microseconds:", baseline_average_time_microseconds
+    print "\t baseline_average_time [samples @ 25 MHz]:", baseline_average_time_microseconds*microsecond*sampling_freq_Hz/second
     print "\t energy_start_time_microseconds:", energy_start_time_microseconds
-    print "\t decay_start_time [microseconds]:", decay_start_time
-    print "\t decay_end_time [microseconds]:", decay_end_time
+    print "\t energy_start_time [samples at 25 MHz]:", energy_start_time_microseconds*microsecond*sampling_freq_Hz/second
+    print "\t decay_start_time_microseconds:", decay_start_time_microseconds
+    print "\t decay_end_time_microseconds:", decay_end_time_microseconds
+    print "\t decay_start_time_microseconds [samples @ 25 MHz]:", decay_start_time_microseconds*microsecond*sampling_freq_Hz/second
+    print "\t decay_end_time [samples @ 25 MHz]:", decay_end_time_microseconds*microsecond*sampling_freq_Hz/second
 
     #print "\nchannels used:"
     #for channel in channels:
