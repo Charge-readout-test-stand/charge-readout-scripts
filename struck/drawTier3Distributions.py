@@ -41,7 +41,7 @@ def setup_hist(hist, color, xtitle, xUnits):
     hist.SetLineWidth(2)
     hist.SetXTitle("%s [%s]" % (xtitle, xUnits))
     hist.SetYTitle("Counts / %s %s" % (hist.GetBinWidth(1), xUnits,))
-    print "hist %s bin width" % hist.GetName(), hist.GetBinWidth(1)
+    #print "hist %s bin width" % hist.GetName(), hist.GetBinWidth(1)
     #hist.SetFillColor(color)
 
 
@@ -65,15 +65,16 @@ def process_files(filenames):
     #do_draw_sum = False # sum energy
     do_draw_sum = True # sum energy
 
-    draw_channels = True # print individual channel plots
+    do_print_individual_channels = False # print individual channel plots
+    do_draw_individual_channels = True # draw individual channels along with the sum on 1 plot
 
     # default values:
     xUnits = ""
     prefix = "plots"
     selections = []
     selections.append("!is_pulser") # debugging
-    selections.append("!is_bad") # debugging
-    selections.append("nsignals==1") # debugging
+    #selections.append("!is_bad") # debugging
+    #selections.append("nsignals==1") # debugging
     #selections.append("Entry$<500") # debugging
     sum_selections = []
     ch_selections = []
@@ -84,9 +85,10 @@ def process_files(filenames):
         #draw_command = "energy1_pz"
         draw_command = "energy1"
         sum_draw_cmd = "SignalEnergy"
-        min_bin = 100
-        #max_bin = 2000
-        max_bin = 1400
+        #min_bin = 100
+        min_bin = 0
+        max_bin = 2000
+        #max_bin = 1400
         bin_width = 10
 
         xUnits = "keV"
@@ -232,6 +234,7 @@ def process_files(filenames):
     frame_hist = ROOT.TH1D("frame_hist","",n_bins,min_bin,max_bin)
     frame_hist.SetLineWidth(2)
     frame_hist.SetMinimum(1.0)
+    frame_hist.GetYaxis().SetTitleOffset(1.3)
     selection = " && ".join(selections)
 
     # setup hists:
@@ -256,16 +259,17 @@ def process_files(filenames):
         print "--> processing",filename
         root_file = ROOT.TFile(filename)
         tree = root_file.Get("tree")
-        tree.SetBranchStatus("*",0)
-        tree.SetBranchStatus("is_pulser",1)
-        tree.SetBranchStatus("is_bad",1)
-        tree.SetBranchStatus("nsignals",1)
         try:
             n_entries = tree.GetEntries()
             print "\t %i tree entries, file %i of %i" % (n_entries, i_file, len(filenames))
         except AttributeError:
             print "\t skipping bad file!"
             continue
+
+        tree.SetBranchStatus("*",0)
+        tree.SetBranchStatus("is_pulser",1)
+        tree.SetBranchStatus("is_bad",1)
+        tree.SetBranchStatus("nsignals",1)
 
         # decide if this is a tier1 or tier2 file
         is_tier1 = False
@@ -321,20 +325,25 @@ def process_files(filenames):
                 print "%i entries in sum hist" % tree.Draw("%s >>+ frame_hist" % sum_draw_cmd, selection)
             setup_hist(frame_hist, ROOT.kBlack, xtitle, xUnits)
 
-            canvas.SetLogy(0)
-            canvas.Update()
-            canvas.Print("%s_lin_sum.pdf" % basename)
-            canvas.SetLogy(1)
-            canvas.Update()
-            canvas.Print("%s_log_sum.pdf" % basename)
+            if do_print_individual_channels:
+                canvas.SetLogy(0)
+                canvas.Update()
+                canvas.Print("%s_lin_sum.pdf" % basename)
+                canvas.SetLogy(1)
+                canvas.Update()
+                canvas.Print("%s_log_sum.pdf" % basename)
 
 
         i_channel = 0
         for (channel, value) in enumerate(charge_channels_to_use):
 
-            if not value:
+            if channel==0 and not do_draw_individual_channels: 
+                print "==> skipping individual channels"
                 continue
      
+            if not value:
+                continue
+
             if do_draw_one_strip_channels:
                 if struck_analysis_parameters.one_strip_channels[channel] != 1:
                     print "==> skipping channel %i: %s" % (channel, struck_analysis_parameters.channel_map[channel])
@@ -358,7 +367,7 @@ def process_files(filenames):
 
             n_entries = tree.Draw(draw_cmd, selection)
 
-            if draw_channels: # draw individual channel plots
+            if do_print_individual_channels: # draw individual channel plots
                 title = "ch %i: %s {%s}" % (channel, channel_map[channel], selection)
                 hist.SetTitle(title)
                 canvas.SetLogy(0)
@@ -376,31 +385,36 @@ def process_files(filenames):
                 print "\t draw command: %s" % draw_cmd, "selection: %s" % selection
                 print "\t %i entries drawn, %i entries in hist" % (n_entries, hist.GetEntries())
             i_channel += 1
-            # end loop over files
+            # end loop over channels
+
+        print "\n"
+        # end loop over files
     
     
     y_max = 0
-    for hist in hists:
-        hist.Draw()
-        if y_max < hist.GetMaximum(): y_max = hist.GetMaximum()
-        print "\t hist %s | max: %.2e | mean: %.4f | sigma: %.4f" % (
-            hist.GetName(),
-            hist.GetMaximum(),
-            hist.GetMean(), 
-            hist.GetRMS(),
-        )
+    if do_draw_individual_channels:
+      for hist in hists:
+          hist.Draw()
+          if y_max < hist.GetMaximum(): y_max = hist.GetMaximum()
+          print "\t hist %s | max: %.2e | mean: %.4f | sigma: %.4f" % (
+              hist.GetName(),
+              hist.GetMaximum(),
+              hist.GetMean(), 
+              hist.GetRMS(),
+          )
 
     if do_draw_sum:
         frame_hist.Draw()
-        legend.AddEntry(frame_hist, "sum","p")
+        legend.AddEntry(frame_hist, "sum (%.1e)" % frame_hist.GetEntries(),"p")
         if y_max < frame_hist.GetMaximum(): y_max = frame_hist.GetMaximum()
         frame_hist.SetMaximum(y_max*1.2)
     else:
         hists[0].SetMaximum(y_max*1.2)
         hists[0].Draw()
         
-    for hist in hists:
-        hist.Draw("same")
+    if do_draw_individual_channels:
+      for hist in hists:
+          hist.Draw("same")
 
     legend.Draw()
     canvas.Update()
@@ -422,7 +436,7 @@ def process_files(filenames):
     if do_draw_energy:
         # set maximum to the bin content at XXX keV
         #y_max = frame_hist.GetBinContent(frame_hist.FindBin(570))
-        y_max = frame_hist.GetBinContent(frame_hist.FindBin(300))
+        y_max = frame_hist.GetBinContent(frame_hist.FindBin(500))
         frame_hist.SetMaximum(y_max*1.2)
     elif do_draw_drift_times:
         print "frame hist max:", frame_hist.GetMaximum()
