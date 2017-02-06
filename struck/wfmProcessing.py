@@ -262,6 +262,8 @@ def get_wfmparams(
     energy_wfm = EXODoubleWaveform(exo_wfm)
 
     # FIXME -- this should come from struck_analysis_parameters
+    energy_start_time_microseconds = struck_analysis_parameters.energy_start_time_microseconds
+    energy_start_sample = energy_start_time_microseconds*microsecond*sampling_freq_Hz/second
     #energy_start_sample = 450 # < 10th LXe
     energy_start_sample = 850 # 10th LXe 
 
@@ -315,8 +317,8 @@ def get_wfmparams(
     decay_error = -999.0
     if do_decay_time_fit and not isMC and energy_rms1 > 0.0 and energy1/energy_rms1 > 10.0:
         decay_fitter = EXODecayTimeFit()
-        decay_fitter.SetStartSample(struck_analysis_parameters.decay_start_time)
-        decay_fitter.SetEndSample(struck_analysis_parameters.decay_end_time)
+        decay_fitter.SetStartSample(struck_analysis_parameters.decay_start_time_microseconds*microsecond*sampling_freq_Hz/second)
+        decay_fitter.SetEndSample(struck_analysis_parameters.decay_end_time_microseconds*microsecond*sampling_freq_Hz/second)
         decay_fitter.SetMaxValGuess(energy1/calibration)
         decay_fitter.SetTauGuess(struck_analysis_parameters.decay_tau_guess)
         decay_fitter.Transform(exo_wfm, exo_wfm)
