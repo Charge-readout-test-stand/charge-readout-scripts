@@ -4,7 +4,7 @@
 Script to calibrate energies based on location of 570-keV peak. 
 Currently doing binned fit, using exponential background model
 
-All channels are fit first, then each channel individually. 
+All channels (SignalEnergy) are fit first, then each channel individually. 
 
 This script was adapted from mca/fit_to_resolution.py 
 """
@@ -94,7 +94,7 @@ def fit_channel(
         fit_formula = "gausn(0) + [3]*TMath::Exp(-[4]*x) + [5]"
     else:
         fit_formula = "gausn(0) + pol1(3)" # 1st-degree polynomial
-        #step_amplitude_index = 5
+        step_amplitude_index = 5
         #fit_formula = "gausn(0) + pol2(3)" # 2nd-degree polynomial
         #fit_formula = "gausn(0)" 
 
@@ -322,8 +322,9 @@ def fit_channel(
             if value == 'b':
                 ROOT.gROOT.SetBatch(True)
 
-
+    #-------------------------------------------------------------------------------
     # do the fit
+    #-------------------------------------------------------------------------------
     ROOT.Math.MinimizerOptions.SetDefaultMaxFunctionCalls(50000)
     fit_result = hist.Fit(testfit,"NIRLS")
     prob = fit_result.Prob()
@@ -378,6 +379,7 @@ def fit_channel(
         x += bin_width
 
 
+    print "--> grabbing fit parameters"
     # grab fit parameters
     centroid = testfit.GetParameter(1)
     centroid_err = testfit.GetParError(1)
@@ -390,25 +392,27 @@ def fit_channel(
 
     # set up some functions
     if do_use_exp:
+        print "--> grabbing exp parameters"
         bestfit_exp = ROOT.TF1("bestfite","[0]*TMath::Exp(-[1]*x) + [2]", fit_start_energy, fit_stop_energy)
         bestfit_exp.SetParameters(testfit.GetParameter(3), testfit.GetParameter(4), testfit.GetParameter(5))
     else:
-        #bestfit_exp = ROOT.TF1("bestfite","pol1(0)", fit_start_energy, fit_stop_energy)
-        #bestfit_exp.SetParameters(testfit.GetParameter(3), testfit.GetParameter(4))
+        print "--> grabbing pol1 parameters"
         bestfit_exp = ROOT.TF1("bestfite","pol1(0)", fit_start_energy, fit_stop_energy)
-        bestfit_exp.SetParameters(testfit.GetParameter(3), testfit.GetParameter(4), testfit.GetParameter(5))
+        bestfit_exp.SetParameters(testfit.GetParameter(3), testfit.GetParameter(4))
     bestfit_exp.SetLineColor(ROOT.kBlack)
 
 
+    print "--> grabbing gauss parameters"
     bestfit_gaus = ROOT.TF1("bestfitg", "gausn(0)", fit_start_energy, fit_stop_energy)
     bestfit_gaus.SetParameters(testfit.GetParameter(0), centroid, sigma)
     bestfit_gaus.SetLineColor(ROOT.kRed)
 
     if do_use_step:
+        print "--> grabbing step parameters"
         bestfit_step = ROOT.TF1("bestfits", "[0]*TMath::Erfc((x-[1])/sqrt(2)/[2])", fit_start_energy, fit_stop_energy)
         #bestfit_step = ROOT.TF1("bestfits", "[0]*exp((x-[1])/[3])*TMath::Erfc((x-[1])/sqrt(2)/[2] + [2]/sqrt(2)/[3])", fit_start_energy, fit_stop_energy)
         bestfit_step.SetParameters(testfit.GetParameter(step_amplitude_index), 
-            testfit.GetParameter(1), testfit.GetParameter(2), testfit.GetParameter(step_amplitude_index+1))
+            centroid, sigma)
         bestfit_step.SetLineColor(ROOT.kGreen+2)
 
     if channel != None:
@@ -430,7 +434,8 @@ def fit_channel(
     pad1 = canvas.cd(1)
     pad1.SetGrid(1,1)
     hist.SetMaximum(1.2*fit_start_height)
-    peak_height = hist.GetBinContent(hist.FindBin(centroid))
+    #peak_height = hist.GetBinContent(hist.FindBin(centroid))
+    peak_height = testfit.Eval(centroid)
     if peak_height > fit_start_height:
         hist.SetMaximum(1.2*peak_height)
         print "peak height:", peak_height
@@ -499,7 +504,7 @@ def fit_channel(
     canvas.Print("%s_lin.pdf" % plot_name)
     print "printed %s" % plot_name
 
-    # save some results
+    # save some results for json file
     result = {}
     result["a_label"] = channel_name
     result["channel"] = channel
@@ -551,8 +556,6 @@ def fit_channel(
         new_calibration_value,
         new_calibration_value_err,
     )
-    #if channel != None:
-    #    new_calibration += "(was %s) " % struck_analysis_parameters.calibration_values[channel]
     new_calibration += label
     if channel == None:
         new_calibration = "# " + new_calibration
@@ -568,7 +571,6 @@ def fit_channel(
             sys.exit()
         if value == 'b':
             ROOT.gROOT.SetBatch(True)
-
 
     return result
 
@@ -684,19 +686,12 @@ if __name__ == "__main__":
     #drift_time_high=9.0 # microseconds
     drift_time_high = struck_analysis_parameters.max_drift_time+2.0
 
-    nc = struck_analysis_cuts.get_negative_energy_cut(isMC=isMC)
-    sc = struck_analysis_cuts.get_drift_time_cut()
-    lc = struck_analysis_cuts.get_drift_time_cut(drift_time_low=None,
-        drift_time_high=drift_time_high, isMC=isMC)
-    dc = struck_analysis_cuts.get_drift_time_cut( drift_time_high=drift_time_high, isMC=isMC)
-    ds = struck_analysis_cuts.get_drift_time_selection( drift_time_high=drift_time_high, isMC=isMC)
-
     # selections for the SignalEnergy plot
     selection = []
     selection.append(struck_analysis_cuts.get_single_strip_cut())
     selection.append(struck_analysis_cuts.get_drift_time_selection( drift_time_high=drift_time_high, isMC=isMC))
     selection.append("!is_pulser")
-    #selection.append("!is_bad") # still working on 11th LXe
+    selection.append("!is_bad") 
     selection = " && ".join(selection)
 
     # selections for individual channels
