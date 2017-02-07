@@ -26,11 +26,12 @@ import struck_analysis_parameters
 def draw_channel_plots(
     tree,           # the TTree/TChain
     var,            # variable to plot, e.g. baseline_rms*calibration
-    plot_name,      # plot name, e.g. baseline_rms_x_calibration
     min_bin=0.0,    # min y bin
     max_bin=30.0,   # max y bin
     units=None,     # keV, etc
     basename="",       # file basename
+    selection=None,
+    plot_name=None,      # plot name, e.g. baseline_rms_x_calibration
     ):
 
     """
@@ -41,8 +42,11 @@ def draw_channel_plots(
 
     # selections
     #selection = "!is_pulser && !is_bad" # usual
-    selection = "1"
+    #selection = "1"
     #selection = "Entry$<10000 && !is_pulser && !is_bad" # debugging
+
+    if plot_name == None: 
+        plot_name = var
 
     # get the run start and end times:
     tree.GetEntry(0)
@@ -81,7 +85,10 @@ def draw_channel_plots(
             ytitle += " [%s]" % units
         hist.SetYTitle(ytitle)
 
-        ch_selection = "%s && channel==%i" % (selection, channel)
+        if selection:
+            ch_selection = "%s && channel==%i" % (selection, channel)
+        else:
+            ch_selection = "channel==%i" % channel
         ch_draw_cmd = "%s >> %s" % (draw_cmd, hist.GetName())
         print "\t ch_draw_cmd:", ch_draw_cmd
         print "\t ch_selection:", ch_selection
@@ -122,6 +129,11 @@ def draw_channel_plots(
 
 def process_file(filenames):
 
+    # options
+
+    #selection = "!is_pulser && !is_bad" # usual
+    #selection = None
+
     print "processing files: ", len(filenames)
 
     basename = os.path.commonprefix(filenames)
@@ -129,6 +141,7 @@ def process_file(filenames):
     basename = os.path.splitext(basename)[0]
     print basename
 
+    
 
     # open the root file and grab the tree
     tree = ROOT.TChain("tree")
@@ -161,31 +174,39 @@ def process_file(filenames):
     #tree.SetBranchStatus("SignalEnergy",1)
     #tree.SetBranchStatus("signal_map",1)
 
-    if True:
+    if False:
         # wfm_min
         tree.SetBranchStatus("wfm_min",1)
-        draw_channel_plots(tree, "wfm_min", "wfm_min", 0.0, pow(2,14), "ADC units", basename)
+        draw_channel_plots(tree, "wfm_min", 0.0, pow(2,14), "ADC units", basename)
 
         # wfm_max
         tree.SetBranchStatus("wfm_max",1)
-        draw_channel_plots(tree, "wfm_max", "wfm_max", 0.0, pow(2,14), "ADC units", basename)
+        draw_channel_plots(tree, "wfm_max", 0.0, pow(2,14), "ADC units", basename)
 
         # baseline_mean
         tree.SetBranchStatus("baseline_mean",1)
-        draw_channel_plots(tree, "baseline_mean", "baseline_mean", 0.0, pow(2,14), "ADC units", basename)
+        draw_channel_plots(tree, "baseline_mean", 0.0, pow(2,14), "ADC units", basename)
 
         # energy1
         tree.SetBranchStatus("energy1",1)
-        draw_channel_plots(tree, "energy1", "energy1", 0.0, 1000.0, "keV", basename)
+        draw_channel_plots(tree, "energy1", 0.0, 1000.0, "keV", basename)
 
-    # rise_time_stop95
-    tree.SetBranchStatus("rise_time_stop95",1)
-    draw_channel_plots(tree, "rise_time_stop95", "rise_time_stop95", 0.0, 43.0, "#us", basename)
+    # is_bad -- oops, this doesn't vary by channel
+    #tree.SetBranchStatus("is_bad",1)
+    #draw_channel_plots(tree, "is_bad", 0.0, 34.0, "", basename)
 
-    # baseline_rms
-    tree.SetBranchStatus("baseline_rms",1)
-    tree.SetBranchStatus("calibration",1)
-    draw_channel_plots(tree, "baseline_rms*calibration", "baseline_rms_x_calibration", 0.0, 55.0, "keV", basename)
+    tree.SetBranchStatus("decay_fit",1)
+    draw_channel_plots(tree, "decay_fit", 0.0, 3000.0, "#us", basename)
+
+    if False:
+        # rise_time_stop95
+        tree.SetBranchStatus("rise_time_stop95",1)
+        draw_channel_plots(tree, "rise_time_stop95", 0.0, 43.0, "#us", basename)
+
+        # baseline_rms
+        tree.SetBranchStatus("baseline_rms",1)
+        tree.SetBranchStatus("calibration",1)
+        draw_channel_plots(tree, "baseline_rms*calibration", 0.0, 55.0, "keV", basename, plot_name="baseline_rms_x_calibration")
 
 
 if __name__ == "__main__":
