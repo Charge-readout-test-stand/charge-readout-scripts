@@ -68,8 +68,10 @@ def getDecayTimes():
         hist.SetMarkerSize(0.8)
 
         draw_cmd = "decay_fit >> %s" % hist.GetName()
+        print "draw_cmd:", draw_cmd
         # decay_chi2 is reduced chi^2
-        selection = "!is_pulser && !is_bad && decay_chi2>0 && channel==%i" % channel
+        selection = "!is_pulser && !is_bad && decay_chi2>0 && decay_chi2<2.0 && channel==%i" % channel
+        print "selection:", selection
         if fitter < 0.5:
             #If Gaus try to cut bad fits
             selection = "decay_error[%i]/decay_fit[%i] < 0.015" % (channel, channel)
@@ -99,7 +101,7 @@ def getDecayTimes():
         print log_out
         decay_log.write(log_out)
 
-        title = "ch %i: %s | %.2e counts | %s | #tau = %f #pm %f" % (channel, label, n_drawn, selection, mean, mean_error)
+        title = "ch %i: %s | %.2e counts | %s | #tau = %.2f #pm %.2f" % (channel, label, n_drawn, selection, mean, mean_error)
         hist.SetTitle(title)
 
         canvas.SetLogy(0)
