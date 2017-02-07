@@ -413,8 +413,7 @@ if is_7th_LXe:
     decay_time_values[9] = 1.5*microsecond 
 
 
-if is_8th_LXe or is_9th_LXe or is_11th_LXeB: 
-    
+if is_8th_LXe or is_9th_LXe: 
     # vales from Mike's fits on 01 Sep 2016:
     decay_time_values[0] =  10000000000.000000*microsecond # Not Used  
     decay_time_values[1] =  320.733754*microsecond # +/- 0.044737  
@@ -448,6 +447,42 @@ if is_8th_LXe or is_9th_LXe or is_11th_LXeB:
     decay_time_values[29] =  385.634064*microsecond # +/- 0.018183  
     decay_time_values[30] =  359.754388*microsecond # +/- 0.040198  
     decay_time_values[31] =  10000000000.000000*microsecond # Not Used  
+
+if is_11th_LXeB:
+    # Fits are in DecayTime_overnight_11thLXeB_v3.pdf 
+    decay_time_values[0] =  220.177743*microsecond # +/- 0.019631 Y1-10
+    decay_time_values[1] =  336.954510*microsecond # +/- 0.035747 Y11
+    decay_time_values[2] =  342.909975*microsecond # +/- 0.033580 Y12
+    decay_time_values[3] =  375.471621*microsecond # +/- 0.037684 Y13
+    decay_time_values[4] =  364.445833*microsecond # +/- 0.028699 Y14
+    decay_time_values[5] =  430.749504*microsecond # +/- 0.035263 Y15
+    decay_time_values[6] =  401.468398*microsecond # +/- 0.019691 Y16
+    decay_time_values[7] =  366.996051*microsecond # +/- 0.005235 Y17
+    decay_time_values[8] =  314.864279*microsecond # +/- 0.008820 Y18
+    decay_time_values[9] =  295.266593*microsecond # +/- 0.010130 Y19
+    decay_time_values[10] =  316.139852*microsecond # +/- 0.016089 Y20
+    decay_time_values[11] =  317.346648*microsecond # +/- 0.011693 Y21/22
+    decay_time_values[12] =  313.040718*microsecond # +/- 0.007317 Y23/24
+    decay_time_values[13] =  297.191957*microsecond # +/- 0.015426 Y25/26
+    decay_time_values[14] =  324.727292*microsecond # +/- 0.026848 Y27/28
+    decay_time_values[15] =  330.228038*microsecond # +/- 0.033613 Y29/30
+    decay_time_values[16] =  218.350917*microsecond # +/- 0.018520 X1-12
+    decay_time_values[17] =  373.164130*microsecond # +/- 0.024446 X13
+    decay_time_values[18] =  385.112331*microsecond # +/- 0.032387 X14
+    decay_time_values[19] =  395.731914*microsecond # +/- 0.043800 X15
+    decay_time_values[20] =  428.013071*microsecond # +/- 0.024771 X16
+    decay_time_values[21] =  454.867452*microsecond # +/- 0.014542 X17
+    decay_time_values[22] =  436.329761*microsecond # +/- 0.022793 X18
+    decay_time_values[23] =  421.476176*microsecond # +/- 0.037603 X19
+    decay_time_values[24] =  393.562566*microsecond # +/- 0.030876 X20
+    decay_time_values[25] =  381.182494*microsecond # +/- 0.034273 X21
+    decay_time_values[26] =  392.642787*microsecond # +/- 0.043076 X22
+    decay_time_values[27] =  395.270775*microsecond # +/- 0.044866 X23/24
+    decay_time_values[28] =  362.852652*microsecond # +/- 0.021263 X25/26
+    decay_time_values[29] =  362.903823*microsecond # +/- 0.013574 X27/28
+    decay_time_values[30] =  10000000000.000000*microsecond # Not Used  
+    decay_time_values[31] =  10000000000.000000*microsecond # Not Used  
+
 
 if is_10th_LXe or is_11th_LXe:
     # Fits are in DecayTime_overnight10thLXe_v3.pdf 
@@ -1149,7 +1184,7 @@ if __name__ == "__main__":
 
     print "n_chargechannels:", n_chargechannels
 
-    print "\nchannel | label | use | n strips"
+    print "\nchannel     | label  | use | n strips"
     for (channel, name) in channel_map.items():
         labels = []
         try:
