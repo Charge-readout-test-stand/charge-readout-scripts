@@ -22,6 +22,7 @@ is_11th_LXe = False # Jan/Feb 2017, with DT
 is_11th_LXeB = True # Feb 2017, with VME
 
 import os
+import sys
 import math
 import ROOT
 
@@ -41,8 +42,12 @@ if os.getenv("EXOLIB") is not None and not isROOT6:
     try:
         ROOT.gSystem.Load("$EXOLIB/lib/libEXOROOT")
         from ROOT import CLHEP
-        microsecond = CLHEP.microsecond
-        second = CLHEP.second
+        if microsecond != CLHEP.microsecond: 
+            print "WARNING: microsecond definition is wrong!!"
+            sys.exit()
+        if second != CLHEP.second: 
+            print "WARNING: second definition is wrong!!"
+            sys.exit()
         print "imported CLHEP/ROOT"
     except ImportError or AttributeError:
         print "couldn't import CLHEP/ROOT"
@@ -57,12 +62,13 @@ drift_time_threshold = (drift_length - 5.3)/drift_velocity # microsecond
 max_drift_time = drift_length/drift_velocity
 #print "max_drift_time:", max_drift_time
 if is_10th_LXe or is_11th_LXe or is_11th_LXeB:
-    drift_velocity = 1.79 # mm / microsecond  
-    max_drift_time = drift_length/drift_velocity
-    #print "max_drift_time:", max_drift_time
     drift_length = 33.23 # new anode standoffs Dec 2016
+    if is_10th_LXe:
+        drift_velocity = 1.79 # mm/microsecond
     drift_time_threshold = (drift_length - 14.3)/drift_velocity # microsecond
-max_drift_time = drift_length/drift_velocity
+    max_drift_time = drift_length/drift_velocity
+    if is_10th_LXe:
+        max_drift_time += 2.0 # seems ok 
 
 #print "max_drift_time:", max_drift_time
 
@@ -114,8 +120,13 @@ elif is_8th_LXe or is_9th_LXe or is_11th_LXeB:
         charge_channels_to_use[0] = 0 # Y1-10 is dead
         #charge_channels_to_use[16] = 0 # X1-12 is noisy !!
         charge_channels_to_use[27] = 0 # X23/24 is dead
+        pulser_channel = 27
+    if is_11th_LXeB:
+        pulser_channel = 30
+
 elif is_10th_LXe or is_11th_LXe:
     pmt_channel = 0
+    pulser_channel = 1
     channels = []
     for i_channel, val in enumerate(charge_channels_to_use):
         if i_channel < 16:
@@ -134,6 +145,9 @@ else:
     charge_channels_to_use[4] = 1
 
 n_channels = len(channels) # channels that are active
+
+if pulser_channel != None:
+    charge_channels_to_use[pulser_channel] = 0
 
 ## number of useful charge channels
 n_chargechannels = sum(charge_channels_to_use)
@@ -231,6 +245,13 @@ if is_8th_LXe or is_9th_LXe or is_11th_LXeB:
     channel_map[30] = "X29/30"
     channel_map[pmt_channel] = "PMT"
 
+    if is_11th_LXeB:
+        # Y6, X24 are grounded
+        channel_map[27] = "X23" 
+        struck_to_mc_channel_map[0] = [30,31,32,33,34,36,37,38,39]
+        struck_to_mc_channel_map[27] = [22]
+        struck_to_mc_channel_map[pulser_channel] = []
+
     channel_to_n_strips_map[pmt_channel] = 0.0
     for channel, val in struck_to_mc_channel_map.items():
         n_strips = len(val)
@@ -239,16 +260,8 @@ if is_8th_LXe or is_9th_LXe or is_11th_LXeB:
             one_strip_channels[channel] = 1
         elif n_strips == 2:
             two_strip_channels[channel] = 1
-if is_9th_LXe:
-    pulser_channel = 27
-    channel_map[pulser_channel] = "pulser"
-if is_11th_LXeB:
-    pulser_channel = 30
-    channel_map[pulser_channel] = "pulser"
-    charge_channels_to_use[pulser_channel] = 0
 
 if is_10th_LXe or is_11th_LXe:
-    pulser_channel = 1
     channel_map[15] = "X14"
     channel_map[14] = "X15"
     channel_map[13] = "X16"
@@ -282,6 +295,8 @@ if is_10th_LXe or is_11th_LXe:
     struck_to_mc_channel_map[14] = [14]
     struck_to_mc_channel_map[15] = [13]
 
+if pulser_channel != None:
+    channel_map[pulser_channel] = "pulser"
 
 #MC Channels index starts at 0 so X26 = 25
 #Y  Channles are offset by 30
@@ -301,7 +316,7 @@ for struck_channel, label in channel_map.items():
     mc_channel = int(label[1:]) -1
     if is_y: mc_channel += 30
     #print "channel %s: struck=%i | mc=%i" % (label, struck_channel, mc_channel)
-    struck_to_mc_channel_map[struck_channel] = mc_channel
+    struck_to_mc_channel_map[struck_channel] = [mc_channel]
     mc_channel_map[mc_channel] = label
     MCcharge_channels_to_use[mc_channel] = 1
 
@@ -1180,10 +1195,6 @@ if __name__ == "__main__":
     #for channel in channels:
     #    print "\t channel %i" % channel
 
-    print "\npmt channel:", pmt_channel
-
-    print "n_chargechannels:", n_chargechannels
-
     print "\nchannel     | label  | use | n strips"
     for (channel, name) in channel_map.items():
         labels = []
@@ -1197,7 +1208,7 @@ if __name__ == "__main__":
             labels = ", ".join(labels)
         except: pass
         if len(labels) == 0: labels = ""
-        print "\t %2i | %-6s | %i  | %2i | %s" % (
+        print "\t %2i | %-6s |  %i  | %2i | %s" % (
             channel, 
             name,
             charge_channels_to_use[channel],
@@ -1205,9 +1216,24 @@ if __name__ == "__main__":
             labels,
         )
 
-    print "\nMC channel names:"
-    for (channel, name) in mc_channel_map.items():
-        print "\t channel %i: %s" % (channel, name)
+    print "pmt channel:", pmt_channel
+    if pulser_channel:
+        print "pulser channel:", pulser_channel
+    print "n_chargechannels:", n_chargechannels
+
+    # count functional strips:
+    n_strips = 0
+    print "counting strips..."
+    for channel, val in struck_to_mc_channel_map.items():
+        if charge_channels_to_use[channel] == 0: continue
+        n_strips += len(val)
+        print "\t %i, %s, %i" % (channel, channel_map[channel], len(val))
+    print "n_strips:", n_strips
+
+    if len(mc_channel_map) > 0:
+        print "\nMC channel names:"
+        for (channel, name) in mc_channel_map.items():
+            print "\t channel %i: %s" % (channel, name)
 
     print "\nlinear calibration info:"
     for (channel, value) in calibration_values.items():
