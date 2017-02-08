@@ -5,16 +5,12 @@ import glob
 import json
 
 from ROOT import gROOT
-#gROOT.SetBatch(True)
+gROOT.SetBatch(True)
 from ROOT import TH2D
 from ROOT import TFile
 from ROOT import TCanvas
-from ROOT import TColor
 from ROOT import TLegend
-from ROOT import TPaveText
-from ROOT import gSystem
 from ROOT import gStyle
-from ROOT import TTree
 from ROOT import TGraphErrors
 
 gROOT.SetStyle("Plain")     
@@ -33,10 +29,12 @@ def process_file(filenames, fit_results_filename):
     drift_velocity = struck_analysis_parameters.drift_velocity
 
     # options:
-    do_draw_fit_results = True
+    do_draw_fit_results = False
     #draw_cmd = "energy1_pz:(rise_time_stop99-trigger_time+0.020)"
     #draw_cmd = "energy1_pz:(rise_time_stop99-trigger_time+0.020)*%s" % drift_velocity
-    draw_cmd = "energy1_pz:(rise_time_stop95-trigger_time+0.020)*%s" % drift_velocity
+    #draw_cmd = "energy1_pz:(rise_time_stop95-trigger_time+0.020)*%s" % drift_velocity
+    #draw_cmd = "SignalEnergy:(rise_time_stop95_sum-trigger_time+0.020)*%s" % drift_velocity
+    draw_cmd = "SignalEnergy:(rise_time_stop95_sum-trigger_time+0.020)"
 
     if fit_results_filename == None:
         do_draw_fit_results = False
@@ -79,9 +77,16 @@ def process_file(filenames, fit_results_filename):
             graph.SetPointError(i_point,dz/2.0,centroid_err)
 
     # 2D hist for time vs. energy
-    hist = TH2D("hist","",275,0,11*drift_velocity,100,300,1300)
-    #hist.SetXTitle("drift time [#mus]")
-    hist.SetXTitle("distance from anode [mm]")
+    max_drift_time = int(struck_analysis_parameters.max_drift_time+2.0)
+    #max_drift_time = 10 # 10th LXe
+    drift_distance = max_drift_time*struck_analysis_parameters.drift_velocity
+    print "max_drift_time:", max_drift_time
+    n_bins = int(max_drift_time / 0.040 / 2.0)
+    print "n_bins:", n_bins
+    #hist = TH2D("hist","",n_bins,0,drift_distance,100,300,1300)
+    hist = TH2D("hist","",n_bins,0,max_drift_time,100,300,1300)
+    hist.SetXTitle("drift time [#mus]")
+    #hist.SetXTitle("distance from anode [mm]")
     hist.SetYTitle("Energy [keV]")
     hist.GetYaxis().SetTitleOffset(1.3)
 
@@ -102,18 +107,32 @@ def process_file(filenames, fit_results_filename):
             print "could not get entries from tree"
             continue
 
+        tree.SetBranchStatus("*",0)
+        tree.SetBranchStatus("is_bad",1)
+        tree.SetBranchStatus("is_pulser",1)
+        tree.SetBranchStatus("nsignals",1)
+        tree.SetBranchStatus("SignalEnergy",1)
+        tree.SetBranchStatus("rise_time_stop95_sum",1)
+        tree.SetBranchStatus("trigger_time",1)
+        #tree.SetBranchStatus("energy1_pz",1)
+        #tree.SetBranchStatus("rise_time_stop95",1)
+
         # selections (these go in the loop so isMC can be set):
-        single_strip_cut = struck_analysis_cuts.get_single_strip_cut(10.0, isMC)
+        single_strip_cut = struck_analysis_cuts.get_single_strip_cut(isMC=isMC)
         selection = []
-        selection.append(single_strip_cut)
-        selection.append(struck_analysis_cuts.get_channel_selection(isMC))
-        #selection.append("Entry$<1e5") # debugging
-        selection = "&&".join(selection)
+        #selection.append("Entry$<10e5") # debugging
+        #selection.append(single_strip_cut)
+        #selection.append("nsignals==2")
+        selection.append("!is_pulser")
+        selection.append("!is_bad")
+        #selection.append(struck_analysis_cuts.get_channel_selection(isMC))
+        selection = " && ".join(selection)
 
 
 
         print "draw cmd:", "%s >>+ %s" % (draw_cmd, hist.GetName())
         print "selection:", selection
+        hist.SetTitle("%s {%s}" % (draw_cmd, selection))
 
         # draw 2D hist
         hist.GetDirectory().cd()
@@ -139,7 +158,7 @@ def process_file(filenames, fit_results_filename):
     canvas.SetGrid(1,1)
     canvas.SetLogz(1)
     canvas.Update()
-    canvas.Print("%s.pdf" % plot_name)
+    #canvas.Print("%s.pdf" % plot_name)
     canvas.Print("%s.png" % plot_name)
     print "%i hist entries drawn" % n_entries
     if not gROOT.IsBatch():
