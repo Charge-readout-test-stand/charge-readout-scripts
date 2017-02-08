@@ -66,7 +66,7 @@ def do_draw(
     
     if gROOT.IsBatch(): return
     # a canvas for drawing, if debugging:
-    canvas = TCanvas("canvas","")
+    canvas = TCanvas("canvas","do_draw canvas")
     canvas.SetGrid(1,1)
     canvas.cd()
     hist = exo_wfm.GimmeHist("hist")
@@ -208,7 +208,7 @@ def ApplyFilter(exowfm, channel, wfm_length, filter_type="deriv"):
         #Gets negative on hits since the edges are negtive
         gROOT.SetBatch(False)
         print ratio_max, matched_result_trim.GetMinValue()/baseline_rms, matched_result_trim.GetMaxValue()/baseline_rms 
-        c2 = TCanvas("can","")
+        c2 = TCanvas("can","can")
         exowfm.GimmeHist().Draw("L")
         c2.Update()
         raw_input()
@@ -256,9 +256,9 @@ def get_wfmparams(
 
     # FIXME -- this should come from struck_analysis_parameters
     energy_start_time_microseconds = struck_analysis_parameters.energy_start_time_microseconds
-    energy_start_sample = energy_start_time_microseconds*microsecond*sampling_freq_Hz/second
+    energy_start_sample = int(energy_start_time_microseconds*microsecond*sampling_freq_Hz/second)
     #energy_start_sample = 450 # < 10th LXe
-    energy_start_sample = 850 # 10th LXe 
+    #energy_start_sample = 850 # 10th LXe 
 
     # calculate wfm max and min:
     wfm_max = exo_wfm.GetMaxValue()
@@ -270,7 +270,7 @@ def get_wfmparams(
     baseline_remover.SetStartSample(0)
     baseline_remover.Transform(exo_wfm)
     baseline_mean = baseline_remover.GetBaselineMean()
-    #do_draw(energy_wfm, "after baseline_remover")
+    #do_draw(energy_wfm, "channel %i %s after %i-sample baseline_remover" % (channel, label, n_baseline_samples))
 
     # measure energy before PZ correction -- use baseline_remover for this
     #baseline_remover.SetStartSample(wfm_length - n_baseline_samples - 1)
@@ -291,7 +291,7 @@ def get_wfmparams(
         if not isMC: print "WARNING: setting RMS from nan to 0"
         baseline_rms = 0.0
 
-    # measure energy before PZ correction, use 2x n_baseline_samples
+    # measure energy1 before PZ correction, use 2x n_baseline_samples
     #baseline_remover.SetStartSample(wfm_length - 2*n_baseline_samples - 1)
     baseline_remover.SetStartSample(energy_start_sample)
     baseline_remover.Transform(exo_wfm, energy_wfm)
@@ -336,7 +336,7 @@ def get_wfmparams(
             print "decay_start_time_microseconds:", struck_analysis_parameters.decay_start_time_microseconds
             print "decay_end_time_microseconds:", struck_analysis_parameters.decay_end_time_microseconds
 
-            canvas = TCanvas("decay_canvas","")
+            canvas = TCanvas("decay_canvas","decay_canvas")
             canvas.SetGrid()
             hist = exo_wfm.GimmeHist()
             exp_decay = TF1("exp_decay_test","[0]*exp(-x/[1])", 
@@ -373,7 +373,6 @@ def get_wfmparams(
     pole_zero.SetDecayConstant(decay_time)
     if not is_pmtchannel:
         pole_zero.Transform(exo_wfm, energy_wfm)
-        #do_draw(energy_wfm, "%s after PZ correction" % label)
 
     # measure energy after PZ correction -- use baseline remover
     baseline_remover.SetBaselineSamples(n_baseline_samples) # remove baseline
@@ -386,14 +385,51 @@ def get_wfmparams(
         if not isMC: print "WARNING: setting RMS from nan to 0"
         energy_rms_pz = 0.0
  
-    # measure energy after PZ correction, use 2x n_baseline_samples
+    # measure energy after PZ correction, first remove baseline with 2x n_baseline_samples
     baseline_remover.SetBaselineSamples(2*n_baseline_samples)
     baseline_remover.SetStartSample(0)
     baseline_remover.Transform(exo_wfm)
 
+    last_time = n_baseline_samples*2.0/sampling_freq_Hz*1e6
+    fcn = TF1("fcn","pol1(0)",0.0, wfm_length/sampling_freq_Hz*1e6)
+    fcn.SetParameter(0,0.0) # offset
+    fcn.SetParameter(1,0.0) # slope
+    hist = exo_wfm.GimmeHist()
+    #print "last time:", last_time
+    fit_options = "WWBQCN"
+    if not gROOT.IsBatch(): 
+        fit_options = "WWBVC"
+        fcn.SetLineColor(kRed)
+    # Fit options:
+    # "WW" Set all weights to 1 including empty bins; ignore error bars
+    # "N"  Do not store the graphics function, do not draw
+    # "B"  User defined parameter settings are used for predefined functions like "gaus", "expo", "poln", "landau".
+    # "C"  In case of linear fitting, don't calculate the chisquare (saves time)
+    #"Q"  Quiet mode (minimum printing)
+    # "V"  Verbose mode (default is between Q and V)
+    hist.Fit(fcn, fit_options, "", 0.0, last_time) 
+    baseline_slope = fcn.GetParameter(1)
+
+    # draw baseline fit result:
+    if not gROOT.IsBatch() and energy1 > 200:
+        print "last time:", last_time
+        print "%i baseline samples" %  n_baseline_samples
+        print "%.1f energy_start_sample" %  energy_start_sample
+        print "baseline_slope slope: keV/microseconds", baseline_slope*calibration
+        print "p0 keV", (fcn.GetParameter(0) + baseline_slope*last_time/2.0)*calibration
+        can = TCanvas("testcanvas","test canvas")
+        can.SetGrid()
+        hist.Draw()
+        can.Update()
+        raw_input("press enter ")
+    hist.IsA().Destructor(hist)
+
     # correct for exponential decay
     if not is_pmtchannel:
         pole_zero.Transform(exo_wfm, energy_wfm)
+        if False and energy1 > 200:
+            print "decay_time:", decay_time
+            do_draw(energy_wfm, "%s after PZ" % label, exo_wfm)
 
     # create calibrated wfm to be added to sum wfm
     calibrated_wfm = EXODoubleWaveform(energy_wfm)
@@ -407,6 +443,31 @@ def get_wfmparams(
     if math.isnan(energy_rms1_pz): # for events with 0 noise, RMS is sometimes NaN
         if not isMC: print "WARNING: setting RMS from nan to 0"
         energy_rms1_pz = 0.0
+
+    # fit to PZ-corrected slope:
+    last_time = energy_start_time_microseconds + n_baseline_samples*2.0/sampling_freq_Hz*1e6
+    fcn.SetParameter(0,0.0) # offset
+    fcn.SetParameter(1,0.0) # slope
+    hist = energy_wfm.GimmeHist()
+    hist.Fit(fcn, fit_options, "", energy_start_time_microseconds, last_time)
+    energy1_pz_slope = fcn.GetParameter(1)*calibration
+
+    if energy1 > 200 and not gROOT.IsBatch():
+        print "last time:", last_time
+        print "energy_start_time_microseconds:", energy_start_time_microseconds
+        print "energy_start_sample:", energy_start_sample
+        print "%i baseline samples" %  n_baseline_samples
+        print "%.1f energy_start_sample" %  energy_start_sample
+        print "energy1_pz_slope slope: keV/microseconds", energy1_pz_slope*calibration
+        #print "p0", fcn.GetParameter(0) + energy1_pz_slope*(energy_start_time_microseconds+n_baseline_samples*2.0/sampling_freq_Hz*1e6/2.0)
+        print "p0 keV", fcn.GetParameter(0)*calibration + energy1_pz_slope*last_time/2.0
+        can = TCanvas("testcanvas","test canvas")
+        can.SetGrid()
+        hist.Draw()
+        can.Update()
+        #raw_input("press enter ")
+        do_draw(energy_wfm, "%s after energy meas: energy1=%i keV, energy1_pz=%i keV" % (label, energy1, energy1_pz))
+    hist.IsA().Destructor(hist)
     
     #Apply threshold -- we really use 2*n_baseline_samples, so 2.0/2.0 cancels
     if energy1_pz > struck_analysis_parameters.rms_threshold*energy_rms1_pz*math.sqrt(1.0/n_baseline_samples):
@@ -448,20 +509,21 @@ def get_wfmparams(
             #print "wfm:", exo_wfm[index]
             avg += exo_wfm[index]
         avg /= n_used_points
-        energy = exo_wfm.GetMaxValue()*calibration
-        energy1 = avg*calibration
+        energy = exo_wfm.GetMaxValue()*calibration # used for lightEnergy
+        energy1 = avg*calibration # average using n_points
 
         if not gROOT.IsBatch() and False:
             print "is PMT"
             print "index_of_max:", index_of_max
             print "max_val", avg*calibration
-            print "energy:", energy
+            print "energy:", energy 
             print "decay_time:", decay_time
 
         pz_wfm = EXODoubleWaveform(exo_wfm)
         pole_zero.SetDecayConstant(decay_time)
         pole_zero.Transform(exo_wfm, pz_wfm)
         
+        # is this for when we used the Ortec preamp?
         trap_wfm = EXODoubleWaveform(exo_wfm)
         trap_filter = EXOTrapezoidalFilter()
         trap_filter.SetFlatTime(2.0*microsecond)
@@ -475,7 +537,7 @@ def get_wfmparams(
         trap_filter.Transform(pz_wfm, trap_wfm)
         energy1_pz = trap_wfm.GetMaxValue()
 
-        if False: do_draw(
+        if energy1_pz > 100 and False: do_draw(
             #exo_wfm, 
             #pz_wfm,
             trap_wfm,
@@ -490,6 +552,9 @@ def get_wfmparams(
         pz_wfm.IsA().Destructor(pz_wfm)
         trap_wfm.IsA().Destructor(trap_wfm)
 
+        # end is_pmtchannel check
+
+    fcn.IsA().Destructor(fcn)
     energy_wfm.IsA().Destructor(energy_wfm)
     
     return (
@@ -513,7 +578,9 @@ def get_wfmparams(
         dfilter_max,
         dfilter_time,
         mfilter_max,
-        mfilter_time
+        mfilter_time,
+        baseline_slope,
+        energy1_pz_slope,
     )
 
 def do_risetime_calc(rise_time_calculator, threshold_percent, wfm, max_val, period):
