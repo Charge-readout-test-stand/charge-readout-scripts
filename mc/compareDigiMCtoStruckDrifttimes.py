@@ -23,7 +23,8 @@ ROOT.gStyle.SetTitleBorderSize(0)
 
 def process_file(filenames):
 
-    selection = "SignalEnergy>300 && !is_bad && !is_pulser"
+    #selection = "SignalEnergy>300 && !is_bad && !is_pulser"
+    selection = "SignalEnergy>300" # is_bad & is_pulser handled below
     draw_cmd = "rise_time_stop95_sum-trigger_time+0.020"
 
     print "draw_cmd:", draw_cmd
@@ -95,6 +96,10 @@ def process_file(filenames):
         # processing has some bugs; is_pulser is set in the MC and is_bad is
         # flagged for ~all data events:
         this_selection = selection
+        if "8th" in basename:
+            print "8th LXe has no is_bad data"
+        else:
+            this_selection += " && !is_bad && !is_pulser"
         #if not isMC:
         #    this_selection = selection+"&&!is_pulser&&pmt_chi2<=3"
         new_drift_velocity = 1.79
