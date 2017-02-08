@@ -111,8 +111,10 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     do_draw_extra = not ROOT.gROOT.IsBatch()
     skip_short_risetimes = False # reduce file size
     # samples at wfm start and end to use for energy calc:
-    baseline_average_time_microseconds = 4.0 # 100 samples at 25 MHz
 
+    baseline_average_time_microseconds = struck_analysis_parameters.baseline_average_time_microseconds
+
+    # this is just the default; overwritten for NGM files:
     sampling_freq_Hz = struck_analysis_parameters.sampling_freq_Hz
    
     channels = struck_analysis_parameters.channels
@@ -140,7 +142,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
     # a canvas for drawing, if debugging:
     if not ROOT.gROOT.IsBatch():
-        canvas = ROOT.TCanvas("tier3_canvas","")
+        canvas = ROOT.TCanvas("tier3_canvas","tier3_canvas")
         canvas.SetGrid(1,1)
 
     # open the root file and grab the tree
@@ -276,6 +278,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     # 3: wfm min is at ADC min (2^3=8)
     # 4: wfm max is at ADC max (2^4=16)
     # 5: event doesn't contain correct number of channels (2^5=32)
+    # 6: RMS noise too low (2^6=64)
+    # 7: energy1_pz noise too low (2^7=128)
 
     is_2Vinput = array('I', [0]*n_channels) # unsigned int
     out_tree.Branch('is_2Vinput', is_2Vinput, 'is_2Vinput[%i]/i' % n_channels)
@@ -903,6 +907,12 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     out_tree.Branch('energy1_pz', energy1_pz, 'energy1_pz[%i]/D' % n_channels_in_event)
     energy_rms1_pz = array('d', [0]*n_channels_in_event) # double
     out_tree.Branch('energy_rms1_pz', energy_rms1_pz, 'energy_rms1_pz[%i]/D' % n_channels_in_event)
+
+    # slopes
+    energy1_pz_slope = array('d', [0]*n_channels_in_event) # double, calibrated
+    out_tree.Branch('energy1_pz_slope', energy1_pz_slope, 'energy1_pz_slope[%i]/D' % n_channels_in_event)
+    baseline_slope = array('d', [0]*n_channels_in_event) # double, uncalibrated
+    out_tree.Branch('baseline_slope', baseline_slope, 'baseline_slope[%i]/D' % n_channels_in_event)
     
     #matched filter and derivitive filter
     dfilter_max = array('d', [0]*n_channels_in_event)
@@ -1209,7 +1219,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 dfilter_max[i],
                 dfilter_time[i],
                 mfilter_max[i],
-                mfilter_time[i]
+                mfilter_time[i],
+                baseline_slope[i],
+                energy1_pz_slope[i],
             ) = wfmProcessing.get_wfmparams(
                 exo_wfm=exo_wfm, 
                 wfm_length=wfm_length[i], 
@@ -1332,22 +1344,23 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 )
     
                 # testing chi2 calc
-                if not ROOT.gROOT.IsBatch() and True:
+                if not ROOT.gROOT.IsBatch():
                     print "--> PMT signal"
                     pmt_hist.SetTitle("event %i, entry %i" % (i_entry/32, i_entry))
                     pmt_hist.SetLineColor(ROOT.kBlue)
                     wfm_hist.SetLineColor(ROOT.kRed)
-                    canvas.cd()
-                    pmt_hist.Draw()
-                    wfm_hist.Draw("same")
-                    #wfm_hist.Draw()
-                    #pmt_hist.Draw("same")
-                    print calibration_values[pmt_channel], lightEnergy[0], wfm_hist.GetMaximum()*calibration_values[pmt_channel]
-                    canvas.Update()
                     print "\t PMT electronics noise:", rms_keV[pmt_channel]/calibration_values[pmt_channel]
                     print "\t lightEnergy:", lightEnergy[0]
                     print "\t pmt_chi2:", pmt_chi2[0]
-                    raw_input("enter to continue")
+                    if False:
+                        canvas.cd()
+                        pmt_hist.Draw()
+                        wfm_hist.Draw("same")
+                        #wfm_hist.Draw()
+                        #pmt_hist.Draw("same")
+                        print calibration_values[pmt_channel], lightEnergy[0], wfm_hist.GetMaximum()*calibration_values[pmt_channel]
+                        canvas.Update()
+                        raw_input("enter to continue")
 
             exo_wfm.IsA().Destructor(exo_wfm)      
             calibrated_wfm.IsA().Destructor(calibrated_wfm)
@@ -1482,6 +1495,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         # check for bad conditions:
         high_baseline_rms = False
         high_energy_rms = False
+        low_baseline_rms = False
+        low_energy_rms = False
         wfm_too_low = False
         wfm_too_high = False
         if not isMC and pmt_chi2[0] > 3.0: is_bad[0] += 1
@@ -1494,6 +1509,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             try: # rms_keV_sigma doesn't exist for all runs
                 if baseline_rms[j]*calibration[j] > rms_keV[j] + 5.0*rms_keV_sigma[j]: high_baseline_rms = True
                 if energy_rms1_pz[j] > rms_keV[j] + 5.0*rms_keV_sigma[j]: high_energy_rms = True
+                if baseline_rms[j]*calibration[j] < rms_keV[j] - 5.0*rms_keV_sigma[j]: low_baseline_rms = True
+                if energy_rms1_pz[j] < rms_keV[j] - 5.0*rms_keV_sigma[j]: low_energy_rms = True
             except:
                 pass
             if wfm_min[j] == 0: wfm_too_low = True
@@ -1503,6 +1520,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         if high_energy_rms: is_bad[0] += 4
         if wfm_too_low: is_bad[0] += 8
         if wfm_too_high: is_bad[0] += 16
+        if low_baseline_rms: is_bad[0] += 64
+        if low_energy_rms: is_bad[0] += 128
 
         if not isMC and pulser_channel:
             if wfm_min[pulser_channel] < 3000: # 9th LXe value
