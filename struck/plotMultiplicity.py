@@ -22,7 +22,7 @@ def process_files(filenames):
     #selection = "chargeEnergy*%s>1000 & chargeEnergy*%s<1200" % (multiplier, multiplier)
     #selection = ""
     #selection = "%s > 200" % struck_analysis_cuts.get_few_channels_cmd_baseline_rms()
-    selection = "SignalEnergy>200 && SignalEnergy<1500"
+    selection = "SignalEnergy>0 && SignalEnergy<1500 && !is_bad"
 
 
     hists = []
@@ -71,7 +71,6 @@ def process_files(filenames):
         hist.SetMarkerColor(color)
         hist.SetMarkerStyle(21)
         hist.SetMarkerSize(1.5)
-        #hist.SetXTitle("Multiplicity [channels above %.1f keV]" % threshold)
         hist.SetXTitle("Multiplicity")
         hists.append(hist)
 
@@ -86,6 +85,7 @@ def process_files(filenames):
         tree.SetBranchStatus("signal_map",1)
         tree.SetBranchStatus("nsignals",1)
         tree.SetBranchStatus("channel",1)
+        tree.SetBranchStatus("is_bad",1)
         
         n_entries = tree.GetEntries()
         print "\t%i entries" % n_entries
@@ -115,11 +115,12 @@ def process_files(filenames):
             #ch_hist.SetFillStyle(3004)
             #ch_hist.SetBarWidth(bar_width)
             #ch_hist.SetBarOffset(bar_offset)
-            ch_hist.SetXTitle("Channel hit")
+            #ch_hist.SetXTitle("Channel hit")
+            ch_hist.SetXTitle("")
 
             ##selection = "energy1_pz>%s" % (threshold/multiplier)
             sel = "signal_map==1 && %s" % selection 
-            n_drawn = tree.Draw("channel >> %s" % ch_hist.GetName(), sel,)
+            n_drawn = tree.Draw("channel >> %s" % ch_hist.GetName(), sel, "goff norm")
 
 
             for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use):
@@ -129,25 +130,27 @@ def process_files(filenames):
                 label = struck_analysis_parameters.channel_map[channel]
                 print "\t\tch %i | %s | %i strips" % (channel, label, n_strips)
                 ch_hist.GetXaxis().SetBinLabel(i_bin, label)
+                content = ch_hist.GetBinContent(i_bin)
                 if n_strips>1:
-                    ch_hist.SetBinContent(i_bin, ch_hist.GetBinContent(i_bin)/n_strips)
+                    ch_hist.SetBinContent(i_bin, content/n_strips)
+                    print "\t\t\tset ch %i %s bin %i from %.3f to %.3f" % (channel, label, i_bin, content, content/n_strips)
 
                 # set contents to 0 for unused channels
                 if val == 0:
                     if channel == struck_analysis_parameters.pmt_channel: continue
-                    content = ch_hist.GetBinContent(i_bin)
                     ch_hist.SetBinContent(i_bin, 0.0)
-                    print "\t\t\tset ch %i %s bin %i from %i to 0" % (channel, struck_analysis_parameters.channel_map[channel], i_bin, content)
+                    print "\t\t\tset ch %i %s bin %i from %.3f to 0" % (channel, label, i_bin, content)
 
-
-            canvas.SetLogy(1)
-            canvas.Update()
-            canvas.Print("hitChannels_%s.pdf" % basename)
             ch_hists.append(ch_hist)
 
-            canvas.SetLogy(0)
-            canvas.Update()
-            canvas.Print("hitChannels_%s_lin.pdf" % basename)
+            if False: # print individual file plots
+                canvas.SetLogy(1)
+                canvas.Update()
+                canvas.Print("hitChannels_%s.pdf" % basename)
+
+                canvas.SetLogy(0)
+                canvas.Update()
+                canvas.Print("hitChannels_%s_lin.pdf" % basename)
 
             if not ROOT.gROOT.IsBatch(): raw_input("any key to continue  ")
 
@@ -161,7 +164,7 @@ def process_files(filenames):
         print "\tdraw_cmd:", draw_cmd
         print "\tselection", selection
 
-        options = "goff"
+        options = "goff norm"
 
         n_entries = tree.Draw(
             draw_cmd,
@@ -178,19 +181,22 @@ def process_files(filenames):
 
     y_max = 0
     for hist in hists:
-        n_entries = hist.GetEntries()
-        print "scale_factor:", 1.0/n_entries
-        hist.Scale(1.0/n_entries)
+        # normalize by n_entries:
+        if False:
+            n_entries = hist.GetEntries()
+            print "scale_factor:", 1.0/n_entries
+            hist.Scale(1.0/n_entries)
+
         if hist.GetMaximum() > y_max: y_max = hist.GetMaximum()
 
 
-    hists[0].SetMaximum(y_max*1.05)
+    hists[0].SetMaximum(y_max*1.2)
     hists[0].SetTitle("")
-    #hists[0].Draw("b")
-    hists[0].Draw("hist")
+    hists[0].Draw("b hist")
+    #hists[0].Draw("hist")
     for hist in hists:
-        #hist.Draw("b same")
-        hist.Draw("hist same")
+        hist.Draw("bhist same")
+        #hist.Draw("hist same")
 
     n_files = len(filenames)
 
@@ -200,6 +206,7 @@ def process_files(filenames):
     canvas.Print("multiplicity_%i.pdf" % n_files)
 
     canvas.SetLogy(0)
+    hists[0].SetMaximum(y_max*1.05)
     canvas.Update()
     canvas.Print("multiplicity_lin_%i.pdf" % n_files)
 
@@ -212,22 +219,28 @@ def process_files(filenames):
 
 
     if len(ch_hists) > 0:
+
+        for ch_hist in ch_hists:
+            # scale so that Y17 is 1.0
+            content = ch_hist.GetBinContent(ch_hist.FindBin(7)) # Y17
+            ch_hist.Scale(1.0/content)
+
+
         ch_hists[0].SetTitle("")
-        #ch_hists[0].Draw("b norm")
-        #ch_hists[0].Draw("b")
-        ch_hists[0].Draw("hist")
+        ch_hists[0].Draw("b hist")
+        #ch_hists[0].Draw("hist")
         for hist in ch_hists:
-            #hist.Draw("b same")
-            hist.Draw("hist same")
+            hist.Draw("b hist same")
+            #hist.Draw("hist same")
 
         canvas.SetLogy(1)
         legend.Draw()
         canvas.Update()
-        canvas.Print("hitChannels.pdf")
+        canvas.Print("hitChannels_%i.pdf" % n_files)
 
         canvas.SetLogy(0)
         canvas.Update()
-        canvas.Print("hitChannels_lin.pdf")
+        canvas.Print("hitChannels_lin_%i.pdf" % n_files)
 
         if not ROOT.gROOT.IsBatch(): raw_input("any key to continue  ")
 
