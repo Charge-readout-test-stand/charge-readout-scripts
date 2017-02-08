@@ -14,6 +14,7 @@ import sys
 import time
 import inspect
 import commands
+import datetime
 
 from struck import generateTier3Files
 import submitPythonJobsLLNL
@@ -45,7 +46,7 @@ def process_files(filenames):
 
             # limit jobs in queue to follow good neighbor policy
             if n_submitted + n_jobs >= 200:
-                print "\t%i files already submitted.. stopping for now" % n_submitted
+                print "\t%i files submitted in this loop. Sleeping for now" % n_submitted
                 break
 
             filename = filenames[0]
@@ -82,7 +83,8 @@ def process_files(filenames):
             #sys.exit(1) # debugging
 
         print "\t====> %i jobs submitted" % n_submitted
-        if n_submitted == 0: break
+        print "\t", datetime.datetime.now()
+        if len(filenames) == 0: break
         i_loop += 1
 
         sleep_time = 60 # seconds
