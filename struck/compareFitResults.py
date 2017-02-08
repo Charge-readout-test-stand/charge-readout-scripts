@@ -1,23 +1,15 @@
+"""
+Compare results of differen fits. 
+Arguments: json files
+"""
 
 import os
 import sys
 import json
-import math
-import datetime
 
 
-from ROOT import gROOT
-# run in batch mode:
-gROOT.SetBatch(True)
-from ROOT import TFile
-from ROOT import TTree
-from ROOT import TCanvas
-from ROOT import TColor
-from ROOT import TLegend
-from ROOT import TH1D
-from ROOT import TF1
-from ROOT import TGraphErrors
-from ROOT import gSystem
+import ROOT
+ROOT.gROOT.SetBatch(True) # run in batch mode
 
 import struck_analysis_parameters
 
@@ -43,22 +35,22 @@ def add_point_to_graph(results, graph):
             print "no key", key
             
     graph.SetPoint(i, i+1, value)
-    print key
+    print "\t %s" % key
     try:
         error = float(results["%s_err" % key])
     except KeyError:
-        print "%s_err not found" % key
+        print "\t\t %s_err not found" % key
         error = 0.0
     graph.SetPointError(i, 0.0, error)
-    print "\t %s %i: %s +/- %s" % (
+    print "\t\t %s %i: %s +/- %s" % (
         key,
         i,
         value, 
         error
     )
 
-def get_graph(key, color=TColor.kBlue):
-    graph = TGraphErrors()
+def get_graph(key, color=ROOT.kBlue):
+    graph = ROOT.TGraphErrors()
     graph.SetTitle(key)
     graph.GetHistogram().SetYTitle(key)
     graph.SetMarkerColor(color)
@@ -73,19 +65,19 @@ def main(filenames):
 
     # set up some graphs to fill:
     graphs = []
-    graphs.append(get_graph("centroid", TColor.kBlue))
-    graphs.append(get_graph("sigma", TColor.kBlue))
-    graphs.append(get_graph("sigma_over_E", TColor.kBlue))
-    graphs.append(get_graph("red_chi2", TColor.kBlue))
-    graphs.append(get_graph("ndf", TColor.kBlue))
-    graphs.append(get_graph("peak_counts", TColor.kBlue))
-    graphs.append(get_graph("fit_start_energy", TColor.kBlue))
-    graphs.append(get_graph("fit_stop_energy", TColor.kBlue))
-    graphs.append(get_graph("fit_status", TColor.kBlue))
-    graphs.append(get_graph("integral_counts", TColor.kBlue))
-    graphs.append(get_graph("do_use_exp", TColor.kBlue))
-    graphs.append(get_graph("do_use_step", TColor.kBlue))
-    graphs.append(get_graph("ratio", TColor.kBlue))
+    graphs.append(get_graph("centroid", ROOT.kBlue))
+    graphs.append(get_graph("sigma", ROOT.kBlue))
+    graphs.append(get_graph("sigma_over_E", ROOT.kBlue))
+    graphs.append(get_graph("red_chi2", ROOT.kBlue))
+    graphs.append(get_graph("ndf", ROOT.kBlue))
+    graphs.append(get_graph("peak_counts", ROOT.kBlue))
+    graphs.append(get_graph("fit_start_energy", ROOT.kBlue))
+    graphs.append(get_graph("fit_stop_energy", ROOT.kBlue))
+    graphs.append(get_graph("fit_status", ROOT.kBlue))
+    graphs.append(get_graph("integral_counts", ROOT.kBlue))
+    graphs.append(get_graph("do_use_exp", ROOT.kBlue))
+    graphs.append(get_graph("do_use_step", ROOT.kBlue))
+    graphs.append(get_graph("ratio", ROOT.kBlue))
 
     # remove bad files from list
     print "%i files" % len(filenames)
@@ -95,7 +87,7 @@ def main(filenames):
         json_file = file(filename,'r')
         results = json.load(json_file)["all"] 
 
-        print "--> processing", i, filename
+        print "--> checking for bad file", i, filename
         # check line_energy
         line_energy = float(results["line_energy"])
         if i == 0:
@@ -172,7 +164,7 @@ def main(filenames):
         print "label:", label
 
     # draw the hists:
-    canvas = TCanvas("canvas","")
+    canvas = ROOT.TCanvas("canvas","")
     canvas.SetBottomMargin(0.3)
     canvas.SetLeftMargin(0.15)
     canvas.SetGrid(1,1)
@@ -190,7 +182,7 @@ def main(filenames):
         canvas.Update()
         canvas.Print("comparison_%i_%s.pdf" % (line_energy, key) )
 
-        if not gROOT.IsBatch():
+        if not ROOT.gROOT.IsBatch():
             val = raw_input("any key to continue (q to quit) ")
             if val == 'q':
                 return
@@ -200,7 +192,7 @@ if __name__ == "__main__":
 
     
     if len(sys.argv) < 2:
-        print "argument: [sis tier 3 root file]"
+        print "argument: [json files of fit results]"
         sys.exit(1)
 
     filenames = sys.argv[1:]
