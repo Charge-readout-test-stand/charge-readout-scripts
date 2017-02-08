@@ -74,7 +74,7 @@ def process_directory(
             test_result = is_root_file_ok(item)
 
             if not test_result:
-                cmd = 'mv %s %s/' % (item, bad_file_dir)
+                cmd = 'mv -f %s %s/' % (item, bad_file_dir)
                 print cmd
                 (status, output) = commands.getstatusoutput(cmd)
                 if status != 0:
@@ -91,7 +91,7 @@ directories = sys.argv[1:]
 
 # make a directory to hold bad files
 bad_file_dir = 'bad_files'
-cmd = "mkdir %s" % bad_file_dir
+cmd = "mkdir -p %s" % bad_file_dir
 print cmd
 (status, output) = commands.getstatusoutput(cmd)
 if status != 0:
