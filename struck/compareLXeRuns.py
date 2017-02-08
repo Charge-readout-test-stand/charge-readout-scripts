@@ -1,7 +1,7 @@
 """
+** Using co../mc/mpareMCtoData_noise_branch.py more and more instead of this script. 
 
 copied from compareMCtoData_noise_branch.py
-
 """
 
 import os
@@ -15,8 +15,8 @@ from struck import struck_analysis_parameters
 # options
 #draw_cmd = "energy1_pz" # individual channel spectra
 #draw_cmd = "Sum$(energy_pz*signal_map)" # testing
-#draw_cmd = "SignalEnergy" # the usual
-draw_cmd = "is_bad"
+draw_cmd = "SignalEnergy" # the usual
+#draw_cmd = "is_bad"
 
 drift_time_high = struck_analysis_parameters.max_drift_time
 drift_time_low = struck_analysis_parameters.drift_time_threshold
@@ -24,19 +24,26 @@ drift_time_low = struck_analysis_parameters.drift_time_threshold
 #drift_time_low = 8.0
 #drift_time_low = 3.0
 #drift_time_high = 8.5
-drift_time_high = 9.0
+#drift_time_high = 9.0
 #drift_time_high = 0.0
 #drift_time_low = 0.0
 nsignals = 0
 # the usual:
-selection = "nsignals>%i && rise_time_stop95_sum-trigger_time>%s && rise_time_stop95_sum-trigger_time<%s" % ( nsignals, drift_time_low, drift_time_high)
-selection = ""
+selection = []
+selection.append("!is_bad")
+selection.append("!is_pulser")
+if nsignals == 0:
+    selection.append("nsignals>%i" % nsignals)
+else:
+    selection.append("nsignals==%i" % nsignals)
+selection.append(struck_analysis_cuts.get_drift_time_selection(drift_time_high=drift_time_high))
 #selection = "nsignals==1 && rise_time_stop95_sum-8>8.5&&rise_time_stop95_sum-8<8.9&&rise_time_stop50_sum-8>7" # like Conti
 #selection += "&& rise_time_stop50_sum>8.0"
 #selection += " && signal_map[16]==0 && signal_map[7]==0 && signal_map[21]==0"
 #selection += " && signal_map[16]==0"
-#selection = "nsignals>=0"
 
+selection = " && ".join(selection)
+print "selection:", selection
 
 # hist options
 min_bin = 300.0
