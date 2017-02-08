@@ -1,5 +1,7 @@
 """
 19 slices takes 20 minutes
+
+if do_fit is true, this script fits the 570-keV peak in each slice. Otherwise it just draws the slices. 
 """
 
 from ROOT import gROOT
@@ -22,8 +24,8 @@ def process_file(filename):
 
     # options 
     do_fit = False # whether to do fits of z slices
-    max_drift_length = 18.0 # for Liang
-    max_drift_length = struck_analysis_parameters.drift_length+2
+    max_drift_length = struck_analysis_parameters.drift_length+1
+    #max_drift_length = 18.0 # for Liang
     drift_velocity = struck_analysis_parameters.drift_velocity
     n_slices = 9 # for Liang
     #all_energy_var = "chargeEnergy*%s" % struck_analysis_parameters.struck_energy_multiplier # for Liang
@@ -35,7 +37,9 @@ def process_file(filename):
     #n_slices = 3 # 3 detector regions
     #n_slices = 4 # 3 detector regions
     #single_strip_cut = struck_analysis_cuts.get_single_strip_cut(energy_threshold=10.0)
-    single_strip_cut = "!is_bad && !is_pulser"
+    #single_strip_cut = "!is_bad && !is_pulser"
+    single_strip_cut = struck_analysis_cuts.get_single_strip_cut()
+    single_strip_cut += " && !is_bad && !is_pulser"
     n_bins = 160
     min_bin = 0
     max_bin = 1600
@@ -46,7 +50,9 @@ def process_file(filename):
     print "max_drift_time:", max_drift_length/drift_velocity
 
     selections = []
-    #selections.append(single_strip_cut) # ignore for Liang's plot
+    selections.append("!is_bad")
+    selections.append("!is_pulser")
+    #selections.append(struck_analysis_cuts.get_single_strip_cut()) 
     #selections.append("channel<8") # ignore for Liang's plot
 
     print "---> processing", filename
@@ -74,10 +80,11 @@ def process_file(filename):
     tree.SetBranchStatus("*",0)
     tree.SetBranchStatus(all_energy_var,1)
     tree.SetBranchStatus("rise_time_stop95_sum",1)
-    tree.SetBranchStatus("rise_time_stop99_sum",1)
+    #tree.SetBranchStatus("rise_time_stop99_sum",1)
     tree.SetBranchStatus("trigger_time",1)
     tree.SetBranchStatus("is_bad",1)
     tree.SetBranchStatus("is_pulser",1)
+    tree.SetBranchStatus("nsignals",1)
 
     legend = TLegend(0.1, 0.9, 0.9, 0.99)
     legend.SetNColumns(5)
@@ -86,19 +93,21 @@ def process_file(filename):
     #out_file = TFile("%s_%i.root" % (basename, n_slices), "recreate")
 
     hist = TH1D("hist_all", "",n_bins,min_bin,max_bin)
-    tree.Draw("%s >> %s" % (all_energy_var, hist.GetName()),"","goff")
+    #tree.Draw("%s >> %s" % (all_energy_var, hist.GetName()),"!is_bad && !is_pulser","goff")
+    tree.Draw("%s >> %s" % (all_energy_var, hist.GetName()),single_strip_cut,"goff")
     print "%i entries in hist %s" % (hist.GetEntries(), hist.GetName())
-    hists.append(hist)
-    legend.AddEntry(hist,"all","l")
+    #hists.append(hist)
+    #legend.AddEntry(hist,"all","l")
 
     hist = TH1D("hist_ss", "",n_bins,min_bin,max_bin)
     tree.Draw("%s >> %s" % (all_energy_var, hist.GetName()),single_strip_cut,"goff")
     print "%i entries in hist %s" % (hist.GetEntries(), hist.GetName())
-    hists.append(hist)
-    legend.AddEntry(hist,"single-strip","l")
+    #hists.append(hist)
+    #legend.AddEntry(hist,"single-strip","l")
 
     t = 0.0
     i = 0
+    y_max = 0
     if n_slices == 4:
         legend.SetNColumns(3)
     while t < max_drift_length/drift_velocity: # microseconds
@@ -188,10 +197,15 @@ def process_file(filename):
         hist = TH1D("hist_%i_to_%i" % (t*1e3, (t+dt)*1e3), "",n_bins,min_bin,max_bin)
         hists.append(hist)
         tree.Draw("%s >> %s" % (all_energy_var, hist.GetName()),selection,"goff")
-        print "%i entries in hist %s" % (hist.GetEntries(), hist.GetName())
-        print selection
-        print all_energy_var
-        legend.AddEntry(hist,"%.1f to %.1f #mus" % (t, t+dt),"l")
+        print "\t %i entries in hist %s" % (hist.GetEntries(), hist.GetName())
+        print "\t", selection
+        #print all_energy_var
+        legend.AddEntry(hist,"%.1f to %.1f #mus" % (t, t+dt),"p")
+        #val = hist.GetBinContent(hist.FindBin(50))
+        #val = hist.GetBinContent(hist.FindBin(580)) # 11th LXe
+        val = hist.GetBinContent(hist.FindBin(570)) # 10th LXe
+        if val > y_max: y_max = val
+        print "\t hist max:", val
 
         t += dt
         i += 1
@@ -203,20 +217,29 @@ def process_file(filename):
     c1 = TCanvas("c1","")
     c1.SetGrid(1,1)
     c1.SetLogy(1)
-    bin_max = hists[0].GetBinContent(hists[0].FindBin(50))
-    hists[0].SetMaximum(bin_max*1.5)
-    hists[0].SetMinimum(0.5)
+    first_hist = hists[0]
+    #first_hist = hists[2] # skip hist_all and hist_ss
+    print "y_max:", y_max
+    first_hist.SetMaximum(y_max*1.05)
     for i,hist in enumerate(hists):
         hist.SetLineWidth(2)
+        hist.SetMaximum(first_hist.GetMaximum())
+        hist.SetMinimum(0.5)
+        hist.SetMarkerStyle(21)
+        hist.SetMarkerSize(1.0)
         if i == 0:
             hist.Draw()
+            hist.SetMaximum(first_hist.GetMaximum())
             hist.SetXTitle("Energy [keV]")
+            hist.GetYaxis().SetTitleOffset(1.35)
             hist.SetYTitle("Counts / %.1f keV" % hist.GetBinWidth(1))
             hist.SetLineColor(1)
+            hist.SetMarkerColor(1)
         else:
             colors = struck_analysis_parameters.get_colors()
             i_color = colors[(i-1) % len(colors)]
             hist.SetLineColor(i_color)
+            hist.SetMarkerColor(i_color)
             i_style = (i-1) / len(colors) + 1
             print "i_style", i_style
             hist.SetLineStyle(i_style)
@@ -224,7 +247,6 @@ def process_file(filename):
 
     legend.Draw()
     c1.Update()
-    n_slices = len(hists)-2
     c1.Print("%i_%s.pdf" % (n_slices, basename))
     c1.SetLogy(0)
     c1.Update()
