@@ -390,39 +390,42 @@ def get_wfmparams(
     baseline_remover.SetStartSample(0)
     baseline_remover.Transform(exo_wfm)
 
-    last_time = n_baseline_samples*2.0/sampling_freq_Hz*1e6
-    fcn = TF1("fcn","pol1(0)",0.0, wfm_length/sampling_freq_Hz*1e6)
-    fcn.SetParameter(0,0.0) # offset
-    fcn.SetParameter(1,0.0) # slope
-    hist = exo_wfm.GimmeHist()
-    #print "last time:", last_time
-    fit_options = "WWBQCN"
-    if not gROOT.IsBatch(): 
-        fit_options = "WWBVC"
-        fcn.SetLineColor(kRed)
-    # Fit options:
-    # "WW" Set all weights to 1 including empty bins; ignore error bars
-    # "N"  Do not store the graphics function, do not draw
-    # "B"  User defined parameter settings are used for predefined functions like "gaus", "expo", "poln", "landau".
-    # "C"  In case of linear fitting, don't calculate the chisquare (saves time)
-    #"Q"  Quiet mode (minimum printing)
-    # "V"  Verbose mode (default is between Q and V)
-    hist.Fit(fcn, fit_options, "", 0.0, last_time) 
-    baseline_slope = fcn.GetParameter(1)
+    baseline_slope = 0.0
+    if False: # skip baseline_slope for now
+        last_time = n_baseline_samples*2.0/sampling_freq_Hz*1e6
+        fcn = TF1("fcn","pol1(0)",0.0, wfm_length/sampling_freq_Hz*1e6)
+        fcn.SetParameter(0,0.0) # offset
+        fcn.SetParameter(1,0.0) # slope
+        hist = exo_wfm.GimmeHist()
+        #print "last time:", last_time
+        fit_options = "WWBQCN"
+        if not gROOT.IsBatch(): 
+            fit_options = "WWBVC"
+            fcn.SetLineColor(kRed)
+        # Fit options:
+        # "WW" Set all weights to 1 including empty bins; ignore error bars
+        # "N"  Do not store the graphics function, do not draw
+        # "B"  User defined parameter settings are used for predefined functions like "gaus", "expo", "poln", "landau".
+        # "C"  In case of linear fitting, don't calculate the chisquare (saves time)
+        #"Q"  Quiet mode (minimum printing)
+        # "V"  Verbose mode (default is between Q and V)
+        hist.Fit(fcn, fit_options, "", 0.0, last_time) 
+        baseline_slope = fcn.GetParameter(1)
 
-    # draw baseline fit result:
-    if not gROOT.IsBatch() and energy1 > 200:
-        print "last time:", last_time
-        print "%i baseline samples" %  n_baseline_samples
-        print "%.1f energy_start_sample" %  energy_start_sample
-        print "baseline_slope slope: keV/microseconds", baseline_slope*calibration
-        print "p0 keV", (fcn.GetParameter(0) + baseline_slope*last_time/2.0)*calibration
-        can = TCanvas("testcanvas","test canvas")
-        can.SetGrid()
-        hist.Draw()
-        can.Update()
-        raw_input("press enter ")
-    hist.IsA().Destructor(hist)
+        # draw baseline fit result:
+        if not gROOT.IsBatch() and energy1 > 200:
+            print "last time:", last_time
+            print "%i baseline samples" %  n_baseline_samples
+            print "%.1f energy_start_sample" %  energy_start_sample
+            print "baseline_slope slope: keV/microseconds", baseline_slope*calibration
+            print "p0 keV", (fcn.GetParameter(0) + baseline_slope*last_time/2.0)*calibration
+            can = TCanvas("testcanvas","test canvas")
+            can.SetGrid()
+            hist.Draw()
+            can.Update()
+            raw_input("press enter ")
+        hist.IsA().Destructor(hist)
+        # end of baseline_slope calc
 
     # correct for exponential decay
     if not is_pmtchannel:
@@ -444,30 +447,34 @@ def get_wfmparams(
         if not isMC: print "WARNING: setting RMS from nan to 0"
         energy_rms1_pz = 0.0
 
-    # fit to PZ-corrected slope:
-    last_time = energy_start_time_microseconds + n_baseline_samples*2.0/sampling_freq_Hz*1e6
-    fcn.SetParameter(0,0.0) # offset
-    fcn.SetParameter(1,0.0) # slope
-    hist = energy_wfm.GimmeHist()
-    hist.Fit(fcn, fit_options, "", energy_start_time_microseconds, last_time)
-    energy1_pz_slope = fcn.GetParameter(1)*calibration
+    energy1_pz_slope = 0.0
+    if False: # skip energy1_pz_slope for now
+        # fit to PZ-corrected slope:
+        last_time = energy_start_time_microseconds + n_baseline_samples*2.0/sampling_freq_Hz*1e6
+        fcn.SetParameter(0,0.0) # offset
+        fcn.SetParameter(1,0.0) # slope
+        hist = energy_wfm.GimmeHist()
+        hist.Fit(fcn, fit_options, "", energy_start_time_microseconds, last_time)
+        energy1_pz_slope = fcn.GetParameter(1)*calibration
 
-    if energy1 > 200 and not gROOT.IsBatch():
-        print "last time:", last_time
-        print "energy_start_time_microseconds:", energy_start_time_microseconds
-        print "energy_start_sample:", energy_start_sample
-        print "%i baseline samples" %  n_baseline_samples
-        print "%.1f energy_start_sample" %  energy_start_sample
-        print "energy1_pz_slope slope: keV/microseconds", energy1_pz_slope*calibration
-        #print "p0", fcn.GetParameter(0) + energy1_pz_slope*(energy_start_time_microseconds+n_baseline_samples*2.0/sampling_freq_Hz*1e6/2.0)
-        print "p0 keV", fcn.GetParameter(0)*calibration + energy1_pz_slope*last_time/2.0
-        can = TCanvas("testcanvas","test canvas")
-        can.SetGrid()
-        hist.Draw()
-        can.Update()
-        #raw_input("press enter ")
-        do_draw(energy_wfm, "%s after energy meas: energy1=%i keV, energy1_pz=%i keV" % (label, energy1, energy1_pz))
-    hist.IsA().Destructor(hist)
+        if gROOT.IsBatch() and energy1 > 200:
+            print "last time:", last_time
+            print "energy_start_time_microseconds:", energy_start_time_microseconds
+            print "energy_start_sample:", energy_start_sample
+            print "%i baseline samples" %  n_baseline_samples
+            print "%.1f energy_start_sample" %  energy_start_sample
+            print "energy1_pz_slope slope: keV/microseconds", energy1_pz_slope*calibration
+            #print "p0", fcn.GetParameter(0) + energy1_pz_slope*(energy_start_time_microseconds+n_baseline_samples*2.0/sampling_freq_Hz*1e6/2.0)
+            print "p0 keV", fcn.GetParameter(0)*calibration + energy1_pz_slope*last_time/2.0
+            can = TCanvas("testcanvas","test canvas")
+            can.SetGrid()
+            hist.Draw()
+            can.Update()
+            #raw_input("press enter ")
+            do_draw(energy_wfm, "%s after energy meas: energy1=%i keV, energy1_pz=%i keV" % (label, energy1, energy1_pz))
+        hist.IsA().Destructor(hist)
+        fcn.IsA().Destructor(fcn)
+        # end of energy1_pz_slope calc
     
     #Apply threshold -- we really use 2*n_baseline_samples, so 2.0/2.0 cancels
     if energy1_pz > struck_analysis_parameters.rms_threshold*energy_rms1_pz*math.sqrt(1.0/n_baseline_samples):
@@ -554,7 +561,6 @@ def get_wfmparams(
 
         # end is_pmtchannel check
 
-    fcn.IsA().Destructor(fcn)
     energy_wfm.IsA().Destructor(energy_wfm)
     
     return (
