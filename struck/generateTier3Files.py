@@ -858,6 +858,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         MCEventNumber = array('i', [0]) # signed int
         out_tree.Branch('MCEventNumber', MCEventNumber, 'MCEventNumber/I')
 
+        MCtrueEnergy = array('d', [0]*n_channels_in_event) # double
+        out_tree.Branch('MCtrueEnergy', MCtrueEnergy, 'MCtrueEnergy[%i]/D' % n_channels_in_event)
+
         NumPCDs = array('i', [0]) # signed int
         out_tree.Branch('NumPCDs', NumPCDs, 'NumPCDs/I')
         max_n_PCDs = 300
@@ -1070,6 +1073,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 wfm = tree.wfm
                 channel[i] = tree.channel
             elif isMC:
+
                 #Some channels are grouped together so for those sum each channel in the gropu
                 #First always get the one channel that has to exist
                 if i == pmt_channel or i == pulser_channel: 
@@ -1096,7 +1100,10 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                         )
                         for index, wfmi in enumerate(tree.ChannelWaveform[mcch]):
                             wfm[index] += wfmi
+
+                MCtrueEnergy[i] = wfm[-1]*calibration[i] # set true energy to last value of wfm
                 channel[i] = i
+
             elif isNGM:
                 if n_channels_in_this_event > 0: # For NGM, each wfm is its own tree entry
                     i_entry += 1
@@ -1607,10 +1614,13 @@ if __name__ == "__main__":
     print "Make Noise is set to", options.isMakeNoise
 
     noise_file = None
+    test_noise = ""
+    test_noise_slac = ""
     #test_noise = "/home/teststand/testing/test_noiselib/tier3_SIS3316Raw_20160922143510_9thLXe_126mvDT_cath_1700V_100cg_overnight__1-ngm.root"
     #test_noise = "/p/lscratchd/jewell6/MCData_9thLXe/tier3_SIS3316Raw_20160921080244_9thLXe_126mvDT_cath_1700V_100cg_overnight__1-ngm.root"
-    test_noise = "/p/lscratchd/jewell6/MCData_9thLXe/NoiseFiles/noiselib/NoiseLib_9thLXe.root"
-    test_noise_slac = "/nfs/slac/g/exo_data4/users/alexis4/test-stand/NoiseLib_9thLXe.root"
+    if struck_analysis_parameters.is_9th_LXe:
+        test_noise = "/p/lscratchd/jewell6/MCData_9thLXe/NoiseFiles/noiselib/NoiseLib_9thLXe.root"
+        test_noise_slac = "/nfs/slac/g/exo_data4/users/alexis4/test-stand/NoiseLib_9thLXe.root"
     if struck_analysis_parameters.is_10th_LXe:
         test_noise = "/p/lscratchd/jewell6/MCData_9thLXe/NoiseFiles/noiselib/NoiseLib_10thLXe.root"
         test_noise_slac = "/nfs/slac/g/exo_data4/users/alexis4/test-stand/NoiseLib_10thLXe.root"
@@ -1620,7 +1630,6 @@ if __name__ == "__main__":
                 noise_file = options.noise_file
         elif os.path.isfile(test_noise):
             print "Using LLNL test Noise"
-            #raw_input()
             noise_file = test_noise
         elif os.path.isfile(test_noise_slac):
             print "Using SLAC test Noise"
@@ -1628,6 +1637,7 @@ if __name__ == "__main__":
         else:
             print "Noise file is set to none"
             noise_file = None
+        print "noise_file", noise_file
     
 
     for filename in filenames:
