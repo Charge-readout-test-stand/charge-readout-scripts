@@ -53,8 +53,14 @@ import commands
 
 
 # 10th LXe
-filenames = glob.glob("/p/lscratchd/alexiss/2017_01_10_10th_LXe/tier0/SIS3316Raw_*") # 16 Jan 2016 -- all 10th LXe tier0 files
+#filenames = glob.glob("/p/lscratchd/alexiss/2017_01_10_10th_LXe/tier0/SIS3316Raw_*") # 16 Jan 2017 -- all 10th LXe tier0 files
 
+# 11th LXe 
+#filenames = glob.glob("/p/lscratchd/alexiss/11th_LXe/2017_02_01_overnight_vme/tier0/SIS3316Raw_*") # 09 Feb 2017, took 125 minutes 
+#filenames = glob.glob("/p/lscratchd/alexiss/11th_LXe/2017_01_31_overnight/tier0/SIS3316Raw_*") # 10 Feb 2017, 47m8.017s
+#filenames = glob.glob("/p/lscratchd/alexiss/11th_LXe/2017_02_01_vme_digi/tier0/SIS3316Raw_*") # 10 Feb 2017 6m56.259s
+#filenames = glob.glob("/p/lscratchd/alexiss/11th_LXe/2017_01_31_cell_full/tier0/SIS3316Raw_*") # 10 Feb 2017 2m4.306s
+filenames = glob.glob("/p/lscratchd/alexiss/11th_LXe/2017_01_31_pulser_tests/tier0/SIS3316Raw_*") # 10 Feb 2017 0m23.151s
 
 
 filenames.sort() # sort names
