@@ -320,22 +320,29 @@ for struck_channel, label in channel_map.items():
     mc_channel_map[mc_channel] = label
     MCcharge_channels_to_use[mc_channel] = 1
 
-if is_8th_LXe or is_9th_LXe:
+if is_8th_LXe or is_9th_LXe or is_11th_LXeB:
     MCcharge_channels_to_use = [1]*MCn_channels
-    # X23/24 is dead
-    MCcharge_channels_to_use[22] = 0
-    MCcharge_channels_to_use[23] = 0
-    # Y1-10 is dead
-    MCcharge_channels_to_use[30] = 0
-    MCcharge_channels_to_use[31] = 0
-    MCcharge_channels_to_use[32] = 0
-    MCcharge_channels_to_use[33] = 0
-    MCcharge_channels_to_use[34] = 0
-    MCcharge_channels_to_use[35] = 0
-    MCcharge_channels_to_use[36] = 0
-    MCcharge_channels_to_use[37] = 0
-    MCcharge_channels_to_use[38] = 0
-    MCcharge_channels_to_use[39] = 0
+
+    if is_11th_LXeB:
+        # Y6, X24 are grounded
+        MCcharge_channels_to_use[23] = 0
+        MCcharge_channels_to_use[35] = 0
+
+    else:
+        # X23/24 is dead
+        MCcharge_channels_to_use[22] = 0
+        MCcharge_channels_to_use[23] = 0
+        # Y1-10 is dead
+        MCcharge_channels_to_use[30] = 0
+        MCcharge_channels_to_use[31] = 0
+        MCcharge_channels_to_use[32] = 0
+        MCcharge_channels_to_use[33] = 0
+        MCcharge_channels_to_use[34] = 0
+        MCcharge_channels_to_use[35] = 0
+        MCcharge_channels_to_use[36] = 0
+        MCcharge_channels_to_use[37] = 0
+        MCcharge_channels_to_use[38] = 0
+        MCcharge_channels_to_use[39] = 0
 
 if is_10th_LXe or is_11th_LXe:
     for struck_channel, mc_channel in struck_to_mc_channel_map.items():
@@ -1195,7 +1202,7 @@ if __name__ == "__main__":
     #for channel in channels:
     #    print "\t channel %i" % channel
 
-    print "\nchannel     | label  | use | n strips"
+    print "\nchannel     | label  | use | n strips | labels from struck_to_mc_channel_map"
     for (channel, name) in channel_map.items():
         labels = []
         try:
@@ -1223,7 +1230,7 @@ if __name__ == "__main__":
 
     # count functional strips:
     n_strips = 0
-    print "counting strips..."
+    print "counting strips in struck_to_mc_channel_map..."
     for channel, val in struck_to_mc_channel_map.items():
         if charge_channels_to_use[channel] == 0: continue
         n_strips += len(val)
@@ -1234,6 +1241,8 @@ if __name__ == "__main__":
         print "\nMC channel names:"
         for (channel, name) in mc_channel_map.items():
             print "\t channel %i: %s" % (channel, name)
+    else:
+        print "\nNo MC channel names!!"
 
     print "\nlinear calibration info:"
     for (channel, value) in calibration_values.items():
