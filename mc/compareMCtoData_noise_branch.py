@@ -18,21 +18,21 @@ from struck import struck_analysis_parameters
 # options
 #-------------------------------------------------------------------------------
 
-is_noise_study = True
+is_noise_study = False
 is_threshold_study = False
 
-#draw_cmd = "SignalEnergy" # the usual
+draw_cmd = "SignalEnergy" # the usual
 #draw_cmd = "energy1_pz" # individual channel spectra
 #draw_cmd = "energy_rms1_pz"
 #draw_cmd = "Sum$(energy_pz*signal_map)" # testing
 #draw_cmd = "energy1" 
 #draw_cmd = "energy_rms1" 
 #draw_cmd = "baseline_rms*calibration" 
-draw_cmd = "baseline_rms" 
+#draw_cmd = "baseline_rms" 
 
-drift_time_high = struck_analysis_parameters.max_drift_time
+drift_time_high = struck_analysis_parameters.max_drift_time+1.0
 drift_time_low = struck_analysis_parameters.drift_time_threshold
-drift_time_low = 6.43 # up to 9th LXe
+#drift_time_low = 6.43 # up to 9th LXe
 #drift_time_high = drift_time_high - 2.0
 
 # 8th and 9th:
@@ -46,15 +46,17 @@ drift_time_low = 6.43 # up to 9th LXe
 
 
 #nsignals = 2 # only consider events where one strip is hit
-#nstrips = 1 # only use single-strip channels
 nsignals = 0 # conside nsignals>0
+nsignals=1
 #nsignals = 2
+
+#nstrips = 1 # only use single-strip channels
 
 # hist options
 min_bin = 300.0
-min_bin = 200.0 # 8th LXe low fields
-max_bin = 1400.0
-bin_width = 5 # keV
+min_bin = 100.0 # 8th LXe low fields
+max_bin = 3000.0
+bin_width = 10.0 # keV
 
 
 
@@ -240,7 +242,8 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
         if isMC:
             #multiplier = 1.01 # 8th & 9th LXe
             #multiplier = 0.96 # 10th LXe 
-            multiplier = 0.94 # 10th LXe v3
+            #multiplier = 0.94 # 10th LXe v3
+            multiplier = 1.05 # 11th LXe MC
             if is_noise_study:
                 multiplier = 1.0
         else:
@@ -257,9 +260,10 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
                     this_selection = part
             # handle different drift lengths:
             if not is_threshold_study and not is_noise_study:
-                if "10th" in bname or "11th" in bname:
+                if "10th" in bname or "11th" in bname or isMC:
                     # longer minimum drift time
-                    this_selection += " && rise_time_stop95_sum-trigger_time>=%f" % struck_analysis_parameters.drift_time_threshold
+                    if drift_time_low < struck_analysis_parameters.drift_time_threshold:
+                        this_selection += " && rise_time_stop95_sum-trigger_time>=%f" % struck_analysis_parameters.drift_time_threshold
                 else:      
                     # shorter max drift
                     this_selection += " && rise_time_stop95_sum-trigger_time<=%f" % (18.16/2.0)
