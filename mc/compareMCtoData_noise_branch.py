@@ -18,18 +18,22 @@ from struck import struck_analysis_parameters
 # options
 #-------------------------------------------------------------------------------
 
-is_noise_study = False
+is_noise_study = True
+is_threshold_study = False
 
-draw_cmd = "SignalEnergy" # the usual
+#draw_cmd = "SignalEnergy" # the usual
 #draw_cmd = "energy1_pz" # individual channel spectra
+#draw_cmd = "energy_rms1_pz"
 #draw_cmd = "Sum$(energy_pz*signal_map)" # testing
 #draw_cmd = "energy1" 
 #draw_cmd = "energy_rms1" 
 #draw_cmd = "baseline_rms*calibration" 
+draw_cmd = "baseline_rms" 
 
 drift_time_high = struck_analysis_parameters.max_drift_time
 drift_time_low = struck_analysis_parameters.drift_time_threshold
-drift_time_high = drift_time_high - 2.0
+drift_time_low = 6.43 # up to 9th LXe
+#drift_time_high = drift_time_high - 2.0
 
 # 8th and 9th:
 #drift_time_low = 6.43
@@ -41,57 +45,79 @@ drift_time_high = drift_time_high - 2.0
 #drift_time_high = 8.4 # Gaosong's cut, down from 9.08
 
 
-#nsignals = 1 # only consider events where one strip is hit
+#nsignals = 2 # only consider events where one strip is hit
 #nstrips = 1 # only use single-strip channels
-nsignals = 0
-nsignals = 2
+nsignals = 0 # conside nsignals>0
+#nsignals = 2
+
+# hist options
+min_bin = 300.0
+min_bin = 200.0 # 8th LXe low fields
+max_bin = 1400.0
+bin_width = 5 # keV
+
 
 
 #-------------------------------------------------------------------------------
+
+if is_threshold_study:
+    min_bin = 0.0
+    max_bin = 100.0
+    bin_width = 0.5
 
 if is_noise_study:
     drift_time_low = -8.0
     drift_time_high = 42.0 - 8.0
 
-# the usual:
+# selections:
 struck_selection = []
-if is_noise_study:
-    struck_selection.append("nsignals==%i" % nsignals)
+
+# these 2 get handled below for specific runs:
+#struck_selection.append("!is_bad")
+#struck_selection.append("!is_pulser")
+
+if is_threshold_study:
+    pass
+elif is_noise_study:
+    #struck_selection.append("nsignals==%i" % nsignals)
+    print "no nsignals for now"
 elif nsignals == 0:
     struck_selection.append("nsignals>%i" % nsignals)
 else:
     struck_selection.append("nsignals==%i" % nsignals)
 
-if not is_noise_study:
+if not is_noise_study and not is_threshold_study:
     struck_selection.append( struck_analysis_cuts.get_drift_time_selection(
         drift_time_low=drift_time_low,
         drift_time_high=drift_time_high))
     try:
         struck_selection.append(struck_analysis_cuts.get_nstrips_events(nstrips=nstrips))
     except:
+        print "not considering a specific number of strips."
         pass
+else:
+    print "no drift time cut for now..."
 
 #struck_selection.append("(signal_map[6]+signal_map[7]+signal_map[8]+signal_map[20]+signal_map[21]+signal_map[22]==nsignals)")
 #struck_selection.append("signal_map[16]==0") # noisy channel
+if is_threshold_study:
+    struck_selection.append("signal_map") # for threshold study
 struck_selection = " && ".join(struck_selection)
 print "\nselection:"
 print struck_selection, "\n"
 
 
-# hist options
-min_bin = 300.0
-min_bin = 200.0 # 8th LXe low fields
-max_bin = 1400.0
-bin_width = 10 # keV
-
 if is_noise_study: # for noise studies
     min_bin = -20.0
     max_bin = 20.0
     bin_width = 0.2
-    if "baseline_rms" in draw_cmd or "energy_rms1" in draw_cmd:
+    if "baseline_rms" in draw_cmd or "energy_rms1" in draw_cmd or "energy_rms1_pz" in draw_cmd:
         min_bin = 5.0
-        max_bin = 35.0
+        #max_bin = 35.0
         bin_width = 0.2
+        max_bin = 100.0
+    if "baseline_rms" in draw_cmd:
+        max_bin = 60.0 # 09 Feb, for baseline_rms*calibration
 
 n_bins = int((max_bin - min_bin)/bin_width)
 
@@ -123,9 +149,16 @@ for i, filename in enumerate(filenames):
     basenames.append(basename)
     # grab tree
     print "--> file:", filename
-    tfile = ROOT.TFile(filename)
-    tfiles.append(tfile)
-    tree = tfile.Get("tree")
+    # is TChain this faster?
+    if False:
+        # 223m37.657s for 8th, 9th, 11th LXe baseline_rms noise study
+        tree = ROOT.TChain("tree")
+        tree.Add(filename)
+    else:
+        # 176m44.941s minutes for 8th, 9th, 11th LXe energy_rms1_pz threshold study
+        tfile = ROOT.TFile(filename)
+        tree = tfile.Get("tree")
+        tfiles.append(tfile)
     trees.append(tree)
     print "\t %i tree entries" % tree.GetEntries()
     #tree.GetTitle()
@@ -140,19 +173,25 @@ for i, filename in enumerate(filenames):
     hist.SetMarkerSize(1.5)
     hist.SetLineWidth(2)
     hists.append(hist)
+    hist.SetXTitle("Energy [keV]")
+    hist.GetYaxis().SetTitleOffset(1.4)
+    hist.SetYTitle("Counts / %.1f keV" % hist.GetBinWidth(1))
 
     # speed things up by turning off most branches:
     tree.SetBranchStatus("*",0) # first turn off all branches
     tree.SetBranchStatus(draw_cmd,1) 
-    tree.SetBranchStatus("nsignals",1) 
+    if not is_threshold_study:
+        tree.SetBranchStatus("nsignals",1) 
     if "signal_map" in struck_selection:
         tree.SetBranchStatus("signal_map",1) 
-    tree.SetBranchStatus("rise_time_stop95_sum",1) 
-    tree.SetBranchStatus("trigger_time",1) 
+    if not is_noise_study or not is_threshold_study:
+        tree.SetBranchStatus("rise_time_stop95_sum",1) 
+        tree.SetBranchStatus("trigger_time",1) 
     if not struck_analysis_parameters.is_tree_MC(tree):
         print "\t tree is NOT MC"
-        tree.SetBranchStatus("is_pulser",1) 
-        tree.SetBranchStatus("is_bad",1) 
+        if not "8th" in basename:
+            tree.SetBranchStatus("is_pulser",1) 
+            tree.SetBranchStatus("is_bad",1) 
     else:
         print "\t tree is MC"
     if not "SignalEnergy" in draw_cmd:
@@ -163,7 +202,6 @@ for i, filename in enumerate(filenames):
         tree.SetBranchStatus("baseline_rms",1) 
     if is_noise_study:
         tree.SetBranchStatus("lightEnergy",1) 
-        
 
     print "\n"
 
@@ -175,6 +213,8 @@ print "basename:", basename, "\n"
 for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use):
     if val == 0: continue
 
+    print "---> channel %i: %s" % (channel, struck_analysis_parameters.channel_map[channel])
+
     # set up the legend
     legend = ROOT.TLegend(canvas.GetLeftMargin(), 0.91, 0.9, 0.99)
     legend.SetNColumns(2)
@@ -184,16 +224,16 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
     for i, hist in enumerate(hists):
 
         this_selection = struck_selection
-        print "struck_selection:", struck_selection
+        #print "struck_selection:", struck_selection
         print "this_selection:", this_selection
 
         tree = trees[i]
         bname = os.path.splitext(os.path.basename(filenames[i]))[0]
-        print "file", i, ":", bname
-        print "tree", i, ":", tree.GetTitle()
+        print "\t --> file", i, ":", bname
+        print "\t\t tree:", tree.GetTitle()
 
         isMC = struck_analysis_parameters.is_tree_MC(tree)
-        print "isMC:", isMC
+        print "\t\t isMC:", isMC
 
         # construct draw command
         multiplier = 1.0 
@@ -204,16 +244,36 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
             if is_noise_study:
                 multiplier = 1.0
         else:
-            if "9th" in bname or "10th" in bname: 
+            if not "8th" in bname: 
                 if is_noise_study:
-                    part = "!is_bad && is_pulser && lightEnergy<20" # noise studies
+                    #part = "!is_bad && is_pulser && lightEnergy<20" # noise studies
+                    part = "!is_bad && !is_pulser" # noise studies
                 else:
                     part = "!is_bad && !is_pulser"
-                if this_selection != "":
+                if this_selection != "" and len(this_selection) > 0:
                     this_selection += " && " + part
+                    print "added this_selection to part"
                 else:
                     this_selection = part
-                print "this_selection:", this_selection
+            # handle different drift lengths:
+            if not is_threshold_study and not is_noise_study:
+                if "10th" in bname or "11th" in bname:
+                    # longer minimum drift time
+                    this_selection += " && rise_time_stop95_sum-trigger_time>=%f" % struck_analysis_parameters.drift_time_threshold
+                else:      
+                    # shorter max drift
+                    this_selection += " && rise_time_stop95_sum-trigger_time<=%f" % (18.16/2.0)
+
+            # minor mods to energy calibration
+            if "10th" in bname:
+                multiplier = 1.1
+            if "11th" in bname:
+                #multiplier = 0.97
+                pass
+                #this_selection += " && signal_map[0]==0" # Y1-10
+                #this_selection += " && signal_map[16]==0" # X1-12
+
+                #print "this_selection:", this_selection
         this_draw_cmd = "%s*%s" % (draw_cmd, multiplier)
 
         mc_noise = 0.0 # keV
@@ -226,20 +286,20 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
         # channel, so construct selection for that:
         #if "energy1" in draw_cmd:
         if not "SignalEnergy" in draw_cmd:
-            print "--> channel", channel, struck_analysis_parameters.channel_map[channel]
             part = "channel==%i" % channel
-            if this_selection != "":
-                this_selection += " && " + part
+            if this_selection != "" and len(this_selection)>0:
+                this_selection = part + " && " + this_selection
             else:
                 this_selection = part
-            print "\t this_selection:", this_selection
+            #print "\t\t this_selection:", this_selection
 
         # draw hist
         hist.GetDirectory().cd()
-        print "\tdraw_cmd:", this_draw_cmd
-        print "\tselection:", this_selection
-        tree.Draw("%s >> %s" % (this_draw_cmd, hist.GetName()), this_selection, "goff")
-        print "\t%i entries in hist" % hist.GetEntries()
+        print "\t\t draw_cmd:", this_draw_cmd
+        print "\t\t this_selection:", this_selection
+        #sys.exit() # debugging
+        tree.Draw("%s >> %s" % (this_draw_cmd, hist.GetName()), this_selection, "norm goff")
+        print "\t\t %i entries in hist" % hist.GetEntries()
 
         #label = "Data"
         #if isMC: label = "MC"
@@ -247,8 +307,8 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
         if is_noise_study:
             label += " #sigma=%.1f" % hist.GetRMS()
             label += ", x=%.1f" % hist.GetMean()
-            print "\t hist mean:", hist.GetMean()
-            print "\t hist rms:", hist.GetRMS()
+            print "\t\t hist mean:", hist.GetMean()
+            print "\t\t hist rms:", hist.GetRMS()
 
         if draw_cmd != "SignalEnergy":
             label += " ch %s" % struck_analysis_parameters.channel_map[channel]
@@ -259,22 +319,25 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
 
 
     # integrate both hists over energy range to determine scaling
-    start_bin = hists[0].FindBin(min_bin)
-    stop_bin = hists[0].FindBin(max_bin)
-    for hist in hists[1:]:
-        try:
-            scale_factor = 1.0*hists[0].Integral(start_bin,stop_bin)/hist.Integral(start_bin,stop_bin)
-        except ZeroDivisionError: 
-            scale_factor = 1.0
-            print "No counts in hist!!"
-        print "scale factor:", scale_factor
+    if False: # do scaling
+        start_bin = hists[0].FindBin(min_bin)
+        stop_bin = hists[0].FindBin(max_bin)
+        for hist in hists[1:]:
+            try:
+                scale_factor = 1.0*hists[0].Integral(start_bin,stop_bin)/hist.Integral(start_bin,stop_bin)
+            except ZeroDivisionError: 
+                scale_factor = 1.0
+                print "No counts in hist!!"
+            print "scale factor:", scale_factor
         hist.Scale(scale_factor)
 
     if True:
         y_max = 0
         for hist in hists:
             hist.SetMaximum() # reset since we keep filling the same hist... 
-            if hist.GetMaximum() > y_max: y_max = hist.GetMaximum()
+            val = hist.GetMaximum()
+            #val = hist.GetBinContent(hist.FindBin(570))*1.2
+            if val > y_max: y_max = val
         hists[0].SetMaximum(y_max*1.1)
 
     hists[0].Draw()
@@ -299,7 +362,7 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
     text = "\nMC amplitude x %.2f" % scale_factor
     if mc_noise != 0.0:
         text += "%.1f-keV add'l noise" % mc_noise
-    pavetext.AddText(text)
+    #pavetext.AddText(text)
     pavetext.SetBorderSize(0)
     pavetext.SetFillStyle(0)
     pavetext.Draw()
@@ -312,7 +375,14 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
     except:
         pass
     canvas.Update()
-    canvas.Print("%s_%s_cuts.pdf" % (plotname, basename))
+    canvas.SetLogy(1)
+    canvas.Print("%s_%s_cuts_log.pdf" % (plotname, basename))
+
+    hists[0].SetMinimum(0)
+    canvas.SetLogy(0)
+    canvas.Update()
+    canvas.Print("%s_%s_cuts_lin.pdf" % (plotname, basename))
+
 
     if not ROOT.gROOT.IsBatch(): raw_input("any key to continue... ")
 
