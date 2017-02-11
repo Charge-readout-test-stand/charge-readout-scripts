@@ -22,7 +22,11 @@ def process_files(filenames):
     #selection = "chargeEnergy*%s>1000 & chargeEnergy*%s<1200" % (multiplier, multiplier)
     #selection = ""
     #selection = "%s > 200" % struck_analysis_cuts.get_few_channels_cmd_baseline_rms()
-    selection = "SignalEnergy>0 && SignalEnergy<1500 && !is_bad"
+    selection = "SignalEnergy>0 && SignalEnergy<1500 && !is_bad && !is_pulser"
+
+    max_drift_time = struck_analysis_parameters.max_drift_time 
+    drift_time_high = max_drift_time-1.0
+    selection += struck_analysis_cuts.get_drift_time_selection(drift_time_high=drift_time_high) 
 
 
     hists = []
@@ -119,6 +123,7 @@ def process_files(filenames):
             ch_hist.SetXTitle("")
 
             ##selection = "energy1_pz>%s" % (threshold/multiplier)
+            print "\t\t filling hist %s" % ch_hist.GetName()
             sel = "signal_map==1 && %s" % selection 
             n_drawn = tree.Draw("channel >> %s" % ch_hist.GetName(), sel, "goff norm")
 
