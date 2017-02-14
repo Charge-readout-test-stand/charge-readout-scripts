@@ -381,8 +381,10 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
     # estimate trigger time, in microseconds
     if isMC:
-        #MC is always triggered at sample 200 this is hardcoded into nEXO_Analysis
-        trigger_time[0] = 200/sampling_freq_Hz*1e6
+        #MC this is also hardcoded into nEXO_Analysis
+        #trigger_time[0] = 200/sampling_freq_Hz*1e6
+        trigger_time[0] = 275/sampling_freq_Hz*1e6 # run 11+
+
     elif isNGM:
         ngm_config = root_file.Get("NGMSystemConfiguration")
         card = sys_config.GetSlotParameters().GetParValueO("card",0)
