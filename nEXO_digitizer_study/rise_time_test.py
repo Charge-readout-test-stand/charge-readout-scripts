@@ -41,6 +41,7 @@ def main(filename):
     tree.SetMarkerColor(ROOT.kBlue)
     tree.SetMarkerSize(0.8)
     tree.SetMarkerStyle(8)
+    generator = ROOT.TRandom3(0) # random number generator, initialized with TUUID object
 
     for i_entry in xrange(n_entries):
 
@@ -64,6 +65,14 @@ def main(filename):
     
         waveform = array('d', tree.WFAmplitude)
         print len(waveform), tree.WFLen
+        keV_per_electron = 500.0/20100
+        ADCunits_per_keV = 1.0*pow(2, 11)/5000 
+        for i, i_waveform in enumerate(waveform):
+          noise = generator.Gaus()*200.0
+          i_waveform = i_waveform+noise
+          ADCunits = int(i_waveform*keV_per_electron*ADCunits_per_keV)
+          print i, i_waveform, ADCunits
+          waveform[i] = ADCunits
         exo_wfm = EXODoubleWaveform(waveform, len(waveform))
         get_risetimes(exo_wfm=exo_wfm, wfm_length=len(waveform), sampling_freq_Hz=2e6, skip_short_risetimes=False, label="")
         hist=exo_wfm.GimmeHist()
