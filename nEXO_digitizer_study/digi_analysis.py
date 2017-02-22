@@ -25,8 +25,6 @@ else:
 
 microsecond = ROOT.CLHEP.microsecond
 second = ROOT.CLHEP.second
-#microsecond = 1.0e3
-#second = 1.0e9
 
 def do_risetime_calc(rise_time_calculator, threshold_percent, wfm, max_val, period):
     """
@@ -53,7 +51,6 @@ def get_risetimes(exo_wfm, wfm_length, sampling_freq_Hz,skip_short_risetimes=Tru
 
     smoothed_max = new_wfm.GetMaxValue()
     max_val = new_wfm.GetMaxValue() # smoothed max
-    print "max_val", max_val
 
     rise_time_calculator = ROOT.EXORisetimeCalculation()
     rise_time_calculator.SetPulsePeakHeight(max_val)
@@ -103,7 +100,7 @@ def get_risetimes(exo_wfm, wfm_length, sampling_freq_Hz,skip_short_risetimes=Tru
 
     rise_time_stop99 = do_risetime_calc(rise_time_calculator, 0.99, exo_wfm, max_val, period)
 
-    if not gROOT.IsBatch(): #shows a few rise-times to check
+    if not ROOT.gROOT.IsBatch(): #shows a few rise-times to check
       print "rise times:"
       print "\tmax_val:", max_val
       print "\trise_time_stop50:", rise_time_stop50
@@ -174,9 +171,53 @@ def process_file(filename):
     out_tree.SetMarkerStyle(8)
     out_tree.SetMarkerSize(0.5)
 
+    #-------------------------------------------------------------------------------
+    # event-level stuff from MC
+    #-------------------------------------------------------------------------------
+
     # event number
     event = array('I', [0]) # unsigned int
-    out_tree.Branch('event', event, 'event/i')
+    out_tree.Branch('EventNumber', event, 'EventNumber/i')
+
+    # energy
+    energy = array('d', [0]) # double
+    out_tree.Branch('Energy', energy, 'Energy/D')
+
+    # Primary event coords: GenX, GenY, GenZ
+    GenX = array('d', [0]) # double
+    out_tree.Branch('GenX', GenX, 'GenX/D')
+    GenY = array('d', [0]) # double
+    out_tree.Branch('GenY', GenY, 'GenY/D')
+    GenZ = array('d', [0]) # double
+    out_tree.Branch('GenZ', GenZ, 'GenZ/D')
+
+    # NumChannels, from MC
+    NumChannels = array('I', [0]) # unsigned int
+    out_tree.Branch('NumChannels', NumChannels, 'NumChannels/i')
+
+    """
+    event-level stuff example
+
+     EventNumber     = 0
+     Energy          = 2.4578
+     GenX            = -174.998
+     GenY            = -401.721
+     GenZ            = -849.209
+     InitNumOP       = 661
+     NumChannels     = 2
+     xTile           = -144, -144
+     yTile           = -432, -432
+     XPosition       = -144, -174
+     YPosition       = -402, -432
+     ChannelLocalId  = 58, 6
+     ChannelCharge   = 52008, 41127
+     ChannelTime     = 631750, 631250
+     ChannelNTE      = 52008, 41127
+    """
+
+    #-------------------------------------------------------------------------------
+    # processing pars
+    #-------------------------------------------------------------------------------
 
     # noise, in electrons
     noise_electrons_array = array('d', [noise_electrons]) # double
@@ -194,6 +235,12 @@ def process_file(filename):
     n_baseline_samples_array = array('I', [n_baseline_samples]) # unsigned int
     out_tree.Branch('n_baseline_samples', n_baseline_samples_array, 'n_baseline_samples/i')
 
+    #-------------------------------------------------------------------------------
+    # wfm-level stuff from MC
+    #-------------------------------------------------------------------------------
+
+    # this is only kind of from MC, since these get incremented if there are noise triggers
+
     # n channels hit
     n_channels_hit = array('I', [0]) # unsigned int
     out_tree.Branch('n_channels_hit', n_channels_hit, 'n_channels_hit/i')
@@ -210,6 +257,22 @@ def process_file(filename):
     WFChannelCharge = array('d', [0]*n_channels) # double
     out_tree.Branch('WFChannelCharge', WFChannelCharge, 'WFChannelCharge[n_channels_hit]/D')
 
+    # is_hit_MC: whether channel was truly hit in MC
+    is_hit_MC = array('I', [0]) # unsigned int
+    out_tree.Branch('is_hit_MC', is_hit_MC, 'is_hit_MC/i')
+
+
+
+    #-------------------------------------------------------------------------------
+    # calculated stuff
+    #-------------------------------------------------------------------------------
+
+    # SignalEnergy
+    SignalEnergy = array('d', [0]) # double
+    out_tree.Branch('SignalEnergy', SignalEnergy, 'SignalEnergy/D')
+
+    smoothed_max = array('d', [0]*n_channels) # double
+    out_tree.Branch('smoothed_max', smoothed_max, 'smoothed_max[n_channels_hit]/D')
 
     rise_time_stop10 = array('d', [0]*n_channels) # double
     if not skip_short_risetimes:
@@ -266,120 +329,159 @@ def process_file(filename):
     wfm = array('d', [0]*wfm_len) # double
     generator = ROOT.TRandom3(0) # random number generator, initialized with TUUID object
 
-    # waveformTree contains one entry per wfm, and can have many entries per
-    # event
     processed_event = None # keep track of which event we have processed
-    for i_entry in xrange(n_entries):
+
+    # waveformTree contains one entry per wfm, and can have many entries per
+    # event, evtTree contains one entry per event
+    i_entry = 0
+    for i_event in xrange(evtTree.GetEntries()):
+
+        print "---> event %i" % i_event
+        evtTree.GetEntry(i_event)
+
+        # event-level info from MC
+        event[0] = evtTree.EventNumber
+        energy[0] = evtTree.Energy
+        GenX[0] = evtTree.GenX
+        GenY[0] = evtTree.GenY
+        GenZ[0] = evtTree.GenZ
+        NumChannels[0] = evtTree.NumChannels
+        SignalEnergy[0] = 0.0
+
+        # clear wfm-level variables
+        n_channels_hit[0] = 0
+        for i_ch in xrange(n_channels):
+            WFTileId[i_ch] = 0
+            WFLocalId[i_ch] = 0
+            WFChannelCharge[i_ch] = 0
+
+        # loop over waveformTree
+        for i_channel in xrange(NumChannels[0]):
+            print "event %i, wfm entry %i" % (i_event, i_entry)
+            waveformTree.GetEntry(i_entry)
+
+            if waveformTree.EventNumber != evtTree.EventNumber:
+                print "events don't match!!"
+                sys.exit(1)
+            if waveformTree.WFChannelCharge != evtTree.ChannelCharge[n_channels_hit[0]]:
+                print "WFChannelCharge doesn't match!!"
+                sys.exit(1)
+
+            WFTileId[n_channels_hit[0]] = waveformTree.WFTileId
+            WFLocalId[n_channels_hit[0]] = waveformTree.WFLocalId
+            WFChannelCharge[n_channels_hit[0]] = waveformTree.WFChannelCharge
+            n_channels_hit[0] += 1
+
+            nexo_digi_wfm_len = waveformTree.WFLen
+
+            print "entry %i | Evt %i | WFLen %i | WFTileId %i | WFLocalId %i | WFChannelCharge %i" % (
+                i_entry, 
+                waveformTree.EventNumber,
+                waveformTree.WFLen,
+                waveformTree.WFTileId,
+                waveformTree.WFLocalId,
+                waveformTree.WFChannelCharge,
+            )
+
+            # reset wfm
+            for i_wfm in xrange(len(wfm)):
+                wfm[i_wfm] = 0.0
+
+            # fill pretrigger with white noise, in ADC units:
+            for i_wfm in xrange(n_baseline_samples):
+                noise = generator.Gaus()*noise_electrons
+                wfm[i_wfm] = int(noise*keV_per_electron*ADCunits_per_keV) 
+
+            # fill middle of wfm with data from nEXOdigi:
+            for i_wfm in xrange(waveformTree.WFLen):
+                noise = generator.Gaus()*noise_electrons
+                val = noise + waveformTree.WFAmplitude[i_wfm]
+                wfm[i_wfm+n_baseline_samples] = int(val*keV_per_electron*ADCunits_per_keV)
+
+                #print i_wfm+n_baseline_samples, (i_wfm+n_baseline_samples)/sampling_freq_Hz*second/microsecond, waveformTree.WFAmplitude[i_wfm], val, wfm[i_wfm+n_baseline_samples]
+
+            i_wfm += n_baseline_samples # increment i_wfm
 
 
-        print "---> entry %i, event %i" % (i_entry, waveformTree.EventNumber)
+            # grab the final value from the nEXOdigi waveform, in electrons:
+            last_val = waveformTree.WFAmplitude[nexo_digi_wfm_len-1]
 
-        waveformTree.GetEntry(i_entry)
+            # fill the end of the wfm with constant values
+            while i_wfm < len(wfm):
+                val = last_val + generator.Gaus()*noise_electrons
+                wfm[i_wfm] = int(val*keV_per_electron*ADCunits_per_keV) 
+                i_wfm += 1
+            
+            # create an EXODoubleWaveform
+            exo_wfm = ROOT.EXODoubleWaveform(wfm, len(wfm))
+            exo_wfm.SetSamplingFreq(sampling_freq_Hz/second)
 
-        # check for the start of a new event
-        if waveformTree.EventNumber != event[0]:
-            print "===> filling tree with event %i" % event[0]
-            out_tree.Fill()
-            processed_event = event[0]
+            # calc risetimes:
+            n_ch = n_channels_hit[0]-1
+            (
+              smoothed_max[n_ch],
+              rise_time_stop10[n_ch],
+              rise_time_stop20[n_ch],
+              rise_time_stop30[n_ch],
+              rise_time_stop40[n_ch],
+              rise_time_stop50[n_ch],
+              rise_time_stop60[n_ch],
+              rise_time_stop70[n_ch],
+              rise_time_stop80[n_ch],
+              rise_time_stop90[n_ch],
+              rise_time_stop95[n_ch],
+              rise_time_stop99[n_ch],
+            ) = get_risetimes(
+                exo_wfm=exo_wfm, 
+                wfm_length=len(wfm), 
+                sampling_freq_Hz=sampling_freq_Hz, 
+                skip_short_risetimes=skip_short_risetimes, 
+                label="",
+            )
 
-            # clear variables
-            n_channels_hit[0] = 0
-            for i_ch in xrange(n_channels):
-                WFTileId[i_ch] = 0
-                WFLocalId[i_ch] = 0
-                WFChannelCharge[i_ch] = 0
+            if not ROOT.gROOT.IsBatch():
 
-        event[0] = waveformTree.EventNumber
-        WFTileId[n_channels_hit[0]] = waveformTree.WFTileId
-        WFLocalId[n_channels_hit[0]] = waveformTree.WFLocalId
-        WFChannelCharge[n_channels_hit[0]] = waveformTree.WFChannelCharge
-        n_channels_hit[0] += 1
+                # draw the EXODoubleWaveform:
+                hist=exo_wfm.GimmeHist()
+                hist.SetMarkerSize(0.8)
+                hist.SetMarkerStyle(8)
+                hist.SetLineColor(ROOT.kBlue)
+                hist.SetMarkerColor(ROOT.kBlue)
+                hist.Draw("PL")
 
-        nexo_digi_wfm_len = waveformTree.WFLen
+                # draw the nEXO digi wfm also
+                print "pretrigger [microseconds]: ", n_baseline_samples/sampling_freq_Hz*second/microsecond
+                if True:
+                    selection = "Entry$==%i" % i_entry
+                    draw_cmd = "WFAmplitude*%f:WFTime+%f" % (
+                        keV_per_electron*ADCunits_per_keV,
+                        n_baseline_samples/sampling_freq_Hz*second/microsecond,
+                    )
+                    print draw_cmd, selection
+                    waveformTree.Draw(draw_cmd,selection,"pl same")
 
-        print "entry %i | Evt %i | WFLen %i | WFTileId %i | WFLocalId %i | WFChannelCharge %i" % (
-            i_entry, 
-            waveformTree.EventNumber,
-            waveformTree.WFLen,
-            waveformTree.WFTileId,
-            waveformTree.WFLocalId,
-            waveformTree.WFChannelCharge,
-        )
-
-        # reset wfm
-        for i_wfm in xrange(len(wfm)):
-            wfm[i_wfm] = 0.0
-
-        # fill pretrigger with white noise, in ADC units:
-        for i_wfm in xrange(n_baseline_samples):
-            noise = generator.Gaus()*noise_electrons
-            wfm[i_wfm] = int(noise*keV_per_electron*ADCunits_per_keV) 
-
-        # fill middle of wfm with data from nEXOdigi:
-        for i_wfm in xrange(waveformTree.WFLen):
-            noise = generator.Gaus()*noise_electrons
-            val = noise + waveformTree.WFAmplitude[i_wfm]
-            wfm[i_wfm+n_baseline_samples] = int(val*keV_per_electron*ADCunits_per_keV)
-
-            print i_wfm+n_baseline_samples, (i_wfm+n_baseline_samples)/sampling_freq_Hz*second/microsecond, waveformTree.WFAmplitude[i_wfm], val, wfm[i_wfm+n_baseline_samples]
-
-        i_wfm += n_baseline_samples # increment i_wfm
-
-
-        # grab the final value from the nEXOdigi waveform, in electrons:
-        last_val = waveformTree.WFAmplitude[nexo_digi_wfm_len-1]
-
-        # fill the end of the wfm with constant values
-        while i_wfm < len(wfm):
-            val = last_val + generator.Gaus()*noise_electrons
-            wfm[i_wfm] = int(val*keV_per_electron*ADCunits_per_keV) 
-            i_wfm += 1
-        
-        # create an EXODoubleWaveform
-        exo_wfm = ROOT.EXODoubleWaveform(wfm, len(wfm))
-        exo_wfm.SetSamplingFreq(sampling_freq_Hz/second)
-
-        if not ROOT.gROOT.IsBatch():
-
-            # draw the EXODoubleWaveform:
-            hist=exo_wfm.GimmeHist()
-            hist.SetMarkerSize(0.8)
-            hist.SetMarkerStyle(8)
-            hist.SetLineColor(ROOT.kBlue)
-            hist.SetMarkerColor(ROOT.kBlue)
-            hist.Draw("PL")
-
-            # draw the nEXO digi wfm also
-            print "pretrigger [microseconds]: ", n_baseline_samples/sampling_freq_Hz*second/microsecond
-            if True:
-                selection = "Entry$==%i" % i_entry
-                draw_cmd = "WFAmplitude*%f:WFTime+%f" % (
-                    keV_per_electron*ADCunits_per_keV,
-                    n_baseline_samples/sampling_freq_Hz*second/microsecond,
-                )
-                print draw_cmd, selection
-                waveformTree.Draw(draw_cmd,selection,"pl same")
-
-            canvas.Update()
-            val = raw_input("press enter (q to quit) ") 
-            if val == 'q': sys.exit()
-
-            # draw the nEXO digi wfm, alone
-            if False:
-                waveformTree.Draw(draw_cmd,selection,"pl")
                 canvas.Update()
                 val = raw_input("press enter (q to quit) ") 
                 if val == 'q': sys.exit()
 
-            # end test of gROOT.IsBatch()
+                # draw the nEXO digi wfm, alone
+                if False:
+                    waveformTree.Draw(draw_cmd,selection,"pl")
+                    canvas.Update()
+                    val = raw_input("press enter (q to quit) ") 
+                    if val == 'q': sys.exit()
 
-        # end loop over entries
+                # end test of gROOT.IsBatch()
 
-    if processed_event != event[0]:
+            i_entry += 1
+            # end loop over waveformTree
+
+        print "===> filling tree with event %i" % event[0]
         out_tree.Fill()
 
-    out_tree.Write()
+        # end loop over evtTree
 
+    out_tree.Write()
 
 
 if __name__ == "__main__":
@@ -390,3 +492,4 @@ if __name__ == "__main__":
 
     for filename in sys.argv[1:]:
       process_file(filename)
+
