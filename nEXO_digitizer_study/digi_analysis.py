@@ -2,9 +2,10 @@
 
 import os
 import sys
+import math
 from array import array
 import ROOT
-#ROOT.gROOT.SetBatch(True)
+ROOT.gROOT.SetBatch(True)
 
 """
 This script draws waveforms from nEXOdigi and prints info about them. 
@@ -134,7 +135,6 @@ def process_file(filename):
     # options:
     #-------------------------------------------------------------------------------
 
-    sampling_freq_Hz = 2e6 # 2 MHz is default
     noise_electrons = 200
     digitizer_bits = 11
     n_baseline_samples = 100
@@ -162,8 +162,20 @@ def process_file(filename):
         print "couldn't read from waveformTree"
         sys.exit(1)
 
+    if n_entries == 0: sys.exit()
+    evtTree.GetEntry(0)
+    sampling_interval_seconds = evtTree.SamplingInterval/second
+    sampling_freq_Hz = 1.0/sampling_interval_seconds 
+
     basename = os.path.splitext(os.path.basename(filename))[0]
-    out_file = ROOT.TFile("proc_%s.root" % basename, "recreate")
+    basename = "proc_%iMHz_%ibits_%iPT_%s" % (
+        sampling_freq_Hz/1e6,
+        digitizer_bits,
+        n_baseline_samples, # pre-trigger
+        basename,
+
+    )
+    out_file = ROOT.TFile("%s.root" % basename, "recreate")
     out_tree = ROOT.TTree("tree", "%s processed wfm tree" % basename)
     out_tree.SetLineColor(ROOT.kBlue)
     out_tree.SetLineWidth(2)
@@ -190,6 +202,10 @@ def process_file(filename):
     out_tree.Branch('GenY', GenY, 'GenY/D')
     GenZ = array('d', [0]) # double
     out_tree.Branch('GenZ', GenZ, 'GenZ/D')
+
+    # sum of WFChannelCharge
+    ChannelChargeSum = array('d', [0]) # double
+    out_tree.Branch('ChannelChargeSum', ChannelChargeSum, 'ChannelChargeSum/D')
 
     # NumChannels, from MC
     NumChannels = array('I', [0]) # unsigned int
@@ -226,6 +242,14 @@ def process_file(filename):
     # W value, keV per electron
     W_value = array('d', [keV_per_electron]) # double
     out_tree.Branch('W_value', W_value, 'W_value/D')
+
+    # ADCunits_per_keV
+    ADCunits_per_keV_array = array('d', [ADCunits_per_keV]) # double
+    out_tree.Branch('ADCunits_per_keV', ADCunits_per_keV_array, 'ADCunits_per_keV/D')
+
+    # sampling_freq_Hz
+    sampling_freq_Hz_array = array('d', [sampling_freq_Hz]) # double
+    out_tree.Branch('sampling_freq_Hz', sampling_freq_Hz_array, 'sampling_freq_Hz/D')
 
     # digitizer_bits
     digitizer_bits_array = array('I', [digitizer_bits]) # unsigned int
@@ -271,49 +295,62 @@ def process_file(filename):
     SignalEnergy = array('d', [0]) # double
     out_tree.Branch('SignalEnergy', SignalEnergy, 'SignalEnergy/D')
 
-    smoothed_max = array('d', [0]*n_channels) # double
-    out_tree.Branch('smoothed_max', smoothed_max, 'smoothed_max[n_channels_hit]/D')
+    # ChEnergy: channel energy, contribution to SignalEnergy
+    ChEnergy = array('d', [0]*n_channels) # double
+    out_tree.Branch('ChEnergy', ChEnergy, 'ChEnergy[n_channels_hit]/D')
 
-    rise_time_stop10 = array('d', [0]*n_channels) # double
+    # whether a channel was found to be hit
+    signal_map = array('I', [0]*n_channels) 
+    out_tree.Branch('signal_map', signal_map, 'signal_map[n_channels_hit]/i') 
+    
+    # number of channels hit
+    nsignals = array('I', [0])
+    out_tree.Branch('nsignals', nsignals, 'nsignals/i') #Total Signals above threshold
+
+    smoothed_max = array('d', [0]) # double
+    out_tree.Branch('smoothed_max', smoothed_max, 'smoothed_max/D')
+
+    # rise times -- these are only calculated for sum wfm
+    rise_time_stop10 = array('d', [0]) # double
     if not skip_short_risetimes:
-        out_tree.Branch('rise_time_stop10', rise_time_stop10, 'rise_time_stop10[n_channels_hit]/D')
+        out_tree.Branch('rise_time_stop10', rise_time_stop10, 'rise_time_stop10/D')
 
-    rise_time_stop20 = array('d', [0]*n_channels) # double
+    rise_time_stop20 = array('d', [0]) # double
     if not skip_short_risetimes:
-        out_tree.Branch('rise_time_stop20', rise_time_stop20, 'rise_time_stop20[n_channels_hit]/D')
+        out_tree.Branch('rise_time_stop20', rise_time_stop20, 'rise_time_stop20/D')
 
-    rise_time_stop30 = array('d', [0]*n_channels) # double
+    rise_time_stop30 = array('d', [0]) # double
     if not skip_short_risetimes:
-        out_tree.Branch('rise_time_stop30', rise_time_stop30, 'rise_time_stop30[n_channels_hit]/D')
+        out_tree.Branch('rise_time_stop30', rise_time_stop30, 'rise_time_stop30/D')
 
-    rise_time_stop40 = array('d', [0]*n_channels) # double
+    rise_time_stop40 = array('d', [0]) # double
     if not skip_short_risetimes:
-        out_tree.Branch('rise_time_stop40', rise_time_stop40, 'rise_time_stop40[n_channels_hit]/D')
+        out_tree.Branch('rise_time_stop40', rise_time_stop40, 'rise_time_stop40/D')
 
-    rise_time_stop50 = array('d', [0]*n_channels) # double
+    rise_time_stop50 = array('d', [0]) # double
     if not skip_short_risetimes:
-        out_tree.Branch('rise_time_stop50', rise_time_stop50, 'rise_time_stop50[n_channels_hit]/D')
+        out_tree.Branch('rise_time_stop50', rise_time_stop50, 'rise_time_stop50/D')
 
-    rise_time_stop60 = array('d', [0]*n_channels) # double
+    rise_time_stop60 = array('d', [0]) # double
     if not skip_short_risetimes:
-        out_tree.Branch('rise_time_stop60', rise_time_stop60, 'rise_time_stop60[n_channels_hit]/D')
+        out_tree.Branch('rise_time_stop60', rise_time_stop60, 'rise_time_stop60/D')
 
-    rise_time_stop70 = array('d', [0]*n_channels) # double
+    rise_time_stop70 = array('d', [0]) # double
     if not skip_short_risetimes:
-        out_tree.Branch('rise_time_stop70', rise_time_stop70, 'rise_time_stop70[n_channels_hit]/D')
+        out_tree.Branch('rise_time_stop70', rise_time_stop70, 'rise_time_stop70/D')
 
-    rise_time_stop80 = array('d', [0]*n_channels) # double
+    rise_time_stop80 = array('d', [0]) # double
     if not skip_short_risetimes:
-        out_tree.Branch('rise_time_stop80', rise_time_stop80, 'rise_time_stop80[n_channels_hit]/D')
+        out_tree.Branch('rise_time_stop80', rise_time_stop80, 'rise_time_stop80/D')
 
-    rise_time_stop90 = array('d', [0]*n_channels) # double
-    out_tree.Branch('rise_time_stop90', rise_time_stop90, 'rise_time_stop90[n_channels_hit]/D')
+    rise_time_stop90 = array('d', [0]) # double
+    out_tree.Branch('rise_time_stop90', rise_time_stop90, 'rise_time_stop90/D')
 
-    rise_time_stop95 = array('d', [0]*n_channels) # double
-    out_tree.Branch('rise_time_stop95', rise_time_stop95, 'rise_time_stop95[n_channels_hit]/D')
+    rise_time_stop95 = array('d', [0]) # double
+    out_tree.Branch('rise_time_stop95', rise_time_stop95, 'rise_time_stop95/D')
 
-    rise_time_stop99 = array('d', [0]*n_channels) # double
-    out_tree.Branch('rise_time_stop99', rise_time_stop99, 'rise_time_stop99[n_channels_hit]/D')
+    rise_time_stop99 = array('d', [0]) # double
+    out_tree.Branch('rise_time_stop99', rise_time_stop99, 'rise_time_stop99/D')
 
 
     if not ROOT.gROOT.IsBatch():
@@ -339,7 +376,7 @@ def process_file(filename):
         print "---> event %i" % i_event
         evtTree.GetEntry(i_event)
 
-        # event-level info from MC
+        # clear/reset event-level info from MC
         event[0] = evtTree.EventNumber
         energy[0] = evtTree.Energy
         GenX[0] = evtTree.GenX
@@ -347,13 +384,30 @@ def process_file(filename):
         GenZ[0] = evtTree.GenZ
         NumChannels[0] = evtTree.NumChannels
         SignalEnergy[0] = 0.0
+        ChannelChargeSum[0] = 0.0
+        nsignals[0] = 0
+        sum_wfm = None
+        smoothed_max[0] = 0.0
+        rise_time_stop10[0] = 0.0
+        rise_time_stop20[0] = 0.0
+        rise_time_stop30[0] = 0.0
+        rise_time_stop40[0] = 0.0
+        rise_time_stop50[0] = 0.0
+        rise_time_stop60[0] = 0.0
+        rise_time_stop70[0] = 0.0
+        rise_time_stop80[0] = 0.0
+        rise_time_stop90[0] = 0.0
+        rise_time_stop95[0] = 0.0
+        rise_time_stop99[0] = 0.0
 
-        # clear wfm-level variables
+        # clear wfm-level variables, loop over all possible elements
         n_channels_hit[0] = 0
         for i_ch in xrange(n_channels):
             WFTileId[i_ch] = 0
             WFLocalId[i_ch] = 0
-            WFChannelCharge[i_ch] = 0
+            WFChannelCharge[i_ch] = 0.0
+            ChEnergy[i_ch] = 0.0
+            signal_map[i_ch] = 0
 
         # loop over waveformTree
         for i_channel in xrange(NumChannels[0]):
@@ -370,18 +424,20 @@ def process_file(filename):
             WFTileId[n_channels_hit[0]] = waveformTree.WFTileId
             WFLocalId[n_channels_hit[0]] = waveformTree.WFLocalId
             WFChannelCharge[n_channels_hit[0]] = waveformTree.WFChannelCharge
+            ChannelChargeSum[0] += waveformTree.WFChannelCharge
             n_channels_hit[0] += 1
 
             nexo_digi_wfm_len = waveformTree.WFLen
 
-            print "entry %i | Evt %i | WFLen %i | WFTileId %i | WFLocalId %i | WFChannelCharge %i" % (
-                i_entry, 
-                waveformTree.EventNumber,
-                waveformTree.WFLen,
-                waveformTree.WFTileId,
-                waveformTree.WFLocalId,
-                waveformTree.WFChannelCharge,
-            )
+            if not ROOT.gROOT.IsBatch():
+                print "entry %i | Evt %i | WFLen %i | WFTileId %i | WFLocalId %i | WFChannelCharge %i" % (
+                    i_entry, 
+                    waveformTree.EventNumber,
+                    waveformTree.WFLen,
+                    waveformTree.WFTileId,
+                    waveformTree.WFLocalId,
+                    waveformTree.WFChannelCharge,
+                )
 
             # reset wfm
             for i_wfm in xrange(len(wfm)):
@@ -390,13 +446,13 @@ def process_file(filename):
             # fill pretrigger with white noise, in ADC units:
             for i_wfm in xrange(n_baseline_samples):
                 noise = generator.Gaus()*noise_electrons
-                wfm[i_wfm] = int(noise*keV_per_electron*ADCunits_per_keV) 
+                wfm[i_wfm] = int(noise*keV_per_electron*ADCunits_per_keV)*1.0/ADCunits_per_keV 
 
             # fill middle of wfm with data from nEXOdigi:
             for i_wfm in xrange(waveformTree.WFLen):
                 noise = generator.Gaus()*noise_electrons
                 val = noise + waveformTree.WFAmplitude[i_wfm]
-                wfm[i_wfm+n_baseline_samples] = int(val*keV_per_electron*ADCunits_per_keV)
+                wfm[i_wfm+n_baseline_samples] = int(val*keV_per_electron*ADCunits_per_keV)*1.0/ADCunits_per_keV
 
                 #print i_wfm+n_baseline_samples, (i_wfm+n_baseline_samples)/sampling_freq_Hz*second/microsecond, waveformTree.WFAmplitude[i_wfm], val, wfm[i_wfm+n_baseline_samples]
 
@@ -409,35 +465,38 @@ def process_file(filename):
             # fill the end of the wfm with constant values
             while i_wfm < len(wfm):
                 val = last_val + generator.Gaus()*noise_electrons
-                wfm[i_wfm] = int(val*keV_per_electron*ADCunits_per_keV) 
+                wfm[i_wfm] = int(val*keV_per_electron*ADCunits_per_keV)*1.0/ADCunits_per_keV
                 i_wfm += 1
             
             # create an EXODoubleWaveform
             exo_wfm = ROOT.EXODoubleWaveform(wfm, len(wfm))
             exo_wfm.SetSamplingFreq(sampling_freq_Hz/second)
 
-            # calc risetimes:
+            # new_wfm, for energy calcs
+            new_wfm = ROOT.EXODoubleWaveform(exo_wfm)
+
+            baseline_remover = ROOT.EXOBaselineRemover()
+            baseline_remover.SetBaselineSamples(n_baseline_samples)
+            baseline_remover.SetStartSample(0)
+            baseline_remover.Transform(new_wfm)
+            baseline_rms = baseline_remover.GetBaselineRMS()
+
+            baseline_remover.SetStartSample(len(wfm)-n_baseline_samples-1)
+            baseline_remover.Transform(new_wfm)
+            energy_val = baseline_remover.GetBaselineMean()
+            energy_rms = baseline_remover.GetBaselineRMS()
+
             n_ch = n_channels_hit[0]-1
-            (
-              smoothed_max[n_ch],
-              rise_time_stop10[n_ch],
-              rise_time_stop20[n_ch],
-              rise_time_stop30[n_ch],
-              rise_time_stop40[n_ch],
-              rise_time_stop50[n_ch],
-              rise_time_stop60[n_ch],
-              rise_time_stop70[n_ch],
-              rise_time_stop80[n_ch],
-              rise_time_stop90[n_ch],
-              rise_time_stop95[n_ch],
-              rise_time_stop99[n_ch],
-            ) = get_risetimes(
-                exo_wfm=exo_wfm, 
-                wfm_length=len(wfm), 
-                sampling_freq_Hz=sampling_freq_Hz, 
-                skip_short_risetimes=skip_short_risetimes, 
-                label="",
-            )
+            ChEnergy[n_ch] = energy_val
+
+            if energy_val > 5.0*energy_rms*math.sqrt(2.0/n_baseline_samples):
+                signal_map[n_ch] = 1
+                SignalEnergy[0] += energy_val
+                nsignals[0] += 1
+                if sum_wfm is None:
+                    sum_wfm = ROOT.EXODoubleWaveform(exo_wfm)
+                else:
+                    sum_wfm += exo_wfm
 
             if not ROOT.gROOT.IsBatch():
 
@@ -475,6 +534,29 @@ def process_file(filename):
 
             i_entry += 1
             # end loop over waveformTree
+
+
+        # calc risetimes from sum_wfm:
+        (
+          smoothed_max[0],
+          rise_time_stop10[0],
+          rise_time_stop20[0],
+          rise_time_stop30[0],
+          rise_time_stop40[0],
+          rise_time_stop50[0],
+          rise_time_stop60[0],
+          rise_time_stop70[0],
+          rise_time_stop80[0],
+          rise_time_stop90[0],
+          rise_time_stop95[0],
+          rise_time_stop99[0],
+        ) = get_risetimes(
+            exo_wfm=sum_wfm, 
+            wfm_length=len(wfm), 
+            sampling_freq_Hz=sampling_freq_Hz, 
+            skip_short_risetimes=skip_short_risetimes, 
+            label="",
+        )
 
         print "===> filling tree with event %i" % event[0]
         out_tree.Fill()
