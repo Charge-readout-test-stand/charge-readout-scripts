@@ -63,7 +63,8 @@
 /run/setCutForRegion TPCRegion 100 nm
 /run/setCutForRegion CryostatRegion 1.0 mm
 
-/analysis/setOutputROOTFileName bb0n.root
+#/analysis/setOutputROOTFileName bb0n.root
+/analysis/setOutputROOTFileName mc/runSEQNUM.root
 /analysis/setOutputROOTTreeName nEXOevents
 
 /analysis/setPropagateOP 0
@@ -72,5 +73,6 @@
 /analysis/setSaveOP 0 
 #/analysis/setSaveOnlyEventsWithDeposits 1 
 
+#/run/beamOn 10 # 100 events takes ~ 4 min on borax
 /run/beamOn 100 # 100 events takes ~ 4 min on borax
-#
+
