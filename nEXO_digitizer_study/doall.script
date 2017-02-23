@@ -1,0 +1,12 @@
+#!/bin/csh
+
+cd $OUT_DIR
+
+date
+echo "--> running MC"
+jobs_hold/mcSEQNUM.script
+
+jobs_hold/digiSEQNUM.script
+date
+
+

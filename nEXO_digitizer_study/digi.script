@@ -1,0 +1,23 @@
+#!/bin/csh
+setenv LD_LIBRARY_PATH $NEXOANALYSIS/lib:${LD_LIBRARY_PATH}
+cd $OUT_DIR
+
+#printenv
+
+date
+echo "--> digitizing..."
+# digitize:
+time $NEXOANALYSIS/digitization/chargeDigitizer/bin/nEXOdigi -i $OUT_DIR/mc/runSEQNUM.root -t nEXOevents -o $OUT_DIR/digitization_dcoeffDIFF/digiSEQNUM_TYPE_dcoefDIFF.root -r SEED -n -1 -dcoef DIFF -ids true -padsize 3 -saveWF true >& $OUT_DIR/log/digi-TYPE-runSEQNUM_dcoefDIFFR.log
+
+# remove old MC files:
+#rm $OUT_DIR/mc/runSEQNUM.root
+
+date
+echo "--> tier3 ..."
+# tier3:
+cd tier3
+time python $CHARGEREADOUTSCRIPTS/digi_analysis.py $OUT_DIR/digitization_dcoeffDIFF/digiSEQNUM_TYPE_dcoefDIFF.root >& $OUT_DIR/log/tier3_SEQNUM.log
+
+# remove old digi files:
+#rm $OUT_DIR/digitization_dcoeffDIFF/digiSEQNUM_TYPE_dcoefDIFF.root
+

@@ -1,0 +1,9 @@
+#!/bin/bash
+
+source $NEXOMC/env-rhel6-64_LLNL.sh
+cd $OUT_DIR
+echo "starting MC... "
+time $NEXOMCBUILD/nEXO -m ./jobs_hold/runSEQNUM.in -r SEED >& $OUT_DIR/log/job-TYPE-runSEQNUM.log
+echo "done w MC"
+
+
