@@ -60,7 +60,8 @@ import commands
 #filenames = glob.glob("/p/lscratchd/alexiss/11th_LXe/2017_01_31_overnight/tier0/SIS3316Raw_*") # 10 Feb 2017, 47m8.017s
 #filenames = glob.glob("/p/lscratchd/alexiss/11th_LXe/2017_02_01_vme_digi/tier0/SIS3316Raw_*") # 10 Feb 2017 6m56.259s
 #filenames = glob.glob("/p/lscratchd/alexiss/11th_LXe/2017_01_31_cell_full/tier0/SIS3316Raw_*") # 10 Feb 2017 2m4.306s
-filenames = glob.glob("/p/lscratchd/alexiss/11th_LXe/2017_01_31_pulser_tests/tier0/SIS3316Raw_*") # 10 Feb 2017 0m23.151s
+#filenames = glob.glob("/p/lscratchd/alexiss/11th_LXe/2017_01_31_pulser_tests/tier0/SIS3316Raw_*") # 10 Feb 2017 0m23.151s
+filenames = glob.glob("/g/g17/alexiss/scratch/2017_01_27_pmt_tests/tier0/*.dat") # 10 Feb 2017 
 
 
 filenames.sort() # sort names

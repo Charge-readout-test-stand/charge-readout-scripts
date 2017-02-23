@@ -604,6 +604,17 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     #------------------------------------------------------------------------------------------------
     #------------------------------------------------------------------------------------------------
 
+    nsignal_strips = array('I', [0])
+    out_tree.Branch('nsignal_strips', nsignal_strips, 'nsignal_strips/i') #Total Signals above threshold
+
+    n_strips = array('I', [0]*n_channels) # unsigned int
+    out_tree.Branch('n_strips', n_strips, 'n_strips[%i]/i' % n_channels)
+    for ch, strips in struck_analysis_parameters.struck_to_mc_channel_map.items():
+        try:
+            n_strips[ch] = len(strips)
+        except:
+            print "n_strips calc failed for channel %i" % ch
+
     is_pulser = array('I', [0])
     out_tree.Branch('is_pulser', is_pulser, 'is_pulser/i')
 
@@ -1030,6 +1041,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         chargeEnergy[0] = 0.0
         lightEnergy[0] = 0.0
         nsignals[0] = 0
+        nsignal_strips[0] = 0
         nXsignals[0] = 0
         nYsignals[0] = 0
         SignalEnergy[0] = 0.0
@@ -1251,6 +1263,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 #Record Energy in  new variable which tracks total energy from 
                 #channels above threshold.
                 nsignals[0]+=1
+                nsignal_strips[0] += n_strips[i]
                 SignalEnergy[0] += energy1_pz[i]
 
                 #print "Event %i Ch %i has Signal Energy %f" %(n_events, i,energy1_pz[i])
