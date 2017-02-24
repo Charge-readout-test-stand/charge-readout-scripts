@@ -156,11 +156,13 @@ def process_file(filename):
     waveformTree = digi_file.Get("waveformTree")
     evtTree = digi_file.Get("evtTree")
     try:
+        n_entries = evtTree.GetEntries()
+        print "%i entries in evtTree" % n_entries
         n_entries = waveformTree.GetEntries()
         print "%i entries in waveformTree" % n_entries
     except:
         print "couldn't read from waveformTree"
-        sys.exit(1)
+        return
 
     if n_entries == 0: sys.exit()
     evtTree.GetEntry(0)
@@ -175,7 +177,11 @@ def process_file(filename):
         basename,
 
     )
-    out_file = ROOT.TFile("%s.root" % basename, "recreate")
+    out_file_name = "%s.root" % basename
+    if os.path.isfile(out_file_name):
+        print "%s already exists" % out_file_name
+        return
+    out_file = ROOT.TFile(out_file_name, "recreate")
     out_tree = ROOT.TTree("tree", "%s processed wfm tree" % basename)
     out_tree.SetLineColor(ROOT.kBlue)
     out_tree.SetLineWidth(2)
@@ -411,7 +417,7 @@ def process_file(filename):
 
         # loop over waveformTree
         for i_channel in xrange(NumChannels[0]):
-            print "event %i, wfm entry %i" % (i_event, i_entry)
+            #print "event %i, wfm entry %i" % (i_event, i_entry)
             waveformTree.GetEntry(i_entry)
 
             if waveformTree.EventNumber != evtTree.EventNumber:
@@ -460,7 +466,12 @@ def process_file(filename):
 
 
             # grab the final value from the nEXOdigi waveform, in electrons:
-            last_val = waveformTree.WFAmplitude[nexo_digi_wfm_len-1]
+            # I don't understand why some wfms are length 0!
+            #print nexo_digi_wfm_len
+            #print len(waveformTree.WFAmplitude)
+            last_val = 0.0
+            if nexo_digi_wfm_len > 0:
+                last_val = waveformTree.WFAmplitude[nexo_digi_wfm_len-1]
 
             # fill the end of the wfm with constant values
             while i_wfm < len(wfm):
@@ -537,28 +548,29 @@ def process_file(filename):
 
 
         # calc risetimes from sum_wfm:
-        (
-          smoothed_max[0],
-          rise_time_stop10[0],
-          rise_time_stop20[0],
-          rise_time_stop30[0],
-          rise_time_stop40[0],
-          rise_time_stop50[0],
-          rise_time_stop60[0],
-          rise_time_stop70[0],
-          rise_time_stop80[0],
-          rise_time_stop90[0],
-          rise_time_stop95[0],
-          rise_time_stop99[0],
-        ) = get_risetimes(
-            exo_wfm=sum_wfm, 
-            wfm_length=len(wfm), 
-            sampling_freq_Hz=sampling_freq_Hz, 
-            skip_short_risetimes=skip_short_risetimes, 
-            label="",
-        )
+        if sum_wfm:
+            (
+              smoothed_max[0],
+              rise_time_stop10[0],
+              rise_time_stop20[0],
+              rise_time_stop30[0],
+              rise_time_stop40[0],
+              rise_time_stop50[0],
+              rise_time_stop60[0],
+              rise_time_stop70[0],
+              rise_time_stop80[0],
+              rise_time_stop90[0],
+              rise_time_stop95[0],
+              rise_time_stop99[0],
+            ) = get_risetimes(
+                exo_wfm=sum_wfm, 
+                wfm_length=len(wfm), 
+                sampling_freq_Hz=sampling_freq_Hz, 
+                skip_short_risetimes=skip_short_risetimes, 
+                label="",
+            )
 
-        print "===> filling tree with event %i" % event[0]
+        #print "===> filling tree with event %i" % event[0]
         out_tree.Fill()
 
         # end loop over evtTree
@@ -572,6 +584,7 @@ if __name__ == "__main__":
       print "arguments: [nEXO MC digi files]"
       sys.exit(1)
 
-    for filename in sys.argv[1:]:
+    for i_file, filename in enumerate(sys.argv[1:]):
+      print "===> file %i of %i" % (i_file, len(sys.argv[1:]))
       process_file(filename)
 
