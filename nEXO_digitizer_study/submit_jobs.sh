@@ -35,7 +35,7 @@ TYPE=nEXO_bb0n
 # from the command line, just do tests:
 #DIFF=50 
 DIFF=0 # for testing
-j=1
+j=0
 last_job=$j # run one job
 
 # if a command-line argument is supplied, provide it to j

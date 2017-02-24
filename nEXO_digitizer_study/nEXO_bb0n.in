@@ -74,5 +74,6 @@
 #/analysis/setSaveOnlyEventsWithDeposits 1 
 
 #/run/beamOn 10 # 100 events takes ~ 4 min on borax
-/run/beamOn 100 # 100 events takes ~ 4 min on borax
+#/run/beamOn 100 # 100 events takes ~ 4 min on borax
+/run/beamOn 50 # 100 events takes ~ 4 min on borax
 
