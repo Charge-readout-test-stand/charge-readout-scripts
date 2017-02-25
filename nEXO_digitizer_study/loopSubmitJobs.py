@@ -20,9 +20,12 @@ def get_n_jobs_in_queue():
 
 # options:
 start_job = 0
-n_jobs_total = 1000 # 7k x 500 events gives similar stats to run 11B
+n_jobs_total = 2000 
 
 n_jobs_in_queue = get_n_jobs_in_queue()
+
+output = commands.getstatusoutput("date")
+print "started at:", output[1]
 
 while start_job < n_jobs_total:
 
@@ -48,4 +51,10 @@ while start_job < n_jobs_total:
 
     n_jobs_in_queue += 1
     start_job += 1
+
+    # end test of n_jobs_total
+
+
+output = commands.getstatusoutput("date")
+print "ended at:", output[1]
 
