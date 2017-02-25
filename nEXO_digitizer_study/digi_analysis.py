@@ -137,8 +137,9 @@ def process_file(filename):
 
     noise_electrons = 200
     digitizer_bits = 11
-    n_baseline_samples = 100
+    #pretrigger_delay_microseconds = 50
     skip_short_risetimes = False
+    n_baseline_samples = 100
 
     keV_per_electron = 500.0/20100
     ADCunits_per_keV = 1.0*pow(2, 11)/5000 
@@ -168,12 +169,15 @@ def process_file(filename):
     evtTree.GetEntry(0)
     sampling_interval_seconds = evtTree.SamplingInterval/second
     sampling_freq_Hz = 1.0/sampling_interval_seconds 
+    #n_baseline_samples = pretrigger_delay_microseconds/(evtTree.SamplingInterval/microsecond)
+    wfm_len = int(1000.0/(evtTree.SamplingInterval/microsecond)) # 1000 microsecond wfm
 
     basename = os.path.splitext(os.path.basename(filename))[0]
-    basename = "proc_%iMHz_%ibits_%iPT_%s" % (
+    basename = "proc_%iMHz_%ibits_%iPT_%ie_%s" % (
         sampling_freq_Hz/1e6,
         digitizer_bits,
         n_baseline_samples, # pre-trigger
+        noise_electrons,
         basename,
 
     )
@@ -368,7 +372,6 @@ def process_file(filename):
         waveformTree.SetMarkerStyle(8)
 
     # wfm for reuse
-    wfm_len = 2000
     wfm = array('d', [0]*wfm_len) # double
     generator = ROOT.TRandom3(0) # random number generator, initialized with TUUID object
 
