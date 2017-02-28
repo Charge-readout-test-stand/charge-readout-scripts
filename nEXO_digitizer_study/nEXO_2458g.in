@@ -64,7 +64,8 @@
 /run/setCutForRegion TPCRegion 100 nm
 /run/setCutForRegion CryostatRegion 1.0 mm
 
-/analysis/setOutputROOTFileName gamma.root
+#/analysis/setOutputROOTFileName gamma.root
+/analysis/setOutputROOTFileName mc/runSEQNUM.root
 /analysis/setOutputROOTTreeName nEXOevents
 
 /analysis/setPropagateOP 0
@@ -75,7 +76,7 @@
 
 /gps/pos/type Volume
 /gps/pos/shape Cylinder
-/gps/pos/centre 0 0 0 cm
+/gps/pos/centre 0 0 -40.0 cm
 /gps/pos/halfz 65. cm
 /gps/pos/radius 65. cm
 /gps/pos/rot1 0 0 1
@@ -85,5 +86,6 @@
 /gps/energy 2458 keV 
 /gps/particle gamma
 
-/run/beamOn 100
+#/run/beamOn 100 # for batch mode
+/run/beamOn 50
 
