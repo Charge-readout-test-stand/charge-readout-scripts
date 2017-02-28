@@ -19,14 +19,19 @@ import struck_analysis_parameters
 
 def process_files(filenames):
 
+    # options
+    do_scale_by_n_strips = False # divide Y25/26 by 2, etc. 
+    do_normalize_by_ch7 = True # for hit channels: set Y17 height to 1.0
+
+
     #selection = "chargeEnergy*%s>1000 & chargeEnergy*%s<1200" % (multiplier, multiplier)
     #selection = ""
     #selection = "%s > 200" % struck_analysis_cuts.get_few_channels_cmd_baseline_rms()
-    selection = "SignalEnergy>0 && SignalEnergy<1500 && !is_bad && !is_pulser"
+    selection = "SignalEnergy>400 && SignalEnergy<1500 && !is_bad && !is_pulser"
 
     max_drift_time = struck_analysis_parameters.max_drift_time 
     drift_time_high = max_drift_time-1.0
-    selection += struck_analysis_cuts.get_drift_time_selection(drift_time_high=drift_time_high) 
+    selection += " && " + struck_analysis_cuts.get_drift_time_selection(drift_time_high=drift_time_high) 
 
 
     hists = []
@@ -90,6 +95,9 @@ def process_files(filenames):
         tree.SetBranchStatus("nsignals",1)
         tree.SetBranchStatus("channel",1)
         tree.SetBranchStatus("is_bad",1)
+        tree.SetBranchStatus("is_pulser",1)
+        tree.SetBranchStatus("rise_time_stop95_sum",1)
+        tree.SetBranchStatus("trigger_time",1)
         
         n_entries = tree.GetEntries()
         print "\t%i entries" % n_entries
@@ -133,15 +141,17 @@ def process_files(filenames):
                 i_bin = ch_hist.FindBin(channel)
                 n_strips = struck_analysis_parameters.channel_to_n_strips_map[channel]
                 label = struck_analysis_parameters.channel_map[channel]
-                print "\t\tch %i | %s | %i strips" % (channel, label, n_strips)
                 ch_hist.GetXaxis().SetBinLabel(i_bin, label)
-                content = ch_hist.GetBinContent(i_bin)
-                if n_strips>1:
-                    ch_hist.SetBinContent(i_bin, content/n_strips)
-                    print "\t\t\tset ch %i %s bin %i from %.3f to %.3f" % (channel, label, i_bin, content, content/n_strips)
+                if do_scale_by_n_strips: # divide by n strips:
+                    print "\t\tch %i | %s | %i strips" % (channel, label, n_strips)
+                    content = ch_hist.GetBinContent(i_bin)
+                    if n_strips>1:
+                        ch_hist.SetBinContent(i_bin, content/n_strips)
+                        print "\t\t\tset ch %i %s bin %i from %.3f to %.3f" % (channel, label, i_bin, content, content/n_strips)
 
                 # set contents to 0 for unused channels
                 if val == 0:
+                    content = ch_hist.GetBinContent(i_bin)
                     if channel == struck_analysis_parameters.pmt_channel: continue
                     ch_hist.SetBinContent(i_bin, 0.0)
                     print "\t\t\tset ch %i %s bin %i from %.3f to 0" % (channel, label, i_bin, content)
@@ -205,6 +215,14 @@ def process_files(filenames):
 
     n_files = len(filenames)
 
+
+    pavetext = ROOT.TPaveText(0.12, 0.8, 0.9, 0.9, "ndc")
+    pavetext.AddText(selection)
+    pavetext.SetBorderSize(0)
+    pavetext.SetFillStyle(0)
+    pavetext.Draw()
+
+
     canvas.SetLogy(1)
     legend.Draw()
     canvas.Update()
@@ -225,10 +243,11 @@ def process_files(filenames):
 
     if len(ch_hists) > 0:
 
-        for ch_hist in ch_hists:
-            # scale so that Y17 is 1.0
-            content = ch_hist.GetBinContent(ch_hist.FindBin(7)) # Y17
-            ch_hist.Scale(1.0/content)
+        if do_normalize_by_ch7: # scale by ch 7 = Y17
+            for ch_hist in ch_hists:
+                # scale so that Y17 is 1.0
+                content = ch_hist.GetBinContent(ch_hist.FindBin(7)) # Y17
+                ch_hist.Scale(1.0/content)
 
 
         ch_hists[0].SetTitle("")
@@ -240,6 +259,7 @@ def process_files(filenames):
 
         canvas.SetLogy(1)
         legend.Draw()
+        pavetext.Draw()
         canvas.Update()
         canvas.Print("hitChannels_%i.pdf" % n_files)
 
