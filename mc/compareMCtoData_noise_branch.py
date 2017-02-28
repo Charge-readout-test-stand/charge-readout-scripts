@@ -30,8 +30,10 @@ draw_cmd = "SignalEnergy" # the usual
 #draw_cmd = "baseline_rms*calibration" 
 #draw_cmd = "baseline_rms" 
 
-drift_time_high = struck_analysis_parameters.max_drift_time+1.0
-drift_time_low = struck_analysis_parameters.drift_time_threshold
+#drift_time_high = struck_analysis_parameters.max_drift_time+1.0
+drift_time_high = struck_analysis_parameters.max_drift_time-0.5
+drift_time_low = struck_analysis_parameters.drift_time_threshold # usual
+#drift_time_low = struck_analysis_parameters.max_drift_time - 1.0 # study cathode
 #drift_time_low = 6.43 # up to 9th LXe
 #drift_time_high = drift_time_high - 2.0
 
@@ -45,18 +47,21 @@ drift_time_low = struck_analysis_parameters.drift_time_threshold
 #drift_time_high = 8.4 # Gaosong's cut, down from 9.08
 
 
-#nsignals = 2 # only consider events where one strip is hit
-nsignals = 0 # conside nsignals>0
-nsignals=1
-#nsignals = 2
+#nsignals = 1 # only consider events where one strip is hit
+#nsignals = 0 # consider nsignals>0
+nsignals = 2
 
-#nstrips = 1 # only use single-strip channels
+#nstrips = 1 # only use single-strip channels -- old!
+#nsignal_strips = nsignals # added 11th LXe v5
+nsignal_strips = 2 # use 1-strip channels -- added 11th LXe v5
 
 # hist options
-min_bin = 300.0
+#min_bin = 300.0
 min_bin = 100.0 # 8th LXe low fields
-max_bin = 3000.0
-bin_width = 10.0 # keV
+#max_bin = 3000.0
+max_bin = 1400.0 # 1400 keV used for proposal
+#bin_width = 10.0 # keV used for proposal plot
+bin_width = 5.0 # keV
 
 
 
@@ -78,16 +83,30 @@ struck_selection = []
 #struck_selection.append("!is_bad")
 #struck_selection.append("!is_pulser")
 
+struck_selection.append("nXsignals==1 && nYsignals==1")
+#struck_selection.append("nXsignals>=1 && nYsignals>=1")
+
+# specify now many strips were hit:
+try:
+    struck_selection.append("nsignal_strips==%i" % nsignal_strips)
+    #struck_selection.append("nsignal_strips==nsignals") # use 1-strip channels
+except: 
+    pass
+
+# specify nsignals
 if is_threshold_study:
     pass
 elif is_noise_study:
     #struck_selection.append("nsignals==%i" % nsignals)
     print "no nsignals for now"
-elif nsignals == 0:
-    struck_selection.append("nsignals>%i" % nsignals)
-else:
-    struck_selection.append("nsignals==%i" % nsignals)
+elif "nXsignals" in struck_selection and "nYsignals" in struck_selection and "nsignal_strips" in struck_selection:
+    print "nsignals not needed since nXsignals, nYsignals, nsignal_strips are specified"
+    if nsignals == 0:
+        struck_selection.append("nsignals>%i" % nsignals)
+    else:
+        struck_selection.append("nsignals==%i" % nsignals)
 
+# drift time selection
 if not is_noise_study and not is_threshold_study:
     struck_selection.append( struck_analysis_cuts.get_drift_time_selection(
         drift_time_low=drift_time_low,
@@ -204,6 +223,12 @@ for i, filename in enumerate(filenames):
         tree.SetBranchStatus("baseline_rms",1) 
     if is_noise_study:
         tree.SetBranchStatus("lightEnergy",1) 
+    if "nsignal_strips" in struck_selection:
+        tree.SetBranchStatus("nsignal_strips",1)
+    if "nXsignals" in struck_selection:
+        tree.SetBranchStatus("nXsignals")
+    if "nYsignals" in struck_selection:
+        tree.SetBranchStatus("nYsignals")
 
     print "\n"
 
@@ -243,7 +268,7 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
             #multiplier = 1.01 # 8th & 9th LXe
             #multiplier = 0.96 # 10th LXe 
             #multiplier = 0.94 # 10th LXe v3
-            multiplier = 1.05 # 11th LXe MC
+            multiplier = 1.045 # 11th LXe MC
             if is_noise_study:
                 multiplier = 1.0
         else:
@@ -308,6 +333,7 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
         #label = "Data"
         #if isMC: label = "MC"
         label = basenames[i]
+        label += " (%.1e)" % hist.GetEntries()
         if is_noise_study:
             label += " #sigma=%.1f" % hist.GetRMS()
             label += ", x=%.1f" % hist.GetMean()
@@ -344,10 +370,10 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
             if val > y_max: y_max = val
         hists[0].SetMaximum(y_max*1.1)
 
-    hists[0].Draw()
+    hists[0].Draw("hist")
     for hist in hists[1:]:
         hist.Draw("hist same")
-    hists[0].Draw("same")
+    hists[0].Draw("hist same")
     legend.Draw()
     canvas.Update()
     plotname = "comparison_%s" % draw_cmd
@@ -376,6 +402,10 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
     plotname += "%i_signals_" % nsignals
     try: 
         plotname += "_%istrips" % nstrips
+    except:
+        pass
+    try: 
+        plotname += "_%isignal_strips" % nsignal_strips
     except:
         pass
     canvas.Update()
