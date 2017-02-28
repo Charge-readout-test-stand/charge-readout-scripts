@@ -4,6 +4,8 @@ import os
 import sys
 import math
 from array import array
+from optparse import OptionParser
+
 import ROOT
 ROOT.gROOT.SetBatch(True)
 
@@ -129,20 +131,24 @@ def get_risetimes(exo_wfm, wfm_length, sampling_freq_Hz,skip_short_risetimes=Tru
 
 
 
-def process_file(filename):
+def process_file(
+    filename,
+    noise_electrons=200.0,
+    digitizer_bits = 11,
+):
+    noise_electrons = float(noise_electrons)
+    digitizer_bits = int(digitizer_bits)
 
     #-------------------------------------------------------------------------------
     # options:
     #-------------------------------------------------------------------------------
 
-    noise_electrons = 200
-    digitizer_bits = 11
     #pretrigger_delay_microseconds = 50
     skip_short_risetimes = False
     n_baseline_samples = 100
 
     keV_per_electron = 500.0/20100
-    ADCunits_per_keV = 1.0*pow(2, 11)/5000 
+    ADCunits_per_keV = 1.0*pow(2, digitizer_bits)/5000 
 
     n_tiles = 172
     n_channels_per_tile = 60
@@ -152,6 +158,8 @@ def process_file(filename):
 
 
     print "--> processing file:", filename
+    print "\t noise_electrons:", noise_electrons
+    print "\t digitizer_bits:", digitizer_bits
   
     digi_file = ROOT.TFile(filename)
     waveformTree = digi_file.Get("waveformTree")
@@ -382,8 +390,8 @@ def process_file(filename):
     i_entry = 0
     for i_event in xrange(evtTree.GetEntries()):
 
-        print "---> event %i" % i_event
         evtTree.GetEntry(i_event)
+        print "---> event %i, %i channels" % (i_event, evtTree.NumChannels)
 
         # clear/reset event-level info from MC
         event[0] = evtTree.EventNumber
@@ -408,6 +416,13 @@ def process_file(filename):
         rise_time_stop90[0] = 0.0
         rise_time_stop95[0] = 0.0
         rise_time_stop99[0] = 0.0
+
+        if not ROOT.gROOT.IsBatch():
+            print "GenX: %.2f | GenY: %.2f | GenZ: %.2f" % (
+                GenX[0],
+                GenY[0],
+                GenZ[0],
+            )
 
         # clear wfm-level variables, loop over all possible elements
         n_channels_hit[0] = 0
@@ -437,16 +452,6 @@ def process_file(filename):
             n_channels_hit[0] += 1
 
             nexo_digi_wfm_len = waveformTree.WFLen
-
-            if not ROOT.gROOT.IsBatch():
-                print "entry %i | Evt %i | WFLen %i | WFTileId %i | WFLocalId %i | WFChannelCharge %i" % (
-                    i_entry, 
-                    waveformTree.EventNumber,
-                    waveformTree.WFLen,
-                    waveformTree.WFTileId,
-                    waveformTree.WFLocalId,
-                    waveformTree.WFChannelCharge,
-                )
 
             # reset wfm
             for i_wfm in xrange(len(wfm)):
@@ -512,19 +517,44 @@ def process_file(filename):
                 else:
                     sum_wfm += exo_wfm
 
+
+            if not ROOT.gROOT.IsBatch():
+                #print "entry %i | Evt %i | WFLen %i | WFTileId %i | WFLocalId %i | WFChannelCharge %i | energy %i" % (
+                print "entry %i | WFTileId %i | WFLocalId %i | energy %.1f | %i" % (
+                    i_entry, 
+                    #waveformTree.EventNumber,
+                    #waveformTree.WFLen,
+                    waveformTree.WFTileId,
+                    waveformTree.WFLocalId,
+                    #waveformTree.WFChannelCharge,
+                    waveformTree.WFChannelCharge*keV_per_electron,
+                    signal_map[n_ch],
+                )
+
+
+
+
             if not ROOT.gROOT.IsBatch():
 
                 # draw the EXODoubleWaveform:
-                hist=exo_wfm.GimmeHist()
+                hist=exo_wfm.GimmeHist("hist%i" % i_channel)
                 hist.SetMarkerSize(0.8)
                 hist.SetMarkerStyle(8)
                 hist.SetLineColor(ROOT.kBlue)
                 hist.SetMarkerColor(ROOT.kBlue)
-                hist.Draw("PL")
+                hist.SetYTitle("Energy [keV]")
+                hist.GetYaxis().SetTitleOffset(1.3)
+                max_val = evtTree.Energy*1e3
+                hist.SetMaximum(max_val*1.05)
+                hist.SetTitle("")
+                option = "pl"
+                if i_channel > 0:
+                    option = "pl same"
+                hist.Draw(option)
 
                 # draw the nEXO digi wfm also
-                print "pretrigger [microseconds]: ", n_baseline_samples/sampling_freq_Hz*second/microsecond
-                if True:
+                #print "pretrigger [microseconds]: ", n_baseline_samples/sampling_freq_Hz*second/microsecond
+                if False:
                     selection = "Entry$==%i" % i_entry
                     draw_cmd = "WFAmplitude*%f:WFTime+%f" % (
                         keV_per_electron*ADCunits_per_keV,
@@ -533,9 +563,10 @@ def process_file(filename):
                     print draw_cmd, selection
                     waveformTree.Draw(draw_cmd,selection,"pl same")
 
-                canvas.Update()
-                val = raw_input("press enter (q to quit) ") 
-                if val == 'q': sys.exit()
+                if False:
+                    canvas.Update()
+                    val = raw_input("press enter (q to quit) ") 
+                    if val == 'q': sys.exit()
 
                 # draw the nEXO digi wfm, alone
                 if False:
@@ -548,6 +579,22 @@ def process_file(filename):
 
             i_entry += 1
             # end loop over waveformTree
+
+        if not ROOT.gROOT.IsBatch():
+
+            # draw the EXODoubleWaveform:
+            hist=sum_wfm.GimmeHist("hist%i" % i_channel)
+            hist.SetMarkerSize(0.8)
+            hist.SetMarkerStyle(8)
+            hist.SetLineColor(ROOT.kRed)
+            hist.SetMarkerColor(ROOT.kRed)
+            hist.Draw("pl same")
+            print "%i strips above threshold" % nsignals[0]
+
+            canvas.Update()
+            val = raw_input("press enter (q to quit, p to print) ") 
+            if val == 'q': sys.exit()
+            if val == 'p': canvas.Print("%s_%i.pdf" % (basename, i_event))
 
 
         # calc risetimes from sum_wfm:
@@ -583,11 +630,29 @@ def process_file(filename):
 
 if __name__ == "__main__":
 
-    if len(sys.argv) < 2:
+
+    parser = OptionParser()
+
+    parser.add_option("-n", dest="noise_electrons", default=200.0,
+                      help="noise in electrons")
+
+    parser.add_option("-b", dest="digitizer_bits", default=11,
+                      help="digitizer_bits")
+
+    (options, filenames) = parser.parse_args()
+
+    if len(filenames) < 1:
       print "arguments: [nEXO MC digi files]"
       sys.exit(1)
 
-    for i_file, filename in enumerate(sys.argv[1:]):
-      print "===> file %i of %i" % (i_file, len(sys.argv[1:]))
-      process_file(filename)
+
+    for i_file, filename in enumerate(filenames):
+
+        print "===> file %i of %i" % (i_file, len(filenames))
+
+        process_file(
+            filename=filename,
+            noise_electrons=options.noise_electrons,
+            digitizer_bits=options.digitizer_bits,
+        )
 
