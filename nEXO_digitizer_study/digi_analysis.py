@@ -229,24 +229,52 @@ def process_file(
     NumChannels = array('I', [0]) # unsigned int
     out_tree.Branch('NumChannels', NumChannels, 'NumChannels/i')
 
-    """
-    event-level stuff example
 
+    """
+    *** event-level stuff example
+
+    root [2] evtTree->Show(0)
+    ======> EVENT:0
      EventNumber     = 0
      Energy          = 2.4578
-     GenX            = -174.998
-     GenY            = -401.721
-     GenZ            = -849.209
+     GenX            = -138.617
+     GenY            = -163.914
+     GenZ            = 182.2
      InitNumOP       = 661
-     NumChannels     = 2
-     xTile           = -144, -144
-     yTile           = -432, -432
-     XPosition       = -144, -174
-     YPosition       = -402, -432
-     ChannelLocalId  = 58, 6
-     ChannelCharge   = 52008, 41127
-     ChannelTime     = 631750, 631250
-     ChannelNTE      = 52008, 41127
+     NumChannels     = 7
+     xTile           = -144, -144, -144, -144, -144, -144, -144
+     yTile           = -144, -144, -144, -144, -144, -144, -144
+     XPosition       = -144, -141, -138, -144, -135, -144, -144
+     YPosition       = -168, -144, -144, -165, -144, -162, -159
+     ChannelLocalId  = 40, 17, 18, 41, 19, 42, 43
+     ChannelCharge   = 1, 10729, 50750, 23827, 1, 17402, 4
+     ChannelTime     = 26250, 29250, 29250, 28750, 26250, 29250, 29250
+     ChannelNTE      = 1, 10729, 50750, 23827, 1, 17402, 4
+     ChannelNoiseTag = 0, 0, 0, 0, 0, 0, 0
+     SamplingInterval = 500
+     NumCC           = 0
+     ssEnergy        = 0
+     msEnergy        = 0
+
+    *** wfm-level stuff example:
+
+    root [3] waveformTree->Show(0)
+    ======> EVENT:0
+     EventNumber     = 0
+     WFLen           = 57
+     WFTileId        = 63
+     WFLocalId       = 40
+     WFChannelCharge = 1
+     WFAmplitude     = 0, 
+                      17.7889, 36.3261, 55.6532, 75.813, 96.854, 
+                      118.825, 141.781, 165.778, 190.879, 217.151, 
+                      244.666, 273.5, 303.737, 335.468, 368.789, 
+                      403.811, 440.642, 479.413, 520.257
+     WFTime          = 0, 
+                      0.5, 1, 1.5, 2, 2.5, 
+                      3, 3.5, 4, 4.5, 5, 
+                      5.5, 6, 6.5, 7, 7.5, 
+                      8, 8.5, 9, 9.5
     """
 
     #-------------------------------------------------------------------------------
@@ -282,10 +310,36 @@ def process_file(
     #-------------------------------------------------------------------------------
 
     # this is only kind of from MC, since these get incremented if there are noise triggers
+    # no noise triggers yet, so this is just NumChannels
 
     # n channels hit
+    # this is the same as NumChannels for now, but should be different later
+    # when false triggers are added
     n_channels_hit = array('I', [0]) # unsigned int
     out_tree.Branch('n_channels_hit', n_channels_hit, 'n_channels_hit/i')
+
+
+    #-------------------------------------------------------------------------------
+    # these four wfm-level things are from evtTree:
+
+    # xTile
+    xTile = array('d', [0]*n_channels) # double
+    out_tree.Branch('xTile', xTile, 'xTile[n_channels_hit]/D')
+
+    # yTile
+    yTile = array('d', [0]*n_channels) # double
+    out_tree.Branch('yTile', yTile, 'yTile[n_channels_hit]/D')
+
+    # XPosition
+    XPosition = array('d', [0]*n_channels) # double
+    out_tree.Branch('XPosition', XPosition, 'XPosition[n_channels_hit]/D')
+
+    # YPosition
+    YPosition = array('d', [0]*n_channels) # double
+    out_tree.Branch('YPosition', YPosition, 'YPosition[n_channels_hit]/D')
+
+    # end of wfm-level stuff in evtTree
+    #-------------------------------------------------------------------------------
 
     # hit channel tile IDs
     WFTileId = array('I', [0]*n_channels) # unsigned int
@@ -300,9 +354,8 @@ def process_file(
     out_tree.Branch('WFChannelCharge', WFChannelCharge, 'WFChannelCharge[n_channels_hit]/D')
 
     # is_hit_MC: whether channel was truly hit in MC
-    is_hit_MC = array('I', [0]) # unsigned int
-    out_tree.Branch('is_hit_MC', is_hit_MC, 'is_hit_MC/i')
-
+    is_hit_MC = array('I', [0]*n_channels) # unsigned int
+    out_tree.Branch('is_hit_MC', is_hit_MC, 'is_hit_MC[n_channels_hit]/i')
 
 
     #-------------------------------------------------------------------------------
@@ -427,6 +480,7 @@ def process_file(
         # clear wfm-level variables, loop over all possible elements
         n_channels_hit[0] = 0
         for i_ch in xrange(n_channels):
+
             WFTileId[i_ch] = 0
             WFLocalId[i_ch] = 0
             WFChannelCharge[i_ch] = 0.0
@@ -435,6 +489,14 @@ def process_file(
 
         # loop over waveformTree
         for i_channel in xrange(NumChannels[0]):
+
+            # fill evtTree info
+            xTile[i_channel] = evtTree.xTile[i_channel]
+            yTile[i_channel] = evtTree.yTile[i_channel]
+            XPosition[i_channel] = evtTree.XPosition[i_channel]
+            YPosition[i_channel] = evtTree.YPosition[i_channel]
+            is_hit_MC[i_channel] = 1
+
             #print "event %i, wfm entry %i" % (i_event, i_entry)
             waveformTree.GetEntry(i_entry)
 
