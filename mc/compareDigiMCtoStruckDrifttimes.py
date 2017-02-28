@@ -134,9 +134,9 @@ def process_file(filenames):
 
     hists[0].SetMaximum(y_max*1.1)
     hists[0].SetMinimum(1e-4)
-    hists[0].Draw("")
+    hists[0].Draw("hist")
     for hist in hists:
-        hist.Draw("same")
+        hist.Draw("hist same")
     legend.Draw()
 
     canvas.Update()
