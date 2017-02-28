@@ -40,12 +40,13 @@ def fit_channel(
     all_energy_var, # used if channel==None, usually "SignalEnergy"
     selection, # selection for draw commands
     do_use_step=False, # whether to use Erfc step
-    min_bin=200, # just for drawing plots
-    max_bin=1200, # just for plotting
+    min_bin=400, # just for drawing plots
+    max_bin=900, # just for plotting
     line_energy = 570, # calibrated energy
+    #line_energy = 585, # calibrated energy
     #line_energy = 487, # 10th LXe FIXME
     #line_energy = 565,
-    fit_half_width=170, # half width for fit range
+    fit_half_width=120, # half width for fit range
     do_use_exp=True, # whether to use exponential function in the fit
     energy_var = "energy1_pz", # energy variable
 ):
@@ -123,6 +124,8 @@ def fit_channel(
     #-------------------------------------------------------------------------------
 
     isMC = struck_analysis_parameters.is_tree_MC(tree)
+    if isMC:
+        print "this is MC!"
 
     if not do_individual_channels and channel != None:
         print "==> skipping individual channel %i" % channel
@@ -167,6 +170,8 @@ def fit_channel(
         )
     else:
         draw_cmd = "%s >> fit_hist" % energy_var
+        if isMC:
+            draw_cmd = "%s*1.05 >> fit_hist" % energy_var
 
     print "draw command:", draw_cmd
     print "selection:"
@@ -448,7 +453,7 @@ def fit_channel(
 
 
     leg = ROOT.TLegend(0.49, 0.7, 0.99, 0.9)
-    leg.AddEntry(hist, "Data")
+    leg.AddEntry(hist, "Data (%i entries)" % hist.GetEntries())
     leg.AddEntry(testfit, "Total Fit: #chi^{2}/DOF = %.1f/%i, P-val = %.1E" % (chi2, ndf, prob),"l")
     leg.AddEntry(bestfit_gaus, "Gaus Peak: #sigma = %.1f #pm %.1f keV, %.1E #pm %.1E cts" % ( 
         sigma, sigma_err, n_peak_counts, n_peak_counts_err), "l")
@@ -630,6 +635,7 @@ def process_file(
     # speed things up by only turning on the branches we need
     tree.SetBranchStatus("*",0)
     tree.SetBranchStatus(all_energy_var,1)
+    tree.SetBranchStatus("SignalEnergy",1)
     tree.SetBranchStatus("nsignals",1)
     tree.SetBranchStatus("is_bad",1)
     tree.SetBranchStatus("is_pulser",1)
@@ -639,6 +645,12 @@ def process_file(
     tree.SetBranchStatus("trigger_time",1)
     tree.SetBranchStatus("rise_time_stop95_sum",1)
     tree.SetBranchStatus("rise_time_stop95",1)
+    if "nXsignals" in selection:
+        tree.SetBranchStatus("nXsignals",1)
+    if "nYsignals" in selection:
+        tree.SetBranchStatus("nYsignals",1)
+    if "nsignal_strips" in selection:
+        tree.SetBranchStatus("nsignal_strips",1)
 
     # start the calibration file
     new_calib_file = file("%s/new_calib_%s.txt" % (basename, basename),"w")
@@ -660,7 +672,7 @@ def process_file(
         charge_channels_to_use = struck_analysis_parameters.charge_channels_to_use
 
     for channel, value in enumerate(charge_channels_to_use):
-        #continue # skipping indiv channels for now... 
+        continue # skipping indiv channels for now... 
         if value:
             result = fit_channel(tree, channel, basename, do_1064_fit, all_energy_var, channel_selection, do_use_step, energy_var=energy_var, do_use_exp=do_use_exp)
             if result:
@@ -686,10 +698,26 @@ if __name__ == "__main__":
     #drift_time_high=9.0 # microseconds
     drift_time_high = struck_analysis_parameters.max_drift_time+2.0
 
+    # best cut so far for 11B:
+    # nXsignals==1 && nYsignals==1 && nsignal_strips==2 &&
+    # rise_time_stop95_sum-trigger_time >= 9.465 &&
+    # rise_time_stop95_sum-trigger_time <= 15.615
+
     # selections for the SignalEnergy plot
     selection = []
     selection.append(struck_analysis_cuts.get_single_strip_cut())
     selection.append(struck_analysis_cuts.get_drift_time_selection( drift_time_high=drift_time_high, isMC=isMC))
+
+    # best cuts so far for 11B:
+    if True:
+        selection = []
+        #selection.append("nXsignals==1")
+        #selection.append("nYsignals==1")
+        selection.append("nsignal_strips==2")
+        selection.append(struck_analysis_cuts.get_drift_time_selection(
+            drift_time_high=struck_analysis_parameters.max_drift_time-0.5))
+            #drift_time_high=struck_analysis_parameters.max_drift_time-1.0))
+    
     selection.append("!is_pulser")
     selection.append("!is_bad") 
     selection = " && ".join(selection)
@@ -706,10 +734,12 @@ if __name__ == "__main__":
     ##channel_selection = None
 
     all_energy_var = "SignalEnergy"
-    if isMC: all_energy_var = "SignalEnergy*1.02"
+    #if isMC: all_energy_var = "SignalEnergy*1.05" # 11B
     print "all_energy_var:", all_energy_var
-    do_use_step=True
-    do_use_exp=True
+    do_use_step=False
+    do_use_exp=False
+    do_1064_fit=False
 
-    process_file(sys.argv[1], False, all_energy_var, selection, channel_selection, do_use_step=do_use_step, energy_var="energy1_pz", do_use_exp=do_use_exp)
+    for filename in sys.argv[1:]:
+        process_file(filename, do_1064_fit, all_energy_var, selection, channel_selection, do_use_step=do_use_step, energy_var="energy1_pz", do_use_exp=do_use_exp)
 
