@@ -121,7 +121,7 @@ def process_file(filenames, fit_results_filename):
         single_strip_cut = struck_analysis_cuts.get_single_strip_cut(isMC=isMC)
         selection = []
         #selection.append("Entry$<10e5") # debugging
-        #selection.append(single_strip_cut)
+        selection.append(single_strip_cut)
         #selection.append("nsignals==2")
         selection.append("!is_pulser")
         selection.append("!is_bad")
