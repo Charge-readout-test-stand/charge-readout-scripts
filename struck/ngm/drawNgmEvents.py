@@ -42,13 +42,14 @@ canvas.SetRightMargin(0.15)
 
 ROOT.gStyle.SetTitleFontSize(0.04)
 
-nchannels = 16
+nchannels = len(struck_analysis_parameters.channel_map)
+print "%i channels" % nchannels
 
 def process_file(filename=None, n_plots_total=0):
 
     # options ------------------------------------------
     #threshold = 50 # keV
-    threshold = 450
+    threshold = 500
     #threshold = 1250 # keV
     #threshold = 570 # keV, for generating multi-page PDF
     #threshold = 50 # ok for unshaped, unamplified data
@@ -345,7 +346,6 @@ def process_file(filename=None, n_plots_total=0):
                     leg_entry = "%s #leftarrow" % leg_entry
 
             legend_entries[channel] = leg_entry
-
 
             # end loop over channels
 
