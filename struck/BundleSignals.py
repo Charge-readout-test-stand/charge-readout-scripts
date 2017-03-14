@@ -38,10 +38,10 @@ def GetChType(ch, isMC):
     channel_map = struck_analysis_parameters.channel_map
     chtype = 0
     
-    if isMC:
-        if ch < 30: chtype = 1
-        elif ch<60: chtype = 2
-        else: print "MC -- What happened??", ch
+    #if isMC:
+    #    if ch < 30: chtype = 1
+    #    elif ch<60: chtype = 2
+    #    else: print "MC -- What happened??", ch
 
     else:
         if 'X' in channel_map[ch]: chtype = 1
