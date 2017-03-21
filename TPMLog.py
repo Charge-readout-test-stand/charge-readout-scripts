@@ -483,7 +483,13 @@ def main(
 
             if time_stamp >= 3553816731.0:
                 print "during/after 8th LXe"
-                mass_flow_rate_offset = 170.0/15.0/60.0 # 100 grams in 15 hours
+                mass_flow_rate_offset = 170.0/15.0/60.0 # 170 grams in 15 hours
+
+            if time_stamp >= 3563225481: # Manuel's run:
+                mass_flow_rate_offset = 405.0/40.0/60.0 # 405 grams in 40 hours
+
+            if time_stamp >= 3572906297: # Manuel's run 2:
+                mass_flow_rate_offset = 160.0/12.0/60.0 # 160 grams in 12 hours
 
             print "mass_flow_rate_offset: [grams/minute]", mass_flow_rate_offset
 
@@ -512,7 +518,7 @@ def main(
             #print "tstamp:  ", time_stamp
             do_warning = False     
 
-        full_mass_integral = 8760.0
+        full_mass_integral = 8760.0 # grams in cell when it is full
 
         full_capacitance = 38.7
         empty_capacitance = 25
@@ -543,11 +549,13 @@ def main(
             empty_bottle_mass = full_bottle_mass - 8.75
 
         if time_stamp > 3563225481: # after adding LN level sensor
+            #full_bottle_mass = 55.54 # Manuel's run, Dec 2016
             full_bottle_mass = 55.77
             empty_bottle_mass = full_bottle_mass - 8.75
             full_mass_integral = 8750.0
             full_capacitance = 37.2
             empty_capacitance = 24.5
+
 
         TC0.append(float(split_line[1]))
         TC1.append(float(split_line[2]))
