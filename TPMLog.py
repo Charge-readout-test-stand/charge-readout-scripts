@@ -218,6 +218,18 @@ def plot_temperatures(filename, title, time_hours, time_stamps, TC0=None, TC1=No
     # http://www.w3schools.com/tags/ref_colornames.asp
 
     kelvin_offset = 273.15
+
+    # draw this first so it's in the background, since it has lots of noise
+    if T_omega and len(T_omega) > 0:
+        line_omega = plt.plot(time_hours[first_index:last_index],
+        T_omega[first_index:last_index])
+        plt.setp(line_omega, color = 'c', linewidth = linewidth, label = 'Cu Top Omega (%.1fK = %.1fC)' % (T_omega[last_index], T_omega[last_index]-kelvin_offset))
+
+    if TC4 and len(TC4) > 0:
+        line5 = plt.plot(time_hours[first_index:last_index],
+        TC4[first_index:last_index])
+        plt.setp(line5, color = 'k', linewidth = linewidth, label = 'Cu Top (%.1fK = %.1fC)' % (TC4[last_index], TC4[last_index]-kelvin_offset))
+
     if TC0 and len(TC0) > 0:
         line1 = plt.plot(time_hours[first_index:last_index], TC0[first_index:last_index])
         plt.setp(line1, color = 'r', linewidth = linewidth, label = 'Cu Bot (%.1fK = %.1fC)' % (TC0[last_index], TC0[last_index]-kelvin_offset))
@@ -235,16 +247,6 @@ def plot_temperatures(filename, title, time_hours, time_stamps, TC0=None, TC1=No
         line4 = plt.plot(time_hours[first_index:last_index],
         TC3[first_index:last_index])
         plt.setp(line4, color = 'm', linewidth = linewidth, label = 'Cell Bot (%.1fK = %.1fC)' % (TC3[last_index], TC3[last_index]-kelvin_offset))
-
-    if TC4 and len(TC4) > 0:
-        line5 = plt.plot(time_hours[first_index:last_index],
-        TC4[first_index:last_index])
-        plt.setp(line5, color = 'k', linewidth = linewidth, label = 'Cu Top (%.1fK = %.1fC)' % (TC4[last_index], TC4[last_index]-kelvin_offset))
-
-    if T_omega and len(T_omega) > 0:
-        line5 = plt.plot(time_hours[first_index:last_index],
-        T_omega[first_index:last_index])
-        plt.setp(line5, color = 'c', linewidth = linewidth, label = 'Cu Top Omega (%.1fK = %.1fC)' % (T_omega[last_index], T_omega[last_index]-kelvin_offset))
 
     if T_ambient and len(T_ambient) > 0:
         line6 = plt.plot(time_hours[first_index:last_index],
@@ -832,7 +834,7 @@ def main(
       plt.title(title)
       uline1 = plt.plot(time_hours[first_index:last_index],
       Vol[first_index:last_index])
-      plt.setp(uline1, color = 'b', linewidth = linewidth)
+      plt.setp(uline1, color = '#652694', linewidth = linewidth)
 
       # add indicator line without changing plot y axes:
       ymin, ymax = plt.gca().get_ylim()
@@ -918,7 +920,7 @@ def main(
       plt.grid(b=True)
       plt.title("XP5 Vacuum system pressure (1k Torr Baratron) [Torr]: %.2f \n" % Pressure2[-1])
       pline1 = plt.plot(time_hours[first_index:last_index], Pressure2[first_index:last_index])
-      plt.setp(pline1, color = 'b', linewidth = linewidth)
+      plt.setp(pline1, color = 'r', linewidth = linewidth)
       plt.xlabel('Time [hours] %s' % time_string)
       plt.ylabel('Pressure [Torr]')
       plt.savefig(ppath2)
@@ -986,7 +988,7 @@ def main(
       plt.grid(b=True)
       mfline1 = plt.plot(time_hours[first_index:last_index],
       mass_flow_rate[first_index:last_index])
-      plt.setp(mfline1, color = 'b', linewidth = linewidth, 
+      plt.setp(mfline1, color = '#652694', linewidth = linewidth, 
       label="Mass flow rate: %.2f g/min" % mass_flow_rate[last_index])
       ymin, ymax = plt.gca().get_ylim() # record y axis limits now
       label_val = -1.0
@@ -1205,7 +1207,7 @@ def main(
         plt.figure(13)
         plt.grid(b=True)
         mfline1 = plt.plot(time_hours[first_index:last_index], bottle_mass[first_index:last_index])
-        plt.setp(mfline1, color = 'b', linewidth = linewidth, 
+        plt.setp(mfline1, color = '#26946A', linewidth = linewidth, 
         label="Xe bottle mass: %.2f kg (%.1f kg in cell)" % (bottle_mass[last_index], full_bottle_mass - bottle_mass[last_index]))
 
         ymin, ymax = plt.gca().get_ylim() # record y axes now
@@ -1290,7 +1292,7 @@ def main(
             plt.title(title)
             hfe_line = plt.plot(time_hours[first_index:last_index],
             hfe_pressure[first_index:last_index])
-            plt.setp(hfe_line, color = 'b', linewidth = linewidth)
+            plt.setp(hfe_line, color = 'g', linewidth = linewidth)
             plt.xlabel('Time [hours] %s' % time_string)
             plt.ylabel('Pressure [torr]')
             plt.savefig(hfep_path)
@@ -1318,7 +1320,7 @@ def main(
             plt.axhspan(ymin=ymin, ymax=-1000, color='red', alpha=0.5)
             plt.gca().set_ylim([ymin,ymax])
 
-            plt.setp(dP_line, color = 'b', linewidth = linewidth)
+            plt.setp(dP_line, color = 'g', linewidth = linewidth)
             plt.xlabel('Time [hours] %s' % time_string)
             plt.ylabel('Pressure [torr]')
             plt.savefig(dp_path)
