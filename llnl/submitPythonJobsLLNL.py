@@ -50,8 +50,10 @@ def main(python_script, filenames, options="", verbose=True):
 
         basename = os.path.basename(filename)
         basename = os.path.splitext(basename)[0]
-        basename = "_".join(basename.split("_")[2:])
+        test_basename = "_".join(basename.split("_")[2:])
+        if test_basename != "": basename = test_basename
         if basename == "": basename = "test"
+        print basename
 
 # sample LLNL command (from nEXO MC)
 #msub -A afqn -m abe -V -N mc$j -o $OUT_DIR/log/blog_$DIFF.job${j} -j oe -q pbatch -l walltime=12:00:00 $OUT_DIR/jobs_hold/doall${j}.script

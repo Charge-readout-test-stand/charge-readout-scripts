@@ -4,7 +4,7 @@ account.
 
 ** run this script with "python -u" to pipe output to a log file. Usually
 something like this, in a screen session:
-  python -u pyalarm.py --lxe >& py_log.out
+  python -u pyalarm.py >& py_log.out
 
 This script sends email if one of these conditions is met: 
 * Unable to ping IP address of Omega LN controller (power may be out)
@@ -15,19 +15,16 @@ This script sends email if one of these conditions is met:
 * Dropbox is not updating (this means we can't monitor the system)
 
 To do: FIXME
+* skipping LN hours left for now, it gives false alarms for a long time after
+  dewar changes
 * 12 May 2016 -- script hung while trying to send mail, I think internet was
-  down printed text:
+  down. Printed text:
 
         --> sending mail...
 
            user: alexis:
             schubert.alexis@gmail.com
         trying to send mail...
-
-* send heart beat email info?
-
-FIXME -- output thresholds & settings (lxe or not) in heartbeat email
-
 
 Modified from Brian Mong's monitoring of EXO-200. 
 05 May 2016
@@ -42,21 +39,25 @@ import commands
 import smtplib
 
 # options -- monitoring thresholds:
-temperature_threshold = 173.0 # LXe & Cu operating threshold, K
+temperature_threshold = 171.0 # LXe & Cu operating threshold, K
 dp_threshold = 700.0 # xenon - HFE, torr
 ln_mass_threshold = 70.0 # lbs of LN needed
 ln_hours_left_threshold = 1.0 # at least 1 hour of LN must remain! 
 lookback_time_minutes = 10.0 # LabView plots shouldn't be older than this, minutes
 sleep_seconds = 60*5 # sleep for this many seconds between tests
 heartbeat_interval_hours = 1.0
+cu_plate_in_threshold = 168.5 # K, this is most sensitive to failures of cooling
+
 
 def print_warning(warning):
     print "WARNING:", warning
+
 
 def load_gmail_info():
     gmail_user = "lxe.readout@gmail.com"
     gmail_pwd = os.environ["LXEPASS"] # password for this account
     return gmail_user, gmail_pwd
+
 
 def filter_SMS(users):
     """ 
@@ -80,8 +81,6 @@ def filter_SMS(users):
     return new_dict
 
 
-
-
 class LXeMonitoring:
 
     def __init__(self):
@@ -90,31 +89,45 @@ class LXeMonitoring:
         self.users = {
             'alexis':[
                 'schubert.alexis@gmail.com', 
-                'agschube@gmail.com',
-                '2064121866@tmomail.net', # cell phone
+                'agschube@gmail.com', 
+                '2064121866@tmomail.net', # cell
+            ],
+            'mike':[
+                '6097062001@txt.att.net', # cell
                 'mjjewell46@gmail.com', 
             ],
         }
 
-    def main(self, do_debug, do_test, lxe):
+    def main(self, do_debug, do_test, no_lxe):
+
+
+        # trying to avoid UnboundLocalError 
+        global temperature_threshold
+        global ln_mass_threshold
+        global ln_hours_left_threshold
+        global dp_threshold
+        global lookback_time_minutes
+        global sleep_seconds
+        global cu_plate_in_threshold
 
         self.do_test = do_test
         self.do_debug = do_debug
-        self.lxe = lxe
-        
+        self.lxe = not no_lxe
 
         start_time = datetime.datetime.now()
 
         if self.lxe:
-            print 'monitoring for LXe'
+            print '\n----> monitoring for LXe\n'
         else:
             print '===> WARNING: LXe is set to false!'
             print '\t LN mass, Cu & cell temps, will *NOT* be monitored'
         
 
         if self.do_test:
+            print "====> doing test... changing thresholds so all alarms trigger"
             # change thresholds so all alarms will trigger:
             temperature_threshold = 0.0
+            cu_plate_in_threshold = 0.0
             dp_threshold = -1e5
             ln_mass_threshold = -100
             ln_hours_left_threshold = -100
@@ -140,7 +153,6 @@ class LXeMonitoring:
             print '===> starting monitoring loop', now
 
             try:
-
                 self.do_ping() # ping the Omega LN controller
                 self.check_dropbox_data()
 
@@ -156,6 +168,20 @@ class LXeMonitoring:
                         message += "last heartbeat sent at %s \n" % last_heartbeat
                     else:
                         message += "this is the first heartbeat \n"
+
+
+                    # add threshold info:
+                    message += "\n"
+                    message += "threshold info: \n"
+                    message += "temperature_threshold: %.2f K \n" % temperature_threshold 
+                    message += "cu_plate_in_threshold: %.2f K \n" % cu_plate_in_threshold 
+                    message += "ln_mass_threshold: %.1f lbs LN left \n" % ln_mass_threshold 
+                    message += "dp_threshold: %.1f torr \n" % dp_threshold 
+                    #message += "ln_hours_left_threshold: %.2f hours \n" % ln_hours_left_threshold 
+                    message += "lookback_time_minutes: %.2f minutes \n" % lookback_time_minutes 
+                    message += "heartbeat_interval_hours: %.2f hours between these emails\n" % heartbeat_interval_hours 
+                    message += "sleep_seconds: %.2f seconds between script loops \n" % sleep_seconds 
+
                     last_heartbeat = now
                     #print message
                     filtered_users = filter_SMS(self.users) 
@@ -364,6 +390,13 @@ class LXeMonitoring:
                     messages.append(message)
                     print_warning(message)
 
+            key = 'cu_top'
+            if data[key] > cu_plate_in_threshold:
+                message = "%s = %.1f K (threshold=%.1f)" % (key, data[key], cu_plate_in_threshold)
+                messages.append(message)
+                print_warning(message)
+
+
         else:
             print "Warning: LXe is set to false -- not checking cell temps or LN remaining"
 
@@ -417,9 +450,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--test', action='store_true')
-    parser.add_argument('--lxe', action='store_true')
+    parser.add_argument('--no-lxe', action='store_true')
     args = parser.parse_args()
 
     monitor = LXeMonitoring()
-    monitor.main(do_debug=args.debug, do_test=args.test, lxe=args.lxe)
+    monitor.main(do_debug=args.debug, do_test=args.test, no_lxe=args.no_lxe)
 
