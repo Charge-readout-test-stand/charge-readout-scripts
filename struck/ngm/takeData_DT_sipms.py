@@ -44,9 +44,25 @@ def takeData(doLoop=False, n_hours=10.0):
   gain = 0 # default = 1 1 = 2V; 0 = 5V, use 1 for LXe runs, 0 for testing warm
   #termination = 1 # 1 = 50 ohm?
   nimtriginput = 0x10 # Bit0 Enable : Bit1 Invert , we use 0x10 (from struck root gui)
-  #nimtrigoutput = 0
+
   #nimtrigoutput = 0xFF # first 8 channels trigger
-  nimtrigoutput = 0xFFFF # any channel triggers
+  #nimtrigoutput = 0xFFFF # any channel triggers
+
+  # trigger output, described on p. 112 of SIS3316-M-1-1-V114.pdf
+  # bits 0-15: 16 individual channels
+  # bit 16: sum ch 1-4
+  # bit 17: sum ch 5-8
+  # bit 18: sum ch 9-12
+  # bit 19: sum ch 13-16
+
+  #trig_string = '1111' # any of first 4 channels, 0, 1, 2, 3
+  trig_string = '1111111111111111' # any channel
+  nimtrigoutput = int(trig_string, 2)
+  print "trigger ouptut:", nimtrigoutput
+  print "binary trigger output:", bin(nimtrigoutput)
+  print "hex trigger output", hex(nimtrigoutput)
+
+
   #nimtriginput = 0
   #trigconf = 0x8 # default = 0x5, we use 0x8 Bit0:Invert, Bit1:InternalBlockSum, Bit2:Internal, Bit3:External                       
   trigconf = 0
