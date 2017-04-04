@@ -195,8 +195,9 @@ def process_file(filenames):
     #tree.SetBranchStatus("is_bad",1)
     #draw_channel_plots(tree, "is_bad", 0.0, 34.0, "", basename)
 
-    tree.SetBranchStatus("decay_fit",1)
-    draw_channel_plots(tree, "decay_fit", 0.0, 3000.0, "#us", basename)
+    # energy1, to show energy threshold
+    tree.SetBranchStatus("energy1",1)
+    draw_channel_plots(tree, "energy1", 0.0, 100.0, "keV", basename)
 
     if False:
         # rise_time_stop95
@@ -207,6 +208,11 @@ def process_file(filenames):
         tree.SetBranchStatus("baseline_rms",1)
         tree.SetBranchStatus("calibration",1)
         draw_channel_plots(tree, "baseline_rms*calibration", 0.0, 55.0, "keV", basename, plot_name="baseline_rms_x_calibration")
+
+        # decay times
+        tree.SetBranchStatus("decay_fit",1)
+        draw_channel_plots(tree, "decay_fit", 0.0, 3000.0, "#us", basename)
+
 
 
 if __name__ == "__main__":
