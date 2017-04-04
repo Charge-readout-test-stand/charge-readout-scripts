@@ -21,6 +21,9 @@ def takeData(doLoop=False, n_hours=10.0):
   # options
   # ---------------------------------------------------------------------------
 
+  #is_warm = False
+  is_warm = True # FIXME
+
   #file_suffix = "_test" # this gets appended to the file name
   #file_suffix = "_digitizer_noise_tests_" # this gets appended to the file name
   #file_suffix = "_8thLXe_126mvDT_cell_full_cath_1700V_100cg_overnight_" # 126-mV discrim threshold, 1700 cathode bias, 100x PMT coarse gain
@@ -29,8 +32,12 @@ def takeData(doLoop=False, n_hours=10.0):
   #file_suffix = "_9thLXe_126mvDT_cath_1700V_100cg_warmup_before_recovery_" # 126-mV discrim threshold, 1700 cathode bias, 100x PMT coarse gain
   #file_suffix = "_PMT_Xe_gas_126mvDT__" # 126-mV discrim threshold, 1700 cathode bias, 100x PMT coarse gain
   #file_suffix = "_11thLXe_pulser_off_noise" # 126-mV discrim threshold, 1700 cathode bias, 100x PMT coarse gain
-  file_suffix = "_11thLXe_124mVDT_1250VPMT_recovery_cathode_pulser_higher_inhibit2"
   #file_suffix = "_9thLXe_pulsar_cooldown_notFull_pulsarisX23_24_"
+  #file_suffix = "_11thLXe_124mVDT_1250VPMT_recovery_cathode_pulser_higher_inhibit2"
+  #file_suffix = "_noise_tests_900torrAr_ShvFt_dewarOpen"
+  file_suffix = "_noise_tests_880torrAr0V_ShvFt_dewarOpen_CMoff"
+  n_cards = 2
+
   runDuration = 2*60 # seconds
   #runDuration = 10 # seconds -- debugging! FIXME
   #A 60s run is 720 MB with 4ms veto
@@ -42,6 +49,9 @@ def takeData(doLoop=False, n_hours=10.0):
   nimtriginput = 0x10 # Bit0 Enable : Bit1 Invert , we use 0x10 (from struck root gui)
   trigconf = 0x8 # default = 0x5, we use 0x8 Bit0:Invert, Bit1:InternalBlockSum, Bit2:Internal, Bit3:External                       
   dacoffset = 32768 # default = 32768 
+  if is_warm:
+      print "This is DAQ offset for warm cell!!!"
+      dacoffset = 22768 # default = 32768 # FIXME -- for warm cell
 
   # could have a few other clock freqs if we define them, look to struck root gui for info
   clock_source_choice = 3 # 0: 250MHz, 1: 125MHz, 2=62.5MHz 3: 25 MHz (we use 3) 
@@ -67,9 +77,9 @@ def takeData(doLoop=False, n_hours=10.0):
   """
 
   sis = ROOT.SIS3316SystemMT()
-  sis.setDebug() # NGMModuleBase/NGMModule::setDebug()
+  #sis.setDebug() # NGMModuleBase/NGMModule::setDebug()
   sis.initModules() # NGMModuleBase/NGMModule::initModules()
-  sis.SetNumberOfSlots(2) # SIS3316SystemMT::SetNumberOfSlots()
+  sis.SetNumberOfSlots(n_cards) # SIS3316SystemMT::SetNumberOfSlots()
   sis.CreateDefaultConfig("SIS3316") # SIS3316SystemMT _config = new NGMSystemConfigurationv1
 
   sis.SetInterfaceType("sis3316_eth")
@@ -82,14 +92,15 @@ def takeData(doLoop=False, n_hours=10.0):
   sis.GetConfiguration().GetSystemParameters().SetParameterS("OutputFileSuffix",0,file_suffix) 
   sis.GetConfiguration().GetSlotParameters().AddParameterS("IPaddr")
   sis.GetConfiguration().GetSlotParameters().SetParameterS("IPaddr",0,"192.168.1.100")
-  sis.GetConfiguration().GetSlotParameters().SetParameterS("IPaddr",1,"192.168.2.100")
+  if n_cards > 1:
+    sis.GetConfiguration().GetSlotParameters().SetParameterS("IPaddr",1,"192.168.2.100")
 
   print "\n----> calling InitializeSystem()"
   sis.InitializeSystem() # this also calls ConfigureSystem()
   print "----> done InitializeSystem()\n"
 
   # Adjust trigger thresholds etc. See sis3316card.{h,cc}
-  for icard in xrange(2): # loop over cards:
+  for icard in xrange(n_cards): # loop over cards:
     sis0 = sis.GetConfiguration().GetSlotParameters().GetParValueO("card",icard)
 
     sis0.nimtriginput = nimtriginput 
@@ -145,6 +156,8 @@ def takeData(doLoop=False, n_hours=10.0):
   sis.ConfigureSystem()
 
   print "\n-----> start acquisition" 
+  if is_warm:
+      print "SETTINGS ARE FOR WARM CELL !!!"
   if doLoop:
       print "===> starting %.1f-hour loop of %.1f-second runs.." % (n_hours, runDuration)
       n_loops = 0
@@ -170,7 +183,7 @@ def takeData(doLoop=False, n_hours=10.0):
           )
           last_time = now
   else:
-      "\n===> starting single run, %.1f seconds" % runDuration
+      print "\n===> starting single run, %.1f seconds" % runDuration
       sis.StartAcquisition() 
 
 
