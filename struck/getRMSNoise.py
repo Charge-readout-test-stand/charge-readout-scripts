@@ -27,15 +27,15 @@ def getRMS(calibrate):
     plot_name = "/home/teststand/2016_08_15_8th_LXe_overnight/tier3_added/RMSNoise_%s.pdf" % basename
     out_fname = "/home/teststand/2016_08_15_8th_LXe_overnight/tier3_added/RMSNoise_%s.root" % basename
 
-    if len(sys.argv) > 1:
-        plot_name = "RMSNoise_%s.pdf" % basename
-        out_fname = "RMSNoise_%s.root" % basename
-    
     if calibrate:
         plot_name = "/home/teststand/2016_08_15_8th_LXe_overnight/tier3_added/RMSNoise_calibrated_%s.pdf" % basename
         out_fname = "/home/teststand/2016_08_15_8th_LXe_overnight/tier3_added/RMSNoise_calibrated_%s.root" % basename
         log_name = "log_RMSNoise_calibrated.txt"
 
+    if len(sys.argv) > 1:
+        plot_name = "RMSNoise_%s.pdf" % basename
+        out_fname = "RMSNoise_%s.root" % basename
+    
     out_rfile = ROOT.TFile(out_fname, "RECREATE")
 
     canvas = ROOT.TCanvas("canvas")
@@ -67,6 +67,8 @@ def getRMS(calibrate):
 
         hist = ROOT.TH1D("hist_%i" % channel,"",n_bins,0, energy_max)
         hist.SetXTitle("RMS Noise [ADC units]")
+        if calibrate:
+            hist.SetXTitle("RMS Noise [keV]")
         hist.SetYTitle("Counts")
         hist.GetYaxis().SetTitleOffset(1.2)
         hist.SetLineWidth(3)
@@ -86,6 +88,8 @@ def getRMS(calibrate):
             draw_cmd = "baseline_rms[%i] >> %s" % (channel, hist.GetName())
 
         selection = ""
+        print draw_cmd
+        print selection
 
         n_drawn = tree.Draw(draw_cmd, selection)
         print "n_drawn", n_drawn
@@ -207,7 +211,8 @@ def plotRMS():
 
         #canvas.Update()
         mean = hist.GetMean()
-        mean_error = hist.GetMeanError()
+        #mean_error = hist.GetMeanError()
+        mean_error = hist.GetRMS()
         
         print label, mean
 
@@ -249,6 +254,7 @@ def plotRMS():
 if __name__ == "__main__":
     remake = True
     calibrate = False
+    #calibrate = True
     if remake:
         getRMS(calibrate)
         plotRMS()
