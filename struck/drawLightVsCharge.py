@@ -10,8 +10,13 @@ import struck_analysis_cuts
 # 8th LXe overnight, most recent version, at LLNL:
 filename = "/p/lscratchd/alexiss/2016_08_15_8th_LXe_overnight/tier3_added/overnight8thLXe.root"
 filename = "~/scratch/mc_slac/red_overnight8thLXe_v6.root" # alexis
-filename = sys.argv[1]
+filename = "~/mc/Bi207_Full_Ralph_dcoeff50_SIPM/Bi207_Full_Ralph_dcoeff50_efield.root" # alexis, LLNL
+if len(sys.argv) >= 2: filename = sys.argv[1]
+
+
 basename = os.path.splitext(os.path.basename(filename))[0]
+
+print "basename:", basename
 
 
 tfile = ROOT.TFile(filename)
@@ -24,28 +29,42 @@ canvas.SetMargin(margin, margin, margin, margin)
 canvas.SetGrid(1,1)
 canvas.SetLogz()
 
+drift_time_low = struck_analysis_parameters.drift_time_threshold+2.0
 drift_time_high = struck_analysis_parameters.max_drift_time-0.5
+drift_time_high = struck_analysis_parameters.max_drift_time+1.5
+drift_time_high = None
 
 energy_var = "SignalEnergy"
+light_var = "lightEnergy"
+isMC = struck_analysis_parameters.is_tree_MC(tree)
+if isMC:
+    light_var = "NPE"
 
 selection = []
-selection.append(struck_analysis_cuts.get_drift_time_selection(drift_time_high=drift_time_high))
+selection.append(struck_analysis_cuts.get_drift_time_selection(
+    drift_time_low=drift_time_low,
+    drift_time_high=drift_time_high))
 
 #selection = struck_analysis_cuts.get_drift_time_cut( drift_time_low=8.0, drift_time_high=drift_time_high)
 #selection = "rise_time_stop95_sum-8>%s && rise_time_stop95_sum-8<%s" % (drift_time_low, drift_time_high)
 
 # for 11th LXe
-nsignal_strips = 2
+#nsignal_strips = 2
 #nsignal_strips = 4
-#nsignal_strips = 0
+nsignal_strips = 0
 if nsignal_strips > 0:
     selection.append("nsignal_strips==%i" % nsignal_strips)
 else:
-    selection.append("nsignal_strips>%i" % nsignal_strips)
+    #selection.append("nsignal_strips>%i" % nsignal_strips)
+    pass
 
-selection.append("nXsignals==1 && nYsignals==1")
+#selection.append("nXsignals==1 && nYsignals==1")
+
+if isMC: 
+    selection.append("%s>0" % light_var)
 
 selection = " && ".join(selection)
+
 
 basename += "_%isignalstrips" % nsignal_strips
 
@@ -53,6 +72,8 @@ basename += "_%isignalstrips" % nsignal_strips
 tree.SetBranchStatus("*",0)
 tree.SetBranchStatus("SignalEnergy",1)
 tree.SetBranchStatus("lightEnergy",1)
+if isMC:
+    tree.SetBranchStatus("NPE",1)
 tree.SetBranchStatus("nsignals",1)
 tree.SetBranchStatus("is_bad",1)
 tree.SetBranchStatus("is_pulser",1)
@@ -79,17 +100,26 @@ print selection
 
 n_bins = 150
 max_bin = 2000
-hist = ROOT.TH2D("hist","",n_bins,0,max_bin,n_bins,0,max_bin)
-hist.SetTitle("%s: %s {%s}" % (basename, energy_var, selection))
+lightEnergy_multiplier = 1.0
+#if isMC: lightEnergy_multiplier = 3.0
+hist = ROOT.TH2D("hist","",
+  n_bins,0,max_bin,
+  n_bins,0,max_bin*(isMC-1) + isMC*400.0*lightEnergy_multiplier,
+)
+#hist.SetTitle("%s: %s {%s}" % (basename, energy_var, selection))
+hist.SetTitle("%s" % (selection))
 hist.SetYTitle("Scintillation Energy")
 hist.SetXTitle("Ionization Energy")
 hist.GetYaxis().SetTitleOffset(1.6)
 hist.GetXaxis().SetTitleOffset(1.2)
 
-lightEnergy_multiplier = 1.0
+
 hist.GetDirectory().cd()
+draw_cmd = "%s*%s:%s >> hist" % (light_var, lightEnergy_multiplier, energy_var)
+print "draw_cmd:", draw_cmd
+print "selection:", selection
 n_drawn = tree.Draw(
-    "lightEnergy*%s:%s >> hist" % (lightEnergy_multiplier, energy_var),
+    draw_cmd, 
     selection,
     "colz")
 
@@ -104,14 +134,15 @@ canvas.SetLogz(1)
 canvas.Update()
 canvas.Print("chargeVsLight_log_%s.png" % basename)
 
-line = ROOT.TLine(0.0,0.0,2000.0,2000.0)
-line.SetLineWidth(2)
-line.SetLineStyle(2)
-line.Draw()
-canvas.Update()
-canvas.Print("chargeVsLight_log_line_%s.png" % basename)
+if False:
+    line = ROOT.TLine(0.0,0.0,2000.0,2000.0)
+    line.SetLineWidth(2)
+    line.SetLineStyle(2)
+    line.Draw()
+    canvas.Update()
+    canvas.Print("chargeVsLight_log_line_%s.png" % basename)
 
-if not ROOT.gROOT.IsBatch(): raw_input("enter to continue... ")
+    if not ROOT.gROOT.IsBatch(): raw_input("enter to continue... ")
 
 canvas = ROOT.TCanvas("acanvas","")
 canvas.SetGrid()
@@ -133,8 +164,11 @@ legend.AddEntry(chargeHist, "Ionization")
 legend.AddEntry(lightHist, "Scintillation")
 
 
-tree.Draw("SignalEnergy >> chargeHist",selection)
-tree.Draw("lightEnergy*%s >> lightHist" % lightEnergy_multiplier,selection,"same")
+lightEnergy_multiplier = 4.0
+n_drawn = tree.Draw("SignalEnergy >> chargeHist",selection)
+print "%i drawn to charge hist" % n_drawn
+n_drawn = tree.Draw("%s*%s >> lightHist" % (light_var, lightEnergy_multiplier),selection,"same")
+print "%i drawn to light hist" % n_drawn
 legend.Draw()
 canvas.Update()
 canvas.Print("lightAndCharge_%s_lin.pdf" % basename)
