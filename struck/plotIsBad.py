@@ -1,5 +1,7 @@
 """
 Draw is_bad bits
+
+Should add some kind of correlation plot to show which happen at the same time. 
 """
 
 import os
@@ -25,6 +27,9 @@ def process_files(filenames):
     is_bad_bits[2] = "energy1_pz noise too high"
     is_bad_bits[3] = "wfm_min==0"
     is_bad_bits[4] = "wfm_max==2^14-1"
+    is_bad_bits[5] = "n channels != 32"
+    is_bad_bits[6] = "RMS noise too low"
+    is_bad_bits[7] = "energy1_pz noise too low"
 
 
     hists = []
