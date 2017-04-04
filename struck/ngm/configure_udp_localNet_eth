@@ -1,0 +1,43 @@
+# set up MAC address to ethernet IP address mapping for VME or desktop struck
+# digitizers. 
+
+# use sudo
+# testing this 16 June 2016 -- AGS
+#ifconfig eth1 down
+#ifconfig eth1 212.60.16.200 # old attempts
+#ifconfig eth1 192.168.2.99 # IP address jason N. uses
+#ifconfig eth1 up
+#
+#
+# for VME pizza box
+arp -i eth1 -s 192.168.1.100 00:00:56:31:60:61 # eth1 -> S/N 97
+arp -i eth2 -s 192.168.2.100 00:00:56:31:60:62 # eth2 -> S/N 98 
+
+# for desktop unit:
+arp -i eth1 -s 192.168.1.101 00:00:56:31:60:9b # eth1 -> S/N 155
+#arp -i eth2 -s 192.168.2.101 00:00:56:31:60:9b # eth2 -> S/N 155
+
+#
+# reverse (for testing, ethernet cables need to be swapped also)
+#arp -i eth2 -s 192.168.2.100 00:00:56:31:60:61 # eth2 -> S/N 97
+#arp -i eth1 -s 192.168.1.100 00:00:56:31:60:62 # eth1 -> S/N 98 
+#
+#
+#
+# Network TCP/UDP tuning to support high-bandwith applications
+#
+#sysctl -w net.core.rmem_max=33554432
+#
+sysctl -w net.core.rmem_max=8388608
+sysctl -w net.core.wmem_max=8388608
+sysctl -w net.core.rmem_default=65536
+sysctl -w net.core.wmem_default=65536
+#
+sysctl -w net.ipv4.udp_mem='8388608 8388608 8388608'
+#
+sysctl -w net.ipv4.tcp_rmem='4096 87380 8388608'
+sysctl -w net.ipv4.tcp_wmem='4096 65536 8388608'
+sysctl -w net.ipv4.tcp_mem='8388608 8388608 8388608'
+#
+sysctl -w net.ipv4.route.flush=1
+
