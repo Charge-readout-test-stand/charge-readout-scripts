@@ -53,7 +53,7 @@ def process_files(filenames):
     # options
 
     # choose one:
-    do_draw_energy = 1
+    do_draw_energy = 0
     do_draw_drift_times = 0
     do_draw_rms = 0
     do_draw_rms_keV = 0
@@ -61,19 +61,20 @@ def process_files(filenames):
     do_draw_ADC_units = 0
     do_draw_mV = 0
     do_draw_one_strip_channels = 0
+    do_draw_slope = 1
 
     #do_draw_sum = False # sum energy
     do_draw_sum = True # sum energy
 
-    do_print_individual_channels = False # print individual channel plots
+    do_print_individual_channels = True # print individual channel plots
     do_draw_individual_channels = True # draw individual channels along with the sum on 1 plot
 
     # default values:
     xUnits = ""
     prefix = "plots"
     selections = []
-    selections.append("!is_pulser") # debugging
-    #selections.append("!is_bad") # debugging
+    selections.append("!is_pulser") 
+    selections.append("!is_bad") 
     #selections.append("nsignals==1") # debugging
     #selections.append("Entry$<500") # debugging
     sum_selections = []
@@ -139,6 +140,21 @@ def process_files(filenames):
         xtitle = "RMS noise"
         prefix = "keV_"
         do_draw_sum = False
+
+    elif do_draw_slope:
+        print "---> drawing slope"
+        #draw_command = "baseline_slope*calibration"
+        #prefix = "baseline_slope"
+        draw_command = "energy1_pz_slope"
+        prefix = "energy1_pz_slope"
+        selections.append("SignalEnergy>500")
+        min_bin = -20
+        max_bin = 20
+        bin_width = 0.1
+        xUnits = ""
+        xtitle = "slope"
+        do_draw_sum = False
+
 
     elif do_draw_rms:
         print "---> drawing RMS noise"
@@ -305,6 +321,15 @@ def process_files(filenames):
             tree.SetBranchStatus(draw_command,1)
             tree.SetBranchStatus("channel",1)
 
+        if do_draw_slope:
+            tree.SetBranchStatus("channel",1)
+            tree.SetBranchStatus("SignalEnergy",1)
+            if "energy1_pz_slope" in draw_command:
+                tree.SetBranchStatus("energy1_pz_slope",1)
+                tree.SetBranchStatus("calibration",1)
+            else:
+                tree.SetBranchStatus("baseline_slope",1)
+
 
         if do_draw_sum:
             if do_draw_one_strip_channels:
@@ -365,6 +390,8 @@ def process_files(filenames):
             ]
             selection = " && ".join(selections + extra_selections + ch_selections)
 
+            if i_file == len(filenames)-1:
+                print "\t draw command: %s" % draw_cmd, "selection: %s" % selection
             n_entries = tree.Draw(draw_cmd, selection)
 
             if do_print_individual_channels: # draw individual channel plots
@@ -382,7 +409,6 @@ def process_files(filenames):
             hist_rms = hist.GetRMS()
             
             if i_file == len(filenames)-1:
-                print "\t draw command: %s" % draw_cmd, "selection: %s" % selection
                 print "\t %i entries drawn, %i entries in hist" % (n_entries, hist.GetEntries())
             i_channel += 1
             # end loop over channels
