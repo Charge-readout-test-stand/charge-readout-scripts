@@ -39,14 +39,14 @@ print "max_drift_time:", max_drift_time
 
 drift_time_threshold = struck_analysis_parameters.drift_time_threshold
 print "drift_time_threshold:", drift_time_threshold
-
+cathode_offset = 0.5
 #drift_time_high = struck_analysis_parameters.max_drift_time+1.5
-drift_time_high = struck_analysis_parameters.max_drift_time-0.5
+drift_time_high = struck_analysis_parameters.max_drift_time-cathode_offset
 drift_time_low = struck_analysis_parameters.drift_time_threshold # usual
 #drift_time_low = None
 #drift_time_low = 0.0 # exclude low drift time cut...
 #drift_time_low = struck_analysis_parameters.max_drift_time - 1.0 # study cathode
-#drift_time_low = 6.43 # up to 9th LXe
+#drift_time_low = 6.43 # up to 9th LXe ; use this when comparing 9th LXe & 10+ LXe -- other drift_time_low gets handled below
 #drift_time_high = drift_time_high - 2.0
 
 # 8th and 9th:
@@ -311,8 +311,10 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
             #multiplier = 1.01 # 8th & 9th LXe
             #multiplier = 0.96 # 10th LXe 
             #multiplier = 0.94 # 10th LXe v3
-            if "11" in basename:
+            if "11th" in bname:
                 multiplier = 1.0/1.045 # 11th LXe MC
+            elif "9th" in bname:
+                multiplier = 0.995
             if is_noise_study:
                 multiplier = 1.0
         if not "8th" in bname: 
@@ -323,19 +325,21 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
                 part = "!is_bad && !is_pulser"
             if this_selection != "" and len(this_selection) > 0:
                 this_selection += " && " + part
-                print "\t\tadded this_selection to part"
+                print "\t\t added this_selection to part"
             else:
                 this_selection = part
             # handle different drift lengths:
             if not is_threshold_study and not is_noise_study:
                 if "10th" in bname or "11th" in bname or isMC:
                     # longer minimum drift time
-                    #if drift_time_low < struck_analysis_parameters.drift_time_threshold:
-                    #    this_selection += " && rise_time_stop95_sum-trigger_time>=%f" % struck_analysis_parameters.drift_time_threshold
-                    print "\t\tskipping forced drift_time_low for now..."
+                    if drift_time_low != struck_analysis_parameters.drift_time_threshold:
+                        if drift_time_low < struck_analysis_parameters.drift_time_threshold:
+                            this_selection += " && rise_time_stop95_sum-trigger_time>=%f" % struck_analysis_parameters.drift_time_threshold
+                    else:
+                        print "\t\t skipping forced drift_time_low for now..."
                 else:      
                     # shorter max drift
-                    this_selection += " && rise_time_stop95_sum-trigger_time<=%f" % (18.16/2.0)
+                    this_selection += " && rise_time_stop95_sum-trigger_time<=%f" % (18.16/2.0-cathode_offset)
 
             # minor mods to energy calibration
             if "10th" in bname:
@@ -370,10 +374,11 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
         # draw hist
         hist.GetDirectory().cd()
         print "\t\t draw_cmd:", this_draw_cmd
-        print "\t\t this_selection:", this_selection
+        print "\t\t this_selection:"
+        print "\t\t\t " + "&& \n\t\t\t".join(this_selection.split("&&"))
         #sys.exit() # debugging
-        tree.Draw("%s >> %s" % (this_draw_cmd, hist.GetName()), this_selection, "norm goff")
-        print "\t\t %i entries in hist" % hist.GetEntries()
+        n_drawn = tree.Draw("%s >> %s" % (this_draw_cmd, hist.GetName()), this_selection, "norm goff")
+        print "\t\t %i entries in hist, %i drawn" % (hist.GetEntries(), n_drawn)
 
         #label = "Data"
         #if isMC: label = "MC"
@@ -424,7 +429,7 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
     hists[0].Draw("hist")
     for hist in hists[1:]:
         hist.Draw("hist same")
-    hists[0].Draw("hist same")
+    #hists[0].Draw("hist same") # redraw 1st hist over the top
     canvas.Update()
     plotname = "comparison_%s" % draw_cmd
     if "Sum" in draw_cmd:
