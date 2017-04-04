@@ -1000,14 +1000,6 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             event[0] = tree.EventNumber
             sub_event[0] = tree.SubEventNumber
 
-            # check for backwards compatibility...
-            try:
-                NOP[0] = tree.NOP
-                NOPactive[0] = tree.NOPactive
-                NPE[0] = tree.NPE
-                NPEactive[0] = tree.NPEactive
-            except AttributeError:
-                pass
         elif isNGM:
             event[0] = n_events
         else:
@@ -1062,6 +1054,15 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             MCnestEventEnergy[0] = tree.NestEventEnergy
             MCEventNumber[0] = tree.EventNumber
             NumTE[0] = tree.NumTE
+            # check for backwards compatibility...
+            try:
+                NOP[0] = tree.NOP
+                NOPactive[0] = tree.NOPactive
+                NPE[0] = tree.NPE
+                NPEactive[0] = tree.NPEactive
+            except AttributeError:
+                pass
+
             NPrimaries[0] = tree.NPrimaries
             for i_primary in xrange(tree.NPrimaries):
                 PdgCode[i_primary] = tree.PdgCode[i_primary]
