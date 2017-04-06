@@ -35,12 +35,18 @@ def main(filename):
         hist.SetTitle("Electric field [V/cm]")
 
         z = -5.0
-        delta_z = 0.5
+        delta_z = hist.GetYaxis().GetBinWidth(1)
         print "data: z [mm] | E [V/cm]"
         while z < drift_length + 1.0:
             iBin = hist.FindBin(0, z)
             val = hist.GetBinContent(iBin)
-            print "\t  %.1f | %.2f" % (z, val) 
+            bin_low_edge = hist.GetYaxis().GetBinLowEdge(
+              hist.GetYaxis().FindBin(z))
+            print "\t  %.1f to %.1f | %.2f" % (
+                bin_low_edge, 
+                bin_low_edge + hist.GetYaxis().GetBinWidth(1), 
+                val,
+            ) 
             z += delta_z
 
         max_x = math.sqrt(2)*100/2.0 # radius to diagonal of tile
