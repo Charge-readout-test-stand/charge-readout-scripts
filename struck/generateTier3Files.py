@@ -299,6 +299,15 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         sub_event = array('I', [0]) # unsigned int
         out_tree.Branch('sub_event', sub_event, 'sub_event/i')
 
+        GenX = array("d", [0])
+        out_tree.Branch('GenX', GenX, 'GenX/D')
+
+        GenY = array("d", [0])
+        out_tree.Branch('GenY', GenY, 'GenY/D')
+
+        GenZ = array("d", [0])
+        out_tree.Branch('GenZ', GenZ, 'GenZ/D')
+
         NOP = array("I", [0])
         out_tree.Branch('NOP', NOP, 'NOP/i')
 
@@ -999,6 +1008,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             #Event number
             event[0] = tree.EventNumber
             sub_event[0] = tree.SubEventNumber
+            GenX[0] = tree.GenX
+            GenY[0] = tree.GenY
+            GenZ[0] = tree.GenZ
 
         elif isNGM:
             event[0] = n_events
