@@ -43,13 +43,15 @@ canvas.SetRightMargin(0.15)
 ROOT.gStyle.SetTitleFontSize(0.04)
 
 nchannels = len(struck_analysis_parameters.channel_map)
+nchannels = 16 # FIXME -- for DT unit!!
+
 print "%i channels" % nchannels
 
 def process_file(filename=None, n_plots_total=0):
 
     # options ------------------------------------------
     #threshold = 50 # keV
-    threshold = 500
+    threshold = 0
     #threshold = 1250 # keV
     #threshold = 570 # keV, for generating multi-page PDF
     #threshold = 50 # ok for unshaped, unamplified data
@@ -142,6 +144,7 @@ def process_file(filename=None, n_plots_total=0):
 
     trigger_time = card0.pretriggerdelay_block[0]/sampling_freq_Hz*1e6
     print "trigger time: [microseconds]", trigger_time
+    if "crosstalk" in basename: trigger_time = 5.0
 
     frame_hist = ROOT.TH1D("hist", "", tree.HitTree.GetNSamples(), 0, trace_length_us+1)
     #frame_hist = ROOT.TH1D("hist", "", int(tree.HitTree.GetNSamples()*33.0/32.0), 0, 25.0)
@@ -188,6 +191,7 @@ def process_file(filename=None, n_plots_total=0):
     for (i, channel) in enumerate(channels):
         #print "i=%i, ch=%i (%s)" % (i, channel, channel_map[channel])
         hist = ROOT.TH1D("hist%i" % channel,"",10,0,10)
+        if "XChannels" in basename: channel +=15
         try:
             color = colors[channel]
         except IndexError:
@@ -234,8 +238,15 @@ def process_file(filename=None, n_plots_total=0):
             i_entry += 1
             slot = tree.HitTree.GetSlot()
             card_channel = tree.HitTree.GetChannel() # 0 to 16 for each card
+
             channel = card_channel + 16*slot # 0 to 31
             card = sys_config.GetSlotParameters().GetParValueO("card",slot)
+
+            # for crosstalk studies:
+            if "XChannels" in basename: 
+                #print "This is crosstalk study!!"
+                channel += 16-1
+                #print "channel", channel
 
             gain = card.gain[card_channel]
             # gain: 1 = 2V; 0 = 5V
@@ -290,10 +301,12 @@ def process_file(filename=None, n_plots_total=0):
                 energy = (graph.GetY()[227]-baseline)*multiplier
 
             # add an offset so the channels are drawn at different levels
-            if struck_analysis_parameters.n_channels <= 16:
-                offset = channel*500
+            if nchannels <= 16:
+                offset = channel*100
             else:
-                offset = channel*1000
+                offset = channel*100
+
+            if "XChannels" in basename: offset = (channel-16)*100 
 
             graph.SetLineColor(color)
             fcn_string = "(y - %s)*%s + %s" % ( baseline, multiplier, offset)
@@ -345,7 +358,9 @@ def process_file(filename=None, n_plots_total=0):
                     #leg_entry = "#bf{%s}" % leg_entry
                     leg_entry = "%s #leftarrow" % leg_entry
 
-            legend_entries[channel] = leg_entry
+            i_legend_entry = channel
+            if "XChannels" in basename: i_legend_entry -= 15 # crosstalk studies
+            legend_entries[i_legend_entry] = leg_entry
 
             # end loop over channels
 
@@ -424,7 +439,8 @@ def process_file(filename=None, n_plots_total=0):
         if units_to_use == 0: y_max += 100
 
         frame_hist.SetMinimum(y_min)
-        frame_hist.SetMaximum(y_max)
+        frame_hist.SetMaximum(100*16)
+        #frame_hist.SetMaximum(y_max)
         frame_hist.SetTitle("Event %i | Sum Ionization Energy: %.1f keV | time stamp: %i | page %i" % (
             (i_entry-1)/nchannels, 
             sum_energy,
@@ -558,7 +574,7 @@ def process_file(filename=None, n_plots_total=0):
 
 if __name__ == "__main__":
 
-    n_plots_total = 50
+    n_plots_total = 10
     #n_plots_total = 3
     n_plots_so_far = 0
     if len(sys.argv) > 1:
