@@ -29,16 +29,16 @@ def takeData(doLoop=False, n_hours=10.0):
   # options
   # ---------------------------------------------------------------------------
 
-  file_suffix = "_trigger_testing_DT" # this gets appended to the file name
+  file_suffix = "_cathode_pulser_40dB_YChannels_" # this gets appended to the file name
 
-  runDuration = 2*60 # seconds
+  runDuration = 2*5 # seconds
   #runDuration = 5 # seconds # FIXME!!
   #runDuration = 10 # seconds -- debugging! FIXME
   #A 60s run is 720 MB with 4ms veto
 
   # settings
-  threshold = 10
-  gaptime = 30 # delay
+  threshold = 60
+  gaptime = 50 # delay
   risetime = 4 # peaking time
   firenable = 1
   gain = 0 # default = 1 1 = 2V; 0 = 5V, use 1 for LXe runs, 0 for testing warm
@@ -56,7 +56,9 @@ def takeData(doLoop=False, n_hours=10.0):
   # bit 19: sum ch 13-16
 
   #trig_string = '1111' # any of first 4 channels, 0, 1, 2, 3
-  trig_string = '1111111111111111' # any channel
+  #trig_string = '1111111111111111' # any channel
+  #trig_string = '1' # any channel
+  trig_string = '1000000000000000'
   nimtrigoutput = int(trig_string, 2)
   print "trigger ouptut:", nimtrigoutput
   print "binary trigger output:", bin(nimtrigoutput)
@@ -129,8 +131,10 @@ def takeData(doLoop=False, n_hours=10.0):
           sis.GetConfiguration().GetSystemParameters().SetParameterS("OutputFileSuffix",0,file_suffix) 
           sis.GetConfiguration().GetSlotParameters().AddParameterS("IPaddr")
           #sis.GetConfiguration().GetSlotParameters().SetParameterS("IPaddr",0,"192.168.2.101") # eth2
-          sis.GetConfiguration().GetSlotParameters().SetParameterS("IPaddr",0,"192.168.1.101") # eth1
+          #sis.GetConfiguration().GetSlotParameters().SetParameterS("IPaddr",0,"192.168.1.101") # eth1
+          sis.GetConfiguration().GetSlotParameters().SetParameterS("IPaddr",0,"192.168.2.101") # eth1
 
+ 
           print "\n----> calling InitializeSystem()"
           sis.InitializeSystem() # this also calls ConfigureSystem()
           print "----> done InitializeSystem()\n"
