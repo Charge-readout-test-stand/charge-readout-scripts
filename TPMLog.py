@@ -8,6 +8,7 @@ plots that are produced.
 Plot names = DataType_Date_Index*.jpeg
 
 *.dat file columns:
+
 0: time [seconds]
 1: TC0 Cu Bot [K]
 2: TC1 Cell Top
@@ -24,24 +25,28 @@ Plot names = DataType_Date_Index*.jpeg
 13: TC10, regulator temperature [K] (for t > 3500502750)
 14: Omega temp (t > 3520358622, added 21 July 2015)
 
-15: LN valve status
-16: LN enabled (enabled instead of "secondary" t > 3520358622, 21 July 2015)
-17: Heater status
-18: Mass flow  (uncorrected)
+15: extra TC Xe 1 (added 10 April 2017)
+16: extra TC Xe 2 (added 10 April 2017)
+17: extra TC Xe 3 (added 10 April 2017)
+
+18: LN valve status
+19: LN enabled (enabled instead of "secondary" t > 3520358622, 21 July 2015)
+20: Heater status
+21: Mass flow  (uncorrected)
     old 18: Mass flow rate [grams per minute Xe gas] (removed for t > 3520358622, 21 July 2015)
-19: Pressure from 10k Torr baratron [Torr]
-20: Pressure from 1k Torr baratron [Torr]
-21: Cold cathode gauge [micro Torr]
-22: LN mass (minus hooks and dewar tare weight) [lbs]
-23: Xenon Bottle mass [kg]
-24: Capacitance [pF]
-25: T_max set point offset [K]
-26: T_min set point offset [K]
-27: HFE pressure
-28: LN tare mass (hooks + dewar tare) [lbs]
-29: Recovery LN valve after 30 Sept 2016 (RMS noise [mV] from 19 Mar 2015 to 30 Sept 2016)
-30: mass flow valve closed
-31: hanging xenon bottle pressure [psia]
+22: Pressure from 10k Torr baratron [Torr]
+23: Pressure from 1k Torr baratron [Torr]
+24: Cold cathode gauge [micro Torr]
+25: LN mass (minus hooks and dewar tare weight) [lbs]
+26: Xenon Bottle mass [kg]
+27: Capacitance [pF]
+28: T_max set point offset [K]
+29: T_min set point offset [K]
+30: HFE pressure
+31: LN tare mass (hooks + dewar tare) [lbs]
+32: Recovery LN valve after 30 Sept 2016 (RMS noise [mV] from 19 Mar 2015 to 30 Sept 2016)
+33: mass flow valve closed
+34: hanging xenon bottle pressure [psia]
 """
 
 
@@ -197,7 +202,8 @@ def plot_temp_vs_lmass(filename, title, time_hours, time_stamps, T_ambient, mass
    
 def plot_temperatures(filename, title, time_hours, time_stamps, TC0=None, TC1=None, TC2=None,
     TC3=None, TC4=None, TC15=None, TC10=None, T_ambient=None, T_LN_in=None, T_LN_out=None,
-    T_Xe_bottle=None, T_max_set=None, T_min_set=None, T_omega=None,first_index=0, last_index=-1):
+    T_Xe_bottle=None, T_max_set=None, T_min_set=None, T_omega=None, T_Xe1=None,
+    T_Xe2=None, T_Xe3=None, first_index=0, last_index=-1):
 
     """
     This function makes a temperature plot
@@ -216,6 +222,8 @@ def plot_temperatures(filename, title, time_hours, time_stamps, TC0=None, TC1=No
     # plot the lines
     # html color names can be used, as defined here:
     # http://www.w3schools.com/tags/ref_colornames.asp
+    # or here:
+    # https://matplotlib.org/examples/color/named_colors.html
 
     kelvin_offset = 273.15
 
@@ -247,6 +255,18 @@ def plot_temperatures(filename, title, time_hours, time_stamps, TC0=None, TC1=No
         line4 = plt.plot(time_hours[first_index:last_index],
         TC3[first_index:last_index])
         plt.setp(line4, color = 'm', linewidth = linewidth, label = 'Cell Bot (%.1fK = %.1fC)' % (TC3[last_index], TC3[last_index]-kelvin_offset))
+
+    if T_Xe1 and len(T_Xe1) > 0:
+        line4 = plt.plot(time_hours[first_index:last_index], T_Xe1[first_index:last_index])
+        plt.setp(line4, color = 'sienna', linewidth = linewidth, label = 'Extra 1 (%.1fK = %.1fC)' % (T_Xe1[last_index], T_Xe1[last_index]-kelvin_offset))
+
+    if T_Xe2 and len(T_Xe2) > 0:
+        line4 = plt.plot(time_hours[first_index:last_index], T_Xe2[first_index:last_index])
+        plt.setp(line4, color = 'maroon', linewidth = linewidth, label = 'Extra 2 (%.1fK = %.1fC)' % (T_Xe2[last_index], T_Xe2[last_index]-kelvin_offset))
+
+    if T_Xe3 and len(T_Xe3) > 0:
+        line4 = plt.plot(time_hours[first_index:last_index], T_Xe3[first_index:last_index])
+        plt.setp(line4, color = 'navy', linewidth = linewidth, label = 'Extra 3 (%.1fK = %.1fC)' % (T_Xe3[last_index], T_Xe3[last_index]-kelvin_offset))
 
     if T_ambient and len(T_ambient) > 0:
         line6 = plt.plot(time_hours[first_index:last_index],
@@ -309,7 +329,7 @@ def plot_temperatures(filename, title, time_hours, time_stamps, TC0=None, TC1=No
     box = subplt.get_position()
     subplt.set_position([box.x0, box.y0, box.width, box.height*height])
     
-    legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, fontsize='small', ncol=ncol)
+    legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.02), shadow = False, fontsize='small', ncol=ncol)
     plt.savefig(filename)
     print "printed %s" % filename
     plt.clf()
@@ -413,6 +433,9 @@ def main(
     T_LN_in = []
     T_LN_out = []
     T_Xe_bottle = []
+    T_Xe1 = []
+    T_Xe2 = []
+    T_Xe3 = []
     T_max_set = []
     T_max_set_offset = []
     T_min_set = []
@@ -465,6 +488,10 @@ def main(
     # read values from input file:
     for (i_line, line) in enumerate(testfile):
         split_line = line.split()
+
+        if i_line == 0:
+            print "there are %i columns" % len(split_line)
+
         data = []
         try:
             time_stamp = float(split_line[0])
@@ -514,6 +541,9 @@ def main(
         if time_stamp > 3500502750:
             column_offset = 7
 
+        # 10 April 2017: added 3 TCs to HFE dewar
+        if time_stamp > 3574712487:
+            column_offset = 10
        
         if do_warning:
             print "--> setting column_offset to %i !!" % column_offset
@@ -594,6 +624,16 @@ def main(
         #TC15 at XV5 and TC10 at REG
         TC15.append(float(split_line[12]))
         TC10.append(float(split_line[13]))
+
+        # add extra TCs in HFE dewar, also try to be backwards compatible
+        if column_offset >= 10:
+            T_Xe1.append(float(split_line[15]))
+            T_Xe2.append(float(split_line[16]))
+            T_Xe3.append(float(split_line[17]))
+        else:
+            T_Xe1 = None
+            T_Xe2 = None
+            T_Xe3 = None
         
         column_offset_2 = 0
 
@@ -794,26 +834,29 @@ def main(
     filename = os.path.join(directory, "11-Temp_%s.%s" % (basename, filetype))
     plot_temperatures(filename, 'Temperature', time_hours, time_stamps, TC0,
     TC1, TC2, TC3, TC4, TC15, TC10, T_ambient, T_LN_in, T_LN_out, T_Xe_bottle,
-    T_max_set, T_min_set, T_omega, first_index, last_index)
+    T_max_set, T_min_set, T_omega, T_Xe1, T_Xe2, T_Xe3, first_index, last_index)
 
     # plot recent temperatures
     filename = os.path.join(directory, "11-Temp-recent_%s.%s" % (basename, filetype)) 
-    plot_temperatures(filename, 'Recent Temperature', time_hours,
-    time_stamps, TC0, TC1, TC2, TC3, TC4, TC15, TC10, T_ambient, T_LN_in,
-    T_LN_out, T_Xe_bottle, T_max_set=T_max_set, T_min_set=T_min_set,
-    T_omega=T_omega, first_index=start_index_of_last_hour, last_index=last_index)
+    plot_temperatures(filename, 'Recent Temperature', time_hours, time_stamps,
+    TC0, TC1, TC2, TC3, TC4, TC15, TC10, T_ambient, T_LN_in, T_LN_out,
+    T_Xe_bottle, T_max_set=T_max_set, T_min_set=T_min_set, T_omega=T_omega,
+    T_Xe1=T_Xe1, T_Xe2=T_Xe2, T_Xe3=T_Xe3, first_index=start_index_of_last_hour,
+    last_index=last_index)
 
     # plot LXe cell and Cu plate temperatures
     filename = os.path.join(directory, "01-Temp-cell_%s.%s" % (basename, filetype))
     plot_temperatures(filename, 'LXe cell and Cu plate temperature', time_hours,
     time_stamps, TC0, TC1, TC2, TC3, TC4, T_max_set=T_max_set, T_min_set=T_min_set,
-    T_omega=T_omega, first_index=first_index, last_index=last_index)
+    T_omega=T_omega, T_Xe1=T_Xe1, T_Xe2=T_Xe2, T_Xe3=T_Xe3, first_index=first_index, last_index=last_index)
 
     # plot LXe cell and Cu plate recent temperatures
+
     filename = os.path.join(directory, "01-Temp-cell-recent_%s.%s" % (basename, filetype))
     plot_temperatures(filename, 'Recent LXe cell and Cu plate temperature',
     time_hours,time_stamps, TC0, TC1, TC2, TC3, TC4, T_max_set=T_max_set,
-    T_min_set=T_min_set, T_omega=T_omega, first_index=start_index_of_last_hour, last_index=last_index)
+    T_min_set=T_min_set, T_omega=T_omega, T_Xe1=T_Xe1, T_Xe2=T_Xe2, T_Xe3=T_Xe3,
+    first_index=first_index, last_index=last_index)
     
     #plot Ambient Temperature vs. xenon bottle mass
     #filename = os.path.join(directory, "Ambient_Only_%s.%s" % (basename, filetype))
