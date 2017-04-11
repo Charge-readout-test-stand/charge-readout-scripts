@@ -40,6 +40,9 @@ def main(filename):
         if "4_3_2017_PMT_33mm_3100V" in basename: 
             is_chas = True
             E_scaling = 1.0 # V/cm
+        if "2017_04_04_PMT_33mm_3100V" in basename: 
+            is_chas = True
+            E_scaling = 1.0 # V/cm
 
         if is_chas:
             print "Chas COMSOL model"
@@ -76,6 +79,7 @@ def main(filename):
             n_bins_r = int(max_r/step_size)
             min_z = -20
             if "4_3_2017_PMT_33mm_3100V" in basename: min_z = -60
+            if "2017_04_04_PMT_33mm_3100V" in basename: min_z = -80
             max_z = 70
             n_bins_z = int((max_z-min_z)/step_size)
             hist = TH2D("Efieldhist", "", 
