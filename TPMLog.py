@@ -209,7 +209,7 @@ def plot_temperatures(filename, title, time_hours, time_stamps, TC0=None, TC1=No
     This function makes a temperature plot
     """
 
-    linewidth=1
+    linewidth=2
     start_time_hold = datetime.datetime.fromtimestamp(time_stamps[first_index]- 2082844800)
     end_time_hold = datetime.datetime.fromtimestamp(time_stamps[last_index]- 2082844800)
     
@@ -258,20 +258,23 @@ def plot_temperatures(filename, title, time_hours, time_stamps, TC0=None, TC1=No
 
     if T_Xe1 and len(T_Xe1) > 0:
         line4 = plt.plot(time_hours[first_index:last_index], T_Xe1[first_index:last_index])
-        plt.setp(line4, color = 'sienna', linewidth = linewidth, label = 'Extra 1 (%.1fK = %.1fC)' % (T_Xe1[last_index], T_Xe1[last_index]-kelvin_offset))
+        label = 'Extra 1 (%.1fK = %.1fC)' % (T_Xe1[last_index], T_Xe1[last_index]-kelvin_offset)
+        plt.setp(line4, color='sienna', linewidth=linewidth, label=label, ls = '--')
 
     if T_Xe2 and len(T_Xe2) > 0:
         line4 = plt.plot(time_hours[first_index:last_index], T_Xe2[first_index:last_index])
-        plt.setp(line4, color = 'maroon', linewidth = linewidth, label = 'Extra 2 (%.1fK = %.1fC)' % (T_Xe2[last_index], T_Xe2[last_index]-kelvin_offset))
+        label = 'Xe ret. leg (%.1fK = %.1fC)' % (T_Xe2[last_index], T_Xe2[last_index]-kelvin_offset)
+        plt.setp(line4, color='maroon', linewidth=linewidth, label=label, ls='--')
 
     if T_Xe3 and len(T_Xe3) > 0:
         line4 = plt.plot(time_hours[first_index:last_index], T_Xe3[first_index:last_index])
-        plt.setp(line4, color = 'navy', linewidth = linewidth, label = 'Extra 3 (%.1fK = %.1fC)' % (T_Xe3[last_index], T_Xe3[last_index]-kelvin_offset))
+        label = 'Spool mid (%.1fK = %.1fC)' % (T_Xe3[last_index], T_Xe3[last_index]-kelvin_offset)
+        plt.setp(line4, color='navy', linewidth=linewidth, label=label, ls='--')
 
     if T_ambient and len(T_ambient) > 0:
         line6 = plt.plot(time_hours[first_index:last_index],
         T_ambient[first_index:last_index])
-        plt.setp(line6, color = 'c', linewidth = linewidth, label = 'Ambient (%.1fK = %.1fC)' % (T_ambient[last_index], T_ambient[last_index]-kelvin_offset))
+        plt.setp(line6, color = 'darkcyan', linewidth = linewidth, label = 'Ambient (%.1fK = %.1fC)' % (T_ambient[last_index], T_ambient[last_index]-kelvin_offset))
 
     if T_LN_in and len(T_LN_in) > 0 and len(T_LN_in) == len(T_ambient):
         line7 = plt.plot(time_hours[first_index:last_index],
@@ -311,6 +314,7 @@ def plot_temperatures(filename, title, time_hours, time_stamps, TC0=None, TC1=No
         line10 = plt.plot(time_hours[first_index:last_index],
         T_min_set[first_index:last_index])
         plt.setp(line10, color = 'b', linewidth = linewidth, label = 'T_min (%.1fK = %.1fC)' % (T_min_set[last_index], T_min_set[last_index]-kelvin_offset), ls = '--')
+
     plt.xlabel('Time [hours] : '  + str(start_time) + "  -  " + str(end_time))
     plt.ylabel('Temperature [K]')
 
@@ -856,7 +860,7 @@ def main(
     plot_temperatures(filename, 'Recent LXe cell and Cu plate temperature',
     time_hours,time_stamps, TC0, TC1, TC2, TC3, TC4, T_max_set=T_max_set,
     T_min_set=T_min_set, T_omega=T_omega, T_Xe1=T_Xe1, T_Xe2=T_Xe2, T_Xe3=T_Xe3,
-    first_index=first_index, last_index=last_index)
+    first_index=start_index_of_last_hour, last_index=last_index)
     
     #plot Ambient Temperature vs. xenon bottle mass
     #filename = os.path.join(directory, "Ambient_Only_%s.%s" % (basename, filetype))
