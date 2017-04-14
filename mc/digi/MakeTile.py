@@ -47,5 +47,5 @@ if __name__ == "__main__":
 
     make_tile()
     plt.show()
-    raw_input()
+    raw_input("enter to continue")
 
