@@ -80,6 +80,10 @@ def make_WF(xpcd, ypcd, zpcd, Epcd, chID,
     wfm_length=800,
     ):
 
+    """
+    Calculate the instantaneous induced charge at each point in time. 
+    """
+
     # return waveform array
 
     #xch_list, ych_list =  np.loadtxt("/nfs/slac/g/exo/mjewell/nEXO/nEXO_Analysis/utilities/scripts/localChannelsMap.txt", usecols = (1,2) ,unpack=True)
@@ -214,6 +218,7 @@ def current_sum_channel(xpcd,ypcd,zpcd,chID,chx,chy):
     return I
 
 
+
 def make_current_WF(xpcd, ypcd, zpcd, Epcd, chID,
     cathodeToAnodeDistance=cathodeToAnodeDistance,
     #dZ=cathodeToAnodeDistance/100.0, # 100 steps per full drift
@@ -221,6 +226,9 @@ def make_current_WF(xpcd, ypcd, zpcd, Epcd, chID,
     wfm_length=800,
     drift_velocity=drift_velocity,
 ):
+    """
+    Calculate the instantaneous current at each point in time. 
+    """
 
     directory = os.path.dirname(__file__) # directory containing this script
 
@@ -257,6 +265,33 @@ def make_current_WF(xpcd, ypcd, zpcd, Epcd, chID,
             WF[k] = I*Epcd
  
     return WF
+
+
+def make_current_from_derivative(xpcd, ypcd, zpcd, Epcd, chID, 
+    cathodeToAnodeDistance=cathodeToAnodeDistance,
+    dZ=sampling_period*drift_velocity, # one step per digitizer sample
+    wfm_length=800,
+    ):
+
+    """
+    Calculate current from numerical derivative of charge wfm. 
+    """
+
+    charge_WF = make_WF(xpcd, ypcd, zpcd, Epcd, chID, cathodeToAnodeDistance,
+        dZ, wfm_length)
+    #print "charge_WF len:", len(charge_WF)
+
+    dt = dZ/drift_velocity # time step
+
+    current_WF = np.zeros(wfm_length-1)
+    #print "current_WF len:", len(current_WF)
+
+    for i in xrange(wfm_length-1):
+        current_WF[i] = (charge_WF[i+1] - charge_WF[i])/dt
+
+    #print "current_WF len:", len(current_WF)
+
+    return current_WF
 
 
 
