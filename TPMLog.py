@@ -266,11 +266,6 @@ def plot_temperatures(filename, title, time_hours, time_stamps, TC0=None, TC1=No
         label = 'Xe ret. leg (%.1fK = %.1fC)' % (T_Xe2[last_index], T_Xe2[last_index]-kelvin_offset)
         plt.setp(line4, color='maroon', linewidth=linewidth, label=label, ls='--')
 
-    if T_Xe3 and len(T_Xe3) > 0:
-        line4 = plt.plot(time_hours[first_index:last_index], T_Xe3[first_index:last_index])
-        label = 'Spool mid (%.1fK = %.1fC)' % (T_Xe3[last_index], T_Xe3[last_index]-kelvin_offset)
-        plt.setp(line4, color='navy', linewidth=linewidth, label=label, ls='--')
-
     if T_ambient and len(T_ambient) > 0:
         line6 = plt.plot(time_hours[first_index:last_index],
         T_ambient[first_index:last_index])
@@ -304,6 +299,11 @@ def plot_temperatures(filename, title, time_hours, time_stamps, TC0=None, TC1=No
 
     # figure out what the plot limits are before we plot T_min & T_max:
     ymin, ymax = plt.gca().get_ylim()
+
+    if T_Xe3 and len(T_Xe3) > 0:
+        line4 = plt.plot(time_hours[first_index:last_index], T_Xe3[first_index:last_index])
+        label = 'Spool mid (%.1fK = %.1fC)' % (T_Xe3[last_index], T_Xe3[last_index]-kelvin_offset)
+        plt.setp(line4, color='navy', linewidth=linewidth, label=label, ls='--')
 
     if T_max_set and len(T_max_set) > 0 and len(T_max_set) == len(TC0):
         line9 = plt.plot(time_hours[first_index:last_index],
