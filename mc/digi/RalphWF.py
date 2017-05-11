@@ -5,15 +5,22 @@ import ROOT
 import MakeTile
 import math
 
+"""
+X strips are centered at an x coord, have pads along the y direction. 
+
+X16 (chID=15) is centered on x=1.5. X16 has center of one pad at x=1.5, y = 0.0. 
+"""
+
 posion  = True #Use Positive Ion
 cathsupress = True #Use Cathode Supression
-cathodeToAnodeDistance = 18.16 # + 16 # mm
-#cathodeToAnodeDistance = 1000.0 # mm
-#cathodeToAnodeDistance = 33.23 # mm
+#cathodeToAnodeDistance = 18.16 # + 16 # mm
+#cathodeToAnodeDistance = 1000.0 # mm, nEXO
+cathodeToAnodeDistance = 33.23 # mm, 10th, 11th LXe
 drift_velocity = 2.0 # mm/microsecond
 sampling_period = 0.04 # microseconds, 40 ns
 e_lifetime=None # e- lifetime, microseconds
 consider_capturedQ=False # electrons captured on impurities
+diagonal = 3.0 # mm
 
 def f(xi, yi, h):
     inside = (xi*yi)/(h*np.sqrt(xi*xi + yi*yi + h*h))
@@ -22,8 +29,6 @@ def f(xi, yi, h):
 def Q_rot(xpcd, ypcd, zpcd, chx, chy):
     #Get the induced Charge at (x,y,z) using analytic solution from Ralph
     #Just one pad located at chx,chy
-
-    l = 3.0 #3mm on the diagonal
 
     #Rotate into the Rectangles Frame for this calculation
     #45degrees
@@ -37,12 +42,11 @@ def Q_rot(xpcd, ypcd, zpcd, chx, chy):
     chy = chyn
 
     #Assume the charge is centered at (0,0)
-    #And the Diagonal is 3mm
     #Find the Corners of the Square
-    x1 = chx - l/(2*np.sqrt(2))
-    y1 = chy - l/(2*np.sqrt(2))
-    x2 = chx + l/(2*np.sqrt(2))
-    y2 = chy + l/(2*np.sqrt(2))
+    x1 = chx - diagonal/(2*np.sqrt(2))
+    y1 = chy - diagonal/(2*np.sqrt(2))
+    x2 = chx + diagonal/(2*np.sqrt(2))
+    y2 = chy + diagonal/(2*np.sqrt(2))
 
     #Shift so that the charge is at (0,0)
     f22 = f(x2 - xpcdn, y2 - ypcdn, zpcd)
@@ -53,40 +57,41 @@ def Q_rot(xpcd, ypcd, zpcd, chx, chy):
     return (f22 - f21 - f12 + f11)*(1/(2*np.pi))
 
 
-def sum_channel(xpcd,ypcd,zpcd,chID,chx,chy):
+def sum_channel(xpcd,ypcd,zpcd,chID,chx=None,chy=None):
+    """
+    Returns total charge induced on strip chID, at (chx, chy), given point
+    charge at xpcd, ypcd, zpcd. 
+    """
     #xpcd,ypcd,zpcd --- x,y,z of intial pcd
     #z = 0 is cathode 18.16 is anode for 7th LXe
     #chID is ID for channel < 30 is X Channel
     #chx, chy is x,y pos of channel
+
+    # usually chx and chy are supplied by makeWF
+    if chx is None or chy is None:
+        chx, chy = get_chx_and_chy(chID=chID)
+        #print "sum_channel chx and chy:", chx, chy
     
     #Use rotated channel positions
     if(chID < 30): chy = -42.0 #this is weird but trust me
     else: chx = -42.0 #weird but works 1.5 offset
     Q = 0
-    for n in np.arange(0,30,1):
+    for n in np.arange(0,30,1): # iterate over pads
         Q += Q_rot(xpcd, ypcd, zpcd, chx, chy)
         if(chID < 30):
             #Its a xChannel
-            chy += 3.0
+            chy += diagonal
         else:
             #Its a yChannel
-            chx += 3.0
+            chx += diagonal
     return Q
 
-def make_WF(xpcd, ypcd, zpcd, Epcd, chID, 
-    cathodeToAnodeDistance=cathodeToAnodeDistance,
-    #dZ=cathodeToAnodeDistance/100.0, # 100 steps per full drift
-    dZ=sampling_period*drift_velocity, # one step per digitizer sample
-    wfm_length=800,
-    ):
+def get_chx_and_chy(chID):
 
-    """
-    Calculate the instantaneous induced charge at each point in time. 
-    """
-
-    # return waveform array
-
-    #xch_list, ych_list =  np.loadtxt("/nfs/slac/g/exo/mjewell/nEXO/nEXO_Analysis/utilities/scripts/localChannelsMap.txt", usecols = (1,2) ,unpack=True)
+    #xch_list, ych_list =
+    #np.loadtxt(
+    #"/nfs/slac/g/exo/mjewell/nEXO/nEXO_Analysis/utilities/scripts/localChannelsMap.txt",
+    #    usecols = (1,2) ,unpack=True)
 
     directory = os.path.dirname(__file__) # directory containing this script
 
@@ -95,13 +100,30 @@ def make_WF(xpcd, ypcd, zpcd, Epcd, chID,
             usecols = (1,2),
             unpack=True)
 
-
     chx = xch_list[chID]
     chy = ych_list[chID]
+    return chx, chy
+
+
+def make_WF(xpcd, ypcd, zpcd, Epcd, chID, 
+    cathodeToAnodeDistance=cathodeToAnodeDistance,
+    dZ=cathodeToAnodeDistance/100.0, # 100 steps per full drift
+    #dZ=sampling_period*drift_velocity, # one step per digitizer sample
+    wfm_length=800,
+    ):
+
+    """
+    Calculate the instantaneous induced charge at each point in time. 
+    Return waveform array
+    """
+
+    # calc chx and chy once here, to be used in sum_channel during loop
+    chx, chy = get_chx_and_chy(chID=chID)
     WF = np.zeros(wfm_length)
 
     #Ralph's anode is at z = 0.0mm
     zpcd = cathodeToAnodeDistance - zpcd
+    if zpcd < 0: zpcd = 0.0
     
     ionQ = sum_channel(xpcd,ypcd,zpcd,chID,chx,chy)
     
@@ -117,11 +139,10 @@ def make_WF(xpcd, ypcd, zpcd, Epcd, chID,
     #0 is top in Ralph's??
     ki = 0
     for k in np.arange(ki,len(WF),1):    
-        zpcd -= dZ
         if zpcd < 0: zpcd = 0.0
         if e_lifetime != None:
             drift_time = (z0-zpcd)/drift_velocity # so far
-            #exp_factor = math.exp(-drift_time/e_lifetime)
+            exp_factor = math.exp(-drift_time/e_lifetime)
             frac_captured = 1.0 - math.exp(-dZ/drift_velocity/e_lifetime)
             if False: # debugging
                 print "z: %.1f | drift_time: %.1f | exp_factor: %.3f | frac_captured: %.3f | capturedQ: %.3f" % (
@@ -132,7 +153,8 @@ def make_WF(xpcd, ypcd, zpcd, Epcd, chID,
                     capturedQ,
                 )
         if(zpcd <= 0.0):
-            Q = sum_channel(xpcd,ypcd,0.00001,chID,chx,chy) 
+            Q = sum_channel(xpcd,ypcd,1e-6,chID,chx,chy) 
+            zpcd = 0.0
             if e_lifetime != None: Q = Q*exp_factor
             if cathsupress: Q = Q*(cathodeToAnodeDistance-zpcd)/cathodeToAnodeDistance
             if e_lifetime != None and consider_capturedQ: 
@@ -150,7 +172,7 @@ def make_WF(xpcd, ypcd, zpcd, Epcd, chID,
                 Q += capturedQ
             if posion: Q -= ionQ
             WF[k] = Q*Epcd
- 
+        zpcd -= dZ
     return WF
 
 
@@ -165,8 +187,6 @@ def I_rot(xpcd, ypcd, zpcd, chx, chy):
     # current divided by drift_velocity [charge/mm], from one pad
     # modified from Q_rot
 
-    l = 3.0 #3mm on the diagonal
-
     #Rotate into the Rectangles Frame for this calculation
     #45degrees
     xpcdn = (np.sqrt(2)/2)*(xpcd - ypcd)
@@ -179,12 +199,11 @@ def I_rot(xpcd, ypcd, zpcd, chx, chy):
     chy = chyn
 
     #Assume the charge is centered at (0,0)
-    #And the diagonal is 3mm
     #Find the Corners of the Square
-    x1 = chx - l/(2*np.sqrt(2))
-    y1 = chy - l/(2*np.sqrt(2))
-    x2 = chx + l/(2*np.sqrt(2))
-    y2 = chy + l/(2*np.sqrt(2))
+    x1 = chx - diagonal/(2*np.sqrt(2))
+    y1 = chy - diagonal/(2*np.sqrt(2))
+    x2 = chx + diagonal/(2*np.sqrt(2))
+    y2 = chy + diagonal/(2*np.sqrt(2))
 
     #Shift so that the charge is at (0,0)
     f22 = df_dh(x2 - xpcdn, y2 - ypcdn, zpcd)
@@ -211,10 +230,10 @@ def current_sum_channel(xpcd,ypcd,zpcd,chID,chx,chy):
         I += I_rot(xpcd, ypcd, zpcd, chx, chy)
         if(chID < 30):
             #Its a xChannel
-            chy += 3.0
+            chy += diagonal
         else:
             #Its a yChannel
-            chx += 3.0
+            chx += diagonal
     return I
 
 
@@ -230,15 +249,8 @@ def make_current_WF(xpcd, ypcd, zpcd, Epcd, chID,
     Calculate the instantaneous current at each point in time. 
     """
 
-    directory = os.path.dirname(__file__) # directory containing this script
-
-    xch_list, ych_list =  np.loadtxt(
-            "%s/localChannelsMap.txt" % directory, 
-            usecols = (1,2),
-            unpack=True)
-
-    chx = xch_list[chID]
-    chy = ych_list[chID]
+    # calc chx and chy once here, to be used in loop
+    chx, chy = get_chx_and_chy(chID=chID)
     WF = np.zeros(wfm_length)
 
     #Ralph's anode is at z = 0.0mm
