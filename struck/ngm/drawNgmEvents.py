@@ -43,23 +43,28 @@ canvas.SetRightMargin(0.15)
 ROOT.gStyle.SetTitleFontSize(0.04)
 
 nchannels = len(struck_analysis_parameters.channel_map)
-nchannels = 16 # FIXME -- for DT unit!!
+#nchannels = 16 # FIXME -- for DT unit!!
 
 print "%i channels" % nchannels
 
 def process_file(filename=None, n_plots_total=0):
 
     # options ------------------------------------------
-    #threshold = 50 # keV
-    threshold = 0
+    is_for_paper = True # change some formatting
+    threshold = 550 # keV
+    #threshold = 0
     #threshold = 1250 # keV
     #threshold = 570 # keV, for generating multi-page PDF
     #threshold = 50 # ok for unshaped, unamplified data
+    energy_offset = 700 # keV, space between traces
 
     units_to_use = 0 # 0=keV, 1=ADC units, 2=mV
 
     do_fft = False
     do_fit = False #fit sine to sum wfm
+
+    # if this is 1.0 there is no effect:
+    pmt_shrink_scale = 1.0 # shrink PMT signal by an additional factor so it doesn't set the graphical scale
 
     #------------------------------------------------------
 
@@ -80,7 +85,7 @@ def process_file(filename=None, n_plots_total=0):
 
     #y_max = 31500 # keV
     #y_max = nchannels*500+250 # keV
-    y_max = nchannels*500 #+250 # keV
+    y_max = nchannels*energy_offset # +250 # keV
     if units_to_use == 1:
         y_max = 200 # ADC units
     elif units_to_use == 2:
@@ -119,6 +124,7 @@ def process_file(filename=None, n_plots_total=0):
     root_file = ROOT.TFile(filename)
     tree = root_file.Get("HitTree")
     n_entries = tree.GetEntries()
+    print "%i entries in tree" % n_entries
 
     # get NGM system config
     sys_config = root_file.Get("NGMSystemConfiguration")
@@ -146,7 +152,7 @@ def process_file(filename=None, n_plots_total=0):
     print "trigger time: [microseconds]", trigger_time
     if "crosstalk" in basename: trigger_time = 5.0
 
-    frame_hist = ROOT.TH1D("hist", "", tree.HitTree.GetNSamples(), 0, trace_length_us+1)
+    frame_hist = ROOT.TH1D("hist", "", tree.HitTree.GetNSamples(), 0, trace_length_us+0.5)
     #frame_hist = ROOT.TH1D("hist", "", int(tree.HitTree.GetNSamples()*33.0/32.0), 0, 25.0)
     frame_hist.SetXTitle("Time [#mus]")
     sum_offset = 400
@@ -232,6 +238,8 @@ def process_file(filename=None, n_plots_total=0):
         # loop over all channels in the event:
         sum_energy = 0.0
         n_high_rms = 0
+        n_signals = 0
+        n_strips = 0
         for i in xrange(nchannels):
             
             tree.GetEntry(i_entry)
@@ -262,8 +270,8 @@ def process_file(filename=None, n_plots_total=0):
                 multiplier = 1.0
             elif units_to_use == 2: # mV
                 multiplier = voltage_range_mV/pow(2,14)
-            #if channel == pmt_channel:
-            #    multiplier /= 10.0
+            if channel == pmt_channel:
+                multiplier /= pmt_shrink_scale
 
 
             if False: # print debug output
@@ -297,14 +305,16 @@ def process_file(filename=None, n_plots_total=0):
             energy = (energy - baseline)*multiplier
 
             if channel == pmt_channel:
-                # pmt energy is proportional to max, at ~ 9 microseconds
-                energy = (graph.GetY()[227]-baseline)*multiplier
+                # pmt energy is proportional to max, which occurs ~ 27
+                # samples after trigger
+                i_sample = int(struck_analysis_parameters.n_baseline_samples + 27)
+                energy = (graph.GetY()[i_sample]-baseline)*multiplier
+                energy *= pmt_shrink_scale
+                #energy = (graph.GetMaximum()-baseline)*multiplier
+                print energy, baseline, multiplier
 
             # add an offset so the channels are drawn at different levels
-            if nchannels <= 16:
-                offset = channel*100
-            else:
-                offset = channel*100
+            offset = channel*energy_offset
 
             if "XChannels" in basename: offset = (channel-16)*100 
 
@@ -328,8 +338,10 @@ def process_file(filename=None, n_plots_total=0):
             rms_threshold = struck_analysis_parameters.rms_keV[channel] + struck_analysis_parameters.rms_keV_sigma[channel]*4.0
             if charge_channels_to_use[channel] > 0:
                 if energy > signal_threshold:
-                    graph.SetLineWidth(4)
+                    if not is_for_paper: graph.SetLineWidth(4) # don't bold for paper
                     sum_energy += energy
+                    n_signals +=1
+                    n_strips += struck_analysis_parameters.channel_to_n_strips_map[channel]
                 if rms_noise >  rms_threshold:
                     n_high_rms += 1
                     #graph.SetLineColor(ROOT.kBlack)
@@ -372,7 +384,12 @@ def process_file(filename=None, n_plots_total=0):
         ) 
         #if n_high_rms <= 0: continue
         #if sum_energy < threshold or sum_energy > 650: continue
+        print "n_signals:", n_signals, " | sum_energy: %.1f" % sum_energy
         if sum_energy < threshold: continue
+        if is_for_paper:
+          if sum_energy > threshold + 40: continue
+          if n_signals != 2: continue
+          if n_strips != 2: continue
 
         # create sum graphs; add offsets & set x-coords
         sum_graph = ROOT.TGraphErrors()
@@ -439,14 +456,19 @@ def process_file(filename=None, n_plots_total=0):
         if units_to_use == 0: y_max += 100
 
         frame_hist.SetMinimum(y_min)
-        frame_hist.SetMaximum(100*16)
-        #frame_hist.SetMaximum(y_max)
-        frame_hist.SetTitle("Event %i | Sum Ionization Energy: %.1f keV | time stamp: %i | page %i" % (
-            (i_entry-1)/nchannels, 
-            sum_energy,
-            tree.HitTree.GetRawClock(),
-            n_plots+1,
-            ))
+        if "crosstalk" in basename: frame_hist.SetMaximum(100*16)
+        frame_hist.SetMaximum(y_max)
+        title = ""
+        if not is_for_paper:
+            title += "Event %i | " % ((i_entry-1)/nchannels)
+        title += "Sum Ionization Energy: %.1f keV" % sum_energy
+        if not is_for_paper:
+            title += " | time stamp: %i | page %i" % (
+                tree.HitTree.GetRawClock(),
+                n_plots+1,
+            )
+
+        frame_hist.SetTitle(title)
         frame_hist.SetTitleSize(0.2, "t")
 
         for i in xrange(nchannels):
