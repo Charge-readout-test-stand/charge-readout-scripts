@@ -43,7 +43,7 @@ def getRMS(calibrate):
     canvas.SetGrid()
     canvas.Print("%s[" % plot_name) # open multi-page canvas
 
-    n_bins = 500
+    n_bins = 2000
     energy_max = 200.0
 
     log = open(log_name, 'w')
@@ -156,7 +156,7 @@ def getRMS(calibrate):
     canvas.Print("%s]" % plot_name) # close multi-page canvas
     out_rfile.Close()
 
-def plotRMS():
+def plotRMS(calibrate):
     fname = "/home/teststand/2016_08_15_8th_LXe_overnight/tier3_added/RMSNoise_calibrated_overnight8thLXe_v3.root"
     fname = "/home/teststand/2016_08_15_8th_LXe_overnight/tier3_added/RMSNoise_calibrated_tier3_SIS3316Raw_20160913233650_digitizer_noise_tests__1-ngm.root"
     fname = "/home/teststand/2016_08_15_8th_LXe_overnight/tier3_added/RMSNoise_tier3_SIS3316Raw_20160913233650_digitizer_noise_tests__1-ngm.root"
@@ -183,19 +183,40 @@ def plotRMS():
     
     drawn = False
     nchs = len(struck_analysis_parameters.charge_channels_to_use)
-    noise_hist = ROOT.TH1F("nhist","nhist", nchs, 0, nchs)
+    noise_hist = ROOT.TH1F("nhist","", nchs-2, 0, nchs-2)
+    noise_hist.SetMinimum(0)
+    noise_hist.SetLineColor(ROOT.kBlue+1)
+    noise_hist.SetMarkerColor(ROOT.kBlue+1)
+    noise_hist.SetLineWidth(2)
+    #noise_hist.GetXaxis().SetLabelSize(0.03)
+    noise_hist.GetXaxis().SetTitleOffset(1.7)
+    plot_name = "Noise_vs_Channel"
+    noise_hist.SetTitle("Channel RMS Noise")
+    noise_hist.GetYaxis().SetTitle("RMS Noise [ADC units]")
+    if calibrate:
+        noise_hist.GetYaxis().SetTitle("RMS Noise [keV]")
+        noise_hist.SetTitle("")
+        plot_name += "_keV"
+    noise_hist.GetXaxis().SetTitle("Channel")
+    noise_hist_single = noise_hist.Clone("nhist1")
+    noise_hist_double = noise_hist.Clone("nhist2")
+    noise_hist_many = noise_hist.Clone("nhistX")
     y_max = 0
 
     for (channel, value) in enumerate(struck_analysis_parameters.charge_channels_to_use):
         
+        if not value: # skip PMT & pulser
+            continue
+
         label = struck_analysis_parameters.channel_map[channel]
         bini = channel+1
         noise_hist.GetXaxis().SetBinLabel(bini, label)
+        noise_hist_single.GetXaxis().SetBinLabel(bini, label)
+        noise_hist_double.GetXaxis().SetBinLabel(bini, label)
+        noise_hist_many.GetXaxis().SetBinLabel(bini, label)
 
-        if not value:
-            noise_hist.SetBinContent(bini,0.0)
-            noise_hist.SetBinError(bini, 0.0)
-            continue
+
+        n_strips = struck_analysis_parameters.channel_to_n_strips_map[channel]
 
         hist = rfile.Get("hist_%i" % channel)
  
@@ -216,8 +237,15 @@ def plotRMS():
         
         print label, mean
 
+        # find the appropriation "other" noise hist, based on n_strips
+        other_noise_hist = noise_hist_many
+        if n_strips == 1: other_noise_hist = noise_hist_single
+        elif n_strips == 2: other_noise_hist = noise_hist_double
+
         noise_hist.SetBinContent(bini, mean)
         noise_hist.SetBinError(bini, mean_error)
+        other_noise_hist.SetBinContent(bini, mean)
+        other_noise_hist.SetBinError(bini, mean_error)
 
         legend.AddEntry(hist, label, "p")
     hist = rfile.Get("hist_0")
@@ -230,35 +258,42 @@ def plotRMS():
         print "Holding"
         raw_input("Hold Enter")
     
-    print "Doing Noise"
-    canvas.SetGrid(False)
-    noise_hist.SetMarkerStyle(21)
-    noise_hist.GetXaxis().SetLabelSize(0.03)
-    noise_hist.SetMarkerColor(ROOT.kRed)
-    noise_hist.Draw()
-    noise_hist.SetTitle("Channel RMS Noise")
-    if calibrate:
-        noise_hist.GetYaxis().SetTitle("RMS Noise [keV]")
-    else:
-        noise_hist.GetYaxis().SetTitle("RMS Noise [ADC units]")
-    noise_hist.GetXaxis().SetTitle("Channel")
-    canvas.SetTopMargin(0.1)
+    print "Plotting noise vs. channel"
+    canvas.SetGrid(1,1)
+    noise_hist.SetMarkerStyle(20)
+    noise_hist_single.SetMarkerStyle(20)
+    noise_hist_double.SetMarkerStyle(25)
+    noise_hist_many.SetMarkerStyle(21)
+    # https://root.cern.ch/root/roottalk/roottalk02/0083.html
+    # https://root.cern.ch/root/html534/TH1.html
+    noise_hist_many.LabelsOption("v","X") # x-axis labels: vertical 
+
+    noise_hist_many.Draw("E1 X0")
+    noise_hist_single.Draw("E1 X0 same")
+    noise_hist_double.Draw("E1 X0 same")
+    #noise_hist_many.Draw("E1 X0 same")
+    canvas.SetTopMargin(0.08)
     canvas.SetBottomMargin(0.15)
+    legend2 = ROOT.TLegend(0.1, 1.01 - canvas.GetTopMargin(), 0.9, 0.99)
+    legend2.SetNColumns(3)
+    legend2.AddEntry(noise_hist_single, "One strip", "p")
+    legend2.AddEntry(noise_hist_double, "Two strips", "p")
+    legend2.AddEntry(noise_hist_many, "Many strips", "p")
+    legend2.Draw()
     canvas.Update()
-    canvas.Print("Noise_vs_Channel.pdf")
+    canvas.Print("%s.pdf" % plot_name)
     if not ROOT.gROOT.IsBatch():
         print "Noise Plot"
         raw_input("Hold Enter")
 
 
 if __name__ == "__main__":
-    remake = True
-    calibrate = False
-    #calibrate = True
+    #remake = True
+    remake = False
+    #calibrate = False
+    calibrate = True
     if remake:
         getRMS(calibrate)
-        plotRMS()
-    else:
-        plotRMS()
+    plotRMS(calibrate)
 
 
