@@ -349,7 +349,7 @@ def main():
     coords_list = []
     #coords_list.append([0, 0, pcdz]) # 25% of full signal
     coords_list.append([1.5, 0, pcdz]) # center of pad
-    if True: # different x, y coords
+    if False: # different x, y coords
         coords_list.append([0.1, 0, pcdz]) # near outer corner
         coords_list.append([1.5, 1.4, pcdz]) # near indside corner
         coords_list.append([0.8, 0.7, pcdz]) # along edge
@@ -357,9 +357,11 @@ def main():
         #coords_list.append([4.5, 0, pcdz]) # not on X16
 
     # different z coords
-    coords_list.append([1.5, 0, pcdz+100.0]) # center of pad
     coords_list.append([1.5, 0, pcdz+200.0]) # center of pad
-    coords_list.append([1.5, 0, pcdz+300.0]) # center of pad
+    coords_list.append([1.5, 0, pcdz+400.0]) # center of pad
+    coords_list.append([1.5, 0, pcdz+600.0]) # center of pad
+    coords_list.append([1.5, 0, pcdz+800.0]) # center of pad
+    coords_list.append([1.5, 0, pcdz+950.0]) # center of pad
 
     #baseline_sampling_times = oversampled_sample_times[1::oversampling_multiplier]
 
@@ -387,7 +389,7 @@ def main():
 
         #current_wfm = digi.RalphWF.make_current_WF(
         #current_wfm = digi.RalphWF.make_WF(    # really charge, for testing
-        current_wfm = digi.RalphWF.make_current_from_derivative(
+        current_wfm = digi.RalphWF.make_current_from_derivative( # best
                 xpcd=x, ypcd=y, zpcd=z, Epcd=Epcd, chID=chID,
                 cathodeToAnodeDistance=cathodeToAnodeDistance, dZ=dZ,
                 wfm_length=wfm_length)
@@ -396,15 +398,15 @@ def main():
         print "\t current_wfm max:", np.amax(current_wfm)
 
         # filter the current wfm
-        #current_wfm = transform(current_wfm, simple_gaus, tau)
+        current_wfm = transform(current_wfm, simple_gaus, tau)
         print "\t sg_filtered_current_WF:", np.amax(current_wfm)
 
         # undo oversamping -- go back to usual sampling rate:
         # use numpy array slicing for this:
-        #current_wfm = current_wfm[1::oversampling_multiplier]
+        current_wfm = current_wfm[1::oversampling_multiplier]
         print "\t sg_filtered_current_WF_sampled:", np.amax(current_wfm)
 
-        #current_wfm = digitize(current_wfm, max_val=adc_max, bits=adc_bits) # digitize with ADC bits
+        current_wfm = digitize(current_wfm, max_val=adc_max, bits=adc_bits) # digitize with ADC bits
         print "\t sg_digitized_wfm:", np.amax(current_wfm)
 
         current_wfms.append(current_wfm) # save for later charge integration
@@ -424,7 +426,8 @@ def main():
         else:
             label='(%.1f, %.1f, %i)mm: %.2e' % (x, y, z, np.max(current_wfm))
 
-        plt.plot(plot_times, current_wfm, '.-', label=label)
+        #plt.plot(plot_times, current_wfm, '.-', label=label)
+        plt.plot(plot_times, current_wfm, label=label)
 
         if np.max(current_wfm) > max_current: max_current = np.max(current_wfm)
 
@@ -432,15 +435,21 @@ def main():
 
     plot_sampling_period = plot_times[1] - plot_times[0]
     plot_sampling_freq = 1.0 / plot_sampling_period
+    print "plot_sampling_period:", plot_sampling_period
+    print "plot_sampling_freq:", plot_sampling_freq
 
     plt.title("Current signals on X16 (%i MHz, fbw=%.3f, E=%.1f %.1f ADC max, %i bits)" % (
         plot_sampling_freq, fbw, Epcd, adc_max, adc_bits))
     legend = plt.legend(loc='upper left', ncol=2)
     plt.ylim([-max_current*0.1, max_current*1.5])
     #plt.xlim([cathode_arrival_time-1.0, cathode_arrival_time+0.5 ])
-    plt.xlim([cathode_arrival_time-3.0, cathode_arrival_time+5.0 ])
-    plt.savefig("digitized_current_signals_X16_fbw%.3e.png" % fbw)
+    #plt.xlim([cathode_arrival_time-3.0, cathode_arrival_time+5.0 ])
+    plt.xlim([padding_time, cathode_arrival_time+20.0 ])
+    plt.savefig("digitized_current_signals_X16_fbw%.3e_lin.png" % fbw)
 
+    plt.ylim([max_current*1e-4, max_current*20])
+    plt.semilogy()
+    plt.savefig("digitized_current_signals_X16_fbw%.3e_log.png" % fbw)
 
     plt.figure(6)
     #Collection signal on channel X16
@@ -463,7 +472,7 @@ def main():
         z = coords[2]
 
         # integrate to find the charge
-        sg_digitized_charge = np.cumsum(current_wfm)*plot_sampling_freq 
+        sg_digitized_charge = np.cumsum(current_wfm)*plot_sampling_period 
         print "\t sg_digitized_charge:", np.amax(sg_digitized_charge)
         if Epcd == 1.0:
             label='(%.1f, %.1f, %.1f): %.3f' % (x, y, z, np.max(sg_digitized_charge))
@@ -478,7 +487,12 @@ def main():
 
     legend = plt.legend(loc='upper left', ncol=2)
     plt.ylim([-max_charge*0.1, max_charge*1.5])
-    plt.savefig("integrated_charge_signals_X16_fbw%.3e.png" % fbw)
+    plt.savefig("integrated_charge_signals_X16_fbw%.3e_lin.png" % fbw)
+
+    plt.ylim([max_charge*1e-4, max_charge*20])
+    #plt.xlim([padding_time, cathode_arrival_time+20.0 ])
+    plt.semilogy()
+    plt.savefig("integrated_charge_signals_X16_fbw%.3ei_log.png" % fbw)
 
     #raw_input("press enter to continue ")
     # end of main()
