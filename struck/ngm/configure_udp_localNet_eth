@@ -12,6 +12,11 @@
 # for VME pizza box
 arp -i eth1 -s 192.168.1.100 00:00:56:31:60:61 # eth1 -> S/N 97
 arp -i eth2 -s 192.168.2.100 00:00:56:31:60:62 # eth2 -> S/N 98 
+arp -i eth2 -s 192.168.2.102 00:00:56:31:60:61 # eth1 -> S/N 97
+
+#MAC address: constant of device
+#Ethernet just needs to be 192.168.eth#.###
+
 
 # for desktop unit:
 arp -i eth1 -s 192.168.1.101 00:00:56:31:60:9b # eth1 -> S/N 155
