@@ -23,7 +23,7 @@ def make_graph(
     #dz = 1.0 # mm -- quick & dirty, takes ~ 1 minute at 33mm drift
     #dz = 4.0 # mm
     z = 0 # distance from cathode
-    wfm_length = 800
+    wfm_length = 1000
     if cathodeToAnodeDistance > 900:
         z = 880 # mm, for nEXO
         wfm_length = 8000
@@ -57,6 +57,7 @@ def make_graph(
 
 
 def main():
+    #RalphWF.cathodeToAnodeDistance = 1e3 # nEXO
     canvas = ROOT.TCanvas("canvas","")
     canvas.SetGrid(1,1)
     legend = ROOT.TLegend(0.1, 0.91, 0.9, 0.99)
@@ -76,8 +77,10 @@ def main():
     xmax = hist.GetXaxis().GetXmax()
     hist.GetXaxis().SetLimits(0.0, xmax)
     if RalphWF.cathodeToAnodeDistance > 900: hist.GetXaxis().SetLimits(0.0, 120) # nEXO
+    hist.GetYaxis().SetTitleOffset(1.2)
     hist.SetXTitle("Interaction location (distance from anode) [mm]")
     hist.SetYTitle("Fraction of ionization charge observed")
+    hist.GetYaxis().SetTitleOffset(1.2)
     hist.SetMinimum(0.0)
     hist.SetMaximum(1.1)
     #hist.SetAxisRange(5, 20)
@@ -186,10 +189,14 @@ def main():
     graph6.SetLineColor(ROOT.kGreen+2)
     graph6.SetLineWidth(2)
     dz = cathodeToAnodeDistance/100.0
-    WF = RalphWF.make_WF(1.5, 0.0, 0.0, 1.0, 15, cathodeToAnodeDistance, dz, wfm_length=800)
+    wfm_length = 800
+    if RalphWF.cathodeToAnodeDistance > 900: # nEXO
+        dz = 120.0/100.0
+        wfm_length = 8000
 
+    WF = RalphWF.make_WF(1.5, 0.0, 0.0, 1.0, 15, cathodeToAnodeDistance, dz, wfm_length)
     RalphWF.diagonal = 6.0 # 6-mm wire pitch
-    WF6 = RalphWF.make_WF(1.5, 0.0, 0.0, 1.0, 15, cathodeToAnodeDistance, dz, wfm_length=800)
+    WF6 = RalphWF.make_WF(1.5, 0.0, 0.0, 1.0, 15, cathodeToAnodeDistance, dz, wfm_length)
     for i_point in xrange(len(WF)): 
         z = i_point*dz # distance from anode
         y = WF[i_point] 
@@ -203,15 +210,12 @@ def main():
     hist.GetXaxis().SetLimits(0.0, xmax)
     hist.SetXTitle("Distance from anode [mm]")
     hist.SetYTitle("Weighting potential")
+    hist.GetYaxis().SetTitleOffset(1.2)
     hist.SetMinimum(0.0)
     hist.SetMaximum(1.1)
     legend.AddEntry(graph, "Tile design, 3-mm strip pitch", "l")
-    if RalphWF.cathodeToAnodeDistance > 900: # nEXO
-        hist.GetXaxis().SetLimits(0.0, 120) # zoom in near anode for nEXO setup
-        graph6.Draw("l")
-        legend.AddEntry(graph6, "Tile design, 6-mm strip pitch", "l")
 
-    if False:
+    if False: # same as above, but slower...
         # calc weighting potential from graph4
         wp_graph = ROOT.TGraph()
         wp_graph.SetLineColor(ROOT.kGreen)
@@ -224,25 +228,30 @@ def main():
         wp_graph.Draw("l")
         legend.AddEntry(wp_graph, "3mm wire pitch, 2nd method", "l")
 
-    graph2 = ROOT.TGraph()
-    graph2.SetLineColor(ROOT.kRed)
-    graph2.SetLineWidth(2)
-    graph2.SetPoint(0, 0.0, 1.0)
-    graph2.SetPoint(1, 6.0, 0.0)
-    graph2.SetPoint(2, cathodeToAnodeDistance, 0.0)
-    graph2.Draw("l")
-    legend.AddEntry(graph2, "Frisch grid 6 mm from anode", "l")
+    if RalphWF.cathodeToAnodeDistance > 900: # nEXO
+        hist.GetXaxis().SetLimits(0.0, 120) # zoom in near anode for nEXO setup
+        graph6.Draw("l")
+        legend.AddEntry(graph6, "Tile design, 6-mm strip pitch", "l")
+    else:
+        graph2 = ROOT.TGraph()
+        graph2.SetLineColor(ROOT.kRed)
+        graph2.SetLineWidth(2)
+        graph2.SetPoint(0, 0.0, 1.0)
+        graph2.SetPoint(1, 6.0, 0.0)
+        graph2.SetPoint(2, cathodeToAnodeDistance, 0.0)
+        graph2.Draw("l")
+        legend.AddEntry(graph2, "Frisch grid 6 mm from anode", "l")
  
     #canvas.SetTopMargin(0.05)
     legend.Draw()
     line.Draw()
     canvas.Update()
     canvas.Print("WeightingPotential_%imm.pdf" % cathodeToAnodeDistance)
-    #canvas.SetLogy(1)
-    #canvas.Update()
-    #canvas.Print("WeightingPotential_%imm_log.pdf" % cathodeToAnodeDistance)
+    canvas.SetLogy(1)
+    canvas.Update()
+    canvas.Print("WeightingPotential_%imm_log.pdf" % cathodeToAnodeDistance)
 
-    outfile.Close()
+    outfile.Close() # close the TFile
 
 
 if __name__ == "__main__":
