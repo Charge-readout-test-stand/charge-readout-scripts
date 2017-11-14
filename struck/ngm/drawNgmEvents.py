@@ -43,20 +43,23 @@ canvas.SetRightMargin(0.15)
 ROOT.gStyle.SetTitleFontSize(0.04)
 
 nchannels = len(struck_analysis_parameters.channel_map)
-#nchannels = 16 # FIXME -- for DT unit!!
+nchannels = 32 # FIXME -- for DT unit!!
+bits = 16
 
 print "%i channels" % nchannels
 
 def process_file(filename=None, n_plots_total=0):
 
     # options ------------------------------------------
-    is_for_paper = True # change some formatting
-    threshold = 550 # keV
+    is_for_paper = False # change some formatting
+    threshold = 0 # keV
     #threshold = 0
     #threshold = 1250 # keV
     #threshold = 570 # keV, for generating multi-page PDF
     #threshold = 50 # ok for unshaped, unamplified data
-    energy_offset = 700 # keV, space between traces
+    #energy_offset = 100*700 # keV, space between traces
+    energy_offset = 0.2*700
+    
 
     units_to_use = 0 # 0=keV, 1=ADC units, 2=mV
 
@@ -82,6 +85,7 @@ def process_file(filename=None, n_plots_total=0):
         y_min = -50 # ADC units
     elif units_to_use == 2:
         y_min = -5 # mV
+    #y_min = -20000
 
     #y_max = 31500 # keV
     #y_max = nchannels*500+250 # keV
@@ -269,7 +273,7 @@ def process_file(filename=None, n_plots_total=0):
             if units_to_use == 1: # ADC units
                 multiplier = 1.0
             elif units_to_use == 2: # mV
-                multiplier = voltage_range_mV/pow(2,14)
+                multiplier = voltage_range_mV/pow(2,bits)
             if channel == pmt_channel:
                 multiplier /= pmt_shrink_scale
 
@@ -482,6 +486,7 @@ def process_file(filename=None, n_plots_total=0):
         #legend.AddEntry(sum_graph1, "X sum slot 1","l")
 
         # line to show trigger time
+        print trigger_time, "-------------------------------------------------------------"
         line = ROOT.TLine(trigger_time, y_min, trigger_time,y_max)
         line.SetLineWidth(2)
         line.SetLineStyle(7)
@@ -596,7 +601,7 @@ def process_file(filename=None, n_plots_total=0):
 
 if __name__ == "__main__":
 
-    n_plots_total = 10
+    n_plots_total = 2
     #n_plots_total = 3
     n_plots_so_far = 0
     if len(sys.argv) > 1:
