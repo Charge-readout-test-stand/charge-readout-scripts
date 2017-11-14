@@ -113,7 +113,8 @@ class TileEventViewer:
         plt.show()
 
 if __name__ == "__main__":
-    fname = "/home/teststand/2016_08_15_8th_LXe_overnight/tier3_added/overnight8thLXe_v4.root"
+#    fname = "/home/teststand/2016_08_15_8th_LXe_overnight/tier3_added/overnight8thLXe_v4.root"
+    fname = "/nfs/slac/g/exo_data4/users/mjewell/tier1_SIS3316Raw_20170202141534_11thLXe_124mVDT_1250VPMT_3100V_overnight_1-ngm.root"
     rfile = ROOT.TFile(fname)
     tree = rfile.Get("tree")
     nEvents = tree.GetEntries()
