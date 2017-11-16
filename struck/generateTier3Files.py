@@ -113,18 +113,19 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     # samples at wfm start and end to use for energy calc:
 
     baseline_average_time_microseconds = struck_analysis_parameters.baseline_average_time_microseconds
-
     # this is just the default; overwritten for NGM files:
-    sampling_freq_Hz = struck_analysis_parameters.sampling_freq_Hz
-   
-    channels = struck_analysis_parameters.channels
-    channel_map = struck_analysis_parameters.channel_map
-    n_chargechannels = struck_analysis_parameters.n_chargechannels
-    pmt_channel = struck_analysis_parameters.pmt_channel
-    pulser_channel = struck_analysis_parameters.pulser_channel
-    n_channels = struck_analysis_parameters.n_channels
-    charge_channels_to_use = struck_analysis_parameters.charge_channels_to_use
-    rms_keV = struck_analysis_parameters.rms_keV
+    sampling_freq_Hz        = struck_analysis_parameters.sampling_freq_Hz
+    channels                = struck_analysis_parameters.channels
+    channel_map             = struck_analysis_parameters.channel_map
+    n_chargechannels        = struck_analysis_parameters.n_chargechannels
+    pmt_channel             = struck_analysis_parameters.pmt_channel
+    pulser_channel          = struck_analysis_parameters.pulser_channel
+    n_channels              = struck_analysis_parameters.n_channels
+    charge_channels_to_use  = struck_analysis_parameters.charge_channels_to_use
+    rms_keV                 = struck_analysis_parameters.rms_keV
+    sipm_channels_to_use    = struck_analysis_parameters.sipm_channels_to_use
+    dead_channels           = struck_analysis_parameters.dead_channels
+    n_channels_good         = n_channels - sum(dead_channels)
 
     # this is the number of channels per event (1 if we are processing tier1
     # data, len(channels) if we are processing tier2 data
@@ -383,6 +384,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
     channel = array('I', [0]*n_channels_in_event) # unsigned int
     out_tree.Branch('channel', channel, 'channel[%i]/i' % n_channels_in_event)
+    
+    nfound_channels = array('I', [0])
+    out_tree.Branch('nfound_channels', nfound_channels, 'nfound_channels/i') #Total # of found channels. For accounting for dead or bad channels
 
     trigger_time = array('d', [0.0]) # double
     out_tree.Branch('trigger_time', trigger_time, 'trigger_time/D')
@@ -832,6 +836,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         print "--> debugging -- skipping PMT threshold calc"
     elif pulser_channel != None:
         print "skipping PMT threshold calc since pulser is channel %i" % pulser_channel
+    elif pmt_channel == None:
+        print "skipping PMT threshold calc since this is a SiPM run"
     else:
         draw_command = "wfm_max-wfm[0] >> hist"
         selection = "channel==%i" % pmt_channel
@@ -1056,9 +1062,12 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             bundle_nsigs[bundle_index] = 0
             bundle_energy[bundle_index] = 0.0
         nbundles[0] = 0
+        nfound_channels[0] = 0
         is_pulser[0] = 0
         is_bad[0] = 0
-        
+        found_dead = False
+        found_channels = []
+
         if isMC:
             MCchargeEnergy[0] = 0.0
             MCtotalEventEnergy[0] = tree.Energy
@@ -1143,6 +1152,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 time_stampDouble_diff[i] = tree.HitTree.GetRawClock() -time_stampDouble[0] # time stamp for this channel
 
                 if do_debug: # debugging
+                #if True:
                     print "NGM event", n_events, \
                         "i", i, \
                         "channel", channel[i], \
@@ -1153,15 +1163,31 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 # allowable number of clock ticks of difference: 80 ns 
                 clock_tick_diff = sampling_frequency_Hz[0]*80.0/1e9
                 if (abs( tree.HitTree.GetRawClock() - time_stamp[0] ) > clock_tick_diff):
+                    print ""
                     print "===> end of event after %i channels: %i clock tick diff" % (
-                        (i+1),
+                        (n_channels_in_this_event),
                         abs( tree.HitTree.GetRawClock() - time_stamp[0] ),
                     )
+                    print ""
                     i_entry -= 1
-                    n_events += 1
+                    #n_events += 1
                     break # break from loop over events
-
+                
                 n_channels_in_this_event += 1
+                if channel[i] in found_channels:
+                    print ""
+                    print "======> Found Duplicate Channel.  Should this even be possible????"
+                    print ""
+                    sys.exit(1)
+
+                found_channels.append(channel[i])
+
+                if dead_channels[channel[i]] > 0:
+                    found_dead = True
+                    print ""
+                    print "===> DEAD Channel Found: %i" % channel[i]
+                    print ""
+                    break
 
                 wfm = tree._waveform
                 
@@ -1264,10 +1290,12 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 calibration=calibration[i], 
                 decay_time=decay_time[i], 
                 is_pmtchannel=channel[i]==pmt_channel,
+                is_sipmchannel=(sipm_channels_to_use[channel[i]] > 0),
                 channel=channel[i],
                 isMC=isMC,
                 label=label,
             )
+
 
             #print "Using Decay Time %f for chan %i" % (decay_time[i], i)
             
@@ -1288,8 +1316,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                     nYsignals[0]+=1
                     SignalEnergyY[0] += energy1_pz[i]
 
-            if channel[i] == pmt_channel:
-                lightEnergy[0] = energy[i]
+            if channel[i] == pmt_channel or sipm_channels_to_use[channel[i]]:
+                lightEnergy[0] += energy[i]
             elif charge_channels_to_use[channel[i]]:
                 chargeEnergy[0] += energy1_pz[i]
             if isMC:
@@ -1557,6 +1585,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         if wfm_too_high: is_bad[0] += 16
         if low_baseline_rms: is_bad[0] += 64
         if low_energy_rms: is_bad[0] += 128
+        if found_dead: is_bad[0] += 256
 
         if not isMC and pulser_channel:
             if wfm_min[pulser_channel] < 3000: # 9th LXe value
@@ -1565,11 +1594,13 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 is_pulser[0] = 1
 
         if isNGM: # check that event contains all channels:
-            if (n_channels_in_this_event != len(charge_channels_to_use)):
-              print "====> WARNING: %i channels in this event!!" % i
+            do_fill = True
+            nfound_channels[0] = len(found_channels)
+            #if (n_channels_in_this_event != len(charge_channels_to_use)):
+            if (n_channels_in_this_event != n_channels_good):
+              print "================> WARNING: %i channels in this event!! <================" % i
               is_bad[0] += 32
             else:
-                do_fill = False
                 if nsignals[0] > 0: do_fill = True
                 if is_pulser[0] > 0: do_fill = True
 
@@ -1581,8 +1612,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                         do_fill = False
                     if struck_analysis_parameters.is_10th_LXe and out_tree.GetEntries() >= 20: break # 20 events x 1181 files 
 
-                if do_fill:
-                    out_tree.Fill()
+            if do_fill:
+                out_tree.Fill()
             n_events+=1
         else:
             out_tree.Fill()

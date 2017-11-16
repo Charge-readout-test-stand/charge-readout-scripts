@@ -50,7 +50,8 @@ if os.getenv("EXOLIB") is not None and not isROOT6:
             print "WARNING: second definition is wrong!!"
             sys.exit()
         print "imported CLHEP/ROOT"
-    except ImportError or AttributeError:
+    #except ImportError or AttributeError:
+    except (ImportError, AttributeError) as e:
         print "couldn't import CLHEP/ROOT"
 
 drift_length = 18.16 # mm, from solidworks for 7th LXe + 
@@ -1013,6 +1014,7 @@ if is_12th_LXe:
     #WRONG right now
     n_baseline_samples = 5*275.0 # 2x n samples
     energy_start_time_microseconds = (wf_length - n_baseline_samples)*samp_period/1000 # energy calc starts 850 samples
+    #Factor of 1/2 here
     baseline_average_time_microseconds = (n_baseline_samples/2.0*samp_period/1000) # 200 samples at 25 MHz = 8 microseconds
 
 #energy_start_time_samples = int(energy_start_time_microseconds*microsecond*sampling_freq_Hz/second)
