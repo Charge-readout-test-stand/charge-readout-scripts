@@ -1007,12 +1007,15 @@ if is_11th_LXe or is_11th_LXeB:
     energy_start_time_microseconds = (1050.0 - n_baseline_samples)*40/1000 # energy calc starts 850 samples
 baseline_average_time_microseconds = (n_baseline_samples/2.0*40.0/1000) # 200 samples at 25 MHz = 8 microseconds
 if is_12th_LXe:
+    #sampling_freq_Hz = 125.0e6 #saved in tree so don't need
     samp_period = 8 #ns (125MHz)
     wf_length = 5250.0
     #WRONG right now
-    n_baseline_samples = 275.0 # 2x n samples
+    n_baseline_samples = 5*275.0 # 2x n samples
     energy_start_time_microseconds = (wf_length - n_baseline_samples)*samp_period/1000 # energy calc starts 850 samples
     baseline_average_time_microseconds = (n_baseline_samples/2.0*samp_period/1000) # 200 samples at 25 MHz = 8 microseconds
+
+#energy_start_time_samples = int(energy_start_time_microseconds*microsecond*sampling_freq_Hz/second)
 
 #print "energy_start_time_microseconds:", energy_start_time_microseconds
 
