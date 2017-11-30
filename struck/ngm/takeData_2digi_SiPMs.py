@@ -1,7 +1,7 @@
 """
 
-This script is for taking data with the 32-channel (2 x 16) pizza-box VME
-digitizers, with the 2004 version of the firmware. 
+This script is for taking data with the 32-channel (2 x 16) DT Unit + 14-bit VME unit from ORNL
+digitizers, with the 2008 version of the firmware.
 
 For the DT unit with 2008 version of firmware, use the script takeData_16ch_DT.py. 
 
@@ -24,31 +24,17 @@ def takeData(doLoop=False, n_hours=10.0):
   #is_warm = False
   is_warm = True # FIXME
 
-  #file_suffix = "_test" # this gets appended to the file name
-  #file_suffix = "_digitizer_noise_tests_" # this gets appended to the file name
-  #file_suffix = "_8thLXe_126mvDT_cell_full_cath_1700V_100cg_overnight_" # 126-mV discrim threshold, 1700 cathode bias, 100x PMT coarse gain
-  #file_suffix = "_9thLXe_126mvDT_cath_1700V_100cg_setup_" # 126-mV discrim threshold, 1700 cathode bias, 100x PMT coarse gain
-  #file_suffix = "_9thLXe_126mvDT_cath_1700V_100cg_overnight_" # 126-mV discrim threshold, 1700 cathode bias, 100x PMT coarse gain
-  #file_suffix = "_9thLXe_126mvDT_cath_1700V_100cg_warmup_before_recovery_" # 126-mV discrim threshold, 1700 cathode bias, 100x PMT coarse gain
-  #file_suffix = "_PMT_Xe_gas_126mvDT__" # 126-mV discrim threshold, 1700 cathode bias, 100x PMT coarse gain
-  #file_suffix = "_11thLXe_pulser_off_noise" # 126-mV discrim threshold, 1700 cathode bias, 100x PMT coarse gain
-  #file_suffix = "_9thLXe_pulsar_cooldown_notFull_pulsarisX23_24_"
-  #file_suffix = "_11thLXe_124mVDT_1250VPMT_recovery_cathode_pulser_higher_inhibit2"
-  #file_suffix = "_noise_tests_900torrAr_ShvFt_dewarOpen"
-  file_suffix = "_test_triggering"
+  file_suffix = "_test_triggering_SiPMs_with_Charge_3110V_scope_trigger"
   n_cards = 2
 
-  runDuration = 10*100 # seconds
-  #runDuration = 10 # seconds -- debugging! FIXME
+  runDuration = 60*10 # seconds
   #A 60s run is 720 MB with 4ms veto
 
   # settings
   threshold = 60
   gain = 1 # default = 1 1 = 2V; 0 = 5V, use 1 for LXe runs, 0 for testing warm
   termination = 1 # 1 = 50 ohm?
-  #trig_string = '1110'
   nimtriginput = 0x10 # Bit0 Enable : Bit1 Invert , we use 0x10 (from struck root gui)
-  #nimtriginput = int(trig_string, 2)
   trigconf = 0x8 # default = 0x5, we use 0x8 Bit0:Invert, Bit1:InternalBlockSum, Bit2:Internal, Bit3:External                       
   gaptime = 50 # delay
   risetime = 4 # peaking time
@@ -61,13 +47,18 @@ def takeData(doLoop=False, n_hours=10.0):
 
   # could have a few other clock freqs if we define them, look to struck root gui for info
   # clock_source_choice = [1,1] # 0: 250MHz, 1: 125MHz, 2=62.5MHz 3: 25 MHz (we use 3) 
-  clock_source_choice = 3 # 0: 250MHz, 1: 125MHz, 2=62.5MHz 3: 25 MHz (we use 3) 
-  gate_window_length = 1000 #800 (normal)
-  pretriggerdelay = 500 
-#  if clock_source_choice == 0: # preserve length of wfm in microseconds
-#      gate_window_length = 8000
-#      pretriggerdelay = 2000
-
+  clock_source_choice = 1 # 0: 250MHz, 1: 125MHz, 2=62.5MHz 3: 25 MHz (we use 3) 
+  gate_window_length = 1050 #800 (normal)
+  pretriggerdelay = 275
+  if clock_source_choice == 0: # preserve length of wfm in microseconds
+      gate_window_length = 8000
+      pretriggerdelay = 2000
+  elif clock_source_choice == 1:
+      #At 125MHz we have 5 times more samples in the same time window 
+      #so extend the number of struck samples saved.
+      gate_window_length = 5250
+      pretriggerdelay = 1375
+  
   # ---------------------------------------------------------------------------
 
   """ 
@@ -98,8 +89,11 @@ def takeData(doLoop=False, n_hours=10.0):
   sis.GetConfiguration().GetSystemParameters().SetParameterD("MaxDuration",0,runDuration) #seconds
   sis.GetConfiguration().GetSystemParameters().SetParameterS("OutputFileSuffix",0,file_suffix) 
   sis.GetConfiguration().GetSlotParameters().AddParameterS("IPaddr")
+  
+  #The VME unit is the master so must go first
   sis.GetConfiguration().GetSlotParameters().SetParameterS("IPaddr",0,"192.168.1.100")
   if n_cards > 1:
+    #Slave is currently the DT so goes second
     sis.GetConfiguration().GetSlotParameters().SetParameterS("IPaddr",1,"192.168.2.100")
 
   print "\n----> calling InitializeSystem()"
@@ -111,13 +105,10 @@ def takeData(doLoop=False, n_hours=10.0):
     sis0 = sis.GetConfiguration().GetSlotParameters().GetParValueO("card",icard)
 
     sis0.nimtriginput = nimtriginput 
-    #sis0.nimtrigoutput = 
 
     # need to use this method to set clock freq. We don't want to change the
     # master/slave sharingmode:
-    #sis0.SetClockChoice(clock_source_choice[icard],sis0.sharingmode)
     sis0.SetClockChoice(clock_source_choice,sis0.sharingmode)
-    #sis0.SetClockChoice(3,sis0.sharingmode)
 
     print "\nSIS", icard, \
       "| nimtriginput:", sis0.nimtriginput, \
@@ -144,24 +135,14 @@ def takeData(doLoop=False, n_hours=10.0):
 
       #sis0.firthresh[i] = threshold # set threshold
 
-      #if icard == 0 and i == 0: 
-          #sis0.gain[i] = 0 # 5V for PMT
-      #    sis0.gain[i] =  gain
-      #else:
-      #    sis0.gain[i] = gain # set gain
+      #Set the gains for each channel.
+      if True:
+          sis0.gain[i] = gain
+      else:
+          sis0.gain[i] = gain
 
-      sis0.gain[i] = gain
       sis0.termination[i] = termination # set termination
       sis0.trigconf[i] = trigconf # set trigger conf
-      #sis0.firenable[i] = 1
-      #sis0.risetime[i] = risetime
-      #sis0.gaptime[i] = gaptime
-      #if icard == 0 and (i == 14 or i == 15):
-      #    sis0.firenable[i] = 0
-      #else:
-      #    sis0.gain[i] =  gain
-      #    sis0.trigconf[i] = trigconf
-      #    sis0.firenable[i] = 1
 
       print "\t SIS", icard, "ch%i" % i, \
           "| gain:", sis0.gain[i], \

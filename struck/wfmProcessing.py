@@ -8,11 +8,14 @@ Extract parameters (energy, risetime, etc.) from a waveform.
 import os
 import sys
 import math
+import numpy as np
+from array import array
 
 # somehow these 2 are important?!
 from ROOT import TH1D
 from ROOT import TLine
 from ROOT import *
+
 
 # workaround for systems without EXO offline / CLHEP
 microsecond = 1.0e3
@@ -61,6 +64,7 @@ def do_draw(
     extra_wfm=None, 
     extra_wfm2=None,
     vlines=None, # vertical lines
+    islog = False
     ):
     
     if gROOT.IsBatch(): return
@@ -110,7 +114,9 @@ def do_draw(
             lines.append(line)
     hist.SetMaximum(hist_max)
     hist.SetMinimum(hist_min)
-
+    
+    #hist.GetXaxis().SetRangeUser(0,100)
+    #hist.GetYaxis().SetRangeUser(12700,13300)
 
     canvas.Update()
     plot_name = "_".join(title.split(" "))
@@ -252,6 +258,43 @@ def get_wfmparams(
         print "channel #:", channel
         #raw_input("Pause")
 
+    #if is_sipmchannel:
+    if False:
+        gROOT.SetBatch(False)
+        label = "SiPM"
+        exo_wfm_np = np.array([exo_wfm.At(i) for i in xrange(exo_wfm.GetLength())])
+        exo_fft_array = np.fft.rfft(exo_wfm_np)
+        
+        exo_fft_filter_array = np.zeros_like(exo_fft_array)
+        exo_fft_filter_array[0:600] = exo_fft_array[0:600]
+        exo_wfm_np_filter = np.fft.irfft(exo_fft_filter_array)
+        exo_fft_array = exo_fft_array*np.conj(exo_fft_array)
+
+        
+        exo_wfm_array = array('d', [0]*len(exo_fft_array))
+        for i,wfmx in enumerate(exo_fft_array):
+            exo_wfm_array[i] = np.log(wfmx.real)
+        exo_fft = EXODoubleWaveform(array('d',exo_wfm_array), len(exo_fft_array))
+        
+        exo_wfm_filter_array = array('d', [0]*len(exo_wfm_np_filter))
+        for i,wfmx in enumerate(exo_wfm_np_filter):
+            exo_wfm_filter_array[i] = wfmx
+        exo_filter = EXODoubleWaveform(array('d',exo_wfm_filter_array), len(exo_wfm_np_filter))
+
+        #print np.fft.fftfreq(exo_wfm.GetLength(), d=8e-9)
+        print len(exo_fft_array)
+        print (125.0/2.0)/len(exo_fft_array)
+
+        print "%.4f MHz" % ((np.fft.rfftfreq(len(exo_wfm_np), d=(1/125.0e6))[1])*1e-6)
+
+        do_draw(exo_filter, "channel %i SiPM channel FFT Spectrum %.2f MHz" % (channel, sampling_freq_Hz/(second*1e-3)))
+        #do_draw(exo_wfm, "channel %i SiPM channel FFT Spectrum %.2f MHz" % (channel, sampling_freq_Hz/(second*1e-3)))
+        #do_draw(exo_fft, "channel %i SiPM channel FFT Spectrum %.2f MHz" % (channel, sampling_freq_Hz/(second*1e-3)))
+        
+        #test = np.array([ for x in ])
+        #raw_input("PAUSE")
+        gROOT.SetBatch(True)
+
     #Intitially not a signal
     isSignal = 0
 
@@ -375,7 +418,7 @@ def get_wfmparams(
     # save the transformed WF into the energy_wfm
     pole_zero = EXOPoleZeroCorrection()
     pole_zero.SetDecayConstant(decay_time)
-    if not is_pmtchannel or not is_simpchannel: #Skip correction for Light Channels
+    if not is_pmtchannel and not is_sipmchannel: #Skip correction for Light Channels
         pole_zero.Transform(exo_wfm, energy_wfm)
 
     # measure energy after PZ correction -- use baseline remover
@@ -511,12 +554,34 @@ def get_wfmparams(
         mfilter_max  =  0.0
         mfilter_time = 0.0
 
-    if is_pmtchannel or is_sipmchannel: # for PMT channel, use GetMaxValue()
+    if is_sipmchannel:
+        exo_wfm_np = np.array([exo_wfm.At(i) for i in xrange(exo_wfm.GetLength())])
+        exo_fft_array = np.fft.rfft(exo_wfm_np)
+
+        exo_fft_filter_array = np.zeros_like(exo_fft_array)
+        exo_fft_filter_array[0:600] = exo_fft_array[0:600]
+        exo_wfm_np_filter = np.fft.irfft(exo_fft_filter_array)
+
+        exo_wfm_filter_array = array('d', [0]*len(exo_wfm_np_filter))
+        for i,wfmx in enumerate(exo_wfm_np_filter):
+            exo_wfm_filter_array[i] = wfmx
+        exo_filter = EXODoubleWaveform(array('d',exo_wfm_filter_array), len(exo_wfm_np_filter))
+ 
+        #gROOT.SetBatch(False)
+        #print "Max is ", np.max(exo_wfm_np_filter[1000:1600])
+        #print "Min is ", np.min(exo_wfm_np_filter[1000:1600])
+        #do_draw(exo_filter, "channel %i SiPM channel FFT Spectrum %.2f MHz" % (channel, sampling_freq_Hz/(second*1e-3)))          
+        #gROOT.SetBatch(True)
+        
+        
+        energy = np.max(exo_wfm_np_filter[1000:1600])
+        
+    elif is_pmtchannel: # for PMT channel, use GetMaxValue()
         extremum_finder = EXOExtremumFinder()
         extremum_finder.SetFindMaximum(True)
         extremum_finder.Transform(exo_wfm)
         index_of_max = extremum_finder.GetTheExtremumPoint()
-        n_points = 9
+        n_points = 9 #this is like 72ns at 125MHz (prbly too many samples for sipm)
         avg = 0.0
         n_used_points = 0
         # average a few points around the maximum
@@ -533,7 +598,7 @@ def get_wfmparams(
             #print "wfm:", exo_wfm[index]
             avg += exo_wfm[index]
         avg /= n_used_points
-        energy = exo_wfm.GetMaxValue()*calibration # used for lightEnergy
+        energy = exo_wfm.GetMaxValue()*calibration # used for lightEnergy (not the average over 9 samples)
         energy1 = avg*calibration # average using n_points
 
         if not gROOT.IsBatch() and False:
