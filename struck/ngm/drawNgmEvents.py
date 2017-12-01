@@ -10,6 +10,7 @@ import os
 import sys
 import math
 import commands
+import numpy as np
 from scipy.fftpack import fft
 
 import ROOT
@@ -42,22 +43,24 @@ canvas.SetRightMargin(0.15)
 
 ROOT.gStyle.SetTitleFontSize(0.04)
 
-nchannels = len(struck_analysis_parameters.channel_map)
-#nchannels = 16 # FIXME -- for DT unit!!
+nchannels = len(struck_analysis_parameters.channel_map) 
+#nchannels = 32 # FIXME -- for DT unit!!
+bits = 14
 
 print "%i channels" % nchannels
 
 def process_file(filename=None, n_plots_total=0):
 
     # options ------------------------------------------
-    is_for_paper = True # change some formatting
-    threshold = 550 # keV
+    is_for_paper = False # change some formatting
+    threshold = 300 # keV
     #threshold = 0
     #threshold = 1250 # keV
     #threshold = 570 # keV, for generating multi-page PDF
     #threshold = 50 # ok for unshaped, unamplified data
-    energy_offset = 700 # keV, space between traces
-
+    #energy_offset = 100*700 # keV, space between traces
+    energy_offset = 50000.0/nchannels
+    
     units_to_use = 0 # 0=keV, 1=ADC units, 2=mV
 
     do_fft = False
@@ -82,10 +85,12 @@ def process_file(filename=None, n_plots_total=0):
         y_min = -50 # ADC units
     elif units_to_use == 2:
         y_min = -5 # mV
+    #y_min = -20000
 
     #y_max = 31500 # keV
     #y_max = nchannels*500+250 # keV
     y_max = nchannels*energy_offset # +250 # keV
+    y_max = (nchannels+3)*energy_offset #For SUM WF
     if units_to_use == 1:
         y_max = 200 # ADC units
     elif units_to_use == 2:
@@ -106,13 +111,19 @@ def process_file(filename=None, n_plots_total=0):
     print "pmt_channel:", pmt_channel
 
     charge_channels_to_use = struck_analysis_parameters.charge_channels_to_use
+    sipm_channels_to_use   = struck_analysis_parameters.sipm_channels_to_use
+    dead_channels          = struck_analysis_parameters.dead_channels
+    nchannels_good         = nchannels - sum(dead_channels)  
+    energy_start_time_microseconds = struck_analysis_parameters.energy_start_time_microseconds
+
     channels = []
     for (channel, value) in enumerate(charge_channels_to_use):
-        #print channel, value
+        print "Charge Channel to use", channel, value
         #if value is not 0: channels.append(channel)
         channels.append(channel)
     print "there are %i charge channels" % len(channels)
-    channels.append(pmt_channel)
+    if pmt_channel != None:
+        channels.append(pmt_channel)
     n_channels = len(channels)
     colors = struck_analysis_parameters.get_colors()
 
@@ -139,9 +150,11 @@ def process_file(filename=None, n_plots_total=0):
 
     sampling_freq_Hz = struck_analysis_parameters.get_clock_frequency_Hz_ngm(card0.clock_source_choice)
     print "sampling_freq_Hz: %.1f MHz" % (sampling_freq_Hz/1e6)
-    n_samples_to_avg = int(200*sampling_freq_Hz/25e6) # n baseline samples to use for energy 
+    #n_samples_to_avg = int(200*sampling_freq_Hz/sampling_freq_Hz) # n baseline samples to use for energy 
+    n_samples_to_avg = int(struck_analysis_parameters.n_baseline_samples)
     print "n_samples_to_avg", n_samples_to_avg
-
+    energy_start_time_samples = int(energy_start_time_microseconds*struck_analysis_parameters.microsecond*sampling_freq_Hz/struck_analysis_parameters.second)
+    
     channel_map = struck_analysis_parameters.channel_map
 
     tree.GetEntry(0) # use 0th entry to get some info that we don't expect to change... 
@@ -155,7 +168,7 @@ def process_file(filename=None, n_plots_total=0):
     frame_hist = ROOT.TH1D("hist", "", tree.HitTree.GetNSamples(), 0, trace_length_us+0.5)
     #frame_hist = ROOT.TH1D("hist", "", int(tree.HitTree.GetNSamples()*33.0/32.0), 0, 25.0)
     frame_hist.SetXTitle("Time [#mus]")
-    sum_offset = 400
+    sum_offset = 51500
     frame_hist.SetYTitle("Energy (with arbitrary offsets) [keV]")
     if units_to_use == 1: # ADC units
         frame_hist.SetYTitle("ADC units")
@@ -214,6 +227,9 @@ def process_file(filename=None, n_plots_total=0):
     y_min_old = y_min
     # use while loop instead of for loop so we can modify i_entry if needed
     while i_entry < n_entries:
+        tree.GetEntry(i_entry)
+        timestamp_first = tree.HitTree.GetRawClock()
+        #print "At entry %i With Time stamp %i" % (i_entry, timestamp_first)
 
         canvas.SetLogy(0)
         canvas.SetLogx(0)
@@ -230,6 +246,8 @@ def process_file(filename=None, n_plots_total=0):
         sum_wfm0 = [0]*wfm_length
         sum_wfm1 = [0]*wfm_length
 
+        sum_sipm_wfm = np.zeros(wfm_length)
+
         #print "==> entry %i of %i | charge energy: %i" % ( i_entry, n_entries, chargeEnergy,)
       
         legend.Clear()
@@ -237,20 +255,45 @@ def process_file(filename=None, n_plots_total=0):
 
         # loop over all channels in the event:
         sum_energy = 0.0
+        sum_energy_light = 0.0
         n_high_rms = 0
         n_signals = 0
         n_strips = 0
 
         graph_dict = {}
         
-        for i in xrange(nchannels):
-            
-            tree.GetEntry(i_entry)
-            i_entry += 1
+        found_channels = []
+        isdead_event = False
+        timestamp_diff = 0.0
+        
+        for i_channel in xrange(nchannels):
+            if i_channel > 0 : tree.GetEntry(i_entry)
+
             slot = tree.HitTree.GetSlot()
             card_channel = tree.HitTree.GetChannel() # 0 to 16 for each card
-
+            timestamp = tree.HitTree.GetRawClock()
+            timestamp_diff = timestamp - timestamp_first
             channel = card_channel + 16*slot # 0 to 31
+
+            if timestamp_diff > 0.5: 
+                print "Moving on to next event after finding next time stamp", i_entry, timestamp_diff, channel
+                break
+
+            #Don't increment until after we confirm this entry is part of current event
+            i_entry +=1 
+
+            if dead_channels[channel] > 0: 
+                isdead_event = True
+                print "Break after finding dead channel", i_entry, channel
+                break
+
+            if channel in found_channels:
+                print "Entry %i Channel %i" % (i_entry, channel)
+                raw_input("Found a channel more than once is this ok????? Pause here")
+            found_channels.append(channel)
+
+            #print "Entry %i time %i time diff %.2f WF for slot %i and card-ch %i and true ch %i" % (i_entry, timestamp, timestamp_diff, slot, card_channel, card_channel + 16*slot)
+
             card = sys_config.GetSlotParameters().GetParValueO("card",slot)
 
             # for crosstalk studies:
@@ -272,10 +315,11 @@ def process_file(filename=None, n_plots_total=0):
             if units_to_use == 1: # ADC units
                 multiplier = 1.0
             elif units_to_use == 2: # mV
-                multiplier = voltage_range_mV/pow(2,14)
+                multiplier = voltage_range_mV/pow(2,bits)
             if channel == pmt_channel:
                 multiplier /= pmt_shrink_scale
-
+            if sipm_channels_to_use[channel] > 0:
+                multiplier = 8.0
 
             if False: # print debug output
                 print "entry %i | slot %i | card ch %i | ch %i | multiplier: %.4f" % (
@@ -290,14 +334,33 @@ def process_file(filename=None, n_plots_total=0):
             graph_dict_name = "graph_ch%i" % channel
             graph_dict[graph_dict_name] = graph
 
+            #--------------------------------------------------------------------------------------
+            #------------------------------------------SiPM filter--------------------------
+            #--------------------------------------------------------------------------------------
+
+            if sipm_channels_to_use[channel] > 0:
+                #Filter the sipm channels
+                sipm_wfm = np.array([graph.GetY()[isamp] for isamp in xrange(graph.GetN())])
+                sipm_fft = np.fft.rfft(sipm_wfm)
+                sipm_fft[600:] = 0
+                sipm_wfm_filter = np.fft.irfft(sipm_fft)
+                sum_sipm_wfm += sipm_wfm_filter
+                for isamp in xrange(graph.GetN()):
+                    x = graph.GetX()[isamp]
+                    graph.SetPoint(isamp,x,sipm_wfm_filter[isamp])
+
+            #--------------------------------------------------------------------------------------
+            #------------------------------------------Energy Calculation--------------------------
+            #--------------------------------------------------------------------------------------
             # as in http://exo-data.slac.stanford.edu/exodoc/src/EXOBaselineRemover.cxx.html#48
+            
             baseline = 0.0
             energy = 0.0
             baseline_avg_sq = 0.0
             energy_avg_sq = 0.0
             for i_sample in xrange(n_samples_to_avg):
                 y = graph.GetY()[i_sample]
-                y2 = graph.GetY()[i_sample+850]
+                y2 = graph.GetY()[i_sample+energy_start_time_samples]
                 baseline += y / n_samples_to_avg
                 energy += y2 / n_samples_to_avg
                 baseline_avg_sq += y*y/n_samples_to_avg
@@ -308,6 +371,10 @@ def process_file(filename=None, n_plots_total=0):
             except ValueError:
                 energy_noise = 0.0
             energy = (energy - baseline)*multiplier
+            
+            #--------------------------------------------------------------------------------------
+            #--------------------------------------------------------------------------------------
+            #--------------------------------------------------------------------------------------
 
             if channel == pmt_channel:
                 # pmt energy is proportional to max, which occurs ~ 27
@@ -317,6 +384,23 @@ def process_file(filename=None, n_plots_total=0):
                 energy *= pmt_shrink_scale
                 #energy = (graph.GetMaximum()-baseline)*multiplier
                 print energy, baseline, multiplier
+            
+            if sipm_channels_to_use[channel] > 0:
+                #print "SiPM Channel Energy", channel
+                wf = []
+                for i_sample in xrange(graph.GetN()):
+                    #print i_sample, graph.GetY()[i_sample]
+                    wf.append(graph.GetY()[i_sample])
+                energy = (np.max(wf) - baseline)*multiplier
+                #print "Maximum is", graph.GetMaximum(), np.argmax(wf), np.max(wf), np.mean(wf)
+                #print dir(graph)
+                #raw_input()
+                #energy = np.max(graph.GetY())
+
+            #--------------------------------------------------------------------------------------
+            #--------------------------------------------------------------------------------------
+            #--------------------------------------------------------------------------------------
+
 
             # add an offset so the channels are drawn at different levels
             offset = channel*energy_offset
@@ -324,6 +408,7 @@ def process_file(filename=None, n_plots_total=0):
             if "XChannels" in basename: offset = (channel-16)*100 
 
             graph.SetLineColor(color)
+            #Subtract off the baseline and apply calibration
             fcn_string = "(y - %s)*%s + %s" % ( baseline, multiplier, offset)
             #print "fcn_string:", fcn_string
             fcn = ROOT.TF2("fcn",fcn_string)
@@ -334,10 +419,14 @@ def process_file(filename=None, n_plots_total=0):
                 y = graph.GetY()[i_point]
                 if y > y_max: y_max = y
                 #if y < y_min: y_min = y
-
                 graph.SetPoint(i_point, x/sampling_freq_Hz*1e6, y)
 
             graph.SetLineWidth(2)
+            
+            #----------------------------------------------------------------------------------------
+            #----------------------------Find Signals above Threshold--------------------------------
+            #----------------------------Add Up Charge and Light Energy------------------------------
+            #----------------------------------------------------------------------------------------
             #signal_threshold = 5.0*rms_noise/10.0
             signal_threshold = 5.0*energy_noise/10.0
             rms_threshold = struck_analysis_parameters.rms_keV[channel] + struck_analysis_parameters.rms_keV_sigma[channel]*4.0
@@ -350,6 +439,9 @@ def process_file(filename=None, n_plots_total=0):
                 if rms_noise >  rms_threshold:
                     n_high_rms += 1
                     #graph.SetLineColor(ROOT.kBlack)
+
+            if sipm_channels_to_use[channel] > 0:
+                sum_energy_light += energy
 
             graph.Draw("l")
             #print "\t entry %i, ch %i, slot %i" % ( i_entry-1, channel, slot,)
@@ -379,7 +471,18 @@ def process_file(filename=None, n_plots_total=0):
             if "XChannels" in basename: i_legend_entry -= 15 # crosstalk studies
             legend_entries[i_legend_entry] = leg_entry
 
+            #------------------------------------------------------------------------------------------
             # end loop over channels
+            #------------------------------------------------------------------------------------------
+
+        if isdead_event: 
+            print "Skipping event where we found a dead channel"
+            continue
+        nfound = len(found_channels)
+        if nfound < nchannels_good:
+            raw_input("Found %i channels which is less than %i good channels" % (nfound, nchannels_good))
+
+        print "Found Channels", len(found_channels), found_channels
 
         print "---------> entry %i of %i (%.1f percent), %i plots so far" % (
             i_entry/nchannels,  # current event
@@ -400,8 +503,10 @@ def process_file(filename=None, n_plots_total=0):
         sum_graph = ROOT.TGraphErrors()
         sum_graph0 = ROOT.TGraphErrors()
         sum_graph1 = ROOT.TGraphErrors()
+        sum_graph_sipm = ROOT.TGraphErrors()
 
         rms_noise = 0.0
+        sum_sipm_wfm -= np.mean(sum_sipm_wfm[:100])
         for i_point in xrange(len(sum_wfm)):
             sum_graph.SetPoint(i_point, i_point/sampling_freq_Hz*1e6, sum_wfm[i_point]+sum_offset)
             #sum_graph.SetPoint(i_point, i_point/sampling_freq_Hz*1e6, sum_wfm[i_point])
@@ -411,11 +516,18 @@ def process_file(filename=None, n_plots_total=0):
             sum_graph1.SetPoint(i_point, i_point/sampling_freq_Hz*1e6, sum_wfm1[i_point]+sum_offset*3)
             sum_graph1.SetPointError(i_point, 0.0, 0.1*multiplier)
 
+            sum_graph_sipm.SetPoint(i_point, i_point/sampling_freq_Hz*1e6, sum_sipm_wfm[i_point]+sum_offset)
+            sum_graph_sipm.SetPointError(i_point, 0.0, 0.1*multiplier)
+
             if i_point < n_samples_to_avg:
                 rms_noise += pow(sum_wfm[i_point], 2.0)/n_samples_to_avg
+        
 
         rms_noise = math.sqrt(rms_noise)
 
+        #------------------------------------------------------------------------------------------
+        #---------------------------------Fit Sum WF to Sin Wave-----------------------------------
+        #------------------------------------------------------------------------------------------
         fit_fcn = ROOT.TF1("fit_fcn", "[0] + [1]*sin(2*pi*(x*[2]+[3]))", 0, trace_length_us)
         fit_fcn.SetLineColor(ROOT.kGreen+2)
 
@@ -447,6 +559,11 @@ def process_file(filename=None, n_plots_total=0):
         sum_graph1.SetLineColor(ROOT.kRed)
         sum_graph1.Draw("xl")
         """
+        sum_graph_sipm.Draw("xl")
+        sum_graph_sipm.SetLineColor(ROOT.kRed)
+        #------------------------------------------------------------------------------------------
+        #------------------------------End Fit Sum WF to Sin Wave-----------------------------------
+        #------------------------------------------------------------------------------------------
 
         pave_text.Clear()
         pave_text.AddText("page %i, event %i" % (n_plots+1, i_entry/nchannels))
@@ -466,7 +583,8 @@ def process_file(filename=None, n_plots_total=0):
         title = ""
         if not is_for_paper:
             title += "Event %i | " % ((i_entry-1)/nchannels)
-        title += "Sum Ionization Energy: %.1f keV" % sum_energy
+        title += "Sum Ionization Energy: %.1f keV " % sum_energy
+        title += "Sum Light Energy: %.1f ADC " % sum_energy_light
         if not is_for_paper:
             title += " | time stamp: %i | page %i" % (
                 tree.HitTree.GetRawClock(),
@@ -485,12 +603,14 @@ def process_file(filename=None, n_plots_total=0):
         #legend.AddEntry(sum_graph, "sum %.1f" % sum_energy,"p")
         #legend.AddEntry(sum_graph0, "Y sum slot 0","l")
         #legend.AddEntry(sum_graph1, "X sum slot 1","l")
+        legend.AddEntry(sum_graph_sipm, "SiPM Sum","l")
 
         # line to show trigger time
+        print trigger_time, "-------------------------------------------------------------"
         line = ROOT.TLine(trigger_time, y_min, trigger_time,y_max)
         line.SetLineWidth(2)
         line.SetLineStyle(7)
-        line.Draw()
+        #line.Draw()
 
         max_drift_time = struck_analysis_parameters.max_drift_time
         line1 = ROOT.TLine(trigger_time+max_drift_time, y_min, trigger_time+max_drift_time,y_max)
@@ -612,7 +732,7 @@ def process_file(filename=None, n_plots_total=0):
 
 if __name__ == "__main__":
 
-    n_plots_total = 10
+    n_plots_total = 20
     #n_plots_total = 3
     n_plots_so_far = 0
     if len(sys.argv) > 1:

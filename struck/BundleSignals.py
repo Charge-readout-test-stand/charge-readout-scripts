@@ -26,7 +26,8 @@ if os.getenv("EXOLIB") is not None and not isROOT6:
         from ROOT import CLHEP
         microsecond = CLHEP.microsecond
         second = CLHEP.second
-    except ImportError:
+    #except ImportError:
+    except (ImportError, AttributeError) as e:
         print "couldn't import CLHEP/ROOT"
 
 
@@ -49,7 +50,7 @@ def GetChType(ch, isMC):
     elif 'PMT' in channel_map[ch]: chtype = 0
     elif 'pulser' in channel_map[ch]: chtype = 0
     else: 
-        print "What happened??", channel_map[ch]
+        print "(BundleSignal.py) What happened to channel type?? ", channel_map[ch]
         chtype = 0
     
     return chtype

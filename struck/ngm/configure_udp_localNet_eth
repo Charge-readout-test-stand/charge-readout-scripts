@@ -10,17 +10,25 @@
 #
 #
 # for VME pizza box
-arp -i eth1 -s 192.168.1.100 00:00:56:31:60:61 # eth1 -> S/N 97
-arp -i eth2 -s 192.168.2.100 00:00:56:31:60:62 # eth2 -> S/N 98 
-arp -i eth2 -s 192.168.2.102 00:00:56:31:60:61 # eth1 -> S/N 97
+# old from Alexis
+#arp -i eth1 -s 192.168.1.100 00:00:56:31:60:61 # eth1 -> S/N 97
+#arp -i eth2 -s 192.168.2.100 00:00:56:31:60:62 # eth2 -> S/N 98 
+#arp -i eth2 -s 192.168.2.102 00:00:56:31:60:61 # eth1 -> S/N 97
 
+#new for S/N 205 and S/N 08 DTs
+#
+arp -i eth2 -s 192.168.2.100 00:00:56:31:60:9b # eth1 -> S/N 155
+arp -i eth1 -s 192.168.1.100 00:00:56:31:60:08 # eth2 -> S/N 08
+#arp -i eth2 -s 192.168.2.100 00:00:56:31:60:9b # eth2 -> S/N 155
+#arp -i eth2 -s 192.168.2.100 00:00:56:31:60:cd # eth1 -> S/N 205
+ 
 #MAC address: constant of device
 #Ethernet just needs to be 192.168.eth#.###
 
 
 # for desktop unit:
-arp -i eth1 -s 192.168.1.101 00:00:56:31:60:9b # eth1 -> S/N 155
-arp -i eth2 -s 192.168.2.101 00:00:56:31:60:9b # eth2 -> S/N 155
+#arp -i eth2 -s 192.168.1.100 00:00:56:31:60:9b # eth1 -> S/N 155
+#arp -i eth2 -s 192.168.1.101 00:00:56:31:60:9b # eth2 -> S/N 155
 
 # for 5-port TP-Link ethernet switch, not sure this is necessary:
 #arp -i eth2 -s 192.168.2.105 98:DE:D0:F9:1A:CA

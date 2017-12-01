@@ -24,10 +24,10 @@ def takeData(doLoop=False, n_hours=10.0):
   #is_warm = False
   is_warm = True # FIXME
 
-  file_suffix = "_recovery_noise_run_SiPMs_nobias_with_Charge_noHV_scope_trigger_pulser"
+  file_suffix = "_test_triggering_SiPMs_with_Charge_3110V_scope_trigger"
   n_cards = 2
 
-  runDuration = 60 # seconds
+  runDuration = 60*10 # seconds
   #A 60s run is 720 MB with 4ms veto
 
   # settings

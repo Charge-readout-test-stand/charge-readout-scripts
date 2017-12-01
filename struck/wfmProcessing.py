@@ -8,11 +8,14 @@ Extract parameters (energy, risetime, etc.) from a waveform.
 import os
 import sys
 import math
+import numpy as np
+from array import array
 
 # somehow these 2 are important?!
 from ROOT import TH1D
 from ROOT import TLine
 from ROOT import *
+
 
 # workaround for systems without EXO offline / CLHEP
 microsecond = 1.0e3
@@ -32,9 +35,8 @@ if os.getenv("EXOLIB") is not None and not isROOT6:
         microsecond = CLHEP.microsecond
         second = CLHEP.second
         print "imported CLHEP/ROOT"
-    except ImportError:
+    except (ImportError, AttributeError) as e:
         print "couldn't import CLHEP/ROOT"
-
 
 from ROOT import EXODoubleWaveform
 from ROOT import EXOBaselineRemover
@@ -62,6 +64,7 @@ def do_draw(
     extra_wfm=None, 
     extra_wfm2=None,
     vlines=None, # vertical lines
+    islog = False
     ):
     
     if gROOT.IsBatch(): return
@@ -111,7 +114,9 @@ def do_draw(
             lines.append(line)
     hist.SetMaximum(hist_max)
     hist.SetMinimum(hist_min)
-
+    
+    #hist.GetXaxis().SetRangeUser(0,100)
+    #hist.GetYaxis().SetRangeUser(12700,13300)
 
     canvas.Update()
     plot_name = "_".join(title.split(" "))
@@ -235,11 +240,13 @@ def get_wfmparams(
     calibration, 
     decay_time, 
     is_pmtchannel,
+    is_sipmchannel,
     channel,
     isMC=False,
     label="",
 ):
     if False:
+        gROOT.SetBatch(False)
         print "exo_wfm:", exo_wfm
         print "wfm_length:", wfm_length
         print "sampling_freq_Hz:", sampling_freq_Hz
@@ -247,24 +254,63 @@ def get_wfmparams(
         print "calibration:", calibration
         print "decay_time:", decay_time
         print "is_pmtchannel:", is_pmtchannel
+        print "is_sipmchannel", is_sipmchannel
+        print "channel #:", channel
+        #raw_input("Pause")
+
+    #if is_sipmchannel:
+    if False:
+        gROOT.SetBatch(False)
+        label = "SiPM"
+        exo_wfm_np = np.array([exo_wfm.At(i) for i in xrange(exo_wfm.GetLength())])
+        exo_fft_array = np.fft.rfft(exo_wfm_np)
+        
+        exo_fft_filter_array = np.zeros_like(exo_fft_array)
+        exo_fft_filter_array[0:600] = exo_fft_array[0:600]
+        exo_wfm_np_filter = np.fft.irfft(exo_fft_filter_array)
+        exo_fft_array = exo_fft_array*np.conj(exo_fft_array)
+
+        
+        exo_wfm_array = array('d', [0]*len(exo_fft_array))
+        for i,wfmx in enumerate(exo_fft_array):
+            exo_wfm_array[i] = np.log(wfmx.real)
+        exo_fft = EXODoubleWaveform(array('d',exo_wfm_array), len(exo_fft_array))
+        
+        exo_wfm_filter_array = array('d', [0]*len(exo_wfm_np_filter))
+        for i,wfmx in enumerate(exo_wfm_np_filter):
+            exo_wfm_filter_array[i] = wfmx
+        exo_filter = EXODoubleWaveform(array('d',exo_wfm_filter_array), len(exo_wfm_np_filter))
+
+        #print np.fft.fftfreq(exo_wfm.GetLength(), d=8e-9)
+        print len(exo_fft_array)
+        print (125.0/2.0)/len(exo_fft_array)
+
+        print "%.4f MHz" % ((np.fft.rfftfreq(len(exo_wfm_np), d=(1/125.0e6))[1])*1e-6)
+
+        do_draw(exo_filter, "channel %i SiPM channel FFT Spectrum %.2f MHz" % (channel, sampling_freq_Hz/(second*1e-3)))
+        #do_draw(exo_wfm, "channel %i SiPM channel FFT Spectrum %.2f MHz" % (channel, sampling_freq_Hz/(second*1e-3)))
+        #do_draw(exo_fft, "channel %i SiPM channel FFT Spectrum %.2f MHz" % (channel, sampling_freq_Hz/(second*1e-3)))
+        
+        #test = np.array([ for x in ])
+        #raw_input("PAUSE")
+        gROOT.SetBatch(True)
 
     #Intitially not a signal
     isSignal = 0
 
+    #Setup WF and copy into energy_wfm for Transformations
     exo_wfm.SetSamplingFreq(sampling_freq_Hz/second)
     energy_wfm = EXODoubleWaveform(exo_wfm)
-
-    # FIXME -- this should come from struck_analysis_parameters
+    
+    # Get Sample and Time for when to start doing Energy Calculation
     energy_start_time_microseconds = struck_analysis_parameters.energy_start_time_microseconds
     energy_start_sample = int(energy_start_time_microseconds*microsecond*sampling_freq_Hz/second)
-    #energy_start_sample = 450 # < 10th LXe
-    #energy_start_sample = 850 # 10th LXe 
 
     # calculate wfm max and min:
     wfm_max = exo_wfm.GetMaxValue()
     wfm_min = exo_wfm.GetMinValue()
 
-    # remove the baseline
+    # remove the baseline using 1/2 the standard # of baseline samples
     baseline_remover = EXOBaselineRemover()
     baseline_remover.SetBaselineSamples(n_baseline_samples)
     baseline_remover.SetStartSample(0)
@@ -273,7 +319,7 @@ def get_wfmparams(
     #do_draw(energy_wfm, "channel %i %s after %i-sample baseline_remover" % (channel, label, n_baseline_samples))
 
     # measure energy before PZ correction -- use baseline_remover for this
-    #baseline_remover.SetStartSample(wfm_length - n_baseline_samples - 1)
+    # saves to the enrgy_wfm when transform is performed
     baseline_remover.SetStartSample(energy_start_sample)
     baseline_remover.Transform(exo_wfm, energy_wfm)
     energy = baseline_remover.GetBaselineMean()*calibration
@@ -283,6 +329,7 @@ def get_wfmparams(
         energy_rms = 0.0
 
     # remove baseline using 2x n_baseline_samples
+    # this is because n_baseline_samples is 1/2 the pretrigger delay
     baseline_remover.SetBaselineSamples(2*n_baseline_samples)
     baseline_remover.SetStartSample(0)
     baseline_remover.Transform(exo_wfm)
@@ -290,9 +337,9 @@ def get_wfmparams(
     if math.isnan(baseline_rms): # for events with 0 noise, RMS is sometimes NaN
         if not isMC: print "WARNING: setting RMS from nan to 0"
         baseline_rms = 0.0
-
-    # measure energy1 before PZ correction, use 2x n_baseline_samples
-    #baseline_remover.SetStartSample(wfm_length - 2*n_baseline_samples - 1)
+    
+    # measure energy1 before PZ correction, use 2x n_baseline_samples for baseline 
+    # energy starts same place
     baseline_remover.SetStartSample(energy_start_sample)
     baseline_remover.Transform(exo_wfm, energy_wfm)
     energy1 = baseline_remover.GetBaselineMean()*calibration
@@ -302,9 +349,8 @@ def get_wfmparams(
         energy_rms1 = 0.0
     
     #measure Decay Time for this WF
-    #Only measure if there is a signal which we defice as 10 times above the noise
+    #Only measure if there is a signal which we define as 10 times above the noise
     #otherwise fill with default negative numbers
-
     decay_fit = -999.0
     decay_chi2 = -999.0
     decay_error = -999.0
@@ -369,14 +415,14 @@ def get_wfmparams(
 
 
     # correct for exponential decay
+    # save the transformed WF into the energy_wfm
     pole_zero = EXOPoleZeroCorrection()
     pole_zero.SetDecayConstant(decay_time)
-    if not is_pmtchannel:
+    if not is_pmtchannel and not is_sipmchannel: #Skip correction for Light Channels
         pole_zero.Transform(exo_wfm, energy_wfm)
 
     # measure energy after PZ correction -- use baseline remover
     baseline_remover.SetBaselineSamples(n_baseline_samples) # remove baseline
-    #baseline_remover.SetStartSample(wfm_length - n_baseline_samples - 1)
     baseline_remover.SetStartSample(energy_start_sample)
     baseline_remover.Transform(energy_wfm)
     energy_pz = baseline_remover.GetBaselineMean()*calibration
@@ -385,11 +431,15 @@ def get_wfmparams(
         if not isMC: print "WARNING: setting RMS from nan to 0"
         energy_rms_pz = 0.0
  
+
     # measure energy after PZ correction, first remove baseline with 2x n_baseline_samples
     baseline_remover.SetBaselineSamples(2*n_baseline_samples)
     baseline_remover.SetStartSample(0)
     baseline_remover.Transform(exo_wfm)
 
+#----------------------------------------------------------------------------------------------------
+#-----------------------------------------------Do We Need?------------------------------------------
+#----------------------------------------------------------------------------------------------------
     baseline_slope = 0.0
     if False: # skip baseline_slope for now
         last_time = n_baseline_samples*2.0/sampling_freq_Hz*1e6
@@ -426,9 +476,12 @@ def get_wfmparams(
             raw_input("press enter ")
         hist.IsA().Destructor(hist)
         # end of baseline_slope calc
+#------------------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------------------------------------
 
     # correct for exponential decay
-    if not is_pmtchannel:
+    if not is_pmtchannel or not is_sipmchannel:
         pole_zero.Transform(exo_wfm, energy_wfm)
         if False and energy1 > 200:
             print "decay_time:", decay_time
@@ -438,7 +491,8 @@ def get_wfmparams(
     calibrated_wfm = EXODoubleWaveform(energy_wfm)
     calibrated_wfm *= calibration
 
-    #baseline_remover.SetStartSample(wfm_length - 2*n_baseline_samples - 1)
+    # Get the energy using same number of energy averages but 2x the number of baseline
+    # averages 
     baseline_remover.SetStartSample(energy_start_sample)
     baseline_remover.Transform(energy_wfm)
     energy1_pz = baseline_remover.GetBaselineMean()*calibration
@@ -447,6 +501,9 @@ def get_wfmparams(
         if not isMC: print "WARNING: setting RMS from nan to 0"
         energy_rms1_pz = 0.0
 
+#------------------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------------------------------------
     energy1_pz_slope = 0.0
     if False: # skip energy1_pz_slope for now
         # fit to PZ-corrected slope:
@@ -475,13 +532,16 @@ def get_wfmparams(
         hist.IsA().Destructor(hist)
         fcn.IsA().Destructor(fcn)
         # end of energy1_pz_slope calc
+#------------------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------------------------------------
     
     #Apply threshold -- we really use 2*n_baseline_samples, so 2.0/2.0 cancels
     if energy1_pz > struck_analysis_parameters.rms_threshold*energy_rms1_pz*math.sqrt(1.0/n_baseline_samples):
-        if not is_pmtchannel:
+        #SiPM check too
+        if not is_pmtchannel and not is_sipmchannel:
             #PMT can't be a signal because by default it has to have triggered
             isSignal = 1
-
     
     #Apply Matched Filter currently in testing
     #if not is_pmtchannel:
@@ -494,12 +554,34 @@ def get_wfmparams(
         mfilter_max  =  0.0
         mfilter_time = 0.0
 
-    if is_pmtchannel: # for PMT channel, use GetMaxValue()
+    if is_sipmchannel:
+        exo_wfm_np = np.array([exo_wfm.At(i) for i in xrange(exo_wfm.GetLength())])
+        exo_fft_array = np.fft.rfft(exo_wfm_np)
+
+        exo_fft_filter_array = np.zeros_like(exo_fft_array)
+        exo_fft_filter_array[0:600] = exo_fft_array[0:600]
+        exo_wfm_np_filter = np.fft.irfft(exo_fft_filter_array)
+
+        exo_wfm_filter_array = array('d', [0]*len(exo_wfm_np_filter))
+        for i,wfmx in enumerate(exo_wfm_np_filter):
+            exo_wfm_filter_array[i] = wfmx
+        exo_filter = EXODoubleWaveform(array('d',exo_wfm_filter_array), len(exo_wfm_np_filter))
+ 
+        #gROOT.SetBatch(False)
+        #print "Max is ", np.max(exo_wfm_np_filter[1000:1600])
+        #print "Min is ", np.min(exo_wfm_np_filter[1000:1600])
+        #do_draw(exo_filter, "channel %i SiPM channel FFT Spectrum %.2f MHz" % (channel, sampling_freq_Hz/(second*1e-3)))          
+        #gROOT.SetBatch(True)
+        
+        
+        energy = np.max(exo_wfm_np_filter[1000:1600])
+        
+    elif is_pmtchannel: # for PMT channel, use GetMaxValue()
         extremum_finder = EXOExtremumFinder()
         extremum_finder.SetFindMaximum(True)
         extremum_finder.Transform(exo_wfm)
         index_of_max = extremum_finder.GetTheExtremumPoint()
-        n_points = 9
+        n_points = 9 #this is like 72ns at 125MHz (prbly too many samples for sipm)
         avg = 0.0
         n_used_points = 0
         # average a few points around the maximum
@@ -516,7 +598,7 @@ def get_wfmparams(
             #print "wfm:", exo_wfm[index]
             avg += exo_wfm[index]
         avg /= n_used_points
-        energy = exo_wfm.GetMaxValue()*calibration # used for lightEnergy
+        energy = exo_wfm.GetMaxValue()*calibration # used for lightEnergy (not the average over 9 samples)
         energy1 = avg*calibration # average using n_points
 
         if not gROOT.IsBatch() and False:
