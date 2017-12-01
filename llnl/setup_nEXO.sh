@@ -17,7 +17,8 @@ source $ROOTSYS/bin/thisroot.sh
 
 # needed for VGM:
 source /usr/gapps/cern/CLHEP.2311/setup
-export VGM_DIR=/g/g17/alexiss/software/vgm-borax/install/lib64/VGM-4.2.0
+#export VGM_DIR=/g/g17/alexiss/software/vgm-borax/install/lib64/VGM-4.2.0
+export VGM_DIR=/g/g19/jewell6/software/vgm-borax/install/lib64/VGM-4.2.0
 
 # SET UP GEANT4v10 -- Feb 10 2017
 export G4INSTALL=/usr/gapps/cern/geant4.10.02.p02/  
