@@ -62,24 +62,26 @@ def process_file(filenames):
 
 
     for i, filename in enumerate(filenames):
-
-        # construct a basename from the input filename
-        basename = os.path.basename(filename) # get rid of file path
-        basename = os.path.splitext(basename)[0] # get rid of file suffix
-
-        # make a histogram to hold energies
-        hist = ROOT.TH1D("hist%i" % i, "", n_bins, hist_min, hist_max)
-        hist.SetLineColor(colors[i])
-        hist.SetFillColor(colors[i])
-        hist.SetFillStyle(3004)
-        hist.SetLineWidth(2)
-
-
         # open the file and get its entries
         print "processing file: ", filename
         tfile = ROOT.TFile(filename)
         tree = tfile.Get("tree")
         print "\tEntries in tree:", tree.GetEntries()
+
+        # construct a basename from the input filename
+        basename = os.path.basename(filename) # get rid of file path
+        basename = os.path.splitext(basename)[0] # get rid of file suffix
+
+        isMC = struck_analysis_parameters.is_tree_MC(tree)
+        if isMC: hname = "hist_mc"
+        else: hname = "hist_data"
+        # make a histogram to hold energies
+        hist = ROOT.TH1D(hname, "", n_bins, hist_min, hist_max)
+        hist.SetLineColor(colors[i])
+        hist.SetFillColor(colors[i])
+        hist.SetFillStyle(3004)
+        hist.SetLineWidth(2)
+        hist.Sumw2()
 
         tree.SetBranchStatus("*",0)
         tree.SetBranchStatus("rise_time_stop95_sum",1)
@@ -121,6 +123,7 @@ def process_file(filenames):
         print "\t%.1e entries drawn" % entries
         print "\t%.1e entries in hist" % hist.GetEntries()
         legend.AddEntry(hist, basename, "f")
+        hist.SetDirectory(0)
         hists.append(hist)
 
     hists[0].SetXTitle("Drift time [#mus]")
@@ -138,6 +141,13 @@ def process_file(filenames):
     for hist in hists:
         hist.Draw("hist same")
     legend.Draw()
+
+    #SAVE MJ ROOT File
+    root_out_name = "drift_times_hists_%i.root" % (len(filenames))
+    root_file = ROOT.TFile(root_out_name, "RECREATE")
+    for hist in hists:
+        root_file.WriteTObject(hist)
+    root_file.Close()
 
     canvas.Update()
     canvas.Print("drift_times_%i.pdf" % len(filenames))
@@ -160,6 +170,8 @@ if __name__ == "__main__":
     #mc_file = "/nfs/slac/g/exo_data4/users/mjewell/nEXO_MC/digitization/Bi207_Full_Ralph/Tier3/all_tier3_Bi207_Full_Ralph.root"
     mc_file = "207biMc.root"
     data_file = "/nfs/slac/g/exo_data4/users/alexis4/test-stand/2015_12_07_6thLXe/tier3_from_tier2/tier2to3_overnight.root"
+
+    #python compareDigiMCtoStruckDrifttimes.py /p/lscratchd/alexiss/mc/Bi207_Full_Ralph_dcoeff50_11thLXe/Bi207_Full_Ralph_dcoeff50_7000.root /p/lscratchd/alexiss/11th_LXe/2017_02_01_overnight_vme/tier3_added/overnight_11thLXeB_v5.root
 
     filenames = [mc_file, data_file]
 

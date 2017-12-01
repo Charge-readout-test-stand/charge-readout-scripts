@@ -326,6 +326,9 @@ if __name__ == "__main__":
     )
     mc_files.sort()
 
+    mc_files  = ["/p/lscratchd/alexiss/mc/Bi207_Full_Ralph_dcoeff50_11thLXe/Bi207_Full_Ralph_dcoeff50_7000.root"]
+    data_file = "/p/lscratchd/alexiss/11th_LXe/2017_02_01_overnight_vme/tier3_added/overnight_11thLXeB_v5.root"
+
     process_file(
         data_file,
         mc_files, 

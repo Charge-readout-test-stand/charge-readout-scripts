@@ -23,7 +23,7 @@ from ROOT import TCanvas
 def process_file(filename):
 
     # options 
-    do_fit = False # whether to do fits of z slices
+    do_fit = True # whether to do fits of z slices
     max_drift_length = struck_analysis_parameters.drift_length+1
     #max_drift_length = 18.0 # for Liang
     drift_velocity = struck_analysis_parameters.drift_velocity

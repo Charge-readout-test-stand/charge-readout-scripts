@@ -4,6 +4,12 @@ Compare MC & Struck data
 
 use MC noise branch to smear MC energies. 
 
+mike (I think that  the files are)
+MC: /p/lscratchd/alexiss/mc/Bi207_Full_Ralph_dcoeff50_11thLXe/Bi207_Full_Ralph_dcoeff50_7000.root
+Data: /p/lscratchd/alexiss/11th_LXe/2017_02_01_overnight_vme/tier3_added/overnight_11thLXeB_v5.root
+
+python compareMCtoData_noise_branch.py  /p/lscratchd/alexiss/mc/Bi207_Full_Ralph_dcoeff50_11thLXe/Bi207_Full_Ralph_dcoeff50_7000.root /p/lscratchd/alexiss/11th_LXe/2017_02_01_overnight_vme/tier3_added/overnight_11thLXeB_v5.root
+
 """
 
 import os
@@ -217,9 +223,15 @@ for i, filename in enumerate(filenames):
     trees.append(tree)
     print "\t %i tree entries" % tree.GetEntries()
     #tree.GetTitle()
+    
+    isMC = struck_analysis_parameters.is_tree_MC(tree)
+    if isMC:
+        hname = "hist%i_mc" % i
+    else:
+        hname = "hist%i_data" % i
 
     # set up hist
-    hist = ROOT.TH1D("hist%i" % i,"", n_bins, min_bin, max_bin)
+    hist = ROOT.TH1D(hname,"", n_bins, min_bin, max_bin)
     hist.SetLineColor(colors[i])
     hist.SetFillColor(colors[i])
     hist.SetFillStyle(3004)
@@ -227,6 +239,7 @@ for i, filename in enumerate(filenames):
     hist.SetMarkerStyle(21)
     hist.SetMarkerSize(1.5)
     hist.SetLineWidth(2)
+    hist.Sumw2()
     hists.append(hist)
     hist.SetXTitle("Energy [keV]")
     hist.GetYaxis().SetTitleOffset(1.4)
@@ -429,6 +442,7 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
     hists[0].Draw("hist")
     for hist in hists[1:]:
         hist.Draw("hist same")
+    
     #hists[0].Draw("hist same") # redraw 1st hist over the top
     canvas.Update()
     plotname = "comparison_%s" % draw_cmd
@@ -453,6 +467,13 @@ for channel, val in enumerate(struck_analysis_parameters.charge_channels_to_use)
         plotname += "_%isignal_strips" % nsignal_strips
     except:
         pass
+
+    #SAVE MJ ROOT File
+    root_out_name = "%s_%s.root" % (plotname, basename)
+    root_file = ROOT.TFile(root_out_name, "RECREATE")
+    for hist in hists:
+        root_file.WriteTObject(hist)
+    root_file.Close()
 
     # print "clean" plots
     legend2.Draw()

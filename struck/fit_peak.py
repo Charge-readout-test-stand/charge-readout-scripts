@@ -7,6 +7,13 @@ Currently doing binned fit, using exponential background model
 All channels (SignalEnergy) are fit first, then each channel individually. 
 
 This script was adapted from mca/fit_to_resolution.py 
+
+#Single Channel and MC Fits
+python fit_peak.py /p/lscratchd/alexiss/11th_LXe/2017_02_01_overnight_vme/tier3_added/overnight_11thLXeB_v5.root
+
+#Full Fit for MC
+python fit_peak.py /p/lscratchd/alexiss/mc/Bi207_Full_Ralph_dcoeff50_11thLXe/Bi207_Full_Ralph_dcoeff50_7000.root
+
 """
 
 
@@ -16,6 +23,7 @@ import json
 import math
 import commands
 import datetime
+import numpy as np
 from array import array
 
 import ROOT
@@ -40,15 +48,17 @@ def fit_channel(
     all_energy_var, # used if channel==None, usually "SignalEnergy"
     selection, # selection for draw commands
     do_use_step=False, # whether to use Erfc step
-    min_bin=400, # just for drawing plots
-    max_bin=900, # just for plotting
+    min_bin=200, # just for drawing plots
+    max_bin=1200, # just for plotting
     line_energy = 570, # calibrated energy
     #line_energy = 585, # calibrated energy
     #line_energy = 487, # 10th LXe FIXME
     #line_energy = 565,
-    fit_half_width=120, # half width for fit range
+    fit_half_width=170,#120, # half width for fit range
     do_use_exp=True, # whether to use exponential function in the fit
     energy_var = "energy1_pz", # energy variable
+    zslice = None,
+    do_use_erf=False
 ):
     """
     Perform a fit of one channel, or all channels together if channel is None. 
@@ -118,6 +128,8 @@ def fit_channel(
         selection_list.append("(channel==%i)" % channel)
         if channel_selection != None: selection_list.append(channel_selection)
         selection = " && ".join(selection_list)
+    if zslice != None:
+        plot_name += "_zslice%i" % zslice
 
     n_bins = int((max_bin-min_bin)/bin_width)
 
@@ -170,8 +182,12 @@ def fit_channel(
         )
     else:
         draw_cmd = "%s >> fit_hist" % energy_var
-        if isMC:
-            draw_cmd = "%s*1.05 >> fit_hist" % energy_var
+        #if isMC:
+            #draw_cmd = "%s*1.05 >> fit_hist" % energy_var #Old from Alexis to make it look like data I think 
+            #draw_cmd = "%s*1.0 >> fit_hist" % energy_var # what is in ../mc/compareMCtoData_noise_branch.py
+        #else:
+            #draw_cmd = "%s*0.976027397260274 >> fit_hist" % energy_var #this is for 570.0
+        #    draw_cmd  = "%s*0.956937799043 >> fit_hist" % energy_var #this is from the mc draw_cmd in ../mc/compareMCtoData_noise_branch.py
 
     print "draw command:", draw_cmd
     print "selection:"
@@ -451,6 +467,17 @@ def fit_channel(
     if do_use_step: bestfit_step.Draw("same")
     hist.Draw("same")
 
+    print plot_name
+    roo_out_name = "%s_output.root" % plot_name
+    print "Saving to ROOT file", roo_out_name
+    raw_input()
+    root_file = ROOT.TFile(roo_out_name, "RECREATE")
+    root_file.WriteTObject(hist)
+    root_file.WriteTObject(testfit)
+    root_file.WriteTObject(bestfit_exp)
+    root_file.WriteTObject(bestfit_gaus)
+    if do_use_step: root_file.WriteTObject(bestfit_step)
+    root_file.Close()
 
     leg = ROOT.TLegend(0.49, 0.7, 0.99, 0.9)
     leg.AddEntry(hist, "Data (%i entries)" % hist.GetEntries())
@@ -653,16 +680,24 @@ def process_file(
         tree.SetBranchStatus("nsignal_strips",1)
 
     # start the calibration file
+    print "%s/new_calib_%s.txt" % (basename, basename)
     new_calib_file = file("%s/new_calib_%s.txt" % (basename, basename),"w")
     new_calib_file.write("# basename: %s \n" % basename)
     new_calib_file.write("# selection: %s \n" % selection)
     new_calib_file.write("# channel_selection: %s \n" % selection)
     new_calib_file.close()
 
+    raw_input("===============Pause===============")
     all_results = {}
-    if all_energy_var != None:
+    #if all_energy_var != None:
+    if True:
+        #Skip if only want single channels
         result = fit_channel(tree, None, basename, do_1064_fit, all_energy_var, selection, do_use_step, do_use_exp=do_use_exp)
         all_results["all"] = result
+    else:
+        print "Skipping the Full Fit"
+
+    raw_input("==============Pause==================")
 
     isMC = struck_analysis_parameters.is_tree_MC(tree)
 
@@ -670,9 +705,18 @@ def process_file(
         charge_channels_to_use = struck_analysis_parameters.MCcharge_channels_to_use
     else:
         charge_channels_to_use = struck_analysis_parameters.charge_channels_to_use
+    
+    print "Chs to use", charge_channels_to_use
+    
+    #charge_channels_to_use[:]   = np.zeros_like(charge_channels_to_use)
+    #charge_channels_to_use[21]  = 1
+    #charge_channels_to_use[7]   = 1
+    raw_input("=============Pasue==============")
 
     for channel, value in enumerate(charge_channels_to_use):
-        continue # skipping indiv channels for now... 
+        print channel, value, struck_analysis_parameters.channel_map[channel]
+        raw_input("========Pause===============")
+        #continue # skipping indiv channels for now... 
         if value:
             result = fit_channel(tree, channel, basename, do_1064_fit, all_energy_var, channel_selection, do_use_step, energy_var=energy_var, do_use_exp=do_use_exp)
             if result:
@@ -711,13 +755,22 @@ if __name__ == "__main__":
     # best cuts so far for 11B:
     if True:
         selection = []
-        #selection.append("nXsignals==1")
-        #selection.append("nYsignals==1")
+
+        #For Total Energy
+        selection.append("nXsignals==1")
+        selection.append("nYsignals==1")
         selection.append("nsignal_strips==2")
+
+        #For Singal Strip Calibration do
+        #selection.append("nsignals==1")
+        #selection.append("(nXsignals==1 || nYsignals==1)")
+
         selection.append(struck_analysis_cuts.get_drift_time_selection(
             drift_time_high=struck_analysis_parameters.max_drift_time-0.5))
             #drift_time_high=struck_analysis_parameters.max_drift_time-1.0))
-    
+
+
+
     selection.append("!is_pulser")
     selection.append("!is_bad") 
     selection = " && ".join(selection)
@@ -734,11 +787,17 @@ if __name__ == "__main__":
     ##channel_selection = None
 
     all_energy_var = "SignalEnergy"
+    #all_energy_var = None
     #if isMC: all_energy_var = "SignalEnergy*1.05" # 11B
     print "all_energy_var:", all_energy_var
     do_use_step=False
-    do_use_exp=False
+    do_use_exp=True
     do_1064_fit=False
+
+    print selection
+    print channel_selection
+    
+    raw_input("--------------PAUSE----------------")
 
     for filename in sys.argv[1:]:
         process_file(filename, do_1064_fit, all_energy_var, selection, channel_selection, do_use_step=do_use_step, energy_var="energy1_pz", do_use_exp=do_use_exp)
