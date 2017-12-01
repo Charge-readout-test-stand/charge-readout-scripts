@@ -343,9 +343,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         sampling_freq_Hz = sampling_frequency_Hz[0]
         print "sampling frequency [MHz]:", sampling_frequency_Hz[0]/1e6
 
+    #Time stamp in clock ticks (conversion factor is the sampling frequency)
     time_stamp = array('L', [0]) # timestamp for each event, unsigned long
     out_tree.Branch('time_stamp', time_stamp, 'time_stamp/l')
-
     time_stampDouble = array('d', [0]) # double
     out_tree.Branch('time_stampDouble', time_stampDouble, 'time_stampDouble/D')
 
@@ -355,6 +355,12 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
         time_stampDouble_diff = array('d', [0]*n_channels) # double
         out_tree.Branch('time_stampDouble_diff', time_stampDouble_diff, 'time_stampDouble_diff[%i]/D' % n_channels)
+
+        time_stamp_msec = array('d', [0]) # double
+        out_tree.Branch('time_stamp_msec', time_stamp_msec, 'time_stamp_msec/D')
+
+        time_stamp_diff_msec = array('d', [0]*n_channels) # timestamp for each event, unsigned long
+        out_tree.Branch('time_stamp_diff_msec', time_stamp_diff_msec, 'time_stamp_diff_msec[%i]/D' % n_channels)
 
     time_since_last = array('d', [0]) # double
     out_tree.Branch('time_since_last', time_since_last, 'time_since_last/D')
@@ -1033,6 +1039,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         elif isNGM:
             time_stamp[0] = int( tree.HitTree.GetRawClock() ) 
             time_stampDouble[0] = tree.HitTree.GetRawClock()
+            #above are clock ticks. but also save a version in mili-seconds
+            time_stamp_msec[0]  = (tree.HitTree.GetRawClock()/(sampling_freq_Hz))*1.e3
             n_channels_in_this_event = 0
         else:
             time_stamp[0] = tree.time_stamp
@@ -1061,6 +1069,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             bundle_type[bundle_index] = 0
             bundle_nsigs[bundle_index] = 0
             bundle_energy[bundle_index] = 0.0
+        for ch_index in xrange(n_channels_in_event):
+            energy[ch_index] = 0
         nbundles[0] = 0
         nfound_channels[0] = 0
         is_pulser[0] = 0
@@ -1148,8 +1158,10 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 i = tree.HitTree.GetSlot()*16 + tree.HitTree.GetChannel()
 
                 channel[i] = tree.HitTree.GetSlot()*16 + tree.HitTree.GetChannel()
+                #First time stamp diff in clock ticks thans convert to ms 
                 time_stamp_diff[i] = int( tree.HitTree.GetRawClock() ) - time_stamp[0]# time stamp for this channel
                 time_stampDouble_diff[i] = tree.HitTree.GetRawClock() -time_stampDouble[0] # time stamp for this channel
+                time_stamp_diff_msec[i] = ((tree.HitTree.GetRawClock() -time_stampDouble[0])/sampling_freq_Hz)*1.e3 #save in msec too
 
                 if do_debug: # debugging
                 #if True:
@@ -1317,6 +1329,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                     SignalEnergyY[0] += energy1_pz[i]
 
             if channel[i] == pmt_channel or sipm_channels_to_use[channel[i]]:
+                #print energy[i], lightEnergy
                 lightEnergy[0] += energy[i]
             elif charge_channels_to_use[channel[i]]:
                 chargeEnergy[0] += energy1_pz[i]

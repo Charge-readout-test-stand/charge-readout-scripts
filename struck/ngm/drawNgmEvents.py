@@ -53,7 +53,7 @@ def process_file(filename=None, n_plots_total=0):
 
     # options ------------------------------------------
     is_for_paper = False # change some formatting
-    threshold = 0 # keV
+    threshold = 300 # keV
     #threshold = 0
     #threshold = 1250 # keV
     #threshold = 570 # keV, for generating multi-page PDF
@@ -90,6 +90,7 @@ def process_file(filename=None, n_plots_total=0):
     #y_max = 31500 # keV
     #y_max = nchannels*500+250 # keV
     y_max = nchannels*energy_offset # +250 # keV
+    y_max = (nchannels+3)*energy_offset #For SUM WF
     if units_to_use == 1:
         y_max = 200 # ADC units
     elif units_to_use == 2:
@@ -167,7 +168,7 @@ def process_file(filename=None, n_plots_total=0):
     frame_hist = ROOT.TH1D("hist", "", tree.HitTree.GetNSamples(), 0, trace_length_us+0.5)
     #frame_hist = ROOT.TH1D("hist", "", int(tree.HitTree.GetNSamples()*33.0/32.0), 0, 25.0)
     frame_hist.SetXTitle("Time [#mus]")
-    sum_offset = 400
+    sum_offset = 51500
     frame_hist.SetYTitle("Energy (with arbitrary offsets) [keV]")
     if units_to_use == 1: # ADC units
         frame_hist.SetYTitle("ADC units")
@@ -245,6 +246,8 @@ def process_file(filename=None, n_plots_total=0):
         sum_wfm0 = [0]*wfm_length
         sum_wfm1 = [0]*wfm_length
 
+        sum_sipm_wfm = np.zeros(wfm_length)
+
         #print "==> entry %i of %i | charge energy: %i" % ( i_entry, n_entries, chargeEnergy,)
       
         legend.Clear()
@@ -314,7 +317,7 @@ def process_file(filename=None, n_plots_total=0):
             if channel == pmt_channel:
                 multiplier /= pmt_shrink_scale
             if sipm_channels_to_use[channel] > 0:
-                multiplier = 0.1
+                multiplier = 8.0
 
             if False: # print debug output
                 print "entry %i | slot %i | card ch %i | ch %i | multiplier: %.4f" % (
@@ -326,6 +329,21 @@ def process_file(filename=None, n_plots_total=0):
                 )
 
             graph = tree.HitTree.GetGraph()
+
+            #--------------------------------------------------------------------------------------
+            #------------------------------------------SiPM filter--------------------------
+            #--------------------------------------------------------------------------------------
+
+            if sipm_channels_to_use[channel] > 0:
+                #Filter the sipm channels
+                sipm_wfm = np.array([graph.GetY()[isamp] for isamp in xrange(graph.GetN())])
+                sipm_fft = np.fft.rfft(sipm_wfm)
+                sipm_fft[600:] = 0
+                sipm_wfm_filter = np.fft.irfft(sipm_fft)
+                sum_sipm_wfm += sipm_wfm_filter
+                for isamp in xrange(graph.GetN()):
+                    x = graph.GetX()[isamp]
+                    graph.SetPoint(isamp,x,sipm_wfm_filter[isamp])
 
             #--------------------------------------------------------------------------------------
             #------------------------------------------Energy Calculation--------------------------
@@ -481,8 +499,10 @@ def process_file(filename=None, n_plots_total=0):
         sum_graph = ROOT.TGraphErrors()
         sum_graph0 = ROOT.TGraphErrors()
         sum_graph1 = ROOT.TGraphErrors()
+        sum_graph_sipm = ROOT.TGraphErrors()
 
         rms_noise = 0.0
+        sum_sipm_wfm -= np.mean(sum_sipm_wfm[:100])
         for i_point in xrange(len(sum_wfm)):
             sum_graph.SetPoint(i_point, i_point/sampling_freq_Hz*1e6, sum_wfm[i_point]+sum_offset)
             #sum_graph.SetPoint(i_point, i_point/sampling_freq_Hz*1e6, sum_wfm[i_point])
@@ -492,8 +512,12 @@ def process_file(filename=None, n_plots_total=0):
             sum_graph1.SetPoint(i_point, i_point/sampling_freq_Hz*1e6, sum_wfm1[i_point]+sum_offset*3)
             sum_graph1.SetPointError(i_point, 0.0, 0.1*multiplier)
 
+            sum_graph_sipm.SetPoint(i_point, i_point/sampling_freq_Hz*1e6, sum_sipm_wfm[i_point]+sum_offset)
+            sum_graph_sipm.SetPointError(i_point, 0.0, 0.1*multiplier)
+
             if i_point < n_samples_to_avg:
                 rms_noise += pow(sum_wfm[i_point], 2.0)/n_samples_to_avg
+        
 
         rms_noise = math.sqrt(rms_noise)
 
@@ -531,6 +555,8 @@ def process_file(filename=None, n_plots_total=0):
         sum_graph1.SetLineColor(ROOT.kRed)
         sum_graph1.Draw("xl")
         """
+        sum_graph_sipm.Draw("xl")
+        sum_graph_sipm.SetLineColor(ROOT.kRed)
         #------------------------------------------------------------------------------------------
         #------------------------------End Fit Sum WF to Sin Wave-----------------------------------
         #------------------------------------------------------------------------------------------
@@ -573,13 +599,14 @@ def process_file(filename=None, n_plots_total=0):
         #legend.AddEntry(sum_graph, "sum %.1f" % sum_energy,"p")
         #legend.AddEntry(sum_graph0, "Y sum slot 0","l")
         #legend.AddEntry(sum_graph1, "X sum slot 1","l")
+        legend.AddEntry(sum_graph_sipm, "SiPM Sum","l")
 
         # line to show trigger time
         print trigger_time, "-------------------------------------------------------------"
         line = ROOT.TLine(trigger_time, y_min, trigger_time,y_max)
         line.SetLineWidth(2)
         line.SetLineStyle(7)
-        line.Draw()
+        #line.Draw()
 
         max_drift_time = struck_analysis_parameters.max_drift_time
         line1 = ROOT.TLine(trigger_time+max_drift_time, y_min, trigger_time+max_drift_time,y_max)
