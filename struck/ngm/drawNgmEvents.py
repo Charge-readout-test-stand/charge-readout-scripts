@@ -240,6 +240,9 @@ def process_file(filename=None, n_plots_total=0):
         n_high_rms = 0
         n_signals = 0
         n_strips = 0
+
+        graph_dict = {}
+        
         for i in xrange(nchannels):
             
             tree.GetEntry(i_entry)
@@ -284,6 +287,8 @@ def process_file(filename=None, n_plots_total=0):
                 )
 
             graph = tree.HitTree.GetGraph()
+            graph_dict_name = "graph_ch%i" % channel
+            graph_dict[graph_dict_name] = graph
 
             # as in http://exo-data.slac.stanford.edu/exodoc/src/EXOBaselineRemover.cxx.html#48
             baseline = 0.0
@@ -492,6 +497,7 @@ def process_file(filename=None, n_plots_total=0):
         line1.SetLineWidth(2)
         line1.SetLineStyle(7)
         line1.Draw()
+        print "Trigger Lines at", trigger_time, trigger_time+max_drift_time
 
         legend.Draw()
         frame_hist.SetTitleSize(0.02, "t")
@@ -522,6 +528,16 @@ def process_file(filename=None, n_plots_total=0):
 
             if n_plots == 1: # start the file
                 canvas.Print("%s[" % plot_name)
+            
+            routput_name = "event%i.root" % int((i_entry-1)/nchannels)
+            print "Output Root File", routput_name
+            routput = ROOT.TFile(routput_name, "RECREATE")
+            for key in graph_dict:
+                graph_dict[key]
+                routput.WriteTObject(graph_dict[key], key)
+            routput.Close()
+            #raw_input()
+            
             canvas.Print(plot_name)
 
         if do_fft: # calc & draw FFT
