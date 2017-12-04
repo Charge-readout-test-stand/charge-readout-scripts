@@ -10,6 +10,10 @@ unset LD_LIBRARY_PATH
 
 # per Samuele, 18 Jan 2017:
 export LD_LIBRARY_PATH=/usr/tce/packages/gcc/gcc-4.9.3/lib64:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=/g/g19/jewell6/software/LXe_Test_Stand_Analysis/lib:$LD_LIBRARY_PATH
+
+#Set nEXOAnalysis directory
+export NEXOANALYSIS=/g/g19/jewell6/software/LXe_Test_Stand_Analysis
 
 # SET UP ROOT 5
 export ROOTSYS=/usr/gapps/cern/root_v5.34.36/toss_3_x86_64/

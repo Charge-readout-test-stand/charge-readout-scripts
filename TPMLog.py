@@ -112,7 +112,8 @@ def compare_isochoric(data_path, plot_dir, basename, temp_top, temp_mid,
     subplt = plt.subplot(111)
     box = subplt.get_position()
     subplt.set_position([box.x0, box.y0, box.width, box.height*0.9])
-    legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, fontsize='medium', ncol=2)
+    #if isDB: legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, fontsize='medium', ncol=2)
+    legend  =  plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False,  ncol=2)
     plt.savefig(plot_dir+"10-Temp-Isochoric_" + basename + ".jpeg")
     print "printed", plot_dir+"10-Temp-Isochoric_" + basename +".jpeg"
     plt.clf()
@@ -162,7 +163,8 @@ def compare_isochoric(data_path, plot_dir, basename, temp_top, temp_mid,
     subplt = plt.subplot(111)
     box = subplt.get_position()
     subplt.set_position([box.x0, box.y0, box.width, box.height*0.9])
-    legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, fontsize='medium', ncol=3)
+    #if isDB: legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, fontsize='medium', ncol=3)
+    legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False,  ncol=3)
     plt.savefig(plot_dir+"10-Press-Isochoric_" + basename + ".jpeg")
     print "printed", plot_dir+"10-Press-Isochoric_" + basename +".jpeg"
     plt.clf()
@@ -333,7 +335,8 @@ def plot_temperatures(filename, title, time_hours, time_stamps, TC0=None, TC1=No
     box = subplt.get_position()
     subplt.set_position([box.x0, box.y0, box.width, box.height*height])
     
-    legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.02), shadow = False, fontsize='small', ncol=ncol)
+    #if isDB: legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.02), shadow = False, fontsize='small', ncol=ncol)
+    legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.02), shadow = False, ncol=ncol)
     plt.savefig(filename)
     print "printed %s" % filename
     plt.clf()
@@ -377,6 +380,7 @@ def main(
 
     # on the windows DAQ machine:
     directory = 'C://Users//xenon//Dropbox//labViewPlots/'
+    isDB = False
     if not os.path.isdir(directory):
         print "trying alexis' path..."
         #directory = '/Users/alexis/stanford-Dropbox/Dropbox/labViewPlots/'
@@ -391,6 +395,8 @@ def main(
             directory = "C://Users//Michael//Documents//EXO//plots//"
             if not os.path.isdir(directory):
                 directory = "."
+    else:
+        isDB = True
     # offset, in grams/minute, for the mass flow meter (we can never exactly zero  the mass flow meter, so
     # we compensate for this)
     # compensation from test_20150609_173311.dat
@@ -523,6 +529,9 @@ def main(
 
             if time_stamp >= 3572906297: # Manuel's run 2:
                 mass_flow_rate_offset = 160.0/12.0/60.0 # 160 grams in 12 hours
+            
+            if time_stamp >= 3594659654: #12th LXe
+                mass_flow_rate_offset = 173.0/(20*60)
 
             print "mass_flow_rate_offset: [grams/minute]", mass_flow_rate_offset
 
@@ -592,6 +601,10 @@ def main(
             full_capacitance = 37.2
             empty_capacitance = 24.5
 
+        if time_stamp >= 3594659654: #12th LXe
+            full_bottle_mass = 55.7
+            anode_capacitance_guess = 35.3
+            cath_capacitance_guess = 31.0
 
         TC0.append(float(split_line[1]))
         TC1.append(float(split_line[2]))
@@ -900,6 +913,16 @@ def main(
       plt.ylabel('Mass Flow [g of xenon]')
       plt.savefig(mfpath)
       print "printed %s" % mfpath
+
+
+      mfpath2 = mfpath.replace(".jpeg", "_withCap.jpeg")  
+      capoffset = capacitance[first_index]
+      scale = Vol[last_index]/(capacitance[last_index] - capoffset)
+      print "SCALING", scale
+      culine1 = plt.plot(time_hours[first_index:last_index], scale*(np.array(capacitance[first_index:last_index]) - capoffset))
+      print "printed %s " % mfpath2
+      plt.setp(culine1, color='b', linewidth=linewidth)
+      plt.savefig(mfpath2)
       plt.clf()
       
     plt.figure(4)
@@ -999,8 +1022,8 @@ def main(
       # draw recovery box:
       if recovery_start and recovery_stop:
           plt.axvspan(recovery_start, recovery_stop, color='red', alpha=0.3)
-
-      legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, fontsize='medium', ncol=2)
+      if isDB: legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, fontsize='medium', ncol=2)
+      else: legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, ncol=2)
       plt.savefig(ppath3)
       print "printed %s" % ppath3
       plt.clf()
@@ -1024,7 +1047,8 @@ def main(
       if recovery_start and recovery_stop:
           plt.axvspan(recovery_start, recovery_stop, color='red', alpha=0.3)
 
-      legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, fontsize='medium', ncol=2)
+      if isDB: legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, fontsize='medium', ncol=2)
+      else: legend  = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, ncol=2)
       plt.savefig(ppath4)
       print "printed %s" % ppath4
       plt.clf()
@@ -1054,7 +1078,8 @@ def main(
       plt.axhspan(ymin=ymin, ymax=-25.0, color='red', alpha=0.5)
       plt.gca().set_ylim([ymin,ymax])
 
-      legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, fontsize='medium', ncol=2)
+      if isDB: legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, fontsize='medium', ncol=2)
+      else: legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False,  ncol=2)
 
       plt.savefig(mfrpath)
       print "printed %s" % mfrpath
@@ -1202,7 +1227,8 @@ def main(
         subplt = plt.subplot(111)
         box = subplt.get_position()
         subplt.set_position([box.x0, box.y0, box.width, box.height*0.9])
-        legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, fontsize='medium', ncol=2)
+        if isDB: legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, fontsize='medium', ncol=2)
+        else: legend  =  plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False,  ncol=2)
         plt.savefig(lnpath)
         print "printed %s" % lnpath
         plt.clf()
@@ -1240,7 +1266,8 @@ def main(
         subplt = plt.subplot(111)
         box = subplt.get_position()
         subplt.set_position([box.x0, box.y0, box.width, box.height*0.9])
-        legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, fontsize='medium', ncol=2)
+        if isDB: legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, fontsize='medium', ncol=2)
+        else: legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False,  ncol=2)
         plt.savefig(rlnpath)
         print "printed %s" % rlnpath
         plt.clf()
@@ -1282,7 +1309,8 @@ def main(
         plt.xlabel('Time [hours] %s' % time_string)
         plt.ylabel('Mass [kg]')
 
-        legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, fontsize='medium', ncol=2)
+        if isDB: legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, fontsize='medium', ncol=2)
+        else: legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False,  ncol=2)
 
 
         plt.savefig(bottle_mass_path)
@@ -1306,6 +1334,8 @@ def main(
         ymin, ymax = plt.gca().get_ylim()
         plt.axhline(y=full_capacitance, color='black', linestyle="--")
         plt.axhline(y=empty_capacitance, color='black', linestyle="--")
+        plt.axhline(y=cath_capacitance_guess, color='red', linestyle='--')
+        plt.axhline(y=anode_capacitance_guess, color='red', linestyle='--')
         if capacitance_max > 23.0: ymin = 23.0
         plt.gca().set_ylim([ymin,ymax]) # reset axes to original max, a reasonable min
 

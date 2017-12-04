@@ -33,8 +33,8 @@ def process_file(filenames, fit_results_filename):
     #draw_cmd = "energy1_pz:(rise_time_stop99-trigger_time+0.020)"
     #draw_cmd = "energy1_pz:(rise_time_stop99-trigger_time+0.020)*%s" % drift_velocity
     #draw_cmd = "energy1_pz:(rise_time_stop95-trigger_time+0.020)*%s" % drift_velocity
-    #draw_cmd = "SignalEnergy:(rise_time_stop95_sum-trigger_time+0.020)*%s" % drift_velocity
-    draw_cmd = "SignalEnergy:(rise_time_stop95_sum-trigger_time+0.020)"
+    draw_cmd = "SignalEnergy:(rise_time_stop95_sum-trigger_time+0.020)*%s" % drift_velocity
+    #draw_cmd = "SignalEnergy:(rise_time_stop95_sum-trigger_time+0.020)"
 
     if fit_results_filename == None:
         do_draw_fit_results = False
@@ -83,10 +83,10 @@ def process_file(filenames, fit_results_filename):
     print "max_drift_time:", max_drift_time
     n_bins = int(max_drift_time / 0.040 / 2.0)
     print "n_bins:", n_bins
-    #hist = TH2D("hist","",n_bins,0,drift_distance,100,300,1300)
-    hist = TH2D("hist","",n_bins,0,max_drift_time,100,300,1300)
-    hist.SetXTitle("drift time [#mus]")
-    #hist.SetXTitle("distance from anode [mm]")
+    hist = TH2D("hist","",n_bins,0,drift_distance,100,300,1300)
+    #hist = TH2D("hist","",n_bins,0,max_drift_time,100,300,1300)
+    #hist.SetXTitle("drift time [#mus]")
+    hist.SetXTitle("distance from anode [mm]")
     hist.SetYTitle("Energy [keV]")
     hist.GetYaxis().SetTitleOffset(1.3)
 
@@ -114,6 +114,9 @@ def process_file(filenames, fit_results_filename):
         tree.SetBranchStatus("SignalEnergy",1)
         tree.SetBranchStatus("rise_time_stop95_sum",1)
         tree.SetBranchStatus("trigger_time",1)
+        tree.SetBranchStatus("nXsignals",1)
+        tree.SetBranchStatus("nYsignals",1)
+        tree.SetBranchStatus("nsignal_strips",1)
         #tree.SetBranchStatus("energy1_pz",1)
         #tree.SetBranchStatus("rise_time_stop95",1)
 
@@ -121,8 +124,12 @@ def process_file(filenames, fit_results_filename):
         single_strip_cut = struck_analysis_cuts.get_single_strip_cut(isMC=isMC)
         selection = []
         #selection.append("Entry$<10e5") # debugging
-        selection.append(single_strip_cut)
+        #selection.append(single_strip_cut)
         #selection.append("nsignals==2")
+        selection.append("nXsignals==1")
+        selection.append("nYsignals==1")
+        selection.append("nsignal_strips==2")
+        #selection.append("nsignal_strips<3")
         selection.append("!is_pulser")
         selection.append("!is_bad")
         #selection.append(struck_analysis_cuts.get_channel_selection(isMC))
@@ -175,8 +182,10 @@ def process_file(filenames, fit_results_filename):
         canvas.Print("%s.png" % plot_name)
         if not gROOT.IsBatch():
             raw_input("enter... ")
-
-
+    
+    root_outfile = TFile("energy_vs_drifttime_overnight_11thLXeB_v5.root", "RECREATE")
+    root_outfile.WriteTObject(hist)
+    root_outfile.Close()
 
 if __name__ == "__main__":
     
@@ -186,11 +195,13 @@ if __name__ == "__main__":
         #fit_results_file = "fit_results_z_slices_overnight7thLXe_6.txt"
         #fit_results_file = "fit_results_z_slices_overnight7thLXe_10.txt"
         #fit_results_file = "fit_results_z_slices_overnight7thLXe_21.txt"
-        fit_results_file = "fit_results_z_slices_overnight7thLXe_19.txt"
+        #fit_results_file = "fit_results_z_slices_overnight7thLXe_19.txt"
 
-        data_file = "overnight7thLXe.root"
+        #data_file = "overnight7thLXe.root"
         #data_file = "/nfs/slac/g/exo_data4/users/alexis4/test-stand/mc/Bi207_Full_Ralph_dcoeff50/tier3/all.root"
-
+        data_file = "$SCRATCH/alexis_data/11th_LXe/2017_02_01_overnight_vme/tier3_added/overnight_11thLXeB_v5.root"
+        #fit_results_file = "fit_results_z_slices_overnight11thLXe_paper.txt"
+        fit_results_file  = None
 
         process_file([data_file], fit_results_file)
 
