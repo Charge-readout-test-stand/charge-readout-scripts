@@ -17,9 +17,27 @@ def get_cut(ch):
     selection = " && ".join(selection)
     return selection
 
+def get_cut_full():
+    selection = []
+    selection.append("nfound_channels==30") #cut the dead channel events 
+    selection.append("SignalEnergy > 100")
+    selection.append("nsignals==2")
+    selection.append("(nXsignals==1 && nYsignals==1)")
+    selection = " && ".join(selection)
+    return selection
+
+def get_dcmd_full():
+    draw_array = []
+    draw_array.append("SignalEnergy")
+    draw_cmd =  ":".join(draw_array)
+    return draw_cmd, len(draw_array)
+
 def get_dcmd(ch):
     draw_array = []
-    draw_array.append("energy1_pz[%i]" % ch)
+    if ch == "All":
+        draw_array.append("SignalEnergy")
+    else:
+        draw_array.append("energy1_pz[%i]" % ch)
     draw_cmd =  ":".join(draw_array)
     return draw_cmd, len(draw_array)
 
@@ -102,6 +120,7 @@ def process_file(filename):
     cal_file = file("new_calibrations.txt","w")
 
     for i,ch in enumerate(charge_channels_to_use):
+        break
         plt.clf()
 
         if ch==0:
@@ -148,8 +167,32 @@ def process_file(filename):
 
         plt.savefig("./plots/calibration_fit_ch%s.pdf" % channel_map[i])
         
-        if channel_map[i]=="Y14": raw_input()
+        #if channel_map[i]=="Y14": raw_input()
     cal_file.close()
+
+    #Now do for the Signal Energy
+    drawcmd,nvals   = get_dcmd_full()
+    selectcmd = get_cut_full()
+    tree.Draw(drawcmd,selectcmd,"goff")
+    n = tree.GetSelectedRows()
+    channelEnergy =  np.array([tree.GetVal(0)[j] for j in xrange(n)])
+    chHist,bin_edges = np.histogram(channelEnergy, bins=120, range=(200,1200))
+    bin_centers = bin_edges[:-1] + np.diff(bin_edges)/2.0
+    fitx, fitp, fit_cov, isFail = FitPeak(chHist, np.sqrt(chHist), bin_centers)
+    plt.title("Signal Energy", fontsize=14)
+    plt.xlabel("Energy[keV]", fontsize=15)
+    plt.ylabel("Counts/%.2f keV" % np.diff(bin_edges)[0], fontsize=15)
+
+    full_fit = ffn(fitx, fitp[0], fitp[1], fitp[2], fitp[3], fitp[4], fitp[5])
+    plt.errorbar(bin_centers, chHist, yerr=np.sqrt(chHist),marker='o', linestyle='None', c='k')
+    plt.plot(fitx, full_fit, c='r')
+    res = (fitp[2]/fitp[1])*100
+    gaus,exp = ffn_sep(fitx, fitp[0], fitp[1], fitp[2], fitp[3], fitp[4], fitp[5])
+    plt.plot(fitx, gaus, c='b', label="%.2f %% \n %.2f keV" % (res, fitp[1]))
+    plt.plot(fitx, exp, c='g')
+    plt.legend()
+    plt.savefig("./plots/full_fit_SignalEnergy.pdf")
+    raw_input()
 
 if __name__ == "__main__":
 

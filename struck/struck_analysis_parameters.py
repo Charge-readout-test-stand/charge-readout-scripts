@@ -856,15 +856,15 @@ if is_11th_LXeB:
     calibration_values[pulser_channel] = 0.018511 # make the pulser 100 keV when warm 24 Jan 2017
 
 if is_12th_LXe:
-    calibration_values[0]  = 1.039055  # Y12 
-    calibration_values[1]  = 1.119925  # +/-  Y13
-    calibration_values[2]  = 2.570478  # +/-  Y14   (Bad Fit)
-    calibration_values[3] = 2.246636   # +/-  Y15
-    calibration_values[4] = 2.146142   #  +/- Y16
-    calibration_values[5] = 2.216303   # +/-  Y17
-    calibration_values[6] = 1.123176   # +/-  Y18
-    calibration_values[7] = 1.071333   # +/-  Y19
-    calibration_values[8] = 1.094867   # +/-  Y20
+    calibration_values[0]  = 1.039055   # +/-  Y12 
+    calibration_values[1]  = 1.119925   # +/-  Y13
+    calibration_values[2]  = 2.570478   # +/-  Y14   (Bad Fit)
+    calibration_values[3]  = 2.246636   # +/-  Y15
+    calibration_values[4]  = 2.146142   #  +/- Y16
+    calibration_values[5]  = 2.216303   # +/-  Y17
+    calibration_values[6]  = 1.123176   # +/-  Y18
+    calibration_values[7]  = 1.071333   # +/-  Y19
+    calibration_values[8]  = 1.094867   # +/-  Y20
     calibration_values[9]  = 1.0
     calibration_values[10] = 1.0
     calibration_values[11] = 1.0
