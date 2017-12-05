@@ -53,13 +53,13 @@ def process_file(filename=None, n_plots_total=0):
 
     # options ------------------------------------------
     is_for_paper = False # change some formatting
-    threshold = 200 # keV
+    threshold = 500 # keV
     #threshold = 0
     #threshold = 1250 # keV
     #threshold = 570 # keV, for generating multi-page PDF
     #threshold = 50 # ok for unshaped, unamplified data
     #energy_offset = 100*700 # keV, space between traces
-    energy_offset = 50000.0/nchannels
+    energy_offset = 40000.0/nchannels
     
     units_to_use = 0 # 0=keV, 1=ADC units, 2=mV
 
@@ -90,7 +90,7 @@ def process_file(filename=None, n_plots_total=0):
     #y_max = 31500 # keV
     #y_max = nchannels*500+250 # keV
     y_max = nchannels*energy_offset # +250 # keV
-    y_max = (nchannels+3)*energy_offset #For SUM WF
+    #y_max = (nchannels+3)*energy_offset #For SUM WF
     if units_to_use == 1:
         y_max = 200 # ADC units
     elif units_to_use == 2:
@@ -319,7 +319,7 @@ def process_file(filename=None, n_plots_total=0):
             if channel == pmt_channel:
                 multiplier /= pmt_shrink_scale
             if sipm_channels_to_use[channel] > 0:
-                multiplier = 8.0
+                multiplier = 1.3
 
             if False: # print debug output
                 print "entry %i | slot %i | card ch %i | ch %i | multiplier: %.4f" % (
@@ -559,7 +559,7 @@ def process_file(filename=None, n_plots_total=0):
         sum_graph1.SetLineColor(ROOT.kRed)
         sum_graph1.Draw("xl")
         """
-        sum_graph_sipm.Draw("xl")
+        #sum_graph_sipm.Draw("xl")
         sum_graph_sipm.SetLineColor(ROOT.kRed)
         #------------------------------------------------------------------------------------------
         #------------------------------End Fit Sum WF to Sin Wave-----------------------------------
@@ -603,7 +603,7 @@ def process_file(filename=None, n_plots_total=0):
         #legend.AddEntry(sum_graph, "sum %.1f" % sum_energy,"p")
         #legend.AddEntry(sum_graph0, "Y sum slot 0","l")
         #legend.AddEntry(sum_graph1, "X sum slot 1","l")
-        legend.AddEntry(sum_graph_sipm, "SiPM Sum","l")
+        #legend.AddEntry(sum_graph_sipm, "SiPM Sum","l")
 
         # line to show trigger time
         print trigger_time, "-------------------------------------------------------------"
@@ -732,7 +732,7 @@ def process_file(filename=None, n_plots_total=0):
 
 if __name__ == "__main__":
 
-    n_plots_total = 10
+    n_plots_total = 100
     #n_plots_total = 3
     n_plots_so_far = 0
     if len(sys.argv) > 1:

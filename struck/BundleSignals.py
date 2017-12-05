@@ -50,7 +50,7 @@ def GetChType(ch, isMC):
     elif 'PMT' in channel_map[ch]: chtype = 0
     elif 'pulser' in channel_map[ch]: chtype = 0
     else: 
-        print "(BundleSignal.py) What happened to channel type?? ", channel_map[ch]
+        #print "(BundleSignal.py) What happened to channel type?? ", channel_map[ch]
         chtype = 0
     
     return chtype

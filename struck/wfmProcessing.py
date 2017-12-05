@@ -258,6 +258,12 @@ def get_wfmparams(
         print "channel #:", channel
         #raw_input("Pause")
 
+    baseline_rms_filter = 0.0
+    sipm_max = 0.0
+    sipm_min = 0.0
+    sipm_max_time = 0.0
+    sipm_min_time = 0.0
+
     #if is_sipmchannel:
     if False:
         gROOT.SetBatch(False)
@@ -559,6 +565,8 @@ def get_wfmparams(
         exo_fft_array = np.fft.rfft(exo_wfm_np)
 
         exo_fft_filter_array = np.zeros_like(exo_fft_array)
+        
+        #Kill all frequencies above bin 600 (20MHz??)
         exo_fft_filter_array[0:600] = exo_fft_array[0:600]
         exo_wfm_np_filter = np.fft.irfft(exo_fft_filter_array)
 
@@ -573,9 +581,18 @@ def get_wfmparams(
         #do_draw(exo_filter, "channel %i SiPM channel FFT Spectrum %.2f MHz" % (channel, sampling_freq_Hz/(second*1e-3)))          
         #gROOT.SetBatch(True)
         
+        #We know roughly were the trigger is so limit the max here
+        #mostly worried about FFT cut windowing on edges
+        sipm_min = np.min(exo_wfm_np_filter[1000:1600]) 
+        sipm_max = np.max(exo_wfm_np_filter[1000:1600])
         
-        energy = np.max(exo_wfm_np_filter[1000:1600])
-        
+        sipm_max_time = (np.argmax(exo_wfm_np_filter[1000:1600]) + 1000)*(1.e6/sampling_freq_Hz) #us
+        sipm_min_time = (np.argmin(exo_wfm_np_filter[1000:1600]) + 1000)*(1.e6/sampling_freq_Hz) #us
+
+        baseline_rms_filter = np.std(exo_wfm_np_filter[0:1000])
+       
+        energy = sipm_max
+
     elif is_pmtchannel: # for PMT channel, use GetMaxValue()
         extremum_finder = EXOExtremumFinder()
         extremum_finder.SetFindMaximum(True)
@@ -669,6 +686,11 @@ def get_wfmparams(
         mfilter_time,
         baseline_slope,
         energy1_pz_slope,
+        baseline_rms_filter,
+        sipm_max,
+        sipm_min,
+        sipm_max_time,
+        sipm_min_time
     )
 
 def do_risetime_calc(rise_time_calculator, threshold_percent, wfm, max_val, period):
