@@ -343,7 +343,7 @@ if is_12th_LXe:
     channel_map[9] = "2-2"
     channel_map[10] = "2-3"
     channel_map[11] = "2-4"
-    channel_map[12] = "2-6"
+    channel_map[12] = "2-5"
     channel_map[13] = "2-6"
     channel_map[14] = "Dead"
     channel_map[15] = "Dead"
@@ -858,7 +858,7 @@ if is_11th_LXeB:
 if is_12th_LXe:
     calibration_values[0]  = 1.039055   # +/-  Y12 
     calibration_values[1]  = 1.119925   # +/-  Y13
-    calibration_values[2]  = 2.570478   # +/-  Y14   (Bad Fit)
+    calibration_values[2]  = 2.570478*1.5   # +/-  Y14   (Bad Fit)
     calibration_values[3]  = 2.246636   # +/-  Y15
     calibration_values[4]  = 2.146142   #  +/- Y16
     calibration_values[5]  = 2.216303   # +/-  Y17
@@ -873,7 +873,7 @@ if is_12th_LXe:
     calibration_values[14] = 1.0
     calibration_values[15] = 1.0
     calibration_values[16] = 1.082268 # +/-  X13
-    calibration_values[17] = 0.878766 # +/-  X14 (Bad Fit)
+    calibration_values[17] = 0.878766*1.3 # +/-  X14 (Bad Fit)
     calibration_values[18] = 1.069808 # +/-  X15
     calibration_values[19] = 2.117263 # +/-  X16
     calibration_values[20] = 2.284341 # +/-  X17
