@@ -1180,7 +1180,14 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             elif isNGM:
                 if n_channels_in_this_event > 0: # For NGM, each wfm is its own tree entry
                     i_entry += 1
+                    #print "Getttin entry", i_entry
+                    if i_entry == n_entries: 
+                        # This can happen if we chop off the tier1 file before getting all 30 channels.
+                        # Might be a tier1 processing issue? Not sure yet.
+                        print "Exceeded the total number of entries so break"
+                        break
                     tree.GetEntry(i_entry)
+                
 
                 i = tree.HitTree.GetSlot()*16 + tree.HitTree.GetChannel()
 
