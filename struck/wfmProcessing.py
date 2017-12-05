@@ -589,8 +589,14 @@ def get_wfmparams(
         sipm_max_time = (np.argmax(exo_wfm_np_filter[1000:1600]) + 1000)*(1.e6/sampling_freq_Hz) #us
         sipm_min_time = (np.argmin(exo_wfm_np_filter[1000:1600]) + 1000)*(1.e6/sampling_freq_Hz) #us
 
-        baseline_rms_filter = np.std(exo_wfm_np_filter[0:1000])
+        # Currently there is a windowing issue so can't use the first several samples for the RMS
+        baseline_rms_filter = np.std(exo_wfm_np_filter[400:1000])
        
+        #print "Using First 1000", np.std(exo_wfm_np_filter[0:1000])
+        #print "Using 500-1000",   np.std(exo_wfm_np_filter[500:1000])
+        #print "Using 300-1000",   np.std(exo_wfm_np_filter[300:1000])
+        #print "Using 500-800",   np.std(exo_wfm_np_filter[300:800])
+
         energy = sipm_max
 
     elif is_pmtchannel: # for PMT channel, use GetMaxValue()
