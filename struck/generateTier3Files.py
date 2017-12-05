@@ -109,7 +109,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     # whether to run in debug mode (draw wfms):
     do_debug = not ROOT.gROOT.IsBatch()
     do_draw_extra = not ROOT.gROOT.IsBatch()
-    skip_short_risetimes = False # reduce file size
+    skip_short_risetimes = True # reduce file size
     # samples at wfm start and end to use for energy calc:
 
     baseline_average_time_microseconds = struck_analysis_parameters.baseline_average_time_microseconds
@@ -1232,9 +1232,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
                 if dead_channels[channel[i]] > 0:
                     found_dead = True
-                    print ""
-                    print "===> DEAD Channel Found: %i" % channel[i]
-                    print ""
+                    #print ""
+                    #print "===> DEAD Channel Found: %i" % channel[i]
+                    #print ""
                     break
 
                 wfm = tree._waveform
@@ -1391,27 +1391,42 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 else:
                     sum_wfm += calibrated_wfm
 
-            (
-                smoothed_max[i], 
-                rise_time_stop10[i], 
-                rise_time_stop20[i], 
-                rise_time_stop30[i],
-                rise_time_stop40[i], 
-                rise_time_stop50[i], 
-                rise_time_stop60[i], 
-                rise_time_stop70[i],
-                rise_time_stop80[i], 
-                rise_time_stop90[i], 
-                rise_time_stop95[i],
-                rise_time_stop99[i],
-            ) = wfmProcessing.get_risetimes(
-                exo_wfm, 
-                wfm_length[i], 
-                sampling_frequency_Hz[0],
-                skip_short_risetimes,
-                label="%s %i keV" % (label, energy1_pz[i]),
-            )
-
+                (
+                    smoothed_max[i], 
+                    rise_time_stop10[i], 
+                    rise_time_stop20[i], 
+                    rise_time_stop30[i],
+                    rise_time_stop40[i], 
+                    rise_time_stop50[i], 
+                    rise_time_stop60[i], 
+                    rise_time_stop70[i],
+                    rise_time_stop80[i], 
+                    rise_time_stop90[i], 
+                    rise_time_stop95[i],
+                    rise_time_stop99[i],
+                ) = wfmProcessing.get_risetimes(
+                    exo_wfm, 
+                    wfm_length[i], 
+                    sampling_frequency_Hz[0],
+                    skip_short_risetimes,
+                    label="%s %i keV" % (label, energy1_pz[i]),
+                    fit_energy=energy1_pz[i]
+                )
+            else:
+                #No reason to do risetime for events with no signals
+                #also skip for SiPMs
+                smoothed_max[i] = 0.0
+                rise_time_stop10[i] = 0.0
+                rise_time_stop20[i] = 0.0
+                rise_time_stop30[i] = 0.0
+                rise_time_stop40[i] = 0.0
+                rise_time_stop50[i] = 0.0
+                rise_time_stop60[i] = 0.0
+                rise_time_stop70[i] = 0.0
+                rise_time_stop80[i] = 0.0
+                rise_time_stop90[i] = 0.0
+                rise_time_stop95[i] = 0.0
+                rise_time_stop99[i] = 0.0
 
             # pause & draw
             #if not gROOT.IsBatch() and channel[i] == 4:
@@ -1505,7 +1520,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         #for ch_index, bundle_index in enumerate(signal_bundle_map_temp):
         #    signal_bundle_map[ch_index] = bundle_index
         #--------------EndBundlind----------------
-        
+
 
         ##### processing sum waveform
         if sum_wfm == None:
@@ -1528,6 +1543,13 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             maxCurrent4[0] = 0.0
 
         else:
+            baseline_remover.SetStartSample(sum_wfm.size() - 2*n_baseline_samples[0] - 1)
+            baseline_remover.Transform(sum_wfm)
+            energy_sum[0] = baseline_remover.GetBaselineMean()
+            energy_rms_sum[0] = baseline_remover.GetBaselineRMS()
+            baseline_remover.SetStartSample(0)
+            baseline_remover.Transform(sum_wfm)
+            
             (
                 smoothed_max_sum[0], 
                 rise_time_stop10_sum[0], 
@@ -1547,14 +1569,15 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 sampling_frequency_Hz[0],
                 skip_short_risetimes,
                 label="Event %i Sum %i keV" % (n_events, SignalEnergy[0]),
+                fit_energy=energy_sum[0]
             )
 
-            baseline_remover.SetStartSample(sum_wfm.size() - 2*n_baseline_samples[0] - 1)
-            baseline_remover.Transform(sum_wfm)
-            energy_sum[0] = baseline_remover.GetBaselineMean()
-            energy_rms_sum[0] = baseline_remover.GetBaselineRMS()
-            baseline_remover.SetStartSample(0)
-            baseline_remover.Transform(sum_wfm)
+            #baseline_remover.SetStartSample(sum_wfm.size() - 2*n_baseline_samples[0] - 1)
+            #baseline_remover.Transform(sum_wfm)
+            #energy_sum[0] = baseline_remover.GetBaselineMean()
+            #energy_rms_sum[0] = baseline_remover.GetBaselineRMS()
+            #baseline_remover.SetStartSample(0)
+            #baseline_remover.Transform(sum_wfm)
 
             trap_wfm = EXODoubleWaveform(sum_wfm)
             trap_wfm2 = EXODoubleWaveform(sum_wfm)
@@ -1656,8 +1679,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             nfound_channels[0] = len(found_channels)
             #if (n_channels_in_this_event != len(charge_channels_to_use)):
             if (n_channels_in_this_event != n_channels_good):
-              print "================> WARNING: %i channels in this event!! <================" % nfound_channels[0]
-              print "================> found %i and in event %i <================" % (nfound_channels[0], n_channels_in_this_event)
+              #print "================> WARNING: %i channels in this event!! <================" % nfound_channels[0]
+              #print "================> found %i and in event %i <================" % (nfound_channels[0], n_channels_in_this_event)
               is_bad[0] += 32
             else:
                 if nsignals[0] > 0: do_fill = True

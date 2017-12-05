@@ -716,6 +716,7 @@ def get_risetimes(
     sampling_freq_Hz,
     skip_short_risetimes=True, # whether to skip risetimes < 80%
     label="", # a name for plots, used for debugging
+    fit_energy=0.0
 ):
 
     exo_wfm.SetSamplingFreq(sampling_freq_Hz/second)
@@ -748,12 +749,13 @@ def get_risetimes(
 
     # perform some smoothing -- be careful because this changes the rise time
     smoother = EXOSmoother()
-    smoother.SetSmoothSize(5)
-    #smoother.SetSmoothSize(50)
+    #smoother.SetSmoothSize(5) #old for < 12th
+    smoother.SetSmoothSize(15)
     smoother.Transform(exo_wfm, new_wfm) 
 
     smoothed_max = new_wfm.GetMaxValue()
     max_val = new_wfm.GetMaxValue() # smoothed max
+    max_val = fit_energy
 
     rise_time_calculator = EXORisetimeCalculation()
     rise_time_calculator.SetPulsePeakHeight(max_val)
@@ -797,13 +799,29 @@ def get_risetimes(
 
     if skip_short_risetimes:
         rise_time_stop80 = 0.0
-    else:
+    else:##
         rise_time_stop80 = do_risetime_calc(rise_time_calculator, 0.80, exo_wfm, max_val, period)
 
-    rise_time_stop90 = do_risetime_calc(rise_time_calculator, 0.90, exo_wfm, max_val, period)
-    rise_time_stop95 = do_risetime_calc(rise_time_calculator, 0.95, exo_wfm, max_val, period)
-    rise_time_stop99 = do_risetime_calc(rise_time_calculator, 0.99, exo_wfm, max_val, period)
+    #rise_time_stop90 = do_risetime_calc(rise_time_calculator, 0.90, exo_wfm, max_val, period)
+    rise_time_stop90 = do_risetime_calc(rise_time_calculator, 0.90, new_wfm, max_val, period)
+    #rise_time_stop95 = do_risetime_calc(rise_time_calculator, 0.95, exo_wfm, max_val, period)
+    rise_time_stop95 = do_risetime_calc(rise_time_calculator, 0.95, new_wfm, max_val, period)
+    #rise_time_stop99 = do_risetime_calc(rise_time_calculator, 0.99, exo_wfm, max_val, period)
+    rise_time_stop99 = do_risetime_calc(rise_time_calculator, 0.99, new_wfm, max_val, period)
 
+    if False and ("Sum" in label):
+        print "Max is", smoothed_max
+        print "Period is", period
+        print "Ristime is", (rise_time_stop95-11.0)
+        raw_input()
+        gROOT.SetBatch(False)
+        #do_draw(exo_wfm, title="Risetime Chekc")
+        c1 = TCanvas("c1")
+        exo_wfm.GimmeHist().Draw()
+        #new_wfm.GimmeHist().Draw("SAME")
+        c1.Update()
+        raw_input("PAUSE")
+        gROOT.SetBatch(True)
 
     if not gROOT.IsBatch():
         print "rise times:"
@@ -820,18 +838,14 @@ def get_risetimes(
         print "\trise_time_stop95:", rise_time_stop95
         print "\trise_time_stop99:", rise_time_stop99
 
-    if max_val > 100 and not "PMT" in label and False: do_draw(exo_wfm, "%s after rise-time calc" % label, new_wfm, maw_wfm, vlines=[
-        rise_time_stop10,
-        rise_time_stop20,
-        rise_time_stop30,
-        rise_time_stop40,
-        rise_time_stop50,
-        rise_time_stop60,
-        rise_time_stop70,
-        rise_time_stop80,
-        rise_time_stop90,
+    #if max_val > 200 and not "PMT" in label and ("Sum" in label) and (rise_time_stop95-11.0 > 12.5) and  (rise_time_stop95-11.0) < 13.5 and True: 
+    if max_val > 200 and not "PMT" in label and ("Sum" in label) and False:
+        gROOT.SetBatch(False)
+        #do_draw(exo_wfm, "%s after rise-time calc r95 = %.2f" % (label,rise_time_stop95-11.0), new_wfm, maw_wfm, vlines=[
+        do_draw(new_wfm, "%s after rise-time calc max = %.2f, r95 = %.2f" % (label,max_val,rise_time_stop95-11.0),vlines=[
+        11.0,
         rise_time_stop95,
-        rise_time_stop99,
+        #rise_time_stop99,
     ])
     
     maw_wfm.IsA().Destructor(maw_wfm)
