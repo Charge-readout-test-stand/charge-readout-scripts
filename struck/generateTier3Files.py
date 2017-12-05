@@ -209,10 +209,12 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             #print file_start
             # create datetime object from relevant parts of filename:
             file_start  = datetime.datetime.strptime(file_start, "%Y%m%d%H%M%S")
+            print "File Start",file_start
             # get the POSIX timestamp, in seconds:
             posix_start_time = int(time.mktime(file_start.timetuple()))
-            #print posix_start_time
+            print posix_start_time
             print "this NGM file was started at: %s GMT" % file_start
+            #raw_input()
         except: 
             print "couldn't calculate file start time"
             posix_start_time = 0
@@ -364,6 +366,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
     time_since_last = array('d', [0]) # double
     out_tree.Branch('time_since_last', time_since_last, 'time_since_last/D')
+
+    time_since_last_msec = array('d', [0]) # double
+    out_tree.Branch('time_since_last_msec', time_since_last_msec, 'time_since_last_msec/D')
 
     n_entries_array = array('I', [0]) # unsigned int
     out_tree.Branch('n_entries', n_entries_array, 'n_entries/i')
@@ -702,7 +707,26 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
     energy_rms_sum = array('d', [0.0])
     out_tree.Branch('energy_rms_sum', energy_rms_sum, 'energy_rms_sum/D')
+    
+    #Sipm Specific Things
+    baseline_rms_filter = array('d', [0]*n_channels_in_event) # double
+    out_tree.Branch('baseline_rms_filter', baseline_rms_filter, 'baseline_rms_filter[%i]/D' % n_channels_in_event)
 
+    sipm_max      = array('d', [0]*n_channels_in_event)
+    out_tree.Branch('sipm_max', sipm_max, 'sipm_max[%i]/D' % n_channels_in_event)
+    
+    sipm_max_time = array('d', [0]*n_channels_in_event) #in us
+    out_tree.Branch('sipm_max_time', sipm_max_time, 'sipm_max_time[%i]/D' % n_channels_in_event)
+    
+    sipm_min      = array('d', [0]*n_channels_in_event)
+    out_tree.Branch('sipm_min', sipm_min, 'sipm_min[%i]/D' % n_channels_in_event)
+            
+    sipm_min_time = array('d', [0]*n_channels_in_event) #in us
+    out_tree.Branch('sipm_min_time', sipm_min_time, 'sipm_min_time[%i]/D' % n_channels_in_event)
+    
+    SignalEnergyLight = array('d', [0])
+    out_tree.Branch('SignalEnergyLight', SignalEnergyLight, 'SignalEnergyLight/D')
+    #End Sipm shit
 
     # make a hist for calculating some averages
     hist = ROOT.TH1D("hist","",100, 0, pow(2,14))
@@ -1049,8 +1073,10 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         # calculate time since previous event
         if prev_time_stamp > 0:
             time_since_last[0] = time_stampDouble[0] - prev_time_stamp
+            time_since_last_msec[0] = (time_stampDouble[0] - prev_time_stamp)*1.e3/sampling_freq_Hz
         else:
             time_since_last[0] = -1.0
+            time_since_last_msec[0] = -1.0
         prev_time_stamp = time_stampDouble[0]
         if isMC: prev_time_stamp = 0
 
@@ -1063,6 +1089,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         nXsignals[0] = 0
         nYsignals[0] = 0
         SignalEnergy[0] = 0.0
+        SignalEnergyLight[0] = 0.0
         SignalEnergyX[0] = 0.0
         SignalEnergyY[0] = 0.0 
         for bundle_index in xrange(nbundles[0]):
@@ -1175,12 +1202,12 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 # allowable number of clock ticks of difference: 80 ns 
                 clock_tick_diff = sampling_frequency_Hz[0]*80.0/1e9
                 if (abs( tree.HitTree.GetRawClock() - time_stamp[0] ) > clock_tick_diff):
-                    print ""
-                    print "===> end of event after %i channels: %i clock tick diff" % (
-                        (n_channels_in_this_event),
-                        abs( tree.HitTree.GetRawClock() - time_stamp[0] ),
-                    )
-                    print ""
+                    #print ""
+                    #print "===> end of event after %i channels: %i clock tick diff" % (
+                    #    (n_channels_in_this_event),
+                    #    abs( tree.HitTree.GetRawClock() - time_stamp[0] ),
+                    #)
+                    #print ""
                     i_entry -= 1
                     #n_events += 1
                     break # break from loop over events
@@ -1294,6 +1321,11 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 mfilter_time[i],
                 baseline_slope[i],
                 energy1_pz_slope[i],
+                baseline_rms_filter[i],
+                sipm_max[i],
+                sipm_min[i],
+                sipm_max_time[i],
+                sipm_min_time[i]
             ) = wfmProcessing.get_wfmparams(
                 exo_wfm=exo_wfm, 
                 wfm_length=wfm_length[i], 
@@ -1328,9 +1360,13 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                     nYsignals[0]+=1
                     SignalEnergyY[0] += energy1_pz[i]
 
-            if channel[i] == pmt_channel or sipm_channels_to_use[channel[i]]:
+            if channel[i] == pmt_channel:
                 #print energy[i], lightEnergy
                 lightEnergy[0] += energy[i]
+            elif sipm_channels_to_use[channel[i]]:
+                lightEnergy[0] += energy[i]
+                if abs(energy[i]/baseline_rms_filter[i]) > 5.0: #and  abs(sipm_min[i]/baseline_rms_filter[i]) < 5.0:
+                    SignalEnergyLight[0] += energy[i]
             elif charge_channels_to_use[channel[i]]:
                 chargeEnergy[0] += energy1_pz[i]
             if isMC:
@@ -1611,7 +1647,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             nfound_channels[0] = len(found_channels)
             #if (n_channels_in_this_event != len(charge_channels_to_use)):
             if (n_channels_in_this_event != n_channels_good):
-              print "================> WARNING: %i channels in this event!! <================" % i
+              print "================> WARNING: %i channels in this event!! <================" % nfound_channels[0]
+              print "================> found %i and in event %i <================" % (nfound_channels[0], n_channels_in_this_event)
               is_bad[0] += 32
             else:
                 if nsignals[0] > 0: do_fill = True
