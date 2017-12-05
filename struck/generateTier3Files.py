@@ -1367,7 +1367,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 lightEnergy[0] += energy[i]
             elif sipm_channels_to_use[channel[i]]:
                 lightEnergy[0] += energy[i]
-                if abs(energy[i]/baseline_rms_filter[i]) > 5.0: #and  abs(sipm_min[i]/baseline_rms_filter[i]) < 5.0:
+                if abs(energy[i]/baseline_rms_filter[i]) > 10.0: #and  abs(sipm_min[i]/baseline_rms_filter[i]) < 5.0:
                     SignalEnergyLight[0] += energy[i]
             elif charge_channels_to_use[channel[i]]:
                 chargeEnergy[0] += energy1_pz[i]
