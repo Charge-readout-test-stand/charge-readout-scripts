@@ -53,7 +53,7 @@ def process_file(filename=None, n_plots_total=0):
 
     # options ------------------------------------------
     is_for_paper = False # change some formatting
-    threshold = 300 # keV
+    threshold = 200 # keV
     #threshold = 0
     #threshold = 1250 # keV
     #threshold = 570 # keV, for generating multi-page PDF
@@ -651,11 +651,11 @@ def process_file(filename=None, n_plots_total=0):
             
             routput_name = "event%i.root" % int((i_entry-1)/nchannels)
             print "Output Root File", routput_name
-            routput = ROOT.TFile(routput_name, "RECREATE")
-            for key in graph_dict:
-                graph_dict[key]
-                routput.WriteTObject(graph_dict[key], key)
-            routput.Close()
+            #routput = ROOT.TFile(routput_name, "RECREATE")
+            #for key in graph_dict:
+                #graph_dict[key]
+                #routput.WriteTObject(graph_dict[key], key)
+            #routput.Close()
             #raw_input()
             
             canvas.Print(plot_name)
@@ -732,7 +732,7 @@ def process_file(filename=None, n_plots_total=0):
 
 if __name__ == "__main__":
 
-    n_plots_total = 20
+    n_plots_total = 10
     #n_plots_total = 3
     n_plots_so_far = 0
     if len(sys.argv) > 1:
