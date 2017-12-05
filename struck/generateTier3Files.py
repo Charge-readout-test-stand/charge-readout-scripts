@@ -1215,7 +1215,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 n_channels_in_this_event += 1
                 if channel[i] in found_channels:
                     print ""
-                    print "======> Found Duplicate Channel.  Should this even be possible????"
+                    print "======> Found Duplicate Channel %i at entry %i.  Should this even be possible????" % (channel[i],i_entry)
+                    print "This is entry %i out of %i entries." % (i_entry, n_entries)
+                    print found_channels
                     print ""
                     sys.exit(1)
 
