@@ -14,6 +14,8 @@ def get_cut(ch):
     selection.append("nsignals==1")
     selection.append("(nXsignals==1 || nYsignals==1)")
     selection.append("channel==%i" % ch)
+    selection.append("(rise_time_stop95_sum-trigger_time) > 10")
+    selection.append("(rise_time_stop95_sum-trigger_time) < 15")
     selection = " && ".join(selection)
     return selection
 
@@ -52,7 +54,7 @@ def ffn_sep(x, A1, mu, sig, E1, E2, E3):
     return gaus , exp
 
 def FitPeak(hist_counts, hist_errors, bin_centers):
-    de = 180 # Fit width
+    de = 200 # Fit width
     peak_pos = 570.0 #bin_centers[np.argmax(hist_counts)]
     
     print "Peak Guess", peak_pos
@@ -61,11 +63,27 @@ def FitPeak(hist_counts, hist_errors, bin_centers):
     fit_min = peak_pos-de
     fit_max = peak_pos+de
     fpts = np.logical_and( bin_centers > peak_pos-de, bin_centers < peak_pos+de )
-    
-    exp_decay_guess  = np.log(fit_max/fit_min)/(2*de)
+
+    print (hist_counts[fpts])[0], (hist_counts[fpts])[-1], fit_min, fit_max
+    start_height = (hist_counts[fpts])[0]
+    end_height   = (hist_counts[fpts])[-1]
+    if end_height == 0: end_height = 1e-16
+    if start_height == 0: start_height = 1.0
+    #exp_decay_guess  = np.log(fit_max/fit_min)/(2*de)
+    exp_decay_guess   = np.log(1.0*start_height/end_height)*(1/(2.0*de))
     exp_height_guess = (hist_counts[fpts])[0]*np.exp(fit_min*exp_decay_guess) 
-    spars = [1e2, peak_pos, 30.0, exp_height_guess, exp_decay_guess, 0.] #Initial guess for fitter
+    sigma_guess  = 35.0
+    height_guess = hist_counts[np.argmin(np.abs(bin_centers - peak_pos))] - exp_height_guess*np.exp(-exp_decay_guess*peak_pos)
+    spars = [height_guess, peak_pos, sigma_guess, exp_height_guess, exp_decay_guess, 0.] #Initial guess for fitter
     
+    print "Height Guess:", height_guess
+    print "Sigma  Guess:", sigma_guess
+    print "Peak Pos:", peak_pos
+    print "Exp Height Guess:", exp_height_guess
+    print "EXP Decay Guess", exp_decay_guess
+    print abs((hist_counts[fpts])[0] - (hist_counts[fpts])[-1]), (2*de)
+    print -1*np.log(abs((hist_counts[fpts])[0] - (hist_counts[fpts])[-1])/(2.0*de))
+
     fail = False
 
     #Perform the fit
@@ -84,7 +102,7 @@ def FitPeak(hist_counts, hist_errors, bin_centers):
     print "-------Fit Results----------"
     print "Mean:  %.2f" % bp[1]
     print "Sigma: %.2f" % bp[2]
-    #print bp
+    print "EXP Decay Final", bp[4]
     print "----------------------------"
     print
 
@@ -120,7 +138,6 @@ def process_file(filename):
     cal_file = file("new_calibrations.txt","w")
 
     for i,ch in enumerate(charge_channels_to_use):
-        break
         plt.clf()
 
         if ch==0:
@@ -135,7 +152,7 @@ def process_file(filename):
         n = tree.GetSelectedRows()
         channelEnergy =  np.array([tree.GetVal(0)[j] for j in xrange(n)])   
         
-        chHist,bin_edges = np.histogram(channelEnergy, bins=120, range=(200,1200))
+        chHist,bin_edges = np.histogram(channelEnergy, bins=100, range=(200,1200))
         
         if channel_map[i] == "Y14":
             chHist,bin_edges = np.histogram(channelEnergy, bins=130, range=(200,1200))
@@ -168,6 +185,7 @@ def process_file(filename):
         plt.savefig("./plots/calibration_fit_ch%s.pdf" % channel_map[i])
         
         #if channel_map[i]=="Y14": raw_input()
+        raw_input()
     cal_file.close()
 
     #Now do for the Signal Energy
@@ -200,7 +218,9 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         print "argument: [sis tier 3 root file]"
         #sys.exit(1)
-        filename = "overnight_new_bias_tier3_all_v1_12_3_2017.root"
+        #filename = "overnight_new_bias_tier3_all_v1_12_3_2017.root"
+        #filename = "overnight_new_bias_tier3_all_v2_12_4_2017.root"
+        filename  = "overnight_new_bias_tier3_all_v3_12_6_2017.root"
     else:
         filename = sys.argv[1]
 
