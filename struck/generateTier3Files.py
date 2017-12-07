@@ -126,6 +126,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     sipm_channels_to_use    = struck_analysis_parameters.sipm_channels_to_use
     dead_channels           = struck_analysis_parameters.dead_channels
     n_channels_good         = n_channels - sum(dead_channels)
+    channel_pos_x           = struck_analysis_parameters.channel_pos_x
+    channel_pos_y           = struck_analysis_parameters.channel_pos_y
 
     # this is the number of channels per event (1 if we are processing tier1
     # data, len(channels) if we are processing tier2 data
@@ -592,6 +594,12 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     nYsignals = array('I', [0])
     out_tree.Branch('nYsignals', nYsignals, 'nYsignals/i') #Total YSignals above thresholdY
     
+    pos_x = array('d', [0])
+    out_tree.Branch('pos_x', pos_x, 'pos_x/D') #position of event
+
+    pos_y = array('d', [0])
+    out_tree.Branch('pos_y', pos_y, 'pos_y/D') #position of event
+
     SignalEnergy = array('d', [0])
     out_tree.Branch('SignalEnergy', SignalEnergy, 'SignalEnergy/D') #Sum Energy of Signals
 
@@ -1089,6 +1097,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         nXsignals[0] = 0
         nYsignals[0] = 0
         SignalEnergy[0] = 0.0
+        pos_x[0] = -999.0
+        pos_y[0] = -999.0
         SignalEnergyLight[0] = 0.0
         SignalEnergyX[0] = 0.0
         SignalEnergyY[0] = 0.0 
@@ -1520,6 +1530,21 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         #for ch_index, bundle_index in enumerate(signal_bundle_map_temp):
         #    signal_bundle_map[ch_index] = bundle_index
         #--------------EndBundlind----------------
+    
+        energy_x_track = 0.0
+        energy_y_track = 0.0
+        for sigi, sig_map in enumerate(signal_map):
+            if sig_map < 0.5:continue
+            #print sigi,channel_map[sigi], energy1_pz[sigi]
+            energy_x_track += energy1_pz[sigi]*channel_pos_x[sigi]
+            energy_y_track += energy1_pz[sigi]*channel_pos_y[sigi]
+        
+        if SignalEnergyX[0] > 0.0: energy_x_track *= 1/SignalEnergyX[0]
+        if SignalEnergyY[0] > 0.0: energy_y_track *= 1/SignalEnergyY[0]
+        pos_x[0] = energy_x_track
+        pos_y[0] = energy_y_track
+        #print "Final Pos is", pos_x[0], pos_y[0]
+        #raw_input()
 
 
         ##### processing sum waveform

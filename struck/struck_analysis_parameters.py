@@ -675,6 +675,8 @@ if is_12th_LXe:
 
 struck_energy_multiplier = 0.96 # match struck calibration to MC TE calib
 #struck_energy_multiplier = 1.0 # match struck calibration to MC TE calib
+channel_pos_y = {}
+channel_pos_x = {}
 calibration_values = {}
 calibration_values[0] = 5.827591
 calibration_values[1] = 5.146835
@@ -888,6 +890,73 @@ if is_12th_LXe:
     calibration_values[29] = 1.0
     calibration_values[30] = 1.0
     calibration_values[31] = 1.0
+
+    channel_pos_y[0] = -10.5 #Y12
+    channel_pos_y[1] =  -7.5 #Y13
+    channel_pos_y[2] = -4.5  #Y14
+    channel_pos_y[3] =  -1.5 #Y15
+    channel_pos_y[4] =  1.5  #Y16
+    channel_pos_y[5] =  4.5  #Y17
+    channel_pos_y[6] =  7.5  #Y18
+    channel_pos_y[7] =  10.5 #Y19
+    channel_pos_y[8] =  13.5 #Y20
+    channel_pos_y[9]  =  0.0  
+    channel_pos_y[10] =  0.0 
+    channel_pos_y[11] =  0.0  
+    channel_pos_y[12] =  0.0 
+    channel_pos_y[13] =  0.0  
+    channel_pos_y[14] =  0.0  #Dead
+    channel_pos_y[15] =  0.0  #Dead
+    channel_pos_y[16] =  0.0 #X13
+    channel_pos_y[17] =  0.0 #X14
+    channel_pos_y[18] =  0.0 #X15
+    channel_pos_y[19] =  0.0 #X16
+    channel_pos_y[20] =  0.0 #X17
+    channel_pos_y[21] =  0.0 #X18
+    channel_pos_y[22] =  0.0 #X19
+    channel_pos_y[23] =  0.0 #X20
+    channel_pos_y[24] =  0.0 #X21
+    channel_pos_y[25] =  0.0 
+    channel_pos_y[26] =  0.0
+    channel_pos_y[27] =  0.0  
+    channel_pos_y[28] =  0.0
+    channel_pos_y[29] =  0.0  
+    channel_pos_y[30] =  0.0
+    channel_pos_y[31] =  0.0
+    
+    channel_pos_x[0]  =  0.0 #Y12
+    channel_pos_x[1]  =  0.0 #Y13
+    channel_pos_x[2]  =  0.0  #Y14
+    channel_pos_x[3]  =  0.0 #Y15
+    channel_pos_x[4]  =  0.0  #Y16
+    channel_pos_x[5]  =  0.0  #Y17
+    channel_pos_x[6]  =  0.0  #Y18
+    channel_pos_x[7]  =  0.0 #Y19
+    channel_pos_x[8]  =  0.0 #Y20
+    channel_pos_x[9]  =  0.0 
+    channel_pos_x[10] =  0.0 
+    channel_pos_x[11] =  0.0 
+    channel_pos_x[12] =  0.0 
+    channel_pos_x[13] =  0.0  
+    channel_pos_x[14] =  0.0  #Dead
+    channel_pos_x[15] =  0.0  #Dead
+    channel_pos_x[16] =  -7.5 #X13
+    channel_pos_x[17] =  -4.5 #X14
+    channel_pos_x[18] =  -1.5 #X15
+    channel_pos_x[19] =  1.5 #X16
+    channel_pos_x[20] =  4.5 #X17
+    channel_pos_x[21] =  7.5 #X18
+    channel_pos_x[22] =  10.5 #X19
+    channel_pos_x[23] =  13.5 #X20
+    channel_pos_x[24] =  16.5 #X21
+    channel_pos_x[25] =  0.0  
+    channel_pos_x[26] =  0.0
+    channel_pos_x[27] =  0.0  
+    channel_pos_x[28] =  0.0
+    channel_pos_x[29] =  0.0
+    channel_pos_x[30] =  0.0
+
+
 
 
 
@@ -1385,6 +1454,7 @@ if is_8th_LXe or is_9th_LXe:
     tileCh_to_PreCh[57] = 14
     tileCh_to_PreCh[58] = 15
     tileCh_to_PreCh[59] = 15
+
 
 
 

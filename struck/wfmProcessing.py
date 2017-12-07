@@ -10,6 +10,7 @@ import sys
 import math
 import numpy as np
 from array import array
+import matplotlib.pyplot as plt
 
 # somehow these 2 are important?!
 from ROOT import TH1D
@@ -574,13 +575,57 @@ def get_wfmparams(
         for i,wfmx in enumerate(exo_wfm_np_filter):
             exo_wfm_filter_array[i] = wfmx
         exo_filter = EXODoubleWaveform(array('d',exo_wfm_filter_array), len(exo_wfm_np_filter))
- 
+    
         #gROOT.SetBatch(False)
         #print "Max is ", np.max(exo_wfm_np_filter[1000:1600])
         #print "Min is ", np.min(exo_wfm_np_filter[1000:1600])
-        #do_draw(exo_filter, "channel %i SiPM channel FFT Spectrum %.2f MHz" % (channel, sampling_freq_Hz/(second*1e-3)))          
-        #gROOT.SetBatch(True)
+        #gROOT.SetBatch(False)
+        #do_draw(exo_filter, "channel", vlines=[11.0])          
         
+        if False:
+            plt.ion()
+            time = np.arange(len(exo_wfm_np))*8.0*1e-3
+            offset = 1000
+            if channel < 16:
+                plt.plot(time,exo_wfm_np_filter+channel*offset, linewidth=3.0,label='ch=%i' % channel)
+            else:
+                plt.plot(time,exo_wfm_np_filter+(channel-11)*offset, linewidth=3.0,label='ch=%i' % channel)
+            plt.xlim(10, 12)
+            plt.title("Example SiPM Signals")
+            plt.xlabel("WF Sample",fontsize=18)
+            plt.ylabel("Amplitude [ADC]",fontsize=18)
+            #plt.legend()
+            plt.savefig("sipm_stack.pdf")
+            raw_input()
+
+        if False:
+            plt.ion()
+            plt.clf()
+            plt.plot(exo_wfm_np, c='r', linewidth=1.0, label='Raw Sipm WF')
+            plt.plot(exo_wfm_np_filter,c='b', linewidth=3.0, label='Filtered WF')
+            plt.xlim(1000, 2000)
+            plt.xlabel("WF Sample")
+            plt.ylabel("Amplitude [ADC]")
+            #plt.yscale("linear")
+            plt.legend()
+            plt.savefig("sipm_example_wfm_filter.pdf")
+            raw_input()
+
+            plt.clf()
+            freq = np.fft.rfftfreq(exo_wfm.GetLength(), d=8e-9)
+            freq *= 1e-6
+            print len(freq), len(exo_fft_array)
+            plt.plot(freq, exo_fft_array*np.conj(exo_fft_array), c='b', linewidth=3.0)
+            plt.axvline(freq[600], linewidth=4.0, linestyle='--', c='r')
+            print freq[600]
+            #plt.xlim(1000, 2000)
+            plt.xlabel("FFT Frequency [MHz]")
+            plt.ylabel("Power Spectrum")
+            plt.yscale("log")
+            #plt.legend()
+            plt.savefig("sipm_example_fft_filter.pdf")
+            raw_input()
+
         #We know roughly were the trigger is so limit the max here
         #mostly worried about FFT cut windowing on edges
         sipm_min = np.min(exo_wfm_np_filter[1000:1600]) 
@@ -847,7 +892,26 @@ def get_risetimes(
         rise_time_stop95,
         #rise_time_stop99,
     ])
-    
+
+    #print max_val, 
+    if False and max_val > 400 and (not "PMT" in label) and ("Sum" in label):
+        #Add python plotter
+        exo_wfm_np = np.array([exo_wfm.At(i) for i in xrange(exo_wfm.GetLength())])
+        exo_wfm_np_smooth = np.array([new_wfm.At(i) for i in xrange(new_wfm.GetLength())])        
+
+        plt.ion()
+        plt.clf()
+        time = np.arange(len(exo_wfm_np))*8.0*1e-3
+        plt.plot(time, exo_wfm_np, c='r', linewidth=1.0, label='Raw WF')
+        plt.plot(time,exo_wfm_np_smooth, c='b', linewidth=3.0, label='Smooth WF')
+        #plt.xlim(1000, 2000)
+        plt.xlabel(r"Sample Time [$\mu$s]", fontsize=18)
+        plt.ylabel("Amplitude [ADC]", fontsize=18)
+        plt.legend()
+        plt.savefig("risetime_example_wfm.pdf")
+        raw_input()
+
+
     maw_wfm.IsA().Destructor(maw_wfm)
     new_wfm.IsA().Destructor(new_wfm)
 
