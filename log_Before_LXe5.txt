@@ -2,7 +2,7 @@ XP4 (cold cathode gauge) pressure [Torr]: 2.26e-06
 LN time remaining [hours]: -17.12 
 LN consumption rate [lb/hour]: 0.51 
 LN consumption rate [L/hour]: 0.29 
-LN total mass [lb]: 7.202 
+LN total mass [lb]: 7.202
 LN tare mass [lb]: 16.000 
 LN mass [lb]: -8.798 
 Xenon bottle mass [kg]: 94.933 
