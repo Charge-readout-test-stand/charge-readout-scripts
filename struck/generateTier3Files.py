@@ -84,6 +84,7 @@ if os.getenv("EXOLIB") is not None and not isROOT6:
 microsecond = 1.0e3
 second = 1.0e9
 
+#The order of these imports matters...??
 from ROOT import EXOTrapezoidalFilter
 from ROOT import EXOBaselineRemover
 from ROOT import EXODoubleWaveform
@@ -585,6 +586,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     signal_map = array('I', [0]*n_channels) 
     out_tree.Branch('signal_map', signal_map, 'signal_map[%i]/i' % n_channels_in_event) 
     
+    induct_map = array('I', [0]*n_channels)
+    out_tree.Branch('induct_map', induct_map, 'induct_map[%i]/i' % n_channels_in_event)
+
     nsignals = array('I', [0])
     out_tree.Branch('nsignals', nsignals, 'nsignals/i') #Total Signals above threshold
 
@@ -609,6 +613,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     SignalEnergyY = array('d', [0])
     out_tree.Branch('SignalEnergyY', SignalEnergyY, 'SignalEnergyY/D') #Sum Energy of YSignals
     
+    InductionEnergy  = array('d', [0])
+    out_tree.Branch('InductionEnergy', InductionEnergy, 'InductionEnergy/D') #Sum Induction Energy
+
     #Store the assosiated bundle of adjacent wires 
     #Map each bundle to set of channels
     signal_bundle_map = array('I', [0]*n_channels)
@@ -983,6 +990,13 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     baseline_slope = array('d', [0]*n_channels_in_event) # double, uncalibrated
     out_tree.Branch('baseline_slope', baseline_slope, 'baseline_slope[%i]/D' % n_channels_in_event)
     
+    # induct amp
+    induct_amp = array('d', [0]*n_channels_in_event) # double
+    out_tree.Branch('induct_amp', induct_amp, 'induct_amp[%i]/D' % n_channels_in_event)
+    
+    induct_time = array('d', [0]*n_channels_in_event) # double
+    out_tree.Branch('induct_time', induct_time, 'induct_time[%i]/D' % n_channels_in_event)
+
     #matched filter and derivitive filter
     dfilter_max = array('d', [0]*n_channels_in_event)
     out_tree.Branch('dfilter_max', dfilter_max, 'dfilter_max[%i]/D' % n_channels_in_event)
@@ -1097,6 +1111,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         nXsignals[0] = 0
         nYsignals[0] = 0
         SignalEnergy[0] = 0.0
+        InductionEnergy[0] = 0.0
         pos_x[0] = -999.0
         pos_y[0] = -999.0
         SignalEnergyLight[0] = 0.0
@@ -1344,7 +1359,10 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 sipm_max[i],
                 sipm_min[i],
                 sipm_max_time[i],
-                sipm_min_time[i]
+                sipm_min_time[i],
+                induct_map[i],
+                induct_amp[i],
+                induct_time[i]
             ) = wfmProcessing.get_wfmparams(
                 exo_wfm=exo_wfm, 
                 wfm_length=wfm_length[i], 
@@ -1362,6 +1380,15 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
             #print "Using Decay Time %f for chan %i" % (decay_time[i], i)
             
+            if induct_map[i] > 0.5:
+                #print "Induction Energy", induct_amp[i]
+                #raw_input()
+                #Pure induction signal no collection
+                if signal_map[i] > 0.5: 
+                    print "Both Types"
+                    raw_input()
+                InductionEnergy[0] += induct_amp[i]
+
             if charge_channels_to_use[channel[i]] and signal_map[i] > 0.5:
                 #This is a signal so add to total and figure out the type
                 #Record Energy in  new variable which tracks total energy from 

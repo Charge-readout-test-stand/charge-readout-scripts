@@ -303,7 +303,10 @@ def get_wfmparams(
         gROOT.SetBatch(True)
 
     #Intitially not a signal
-    isSignal = 0
+    isSignal    = 0
+    isInduction = 0 
+    induct_amp  = 0
+    induct_time = 0
 
     #Setup WF and copy into energy_wfm for Transformations
     exo_wfm.SetSamplingFreq(sampling_freq_Hz/second)
@@ -564,16 +567,18 @@ def get_wfmparams(
 
         exo_wfm_np = np.array([smooth_wfm.At(i) for i in xrange(smooth_wfm.GetLength())])
         if np.max(exo_wfm_np) > 100*baseline_rms*math.sqrt(1.0/n_baseline_samples):
-            
+            isInduction = 1 
+            induct_amp  = np.max(exo_wfm_np)*calibration
             if False:
                 plt.ion()
                 plt.clf()
                 time = np.arange(len(exo_wfm_np))*8.0*1e-3
                 plt.plot(time, exo_wfm_np, c='r', linewidth=1.0, label='Raw WF')
-                ind_time = time[np.argmax(exo_wfm_np)]
-                plt.axvline(ind_time, linewidth=2.0,c='b', linestyle='--')
+                induct_time = time[np.argmax(exo_wfm_np)]
+                plt.axvline(induct_time, linewidth=2.0,c='b', linestyle='--')
                 #plt.plot(time,exo_wfm_np_smooth, c='b', linewidth=3.0, label='Smooth WF')
                 #plt.xlim(1000, 2000)
+                plt.title("My max %.2f vs other %.2f" % (np.max(exo_wfm_np), wfm_max))
                 plt.xlabel(r"Sample Time [$\mu$s]", fontsize=18)
                 plt.ylabel("Amplitude [ADC]", fontsize=18)
                 plt.legend()
@@ -778,7 +783,10 @@ def get_wfmparams(
         sipm_max,
         sipm_min,
         sipm_max_time,
-        sipm_min_time
+        sipm_min_time,
+        isInduction,
+        induct_amp,
+        induct_time
     )
 
 def do_risetime_calc(rise_time_calculator, threshold_percent, wfm, max_val, period):
