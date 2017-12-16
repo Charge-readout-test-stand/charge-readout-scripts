@@ -569,12 +569,13 @@ def get_wfmparams(
         if np.max(exo_wfm_np) > 100*baseline_rms*math.sqrt(1.0/n_baseline_samples):
             isInduction = 1 
             induct_amp  = np.max(exo_wfm_np)*calibration
+            time = np.arange(len(exo_wfm_np))*8.0*1e-3
+            induct_time = time[np.argmax(exo_wfm_np)]
             if False:
                 plt.ion()
                 plt.clf()
                 time = np.arange(len(exo_wfm_np))*8.0*1e-3
                 plt.plot(time, exo_wfm_np, c='r', linewidth=1.0, label='Raw WF')
-                induct_time = time[np.argmax(exo_wfm_np)]
                 plt.axvline(induct_time, linewidth=2.0,c='b', linestyle='--')
                 #plt.plot(time,exo_wfm_np_smooth, c='b', linewidth=3.0, label='Smooth WF')
                 #plt.xlim(1000, 2000)
