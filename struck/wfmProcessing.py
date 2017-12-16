@@ -549,7 +549,44 @@ def get_wfmparams(
         if not is_pmtchannel and not is_sipmchannel:
             #PMT can't be a signal because by default it has to have triggered
             isSignal = 1
-    
+#------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+    #Test induction finder
+
+    if energy1_pz < struck_analysis_parameters.rms_threshold*energy_rms1_pz*math.sqrt(1.0/n_baseline_samples) and not is_sipmchannel:
+        #Smooth first??
+        smooth_wfm = EXODoubleWaveform(exo_wfm)
+        smoother = EXOSmoother()
+        smoother.SetSmoothSize(10)
+        smoother.Transform(exo_wfm, smooth_wfm)
+
+        exo_wfm_np = np.array([smooth_wfm.At(i) for i in xrange(smooth_wfm.GetLength())])
+        if np.max(exo_wfm_np) > 100*baseline_rms*math.sqrt(1.0/n_baseline_samples):
+            
+            if False:
+                plt.ion()
+                plt.clf()
+                time = np.arange(len(exo_wfm_np))*8.0*1e-3
+                plt.plot(time, exo_wfm_np, c='r', linewidth=1.0, label='Raw WF')
+                ind_time = time[np.argmax(exo_wfm_np)]
+                plt.axvline(ind_time, linewidth=2.0,c='b', linestyle='--')
+                #plt.plot(time,exo_wfm_np_smooth, c='b', linewidth=3.0, label='Smooth WF')
+                #plt.xlim(1000, 2000)
+                plt.xlabel(r"Sample Time [$\mu$s]", fontsize=18)
+                plt.ylabel("Amplitude [ADC]", fontsize=18)
+                plt.legend()
+                #plt.savefig("risetime_example_wfm.pdf")
+                raw_input()
+        smooth_wfm.IsA().Destructor(smooth_wfm)
+
+
+#------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
     #Apply Matched Filter currently in testing
     #if not is_pmtchannel:
     if False:
