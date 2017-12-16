@@ -16,6 +16,27 @@ from scipy.fftpack import fft
 import ROOT
 ROOT.gROOT.SetBatch(True) # uncomment to draw multi-page PDF
 
+import subprocess
+root_version = subprocess.check_output(['root-config --version'], shell=True)
+isROOT6 = False
+if '6.1.0' in root_version or '6.04/06' in root_version:
+    print "Found ROOT 6"
+    isROOT6 = True
+
+if os.getenv("EXOLIB") is not None and not isROOT6:
+    try:
+        print "loading libEXOROOT"
+        ROOT.gSystem.Load("$EXOLIB/lib/libEXOROOT")
+    except:
+        print "Skip it"
+        pass
+
+from ROOT import EXOTrapezoidalFilter
+from ROOT import EXOBaselineRemover
+from ROOT import EXODoubleWaveform
+from ROOT import TObjString
+from ROOT import EXOSmoother
+
 from struck import struck_analysis_parameters
 
 # set the ROOT style
@@ -59,7 +80,7 @@ def process_file(filename=None, n_plots_total=0):
     #threshold = 570 # keV, for generating multi-page PDF
     #threshold = 50 # ok for unshaped, unamplified data
     #energy_offset = 100*700 # keV, space between traces
-    energy_offset = 40000.0/nchannels
+    energy_offset = 33000.0/nchannels
     
     units_to_use = 0 # 0=keV, 1=ADC units, 2=mV
 
@@ -443,6 +464,22 @@ def process_file(filename=None, n_plots_total=0):
             if sipm_channels_to_use[channel] > 0:
                 sum_energy_light += energy
 
+            #Smooth the WF
+            if charge_channels_to_use[channel]>0:
+                np_wfm  = np.array([graph.GetY()[isamp] for isamp in xrange(graph.GetN())])
+                exo_wfm = EXODoubleWaveform(np_wfm, len(np_wfm))    
+                new_wfm = EXODoubleWaveform(exo_wfm)
+                smoother = EXOSmoother()
+                smoother.SetSmoothSize(10)
+                smoother.Transform(exo_wfm,new_wfm)
+                new_wfm_np = np.array([new_wfm.At(i) for i in xrange(new_wfm.GetLength())])
+                for i_point in xrange(graph.GetN()):
+                    x = graph.GetX()[i_point]
+                    y = new_wfm_np[i_point]
+                    graph.SetPoint(i_point, x, y)
+
+            #End smooth
+
             graph.Draw("l")
             #print "\t entry %i, ch %i, slot %i" % ( i_entry-1, channel, slot,)
             # construct sum wfm
@@ -732,7 +769,7 @@ def process_file(filename=None, n_plots_total=0):
 
 if __name__ == "__main__":
 
-    n_plots_total = 100
+    n_plots_total = 2
     #n_plots_total = 3
     n_plots_so_far = 0
     if len(sys.argv) > 1:
