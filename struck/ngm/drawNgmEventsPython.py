@@ -14,6 +14,7 @@ import numpy as np
 from scipy.fftpack import fft
 import matplotlib.pyplot as plt
 import matplotlib.backends.backend_pdf as PdfPages
+import matplotlib.gridspec as gridspec
 plt.ion()
 
 import ROOT
@@ -147,6 +148,15 @@ def process_file(filename=None, n_plots_total=0):
     trigger_time = card0.pretriggerdelay_block[0]/sampling_freq_Hz*1e6
     print "trigger time: [microseconds]", trigger_time
     
+    fig1 = plt.figure(1, figsize=(10,8))
+    gs1 = gridspec.GridSpec(1,1)
+    gs1.update(left=0.1, right=0.6)
+    ax0 = plt.subplot(gs1[0])
+
+    gs2 = gridspec.GridSpec(1,1)
+    gs2.update(left=0.61, right=0.91)
+    ax1 = plt.subplot(gs2[0])
+
     #Now loop over the entries in the tree were each entry is a WF
     i_entry = 0
     n_plots = 0
@@ -173,7 +183,8 @@ def process_file(filename=None, n_plots_total=0):
         sum_wfm       = np.zeros(wfm_length)
         sum_wfm0      = np.zeros(wfm_length)
         sum_wfm1      = np.zeros(wfm_length) 
-        
+        ymax = 0
+        ymin = 0
         #Loop over expected number of channels in a real event
         for i_channel in xrange(nchannels):
             #Already have the first entry so only get new ones
@@ -285,11 +296,21 @@ def process_file(filename=None, n_plots_total=0):
             i_legend_entry = channel
             #legend_entries[i_legend_entry] = leg_entry
             
-            plt.figure(1)
+            #plt.figure(1)
             # add an offset so the channels are drawn at different levels
             offset = channel*energy_offset
             time_sample = np.arange(len(wfm))*(1./(sampling_freq_Hz))*1.e6
-            plt.plot(time_sample, (wfm)+offset, linewidth=2.0, label=leg_entry)
+            wfm = (wfm)+offset
+            if np.max(wfm) > ymax: ymax=np.max(wfm)+energy_offset
+            if np.min(wfm) < ymin: ymin=np.min(wfm)-energy_offset
+            
+            print "Here",channel, charge_channels_to_use[channel], sipm_channels_to_use[channel]
+            if charge_channels_to_use[channel] > 0:
+                print "Plot Charge"
+                ax0.plot(time_sample, wfm, linewidth=2.0, label=leg_entry)
+            elif sipm_channels_to_use[channel] > 0:
+                print "Plot SiPM"
+                ax1.plot(time_sample, wfm, linewidth=2.0, label=leg_entry)
 
         #Check if the channel is a dead channel
         if isdead_event:
@@ -313,30 +334,46 @@ def process_file(filename=None, n_plots_total=0):
         
         if sum_energy < threshold: continue
         
-        fig1 = plt.figure(1)
-        plt.axvline(trigger_time, linewidth=3.0, linestyle='--', c='k')
-        plt.axvline(trigger_time+max_drift_time, linewidth=3.0, linestyle='--', c='k')
-        plt.xlabel(r"Time [$\mu$s]",fontsize=16)
-        plt.ylabel("Energy [arb]"  ,fontsize=16)
-        plt.legend()
-        plt.show()
+        #fig1 = plt.figure(1,figsize=(10,7))
+        #ax = fig1.add_subplot(111)
+        ax0.axvline(trigger_time, linewidth=3.0, linestyle='--', c='k')
+        ax0.axvline(trigger_time+max_drift_time, linewidth=3.0, linestyle='--', c='k')
+        ax0.set_xlabel(r"Time [$\mu$s]",fontsize=16)
+        ax0.set_ylabel("Energy [arb]"  ,fontsize=16)
+        
+        tick_name=[]
+        tick_pos =[]
+        for i_channel in xrange(nchannels):
+            tick_name.append(channel_map[i_channel])
+            tick_pos.append(i_channel*energy_offset)
+            print i_channel*energy_offset, channel_map[i_channel]
+        ax0.set_yticks(tick_pos)
+        ax0.set_yticklabels(tick_name,rotation='horizontal', fontsize=12)
+        ax0.set_xlim(min(time_sample),max(time_sample))
+        print ymin, ymax
+        plt.ylim(ymin,ymax)
+        #plt.legend()
+        #plt.show()
         pdf.savefig(fig1)
         n_plots += 1
         #raw_input()
-        plt.clf()
+        ax0.cla()
+        ax1.cla()
 
-        plt.figure(2)
+        fig2=plt.figure(2)
         plt.plot(time_sample, sum_wfm,  label='sum charge'  , linewidth=2)
         plt.plot(time_sample, sum_wfm0, label='sum charge-1', linewidth=2)
         plt.plot(time_sample, sum_wfm1, label='sum charge-2', linewidth=2)
         plt.legend()
-        plt.show()
+        #plt.show()
+        pdf.savefig(fig2)
         #raw_input()
         plt.clf()
 
-        plt.figure(3)
+        fig3=plt.figure(3)
         plt.plot(time_sample, sum_sipm_wfm, linewidth=2)
-        plt.show()
+        #plt.show()
+        pdf.savefig(fig3)
         #raw_input()
         plt.clf()
         
