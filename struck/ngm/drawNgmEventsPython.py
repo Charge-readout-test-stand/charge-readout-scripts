@@ -183,8 +183,10 @@ def process_file(filename=None, n_plots_total=0):
         sum_wfm       = np.zeros(wfm_length)
         sum_wfm0      = np.zeros(wfm_length)
         sum_wfm1      = np.zeros(wfm_length) 
-        ymax = 0
-        ymin = 0
+        cmax = 0
+        cmin = 0
+        smax = 0
+        smin = 0
         #Loop over expected number of channels in a real event
         for i_channel in xrange(nchannels):
             #Already have the first entry so only get new ones
@@ -254,9 +256,9 @@ def process_file(filename=None, n_plots_total=0):
 
             if channel == pmt_channel:
                 i_sample = int(struck_analysis_parameters.n_baseline_samples + 27)
-                energy   = (wfm[i_sample]  - baseline)*multiplier          
+                energy   = (wfm[i_sample])*multiplier          
             if sipm_channels_to_use[channel] > 0:
-                energy = (np.max(wfm) - baseline)*multiplier
+                energy = (np.max(wfm))*multiplier
             
             #Quick signal Finding on Charge Channels            
             signal_threshold = 5.0*baseline_rms/10.0
@@ -300,16 +302,21 @@ def process_file(filename=None, n_plots_total=0):
             # add an offset so the channels are drawn at different levels
             offset = channel*energy_offset
             time_sample = np.arange(len(wfm))*(1./(sampling_freq_Hz))*1.e6
-            wfm = (wfm)+offset
-            if np.max(wfm) > ymax: ymax=np.max(wfm)+energy_offset
-            if np.min(wfm) < ymin: ymin=np.min(wfm)-energy_offset
             
             print "Here",channel, charge_channels_to_use[channel], sipm_channels_to_use[channel]
             if charge_channels_to_use[channel] > 0:
                 print "Plot Charge"
+                offset = energy_offset*np.sum(charge_channels_to_use[0:channel])
+                wfm += offset
+                if np.max(wfm) > cmax: cmax=np.max(wfm)
+                if np.min(wfm) < cmin: cmin=np.min(wfm)
                 ax0.plot(time_sample, wfm, linewidth=2.0, label=leg_entry)
             elif sipm_channels_to_use[channel] > 0:
                 print "Plot SiPM"
+                offset = energy_offset*np.sum(sipm_channels_to_use[0:channel])
+                wfm += offset
+                if np.max(wfm) > smax: smax=np.max(wfm)
+                if np.min(wfm) < smin: smin=np.min(wfm)
                 ax1.plot(time_sample, wfm, linewidth=2.0, label=leg_entry)
 
         #Check if the channel is a dead channel
@@ -334,24 +341,42 @@ def process_file(filename=None, n_plots_total=0):
         
         if sum_energy < threshold: continue
         
-        #fig1 = plt.figure(1,figsize=(10,7))
+        plt.figure(1)
         #ax = fig1.add_subplot(111)
+        ax0.set_title("Charge Energy=%.2f keV" % sum_energy)
         ax0.axvline(trigger_time, linewidth=3.0, linestyle='--', c='k')
         ax0.axvline(trigger_time+max_drift_time, linewidth=3.0, linestyle='--', c='k')
         ax0.set_xlabel(r"Time [$\mu$s]",fontsize=16)
-        ax0.set_ylabel("Energy [arb]"  ,fontsize=16)
+        #ax0.set_ylabel("Energy [arb]"  ,fontsize=16)
         
         tick_name=[]
         tick_pos =[]
         for i_channel in xrange(nchannels):
+            if charge_channels_to_use[i_channel] < 0.5: continue
             tick_name.append(channel_map[i_channel])
-            tick_pos.append(i_channel*energy_offset)
+            offset = energy_offset*np.sum(charge_channels_to_use[:i_channel])
+            tick_pos.append(offset)
             print i_channel*energy_offset, channel_map[i_channel]
         ax0.set_yticks(tick_pos)
         ax0.set_yticklabels(tick_name,rotation='horizontal', fontsize=12)
         ax0.set_xlim(min(time_sample),max(time_sample))
-        print ymin, ymax
-        plt.ylim(ymin,ymax)
+        ax0.set_ylim(cmin-energy_offset,cmax+energy_offset)
+
+        tick_name=[]
+        tick_pos =[]
+        for i_channel in xrange(nchannels):
+            if sipm_channels_to_use[i_channel] < 0.5: continue
+            tick_name.append(channel_map[i_channel])
+            offset = energy_offset*np.sum(sipm_channels_to_use[:i_channel])
+            tick_pos.append(offset)
+
+        ax1.set_title("Light Energy=%.2f keV" % sum_energy_light)
+        ax1.yaxis.tick_right()
+        ax1.set_yticks(tick_pos)
+        ax1.set_yticklabels(tick_name,rotation='horizontal', fontsize=12)
+        ax1.set_ylim(smin-energy_offset,smax+energy_offset)
+        ax1.set_xlabel(r"Time [$\mu$s]",fontsize=16)
+        ax1.set_xlim(min(time_sample),max(time_sample))
         #plt.legend()
         #plt.show()
         pdf.savefig(fig1)
@@ -366,14 +391,14 @@ def process_file(filename=None, n_plots_total=0):
         plt.plot(time_sample, sum_wfm1, label='sum charge-2', linewidth=2)
         plt.legend()
         #plt.show()
-        pdf.savefig(fig2)
+        #pdf.savefig(fig2)
         #raw_input()
         plt.clf()
 
         fig3=plt.figure(3)
         plt.plot(time_sample, sum_sipm_wfm, linewidth=2)
         #plt.show()
-        pdf.savefig(fig3)
+        #pdf.savefig(fig3)
         #raw_input()
         plt.clf()
         
