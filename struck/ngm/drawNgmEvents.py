@@ -74,7 +74,7 @@ def process_file(filename=None, n_plots_total=0):
 
     # options ------------------------------------------
     is_for_paper = False # change some formatting
-    threshold = 500 # keV
+    threshold = 0 # keV
     #threshold = 0
     #threshold = 1250 # keV
     #threshold = 570 # keV, for generating multi-page PDF
@@ -296,6 +296,9 @@ def process_file(filename=None, n_plots_total=0):
             timestamp_diff = timestamp - timestamp_first
             channel = card_channel + 16*slot # 0 to 31
 
+            if True:
+                print i_entry, channel, timestamp
+
             if timestamp_diff > 0.5: 
                 print "Moving on to next event after finding next time stamp", i_entry, timestamp_diff, channel
                 break
@@ -307,6 +310,7 @@ def process_file(filename=None, n_plots_total=0):
                 isdead_event = True
                 print "Break after finding dead channel", i_entry, channel
                 break
+                #continue
 
             if channel in found_channels:
                 print "Entry %i Channel %i" % (i_entry, channel)
@@ -769,7 +773,7 @@ def process_file(filename=None, n_plots_total=0):
 
 if __name__ == "__main__":
 
-    n_plots_total = 2
+    n_plots_total = 3
     #n_plots_total = 3
     n_plots_so_far = 0
     if len(sys.argv) > 1:
