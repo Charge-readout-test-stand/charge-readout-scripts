@@ -267,6 +267,7 @@ def get_wfmparams(
 
     #if is_sipmchannel:
     if False:
+        #Testing for the filter
         gROOT.SetBatch(False)
         label = "SiPM"
         exo_wfm_np = np.array([exo_wfm.At(i) for i in xrange(exo_wfm.GetLength())])
@@ -277,7 +278,6 @@ def get_wfmparams(
         exo_wfm_np_filter = np.fft.irfft(exo_fft_filter_array)
         exo_fft_array = exo_fft_array*np.conj(exo_fft_array)
 
-        
         exo_wfm_array = array('d', [0]*len(exo_fft_array))
         for i,wfmx in enumerate(exo_fft_array):
             exo_wfm_array[i] = np.log(wfmx.real)
@@ -291,15 +291,9 @@ def get_wfmparams(
         #print np.fft.fftfreq(exo_wfm.GetLength(), d=8e-9)
         print len(exo_fft_array)
         print (125.0/2.0)/len(exo_fft_array)
-
         print "%.4f MHz" % ((np.fft.rfftfreq(len(exo_wfm_np), d=(1/125.0e6))[1])*1e-6)
 
         do_draw(exo_filter, "channel %i SiPM channel FFT Spectrum %.2f MHz" % (channel, sampling_freq_Hz/(second*1e-3)))
-        #do_draw(exo_wfm, "channel %i SiPM channel FFT Spectrum %.2f MHz" % (channel, sampling_freq_Hz/(second*1e-3)))
-        #do_draw(exo_fft, "channel %i SiPM channel FFT Spectrum %.2f MHz" % (channel, sampling_freq_Hz/(second*1e-3)))
-        
-        #test = np.array([ for x in ])
-        #raw_input("PAUSE")
         gROOT.SetBatch(True)
 
     #Intitially not a signal
@@ -545,7 +539,6 @@ def get_wfmparams(
 #------------------------------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------------------------------
-    
     #Apply threshold -- we really use 2*n_baseline_samples, so 2.0/2.0 cancels
     if energy1_pz > struck_analysis_parameters.rms_threshold*energy_rms1_pz*math.sqrt(1.0/n_baseline_samples):
         #SiPM check too
@@ -586,8 +579,6 @@ def get_wfmparams(
                 #plt.savefig("risetime_example_wfm.pdf")
                 raw_input()
         smooth_wfm.IsA().Destructor(smooth_wfm)
-
-
 #------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -605,6 +596,8 @@ def get_wfmparams(
         mfilter_time = 0.0
 
     if is_sipmchannel:
+        #Apply the filtering to the fft of the SiPM
+
         exo_wfm_np = np.array([exo_wfm.At(i) for i in xrange(exo_wfm.GetLength())])
         exo_fft_array = np.fft.rfft(exo_wfm_np)
 
@@ -619,56 +612,9 @@ def get_wfmparams(
             exo_wfm_filter_array[i] = wfmx
         exo_filter = EXODoubleWaveform(array('d',exo_wfm_filter_array), len(exo_wfm_np_filter))
     
-        #gROOT.SetBatch(False)
-        #print "Max is ", np.max(exo_wfm_np_filter[1000:1600])
-        #print "Min is ", np.min(exo_wfm_np_filter[1000:1600])
-        #gROOT.SetBatch(False)
-        #do_draw(exo_filter, "channel", vlines=[11.0])          
+        freq = np.fft.rfftfreq(exo_wfm.GetLength(), d=8e-9)
+        freq *= 1e-6
         
-        if False:
-            plt.ion()
-            time = np.arange(len(exo_wfm_np))*8.0*1e-3
-            offset = 1000
-            if channel < 16:
-                plt.plot(time,exo_wfm_np_filter+channel*offset, linewidth=3.0,label='ch=%i' % channel)
-            else:
-                plt.plot(time,exo_wfm_np_filter+(channel-11)*offset, linewidth=3.0,label='ch=%i' % channel)
-            plt.xlim(10, 12)
-            plt.title("Example SiPM Signals")
-            plt.xlabel("WF Sample",fontsize=18)
-            plt.ylabel("Amplitude [ADC]",fontsize=18)
-            #plt.legend()
-            plt.savefig("sipm_stack.pdf")
-            raw_input()
-
-        if False:
-            plt.ion()
-            plt.clf()
-            plt.plot(exo_wfm_np, c='r', linewidth=1.0, label='Raw Sipm WF')
-            plt.plot(exo_wfm_np_filter,c='b', linewidth=3.0, label='Filtered WF')
-            plt.xlim(1000, 2000)
-            plt.xlabel("WF Sample")
-            plt.ylabel("Amplitude [ADC]")
-            #plt.yscale("linear")
-            plt.legend()
-            plt.savefig("sipm_example_wfm_filter.pdf")
-            raw_input()
-
-            plt.clf()
-            freq = np.fft.rfftfreq(exo_wfm.GetLength(), d=8e-9)
-            freq *= 1e-6
-            print len(freq), len(exo_fft_array)
-            plt.plot(freq, exo_fft_array*np.conj(exo_fft_array), c='b', linewidth=3.0)
-            plt.axvline(freq[600], linewidth=4.0, linestyle='--', c='r')
-            print freq[600]
-            #plt.xlim(1000, 2000)
-            plt.xlabel("FFT Frequency [MHz]")
-            plt.ylabel("Power Spectrum")
-            plt.yscale("log")
-            #plt.legend()
-            plt.savefig("sipm_example_fft_filter.pdf")
-            raw_input()
-
         #We know roughly were the trigger is so limit the max here
         #mostly worried about FFT cut windowing on edges
         sipm_min = np.min(exo_wfm_np_filter[1000:1600]) 
@@ -680,11 +626,6 @@ def get_wfmparams(
         # Currently there is a windowing issue so can't use the first several samples for the RMS
         baseline_rms_filter = np.std(exo_wfm_np_filter[400:1000])
        
-        #print "Using First 1000", np.std(exo_wfm_np_filter[0:1000])
-        #print "Using 500-1000",   np.std(exo_wfm_np_filter[500:1000])
-        #print "Using 300-1000",   np.std(exo_wfm_np_filter[300:1000])
-        #print "Using 500-800",   np.std(exo_wfm_np_filter[300:800])
-
         energy = sipm_max
 
     elif is_pmtchannel: # for PMT channel, use GetMaxValue()
@@ -893,11 +834,8 @@ def get_risetimes(
     else:##
         rise_time_stop80 = do_risetime_calc(rise_time_calculator, 0.80, exo_wfm, max_val, period)
 
-    #rise_time_stop90 = do_risetime_calc(rise_time_calculator, 0.90, exo_wfm, max_val, period)
     rise_time_stop90 = do_risetime_calc(rise_time_calculator, 0.90, new_wfm, max_val, period)
-    #rise_time_stop95 = do_risetime_calc(rise_time_calculator, 0.95, exo_wfm, max_val, period)
     rise_time_stop95 = do_risetime_calc(rise_time_calculator, 0.95, new_wfm, max_val, period)
-    #rise_time_stop99 = do_risetime_calc(rise_time_calculator, 0.99, exo_wfm, max_val, period)
     rise_time_stop99 = do_risetime_calc(rise_time_calculator, 0.99, new_wfm, max_val, period)
 
     if False and ("Sum" in label):
@@ -929,7 +867,6 @@ def get_risetimes(
         print "\trise_time_stop95:", rise_time_stop95
         print "\trise_time_stop99:", rise_time_stop99
 
-    #if max_val > 200 and not "PMT" in label and ("Sum" in label) and (rise_time_stop95-11.0 > 12.5) and  (rise_time_stop95-11.0) < 13.5 and True: 
     if max_val > 200 and not "PMT" in label and ("Sum" in label) and False:
         gROOT.SetBatch(False)
         #do_draw(exo_wfm, "%s after rise-time calc r95 = %.2f" % (label,rise_time_stop95-11.0), new_wfm, maw_wfm, vlines=[
