@@ -336,7 +336,7 @@ def plot_temperatures(filename, title, time_hours, time_stamps, TC0=None, TC1=No
     subplt.set_position([box.x0, box.y0, box.width, box.height*height])
     
     #if isDB: legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.02), shadow = False, fontsize='small', ncol=ncol)
-    legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.02), shadow = False, ncol=ncol)
+    legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.02), shadow = False, ncol=ncol, prop={'size':9})
     plt.savefig(filename)
     print "printed %s" % filename
     plt.clf()
@@ -531,7 +531,7 @@ def main(
                 mass_flow_rate_offset = 160.0/12.0/60.0 # 160 grams in 12 hours
             
             if time_stamp >= 3594659654: #12th LXe
-                mass_flow_rate_offset = 173.0/(20*60)
+                mass_flow_rate_offset = 173.0/(20*60) #- (55.0/(39*60))
 
             print "mass_flow_rate_offset: [grams/minute]", mass_flow_rate_offset
 
@@ -917,7 +917,10 @@ def main(
 
       mfpath2 = mfpath.replace(".jpeg", "_withCap.jpeg")  
       capoffset = capacitance[first_index]
-      scale = Vol[last_index]/(capacitance[last_index] - capoffset)
+      try:
+        scale = Vol[last_index]/(capacitance[last_index] - capoffset)
+      except ZeroDivisionError:
+        scale = 1.0
       print "SCALING", scale
       culine1 = plt.plot(time_hours[first_index:last_index], scale*(np.array(capacitance[first_index:last_index]) - capoffset))
       print "printed %s " % mfpath2
@@ -951,7 +954,7 @@ def main(
     plt.setp(vline2, color = 'g', linewidth = 2.0, label = 'LN enabled: %i' % SLN[last_index])
     plt.setp(vline3, color = 'r', linewidth = 2.0, label = 'Heaters: %i' % Heat[last_index])
     plt.xlabel('Time [hours] %s' % time_string)
-    plt.legend(loc = 'best', shadow = False, ncol=2)
+    plt.legend(loc = 'best', shadow = False, ncol=2, prop={'size':9})
     plt.ylim(0.0, 1.2)
     plt.savefig(vpath)
     print "printed %s" % vpath
@@ -1022,8 +1025,8 @@ def main(
       # draw recovery box:
       if recovery_start and recovery_stop:
           plt.axvspan(recovery_start, recovery_stop, color='red', alpha=0.3)
-      if isDB: legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, fontsize='medium', ncol=2)
-      else: legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, ncol=2)
+      if isDB: legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, fontsize='medium', ncol=2, prop={'size':9})
+      else: legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, ncol=2, prop={'size':9})
       plt.savefig(ppath3)
       print "printed %s" % ppath3
       plt.clf()
@@ -1228,9 +1231,11 @@ def main(
         box = subplt.get_position()
         subplt.set_position([box.x0, box.y0, box.width, box.height*0.9])
         if isDB: legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, fontsize='medium', ncol=2)
-        else: legend  =  plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False,  ncol=2)
+        else: legend  =  plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False,  ncol=2, prop={'size':9})
         plt.savefig(lnpath)
         print "printed %s" % lnpath
+        plt.ylim(np.min(ln_mass[first_index:last_index]), np.max(ln_mass[first_index:last_index]))
+        plt.savefig(lnpath.replace("Mass_","Mass-zoomed_"))
         plt.clf()
         outfile.write("LN total mass [lb]: %.3f \n" % ln_mass[-1])
         outfile.write("LN tare mass [lb]: %.3f \n" % ln_tare_mass[-1])
