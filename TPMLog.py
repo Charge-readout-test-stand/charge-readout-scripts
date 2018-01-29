@@ -113,7 +113,7 @@ def compare_isochoric(data_path, plot_dir, basename, temp_top, temp_mid,
     box = subplt.get_position()
     subplt.set_position([box.x0, box.y0, box.width, box.height*0.9])
     #if isDB: legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, fontsize='medium', ncol=2)
-    legend  =  plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False,  ncol=2)
+    legend  =  plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False,  ncol=2, prop={'size':9})
     plt.savefig(plot_dir+"10-Temp-Isochoric_" + basename + ".jpeg")
     print "printed", plot_dir+"10-Temp-Isochoric_" + basename +".jpeg"
     plt.clf()
@@ -164,7 +164,7 @@ def compare_isochoric(data_path, plot_dir, basename, temp_top, temp_mid,
     box = subplt.get_position()
     subplt.set_position([box.x0, box.y0, box.width, box.height*0.9])
     #if isDB: legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, fontsize='medium', ncol=3)
-    legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False,  ncol=3)
+    legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False,  ncol=3, prop={'size':9})
     plt.savefig(plot_dir+"10-Press-Isochoric_" + basename + ".jpeg")
     print "printed", plot_dir+"10-Press-Isochoric_" + basename +".jpeg"
     plt.clf()
@@ -194,7 +194,7 @@ def plot_temp_vs_lmass(filename, title, time_hours, time_stamps, T_ambient, mass
     
     plt.xlabel('Time [hours]  ' + str(start_time) + "  -  " + str(end_time))
     plt.ylabel('Temperature [K]')
-    legend = plt.legend(loc='best', shadow = False, fontsize='medium', ncol=2)
+    legend = plt.legend(loc='best', shadow = False, fontsize='medium', ncol=2, prop={'size':9})
     plt.savefig(filename)
     print "printed %s" % filename
     plt.clf()
