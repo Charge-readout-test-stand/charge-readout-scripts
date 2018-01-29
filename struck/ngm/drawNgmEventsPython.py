@@ -15,7 +15,10 @@ from scipy.fftpack import fft
 import matplotlib.pyplot as plt
 import matplotlib.backends.backend_pdf as PdfPages
 import matplotlib.gridspec as gridspec
-plt.ion()
+
+
+#plt.ion()
+plt.ioff()
 
 import ROOT
 ROOT.gROOT.SetBatch(True) # uncomment to draw multi-page PDF
@@ -77,7 +80,8 @@ nchannels_good         = nchannels - sum(dead_channels)
 energy_start_time_microseconds = struck_analysis_parameters.energy_start_time_microseconds
 max_drift_time = struck_analysis_parameters.max_drift_time
 
-do_sipm_filter = True
+do_sipm_filter = struck_analysis_parameters.do_sipm_filter
+sipm_low_pass  = struck_analysis_parameters.sipm_low_pass
 
 channels = []    
 for (channel, value) in enumerate(charge_channels_to_use):        
@@ -204,7 +208,7 @@ def process_file(filename=None, n_plots_total=0):
                 print "Moving on to next event after finding next time stamp", i_entry, timestamp_diff, channel
                 break
             
-            if True: print i_entry, channel, timestamp #Debug 
+            if False: print i_entry, channel, timestamp #Debug 
 
             #Don't increment until after we confirm this entry is part of current event
             i_entry +=1
@@ -239,9 +243,12 @@ def process_file(filename=None, n_plots_total=0):
             #Filter the SiPM WF if necceasry
             if sipm_channels_to_use[channel] > 0 and do_sipm_filter: 
                 sipm_fft = np.fft.rfft(wfm)
-                sipm_fft[600:] = 0
-                #sipm_wfm_filter = np.fft.irfft(sipm_fft)
-                wfm   =  np.fft.irfft(sipm_fft)
+                fft_freq = np.fft.rfftfreq(len(wfm), d=1./sampling_freq_Hz)
+                fft_freq *= 1e-6
+                fft_freq_pass = np.logical_and(fft_freq > -1, fft_freq < sipm_low_pass)
+                sipm_fft_filter = np.zeros_like(sipm_fft)
+                sipm_fft_filter = sipm_fft[fft_freq_pass]
+                wfm   =  np.fft.irfft(sipm_fft_filter)
             if sipm_channels_to_use[channel] > 0:
                 sum_sipm_wfm += wfm
             
@@ -303,16 +310,18 @@ def process_file(filename=None, n_plots_total=0):
             offset = channel*energy_offset
             time_sample = np.arange(len(wfm))*(1./(sampling_freq_Hz))*1.e6
             
-            print "Here",channel, charge_channels_to_use[channel], sipm_channels_to_use[channel]
             if charge_channels_to_use[channel] > 0:
-                print "Plot Charge"
                 offset = energy_offset*np.sum(charge_channels_to_use[0:channel])
                 wfm += offset
                 if np.max(wfm) > cmax: cmax=np.max(wfm)
                 if np.min(wfm) < cmin: cmin=np.min(wfm)
                 ax0.plot(time_sample, wfm, linewidth=2.0, label=leg_entry)
+                #if energy > signal_threshold:
+                if True:
+                    ax0.text(trigger_time/2.0, offset+energy_offset/2.0, "%.2f keV" % energy, size=12,
+                                        rotation=0, ha='center', va='center')#, 
+                                        #bbox=dict(boxstyle="square", ec='k', fc='w'))
             elif sipm_channels_to_use[channel] > 0:
-                print "Plot SiPM"
                 offset = energy_offset*np.sum(sipm_channels_to_use[0:channel])
                 wfm += offset
                 if np.max(wfm) > smax: smax=np.max(wfm)
@@ -356,7 +365,6 @@ def process_file(filename=None, n_plots_total=0):
             tick_name.append(channel_map[i_channel])
             offset = energy_offset*np.sum(charge_channels_to_use[:i_channel])
             tick_pos.append(offset)
-            print i_channel*energy_offset, channel_map[i_channel]
         ax0.set_yticks(tick_pos)
         ax0.set_yticklabels(tick_name,rotation='horizontal', fontsize=12)
         ax0.set_xlim(min(time_sample),max(time_sample))
@@ -411,7 +419,7 @@ def process_file(filename=None, n_plots_total=0):
 
 if __name__ == "__main__":
 
-    n_plots_total = 2
+    n_plots_total = 3
     n_plots_so_far = 0
     
     if len(sys.argv) > 1:

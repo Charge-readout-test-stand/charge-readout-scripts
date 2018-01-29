@@ -91,6 +91,12 @@ if is_8th_LXe or is_9th_LXe or is_11th_LXeB or is_12th_LXe or is_13th_LXe:
     sipm_channels_to_use   = [0]*32 
     dead_channels          = [0]*32
 
+do_sipm_filter = False
+sipm_low_pass = None
+if is_12th_LXe:
+    sipm_low_pass = 14.3
+    do_sipm_filter = True
+
 # in software, struck channels start from 0, not 1
 pmt_channel = 8
 pulser_channel = None
@@ -143,7 +149,7 @@ elif is_10th_LXe or is_11th_LXe:
             charge_channels_to_use[i_channel] = 1
     #charge_channels_to_use[8] = 0 # Y14 changed mid-run
 
-elif is_12th_LXe:
+elif is_12th_LXe or is_13th_LXe:
     pmt_channel = None # now using SiPMs
     pulser_channel = None # won't have one probably?
     channels = []
@@ -160,7 +166,7 @@ elif is_12th_LXe:
             sipm_channels_to_use[i_channel]   = 1
         elif i_channel > 13 and i_channel < 16:
             if is_13th_LXe:
-                charge_channels_to_use[i_channel] = 0
+                charge_channels_to_use[i_channel] = 1 #Maybe not dead anymore??
                 sipm_channels_to_use[i_channel]   = 0
                 dead_channels[i_channel] = 0
             else:
@@ -351,8 +357,12 @@ if is_12th_LXe or is_13th_LXe:
     channel_map[11] = "2-4"
     channel_map[12] = "2-5"
     channel_map[13] = "2-6"
-    channel_map[14] = "Dead"
-    channel_map[15] = "Dead"
+    if is_12th_LXe:
+        channel_map[14] = "Dead"
+        channel_map[15] = "Dead"
+    else:
+        channel_map[14] = "Y11"
+        channel_map[15] = "X22"
     #next unit
     channel_map[16] = "X13"
     channel_map[17] = "X14"

@@ -773,7 +773,7 @@ def process_file(filename=None, n_plots_total=0):
 
 if __name__ == "__main__":
 
-    n_plots_total = 3
+    n_plots_total = 20
     #n_plots_total = 3
     n_plots_so_far = 0
     if len(sys.argv) > 1:
