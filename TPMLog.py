@@ -532,6 +532,9 @@ def main(
             
             if time_stamp >= 3594659654: #12th LXe
                 mass_flow_rate_offset = 173.0/(20*60) #- (55.0/(39*60))
+            
+            if time_stamp >= 3600123249: #13th LXe
+                mass_flow_rate_offset = (118/(60*14.))
 
             print "mass_flow_rate_offset: [grams/minute]", mass_flow_rate_offset
 
