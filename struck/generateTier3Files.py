@@ -1008,8 +1008,6 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     mfilter_time = array('d', [0]*n_channels_in_event)
     out_tree.Branch('mfilter_time', mfilter_time, 'mfilter_time[%i]/D' % n_channels_in_event)
 
-    
-
     #Decay Constat Fit in WFM Processing
     decay_fit = array('d', [0]*n_channels_in_event) # double
     out_tree.Branch('decay_fit', decay_fit, 'decay_fit[%i]/D' % n_channels_in_event)
@@ -1234,12 +1232,12 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 # allowable number of clock ticks of difference: 80 ns 
                 clock_tick_diff = sampling_frequency_Hz[0]*80.0/1e9
                 if (abs( tree.HitTree.GetRawClock() - time_stamp[0] ) > clock_tick_diff):
-                    #print ""
-                    #print "===> end of event after %i channels: %i clock tick diff" % (
-                    #    (n_channels_in_this_event),
-                    #    abs( tree.HitTree.GetRawClock() - time_stamp[0] ),
-                    #)
-                    #print ""
+                    print ""
+                    print "===> end of event after %i channels: %i clock tick diff" % (
+                        (n_channels_in_this_event),
+                        abs( tree.HitTree.GetRawClock() - time_stamp[0] ),
+                    )
+                    print ""
                     i_entry -= 1
                     #n_events += 1
                     break # break from loop over events
@@ -1257,9 +1255,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
                 if dead_channels[channel[i]] > 0:
                     found_dead = True
-                    #print ""
-                    #print "===> DEAD Channel Found: %i" % channel[i]
-                    #print ""
+                    print ""
+                    print "===> DEAD Channel Found: %i" % channel[i]
+                    print ""
                     break
 
                 wfm = tree._waveform
@@ -1730,9 +1728,13 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             do_fill = True
             nfound_channels[0] = len(found_channels)
             #if (n_channels_in_this_event != len(charge_channels_to_use)):
+            #if len(found_channels) != n_channels_good: 
+            #    print len(found_channels)
+            #    print found_channels
+            #    raw_input()
             if (n_channels_in_this_event != n_channels_good):
-              #print "================> WARNING: %i channels in this event!! <================" % nfound_channels[0]
-              #print "================> found %i and in event %i <================" % (nfound_channels[0], n_channels_in_this_event)
+              print "================> WARNING: %i channels in this event!! <================" % nfound_channels[0]
+              print "================> found %i and in event %i <================" % (nfound_channels[0], n_channels_in_this_event)
               is_bad[0] += 32
             else:
                 if nsignals[0] > 0: do_fill = True
