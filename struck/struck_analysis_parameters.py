@@ -93,8 +93,9 @@ if is_8th_LXe or is_9th_LXe or is_11th_LXeB or is_12th_LXe or is_13th_LXe:
 
 do_sipm_filter = False
 sipm_low_pass = None
-if is_12th_LXe:
+if is_12th_LXe or is_13th_LXe:
     sipm_low_pass = 14.3
+    if is_13th_LXe: sipm_low_pass = 9.5
     do_sipm_filter = True
 
 # in software, struck channels start from 0, not 1
