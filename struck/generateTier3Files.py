@@ -1159,11 +1159,17 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
                 #Some channels are grouped together so for those sum each channel in the gropu
                 #First always get the one channel that has to exist
-                if i == pmt_channel or i == pulser_channel: 
+                if i == pmt_channel or i == pulser_channel or (sipm_channels_to_use[i] > 0): 
                     #print "Skip pmt", i, pmt_channel
+                    continue
+                
+                if dead_channels[i] > 0:
+                    #Skip the dead channels 
                     continue
 
                 #print i, pmt_channel
+                print "Channel is ", i
+                print "Ch Map is ", struck_to_mc_channel_map[i][0]
                 wfm = [wfmp for wfmp in tree.ChannelWaveform[struck_to_mc_channel_map[i][0]]]
                 if not ROOT.gROOT.IsBatch(): print "channel %i %s -- adding MC ch %s" % (
                     i, 
