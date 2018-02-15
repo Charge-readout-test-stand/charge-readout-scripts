@@ -750,6 +750,10 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     
     SignalEnergyLightBoth =  array('d', [0])
     out_tree.Branch('SignalEnergyLightBoth', SignalEnergyLightBoth, 'SignalEnergyLightBoth/D')
+    
+    SignalEnergyLightTCut =  array('d', [0])
+    out_tree.Branch('SignalEnergyLightTCut', SignalEnergyLightTCut, 'SignalEnergyLightTCut/D')
+    
     #End Sipm 
 
     # make a hist for calculating some averages
@@ -1122,6 +1126,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         pos_x[0] = -999.0
         pos_y[0] = -999.0
         SignalEnergyLight[0] = 0.0
+        SignalEnergyLightTCut[0] = 0.0
         SignalEnergyLightBoth[0] = 0.0
         SignalEnergyX[0] = 0.0
         SignalEnergyY[0] = 0.0 
@@ -1429,6 +1434,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 lightEnergy[0] += energy[i]
                 if abs(energy[i]/baseline_rms_filter[i]) > 10.0: 
                     SignalEnergyLight[0] += energy[i]
+                    if (np.abs(sipm_max_time[i] - trigger_time[0]) < 0.2):
+                        SignalEnergyLightTCut[0] += energy[i]
                 if abs(sipm_amp[i]/baseline_rms_filter[i])  > 10.0:
                     SignalEnergyLightBoth[0] += abs(sipm_amp[i])
             elif charge_channels_to_use[channel[i]]:
