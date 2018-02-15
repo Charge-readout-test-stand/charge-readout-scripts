@@ -739,9 +739,18 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     sipm_min_time = array('d', [0]*n_channels_in_event) #in us
     out_tree.Branch('sipm_min_time', sipm_min_time, 'sipm_min_time[%i]/D' % n_channels_in_event)
     
+    sipm_amp     = array('d', [0]*n_channels_in_event)
+    out_tree.Branch('sipm_amp', sipm_amp, 'sipm_amp[%i]/D' % n_channels_in_event)
+    
+    sipm_amp_time = array('d', [0]*n_channels_in_event) #in us
+    out_tree.Branch('sipm_amp_time', sipm_amp_time, 'sipm_amp_time[%i]/D' % n_channels_in_event)
+
     SignalEnergyLight = array('d', [0])
     out_tree.Branch('SignalEnergyLight', SignalEnergyLight, 'SignalEnergyLight/D')
-    #End Sipm shit
+    
+    SignalEnergyLightBoth =  array('d', [0])
+    out_tree.Branch('SignalEnergyLightBoth', SignalEnergyLightBoth, 'SignalEnergyLightBoth/D')
+    #End Sipm 
 
     # make a hist for calculating some averages
     hist = ROOT.TH1D("hist","",100, 0, pow(2,14))
@@ -1113,6 +1122,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         pos_x[0] = -999.0
         pos_y[0] = -999.0
         SignalEnergyLight[0] = 0.0
+        SignalEnergyLightBoth[0] = 0.0
         SignalEnergyX[0] = 0.0
         SignalEnergyY[0] = 0.0 
         for bundle_index in xrange(nbundles[0]):
@@ -1362,8 +1372,10 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 baseline_rms_filter[i],
                 sipm_max[i],
                 sipm_min[i],
+                sipm_amp[i],
                 sipm_max_time[i],
                 sipm_min_time[i],
+                sipm_amp_time[i],
                 induct_map[i],
                 induct_amp[i],
                 induct_time[i]
@@ -1415,8 +1427,10 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 lightEnergy[0] += energy[i]
             elif sipm_channels_to_use[channel[i]]:
                 lightEnergy[0] += energy[i]
-                if abs(energy[i]/baseline_rms_filter[i]) > 10.0: #and  abs(sipm_min[i]/baseline_rms_filter[i]) < 5.0:
+                if abs(energy[i]/baseline_rms_filter[i]) > 10.0: 
                     SignalEnergyLight[0] += energy[i]
+                if abs(sipm_amp[i]/baseline_rms_filter[i])  > 10.0:
+                    SignalEnergyLightBoth[0] += abs(sipm_amp[i])
             elif charge_channels_to_use[channel[i]]:
                 chargeEnergy[0] += energy1_pz[i]
             if isMC:
