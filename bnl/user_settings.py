@@ -54,6 +54,7 @@ class user_editable_settings:
 
         #GENERAL SETTINGS###############################################################################
         self.chip_num = 4
+        self.chs_per_chip = 16
         #Which IP addresses you gave those 4 sockets
         self.CHIP_IP = ['192.168.121.83','192.168.121.82','192.168.121.81','192.168.121.80']
         self.FEMB_VER = "nEXO(FE-ASIC with internal DAC)"

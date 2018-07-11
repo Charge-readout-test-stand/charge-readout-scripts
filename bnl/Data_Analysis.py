@@ -165,11 +165,11 @@ class Data_Analysis:
 
         chip = [ch0,ch1,ch2,ch3,ch4,ch5,ch6,ch7,ch8,ch9,ch10,ch11,ch12,ch13,ch14,ch15]
         
-        #for ci,cd in enumerate(chip):
+        for ci,cd in enumerate(chip):
             #print "---->channel",ci
             #if "Chip2" in : continue
-            #self.fixData(cd)
-            #chip[ci] = self.fixData(cd)
+            self.fixData(cd)
+            chip[ci] = self.fixData(cd)
 
         return chip
     
