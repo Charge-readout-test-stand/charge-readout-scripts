@@ -24,32 +24,55 @@ def memory_usage_psutil():
 def ProcessDir(input_dir, output_dir):
 
 
-    out_filename = input_dir.split("/")[-2]
+    out_filename = input_dir.split("/")[-1]
     out_filename = "tier3_%s.root" % out_filename
     out_filename = os.path.join(output_dir, out_filename)
     
+    print "Outfile is", out_filename
+
     out_file = ROOT.TFile(out_filename, "recreate")
     gout = out_file.GetDirectory("")
     nchannels = settings.chip_num*settings.chs_per_chip
     
     out_tree = ROOT.TTree("tree", "%s processed wfm tree" % input_dir.split("/")[-2])
- 
-    wfm_area = array('d', [0]*settings.chip_num*nchannels)
+    
+    hit_channels = array('I', [0]) # signed int
+    out_tree.Branch('hit_channels', hit_channels, 'hit_channels/i')
+
+    hit_channelsX = array('I', [0]) # signed int
+    out_tree.Branch('hit_channelsX', hit_channelsX, 'hit_channelsX/i')
+    
+    hit_channelsY = array('I', [0]) # signed int
+    out_tree.Branch('hit_channelsY', hit_channelsY, 'hit_channelsY/i')
+
+    hit_map = array('I', [0]*nchannels) # signed int
+    out_tree.Branch('hit_map', hit_map, 'hit_map[%i]/i' % nchannels)
+
+    channel = array('I', [0]*nchannels) # unsigned int
+    out_tree.Branch('channel', channel, 'channel[%i]/i' % nchannels)
+
+    wfm_max_energy = array('d', [0])
+    out_tree.Branch('wfm_max_energy', wfm_max_energy, 'wfm_max_energy/D')
+
+    wfm_area_energy = array('d', [0])
+    out_tree.Branch('wfm_area_energy', wfm_area_energy, 'wfm_area_energy/D')
+
+    wfm_area = array('d', [0]*nchannels)
     out_tree.Branch('wfm_area', wfm_area, 'wfm_area[%i]/D' % nchannels)
 
-    wfm_max =  array('d', [0]*settings.chip_num*nchannels)
+    wfm_max =  array('d', [0]*nchannels)
     out_tree.Branch('wfm_max', wfm_max, 'wfm_max[%i]/D' % nchannels)
  
-    wfm_min = array('d', [0]*settings.chip_num*nchannels)
+    wfm_min = array('d', [0]*nchannels)
     out_tree.Branch('wfm_min', wfm_min, 'wfm_min[%i]/D' % nchannels)
 
-    wfm_max_time = array('d', [0]*settings.chip_num*nchannels)
+    wfm_max_time = array('d', [0]*nchannels)
     out_tree.Branch('wfm_max_time', wfm_max_time, 'wfm_max_time[%i]/D' % nchannels)
 
-    wfm_min_time = array('d', [0]*settings.chip_num*nchannels)
+    wfm_min_time = array('d', [0]*nchannels)
     out_tree.Branch('wfm_min_time', wfm_min_time, 'wfm_min_time[%i]/D' % nchannels)
 
-    wfm_baseline = array('d', [0]*settings.chip_num*nchannels)
+    wfm_baseline = array('d', [0]*nchannels)
     out_tree.Branch('wfm_baseline', wfm_baseline, 'wfm_baseline[%i]/D' % nchannels)
 
     eventNum = array('I', [0]) # signed int
@@ -84,20 +107,26 @@ def ProcessDir(input_dir, output_dir):
                 event_num = packet_num + ei
                 
                 for wi, wf in enumerate(wf_list):
-                    channel = chip*settings.chs_per_chip + wi       
+                    wf_ch = chip*settings.chs_per_chip + wi       
                     if chip==2 or chip==1:
                         #These chips are bad for the moment
-                        event_data[event_num][channel] = np.array(wf)*0.0
+                        event_data[event_num][wf_ch] = np.array(wf)*0.0
                     else:
-                        event_data[event_num][channel] = np.array(wf)
-        
+                        event_data[event_num][wf_ch] = np.array(wf)
+ 
+
         for ei in event_data:
             
             packetNum[0] = ei       
             eventNum = nevents
-
+            hit_channels[0] = 0
+            hit_channelsX[0] = 0
+            hit_channelsY[0] = 0
+            wfm_max_energy[0] = 0
+            wfm_area_energy[0] = 0
             for ch in event_data[ei]:
                 wf = np.array(event_data[ei][ch])
+                channel[ch] = ch
 
                 wfm_max[ch]       = np.max(wf)
                 wfm_min[ch]       = np.min(wf)
@@ -114,8 +143,16 @@ def ProcessDir(input_dir, output_dir):
                 t_area_max = np.argmax(wf) + 20
 
                 if np.max(wf) > 30:
-                        
+                    hit_channels[0] +=1
+                    hit_map[ch] = 1
+
+                    if ch < 32: hit_channelsX[0] +=1
+                    else:       hit_channelsY[0] +=1
+
                     wfm_area[ch] = np.trapz(wf[t_area_min:t_area_max])
+                    
+                    wfm_area_energy[0] += wfm_area[ch]
+                    wfm_max_energy[0]  += wfm_max[ch]-wfm_baseline[ch]
 
                     if False:
                         plt.ion()
@@ -135,6 +172,7 @@ def ProcessDir(input_dir, output_dir):
 
                 else:
                     wfm_area[ch] = 0.0
+                    hit_map[ch]  = 0 
 
             out_tree.Fill()
             nevents += 1
@@ -150,12 +188,7 @@ def ProcessDir(input_dir, output_dir):
 if __name__ == "__main__":
     
     parser = OptionParser()
-    
-    parser.add_option("-D", "--directory", dest="dir_name", default = "",
-                        help="set output directory", metavar="Directory")
-    
-    (options, input_dir) = parser.parse_args()
-
-    ProcessDir(input_dir[0], output_dir=options.dir_name)
+    (options, input_dir) = parser.parse_args()   
+    ProcessDir(input_dir[0], output_dir=input_dir[1])
 
 
