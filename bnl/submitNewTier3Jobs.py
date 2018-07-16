@@ -41,7 +41,7 @@ def SubmitJob(top_dir, dir_name):
         script_name,
         "%s" % (os.path.join(top_dir, dir_name)),
         out_dir,
-        "log_tier3_%s.out" % dir_name,
+        "log_tier3_%s.out" % (dir_name),
     )
 
     # write an executable script
@@ -49,15 +49,14 @@ def SubmitJob(top_dir, dir_name):
     script.write(cmd)
     script.close()
 
-
-
+    outfile = os.path.join(out_dir, "out_%s.out" % dir_name)
 
     cmd = """msub \\
           -A nuphys \\
           -m abe \\
             -V \\
           -N %(base)s \\
-          -o out_%(base)s.out \\
+          -o %(outfile)s \\
           -j oe \\
           -q %(queue)s \\
           -l walltime=%(hours)02i:%(minutes)02i:00 \\
@@ -68,6 +67,7 @@ def SubmitJob(top_dir, dir_name):
                   "hours": hours,
                   "minutes": minutes,
                   "base": dir_name,
+                  "outfile":outfile,
                   "shell_script_name": shell_script_name,
                 }
 
@@ -93,5 +93,5 @@ if __name__ == "__main__":
     for dirname in dir_list:
         print dirname
         SubmitJob(dir_name, dirname)
-        sys.exit()
+        #sys.exit()
 
