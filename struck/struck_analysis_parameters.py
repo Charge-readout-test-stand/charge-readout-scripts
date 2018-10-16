@@ -21,7 +21,10 @@ is_10th_LXe = False # Jan 2017
 is_11th_LXe = False # Jan/Feb 2017, with DT
 is_11th_LXeB = False # Feb 2017, with VME
 is_12th_LXe = False
-is_13th_LXe = True
+is_13th_LXe = False
+
+#Testing 
+is_11th_LXeB = True
 
 import os
 import sys
@@ -915,7 +918,7 @@ if is_13th_LXe:
     #Calibraitons 13th combining all 3 day runs with differen SiPM bias
     calibration_values[0] = 1.039173 # +/- 0.036779 Y12
     calibration_values[1] = 1.123437 # +/- 0.038555 Y13
-    calibration_values[2] = 3.855717 # +/- 0.001754 Y14
+    calibration_values[2] = 2.937023 # +/- 0.001754 Y14
     calibration_values[3] = 2.260158 # +/- 0.017537 Y15
     calibration_values[4] = 2.089076 # +/- 0.025162 Y16
     calibration_values[5] = 2.129663 # +/- 0.028330 Y17
@@ -927,13 +930,13 @@ if is_13th_LXe:
     calibration_values[11] = 1.000000 # +/- None 2-4
     calibration_values[12] = 1.000000 # +/- None 2-5
     calibration_values[13] = 1.000000 # +/- None 2-6
-    calibration_values[14] = 1.25     # +/- 0.072026 Y11
-    calibration_values[15] = 1.193397 # +/- 0.060159 X22
+    calibration_values[14] = 1.1638   # +/- 0.072026 Y11
+    calibration_values[15] = 1.1173   # +/- 0.060159 X22
     calibration_values[16] = 1.106813 # +/- 0.102014 X13
     calibration_values[17] = 1.088395 # +/- 0.024772 X14
-    calibration_values[18] = 1.107735 # +/- 0.133791 X15
+    calibration_values[18] = 1.0945   # +/- 0.133791 X15
     calibration_values[19] = 2.094149 # +/- 0.032667 X16
-    calibration_values[20] = 2.272052 # +/- 0.041331 X17
+    calibration_values[20] = 2.2960   # +/- 0.041331 X17
     calibration_values[21] = 2.199645 # +/- 0.001754 X18
     calibration_values[22] = 2.182251 # +/- 0.051105 X19
     calibration_values[23] = 1.064134 # +/- 0.022905 X20

@@ -491,8 +491,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
 
     rise_time_stop10 = array('d', [0]*n_channels_in_event) # double
-    if not skip_short_risetimes:
-        out_tree.Branch('rise_time_stop10', rise_time_stop10, 'rise_time_stop10[%i]/D' % n_channels_in_event)
+    #if not skip_short_risetimes:
+    #    out_tree.Branch('rise_time_stop10', rise_time_stop10, 'rise_time_stop10[%i]/D' % n_channels_in_event)
+    out_tree.Branch('rise_time_stop10', rise_time_stop10, 'rise_time_stop10[%i]/D' % n_channels_in_event)
 
     rise_time_stop20 = array('d', [0]*n_channels_in_event) # double
     if not skip_short_risetimes:
@@ -1467,7 +1468,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                     rise_time_stop95[i],
                     rise_time_stop99[i],
                 ) = wfmProcessing.get_risetimes(
-                    exo_wfm, 
+                    #exo_wfm, 
+                    calibrated_wfm,
                     wfm_length[i], 
                     sampling_frequency_Hz[0],
                     skip_short_risetimes,
@@ -1588,8 +1590,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         for sigi, sig_map in enumerate(signal_map):
             if sig_map < 0.5:continue
             #print sigi,channel_map[sigi], energy1_pz[sigi]
-            energy_x_track += energy1_pz[sigi]*channel_pos_x[sigi]
-            energy_y_track += energy1_pz[sigi]*channel_pos_y[sigi]
+            if len(channel_pos_x) > 0:
+                energy_x_track += energy1_pz[sigi]*channel_pos_x[sigi]
+                energy_y_track += energy1_pz[sigi]*channel_pos_y[sigi]
         
         if SignalEnergyX[0] > 0.0: energy_x_track *= 1/SignalEnergyX[0]
         if SignalEnergyY[0] > 0.0: energy_y_track *= 1/SignalEnergyY[0]
@@ -1622,7 +1625,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         else:
             baseline_remover.SetStartSample(sum_wfm.size() - 2*n_baseline_samples[0] - 1)
             baseline_remover.Transform(sum_wfm)
-            energy_sum[0] = baseline_remover.GetBaselineMean()
+            energy_sum[0]     = baseline_remover.GetBaselineMean()
             energy_rms_sum[0] = baseline_remover.GetBaselineRMS()
             baseline_remover.SetStartSample(0)
             baseline_remover.Transform(sum_wfm)
