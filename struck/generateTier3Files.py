@@ -53,6 +53,7 @@ import commands
 import numpy as np
 import copy
 from optparse import OptionParser
+import matplotlib.pyplot as plt
 
 import ROOT
 
@@ -491,8 +492,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
 
     rise_time_stop10 = array('d', [0]*n_channels_in_event) # double
-    if not skip_short_risetimes:
-        out_tree.Branch('rise_time_stop10', rise_time_stop10, 'rise_time_stop10[%i]/D' % n_channels_in_event)
+    #if not skip_short_risetimes:
+    #    out_tree.Branch('rise_time_stop10', rise_time_stop10, 'rise_time_stop10[%i]/D' % n_channels_in_event)
+    out_tree.Branch('rise_time_stop10', rise_time_stop10, 'rise_time_stop10[%i]/D' % n_channels_in_event)
 
     rise_time_stop20 = array('d', [0]*n_channels_in_event) # double
     if not skip_short_risetimes:
@@ -1467,7 +1469,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                     rise_time_stop95[i],
                     rise_time_stop99[i],
                 ) = wfmProcessing.get_risetimes(
-                    exo_wfm, 
+                    #exo_wfm, 
+                    calibrated_wfm,
                     wfm_length[i], 
                     sampling_frequency_Hz[0],
                     skip_short_risetimes,
@@ -1535,12 +1538,29 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             if isNGM and i == pmt_channel and pmt_hist:
             
                 # check scaling of PMT hist and baseline of exo_wfm
-                wfm_hist = exo_wfm.GimmeHist("wfm_hist")
+                #wfm_hist = exo_wfm.GimmeHist("wfm_hist")
+                wfm_hist  = calibrated_wfm.GimmeHist("wfm_hist")
                 pmt_hist.Scale(wfm_hist.GetMaximum()/pmt_hist.GetMaximum())
                 pmt_chi2[0] = struck_analysis_cuts.pmt_chisq_per_dof(
                     pmt_hist, wfm_hist, rms_keV[pmt_channel]/calibration_values[pmt_channel]
                 )
     
+                if False and pmt_chi2[0] > 0: 
+                    print "Bad PMT", pmt_chi2[0]
+                    
+                    pmt_wf = np.array([calibrated_wfm.At(i) for i in xrange(calibrated_wfm.GetLength())])
+                    fit_wf = np.array([pmt_hist.GetBinContent(i) for i in xrange(pmt_hist.GetNbinsX())])
+                    
+                    plt.figure(190)
+                    plt.clf()
+                    plt.ion()
+                    plt.title("Chi2 = %.2f" % pmt_chi2[0])
+                    plt.plot(pmt_wf, label='Data')
+                    plt.plot(fit_wf, label='MC')
+
+                    plt.legend(loc='upper right')
+                    raw_input("PAUSE")
+
                 # testing chi2 calc
                 if not ROOT.gROOT.IsBatch():
                     print "--> PMT signal"
@@ -1588,8 +1608,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         for sigi, sig_map in enumerate(signal_map):
             if sig_map < 0.5:continue
             #print sigi,channel_map[sigi], energy1_pz[sigi]
-            energy_x_track += energy1_pz[sigi]*channel_pos_x[sigi]
-            energy_y_track += energy1_pz[sigi]*channel_pos_y[sigi]
+            if len(channel_pos_x) > 0:
+                energy_x_track += energy1_pz[sigi]*channel_pos_x[sigi]
+                energy_y_track += energy1_pz[sigi]*channel_pos_y[sigi]
         
         if SignalEnergyX[0] > 0.0: energy_x_track *= 1/SignalEnergyX[0]
         if SignalEnergyY[0] > 0.0: energy_y_track *= 1/SignalEnergyY[0]
@@ -1622,7 +1643,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         else:
             baseline_remover.SetStartSample(sum_wfm.size() - 2*n_baseline_samples[0] - 1)
             baseline_remover.Transform(sum_wfm)
-            energy_sum[0] = baseline_remover.GetBaselineMean()
+            energy_sum[0]     = baseline_remover.GetBaselineMean()
             energy_rms_sum[0] = baseline_remover.GetBaselineRMS()
             baseline_remover.SetStartSample(0)
             baseline_remover.Transform(sum_wfm)
@@ -1720,7 +1741,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         low_energy_rms = False
         wfm_too_low = False
         wfm_too_high = False
-        if not isMC and pmt_chi2[0] > 3.0: is_bad[0] += 1
+        if not isMC and pmt_chi2[0] > 3.0:  is_bad[0] += 1
         rms_keV_sigma = struck_analysis_parameters.rms_keV_sigma
 
         # if any channels exceed conditions, we flag the event:
