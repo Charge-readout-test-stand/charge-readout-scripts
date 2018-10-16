@@ -915,7 +915,7 @@ if is_13th_LXe:
     #Calibraitons 13th combining all 3 day runs with differen SiPM bias
     calibration_values[0] = 1.039173 # +/- 0.036779 Y12
     calibration_values[1] = 1.123437 # +/- 0.038555 Y13
-    calibration_values[2] = 3.855717 # +/- 0.001754 Y14
+    calibration_values[2] = 2.7      # +/- Bad Fit Eye Guess Y14
     calibration_values[3] = 2.260158 # +/- 0.017537 Y15
     calibration_values[4] = 2.089076 # +/- 0.025162 Y16
     calibration_values[5] = 2.129663 # +/- 0.028330 Y17
