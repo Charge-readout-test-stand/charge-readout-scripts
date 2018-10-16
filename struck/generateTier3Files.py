@@ -53,6 +53,7 @@ import commands
 import numpy as np
 import copy
 from optparse import OptionParser
+import matplotlib.pyplot as plt
 
 import ROOT
 
@@ -1537,12 +1538,29 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             if isNGM and i == pmt_channel and pmt_hist:
             
                 # check scaling of PMT hist and baseline of exo_wfm
-                wfm_hist = exo_wfm.GimmeHist("wfm_hist")
+                #wfm_hist = exo_wfm.GimmeHist("wfm_hist")
+                wfm_hist  = calibrated_wfm.GimmeHist("wfm_hist")
                 pmt_hist.Scale(wfm_hist.GetMaximum()/pmt_hist.GetMaximum())
                 pmt_chi2[0] = struck_analysis_cuts.pmt_chisq_per_dof(
                     pmt_hist, wfm_hist, rms_keV[pmt_channel]/calibration_values[pmt_channel]
                 )
     
+                if False and pmt_chi2[0] > 0: 
+                    print "Bad PMT", pmt_chi2[0]
+                    
+                    pmt_wf = np.array([calibrated_wfm.At(i) for i in xrange(calibrated_wfm.GetLength())])
+                    fit_wf = np.array([pmt_hist.GetBinContent(i) for i in xrange(pmt_hist.GetNbinsX())])
+                    
+                    plt.figure(190)
+                    plt.clf()
+                    plt.ion()
+                    plt.title("Chi2 = %.2f" % pmt_chi2[0])
+                    plt.plot(pmt_wf, label='Data')
+                    plt.plot(fit_wf, label='MC')
+
+                    plt.legend(loc='upper right')
+                    raw_input("PAUSE")
+
                 # testing chi2 calc
                 if not ROOT.gROOT.IsBatch():
                     print "--> PMT signal"
@@ -1723,7 +1741,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         low_energy_rms = False
         wfm_too_low = False
         wfm_too_high = False
-        if not isMC and pmt_chi2[0] > 3.0: is_bad[0] += 1
+        if not isMC and pmt_chi2[0] > 3.0:  is_bad[0] += 1
         rms_keV_sigma = struck_analysis_parameters.rms_keV_sigma
 
         # if any channels exceed conditions, we flag the event:
