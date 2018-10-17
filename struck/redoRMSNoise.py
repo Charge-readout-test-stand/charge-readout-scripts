@@ -9,8 +9,10 @@ plt.figure(1)
 
 def get_cut(ch):
     selection = []
-    selection.append("nfound_channels==30") #cut the dead channel events 
+    selection.append("nfound_channels==32") #cut the dead channel events
+    #selection.append("nfound_channels==30") #cut the dead channel events 
     #selection.append("channel==%i" % ch)
+    selection.append("file_start_time > 0.1")
     selection = " && ".join(selection)
     return selection
 
@@ -65,9 +67,11 @@ def FitPeak(hist_counts, hist_errors, bin_centers):
     return xx, bp, bcov, fail
 
 
-def process_file(filename):
-    tfile = ROOT.TFile(filename)
-    tree = tfile.Get("tree")
+def process_file(file_list):
+    tree = ROOT.TChain("tree")
+    for filename in file_list:
+        tree.Add(filename)
+        tree.SetEstimate(tree.GetEntries())
     tree.SetEstimate(tree.GetEntries())
 
     #Speed things up by setting on and off branches
@@ -84,9 +88,10 @@ def process_file(filename):
     channel_map            = struck_analysis_parameters.channel_map 
     calibration            = struck_analysis_parameters.calibration_values
     
-    cal_file = file("new_calibrations.txt","w")
+    cal_file = file("new_noise.txt","w")
 
     for i,ch in enumerate(charge_channels_to_use):
+    #for i in [14,15]:
         plt.clf()
 
         selectcmd = get_cut(i)
@@ -101,11 +106,6 @@ def process_file(filename):
         channelTime =   np.array([tree.GetVal(1)[j] for j in xrange(n)])
 
         print tree.GetEntries(), n, len(channelRMS), len(channelTime)
-        #raw_input()
-        #for i in xrange(n):
-        #    if i > tree.GetEntries()-10:
-        #        print i, tree.GetEntries(),channelRMS[i], channelTime[i]
-        #        raw_input()
     
         plt.figure(2)
         plt.clf()
@@ -117,20 +117,28 @@ def process_file(filename):
 
         bin_centers = bin_edges[:-1] + np.diff(bin_edges)/2.0
      
-
         plt.title("Channel %s" % channel_map[i], fontsize=14)
         plt.xlabel("RMS Noise [mV]", fontsize=15)
         plt.ylabel("Counts/%.2f mV" % np.diff(bin_edges)[0], fontsize=15)
-        plt.errorbar(bin_centers*(2000.0)/(2**14), chHist, yerr=np.sqrt(chHist),marker='o', linestyle='None', c='k', 
+        #plt.errorbar(bin_centers*(2000.0)/(2**14), chHist, yerr=np.sqrt(chHist),marker='o', linestyle='None', c='k', 
+        #             label='RMS Noise = %.4f ADC' % np.mean(channelRMS))
+        plt.errorbar(bin_centers, chHist, yerr=np.sqrt(chHist),marker='o', linestyle='None', c='k', 
                      label='RMS Noise = %.4f ADC' % np.mean(channelRMS))
         
+        #plt.yscale('log')
+        #plt.xscale('log')
+
         noise_mean = np.mean(channelRMS)
+        noise_mean_sigma = np.std(channelRMS)
         noise_mean_mV = noise_mean*(2000./2**14)
         noise_mean_keV = noise_mean*calibration[i]
-        print "Noise in ADC:%.4f, mV:%.4f, keV:%.4f" % (noise_mean, noise_mean_mV, noise_mean_keV) 
+        #print "Noise in ADC:%.4f, mV:%.4f, keV:%.4f" % (noise_mean, noise_mean_mV, noise_mean_keV) 
+        print "Noise in ADC with Sigma %.4f and %.4f" % (noise_mean, noise_mean_sigma)
+        cal_file.write("rms_keV[%i] = %f*calibration_values[%i] \n" % (i,noise_mean,i))
+        cal_file.write("rms_keV_sigma[%i] = %f*calibration_values[%i] \n" % (i,noise_mean_sigma,i))
 
         plt.legend()
-        plt.savefig("./plots/rms_noise_ch%s.pdf" % channel_map[i])
+        plt.savefig("./plots/noise/rms_noise_ch%s.pdf" % channel_map[i])
         #plt.yscale('log', nonposy='clip')
         
         plt.figure(1)
@@ -149,25 +157,28 @@ def process_file(filename):
         print "RMS low and high is", noise_mean, np.std(channelRMS), ylow,yhigh
         print "Time low and high", xlow,xhigh
         plt.ylim(ylow,yhigh)
-        plt.savefig("./plots/rms_noise_vs_time_ch%s.pdf" % channel_map[i])
+        plt.savefig("./plots/noise/rms_noise_vs_time_ch%s.pdf" % channel_map[i])
         
         raw_input()
-
+    cal_file.close()
 
 
 
 if __name__ == "__main__":
 
-    filename = None
+    file_list = None
     if len(sys.argv) < 2:
         print "argument: [sis tier 3 root file]"
         #sys.exit(1)
         #filename = "overnight_new_bias_tier3_all_v1_12_3_2017.root"
         #filename = "overnight_new_bias_tier3_all_v2_12_4_2017.root"
-        filename =  "overnight_new_bias_tier3_all_v3_12_6_2017.root"
+        #filename =  "overnight_new_bias_tier3_all_v3_12_6_2017.root"
+        file_list   = ["all_tier3_overnight_day2_315bias_v1.root",
+                       "~/2018_01_26_SiPM_Run2/full_cell_day_runs/tier3_added/all_tier3_day1_305bias.root",
+                       "~/2018_01_26_SiPM_Run2/full_cell_day_runs_2/tier3_added/all_tier3_day2_305bias.root"]
     else:
-        filename = sys.argv[1]
+        file_list = sys.argv[1:]
 
-    print "Using ", filename
-    process_file(filename)
+    print "Using ", file_list
+    process_file(file_list)
 

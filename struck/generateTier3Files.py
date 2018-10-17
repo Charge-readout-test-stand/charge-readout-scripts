@@ -53,6 +53,7 @@ import commands
 import numpy as np
 import copy
 from optparse import OptionParser
+import matplotlib.pyplot as plt
 
 import ROOT
 
@@ -491,8 +492,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
 
     rise_time_stop10 = array('d', [0]*n_channels_in_event) # double
-    if not skip_short_risetimes:
-        out_tree.Branch('rise_time_stop10', rise_time_stop10, 'rise_time_stop10[%i]/D' % n_channels_in_event)
+    #if not skip_short_risetimes:
+    #    out_tree.Branch('rise_time_stop10', rise_time_stop10, 'rise_time_stop10[%i]/D' % n_channels_in_event)
+    out_tree.Branch('rise_time_stop10', rise_time_stop10, 'rise_time_stop10[%i]/D' % n_channels_in_event)
 
     rise_time_stop20 = array('d', [0]*n_channels_in_event) # double
     if not skip_short_risetimes:
@@ -739,9 +741,22 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     sipm_min_time = array('d', [0]*n_channels_in_event) #in us
     out_tree.Branch('sipm_min_time', sipm_min_time, 'sipm_min_time[%i]/D' % n_channels_in_event)
     
+    sipm_amp     = array('d', [0]*n_channels_in_event)
+    out_tree.Branch('sipm_amp', sipm_amp, 'sipm_amp[%i]/D' % n_channels_in_event)
+    
+    sipm_amp_time = array('d', [0]*n_channels_in_event) #in us
+    out_tree.Branch('sipm_amp_time', sipm_amp_time, 'sipm_amp_time[%i]/D' % n_channels_in_event)
+
     SignalEnergyLight = array('d', [0])
     out_tree.Branch('SignalEnergyLight', SignalEnergyLight, 'SignalEnergyLight/D')
-    #End Sipm shit
+    
+    SignalEnergyLightBoth =  array('d', [0])
+    out_tree.Branch('SignalEnergyLightBoth', SignalEnergyLightBoth, 'SignalEnergyLightBoth/D')
+    
+    SignalEnergyLightTCut =  array('d', [0])
+    out_tree.Branch('SignalEnergyLightTCut', SignalEnergyLightTCut, 'SignalEnergyLightTCut/D')
+    
+    #End Sipm 
 
     # make a hist for calculating some averages
     hist = ROOT.TH1D("hist","",100, 0, pow(2,14))
@@ -1008,8 +1023,6 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     mfilter_time = array('d', [0]*n_channels_in_event)
     out_tree.Branch('mfilter_time', mfilter_time, 'mfilter_time[%i]/D' % n_channels_in_event)
 
-    
-
     #Decay Constat Fit in WFM Processing
     decay_fit = array('d', [0]*n_channels_in_event) # double
     out_tree.Branch('decay_fit', decay_fit, 'decay_fit[%i]/D' % n_channels_in_event)
@@ -1115,6 +1128,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         pos_x[0] = -999.0
         pos_y[0] = -999.0
         SignalEnergyLight[0] = 0.0
+        SignalEnergyLightTCut[0] = 0.0
+        SignalEnergyLightBoth[0] = 0.0
         SignalEnergyX[0] = 0.0
         SignalEnergyY[0] = 0.0 
         for bundle_index in xrange(nbundles[0]):
@@ -1174,11 +1189,17 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
                 #Some channels are grouped together so for those sum each channel in the gropu
                 #First always get the one channel that has to exist
-                if i == pmt_channel or i == pulser_channel: 
+                if i == pmt_channel or i == pulser_channel or (sipm_channels_to_use[i] > 0): 
                     #print "Skip pmt", i, pmt_channel
+                    continue
+                
+                if dead_channels[i] > 0:
+                    #Skip the dead channels 
                     continue
 
                 #print i, pmt_channel
+                print "Channel is ", i
+                print "Ch Map is ", struck_to_mc_channel_map[i][0]
                 wfm = [wfmp for wfmp in tree.ChannelWaveform[struck_to_mc_channel_map[i][0]]]
                 if not ROOT.gROOT.IsBatch(): print "channel %i %s -- adding MC ch %s" % (
                     i, 
@@ -1234,12 +1255,12 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 # allowable number of clock ticks of difference: 80 ns 
                 clock_tick_diff = sampling_frequency_Hz[0]*80.0/1e9
                 if (abs( tree.HitTree.GetRawClock() - time_stamp[0] ) > clock_tick_diff):
-                    #print ""
-                    #print "===> end of event after %i channels: %i clock tick diff" % (
-                    #    (n_channels_in_this_event),
-                    #    abs( tree.HitTree.GetRawClock() - time_stamp[0] ),
-                    #)
-                    #print ""
+                    print ""
+                    print "===> end of event after %i channels: %i clock tick diff" % (
+                        (n_channels_in_this_event),
+                        abs( tree.HitTree.GetRawClock() - time_stamp[0] ),
+                    )
+                    print ""
                     i_entry -= 1
                     #n_events += 1
                     break # break from loop over events
@@ -1257,9 +1278,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
                 if dead_channels[channel[i]] > 0:
                     found_dead = True
-                    #print ""
-                    #print "===> DEAD Channel Found: %i" % channel[i]
-                    #print ""
+                    print ""
+                    print "===> DEAD Channel Found: %i" % channel[i]
+                    print ""
                     break
 
                 wfm = tree._waveform
@@ -1358,8 +1379,10 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 baseline_rms_filter[i],
                 sipm_max[i],
                 sipm_min[i],
+                sipm_amp[i],
                 sipm_max_time[i],
                 sipm_min_time[i],
+                sipm_amp_time[i],
                 induct_map[i],
                 induct_amp[i],
                 induct_time[i]
@@ -1411,8 +1434,12 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 lightEnergy[0] += energy[i]
             elif sipm_channels_to_use[channel[i]]:
                 lightEnergy[0] += energy[i]
-                if abs(energy[i]/baseline_rms_filter[i]) > 10.0: #and  abs(sipm_min[i]/baseline_rms_filter[i]) < 5.0:
+                if abs(energy[i]/baseline_rms_filter[i]) > 10.0: 
                     SignalEnergyLight[0] += energy[i]
+                    if (np.abs(sipm_max_time[i] - trigger_time[0]) < 0.2):
+                        SignalEnergyLightTCut[0] += energy[i]
+                if abs(sipm_amp[i]/baseline_rms_filter[i])  > 10.0:
+                    SignalEnergyLightBoth[0] += abs(sipm_amp[i])
             elif charge_channels_to_use[channel[i]]:
                 chargeEnergy[0] += energy1_pz[i]
             if isMC:
@@ -1442,7 +1469,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                     rise_time_stop95[i],
                     rise_time_stop99[i],
                 ) = wfmProcessing.get_risetimes(
-                    exo_wfm, 
+                    #exo_wfm, 
+                    calibrated_wfm,
                     wfm_length[i], 
                     sampling_frequency_Hz[0],
                     skip_short_risetimes,
@@ -1510,12 +1538,29 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             if isNGM and i == pmt_channel and pmt_hist:
             
                 # check scaling of PMT hist and baseline of exo_wfm
-                wfm_hist = exo_wfm.GimmeHist("wfm_hist")
+                #wfm_hist = exo_wfm.GimmeHist("wfm_hist")
+                wfm_hist  = calibrated_wfm.GimmeHist("wfm_hist")
                 pmt_hist.Scale(wfm_hist.GetMaximum()/pmt_hist.GetMaximum())
                 pmt_chi2[0] = struck_analysis_cuts.pmt_chisq_per_dof(
                     pmt_hist, wfm_hist, rms_keV[pmt_channel]/calibration_values[pmt_channel]
                 )
     
+                if False and pmt_chi2[0] > 0: 
+                    print "Bad PMT", pmt_chi2[0]
+                    
+                    pmt_wf = np.array([calibrated_wfm.At(i) for i in xrange(calibrated_wfm.GetLength())])
+                    fit_wf = np.array([pmt_hist.GetBinContent(i) for i in xrange(pmt_hist.GetNbinsX())])
+                    
+                    plt.figure(190)
+                    plt.clf()
+                    plt.ion()
+                    plt.title("Chi2 = %.2f" % pmt_chi2[0])
+                    plt.plot(pmt_wf, label='Data')
+                    plt.plot(fit_wf, label='MC')
+
+                    plt.legend(loc='upper right')
+                    raw_input("PAUSE")
+
                 # testing chi2 calc
                 if not ROOT.gROOT.IsBatch():
                     print "--> PMT signal"
@@ -1563,8 +1608,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         for sigi, sig_map in enumerate(signal_map):
             if sig_map < 0.5:continue
             #print sigi,channel_map[sigi], energy1_pz[sigi]
-            energy_x_track += energy1_pz[sigi]*channel_pos_x[sigi]
-            energy_y_track += energy1_pz[sigi]*channel_pos_y[sigi]
+            if len(channel_pos_x) > 0:
+                energy_x_track += energy1_pz[sigi]*channel_pos_x[sigi]
+                energy_y_track += energy1_pz[sigi]*channel_pos_y[sigi]
         
         if SignalEnergyX[0] > 0.0: energy_x_track *= 1/SignalEnergyX[0]
         if SignalEnergyY[0] > 0.0: energy_y_track *= 1/SignalEnergyY[0]
@@ -1597,7 +1643,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         else:
             baseline_remover.SetStartSample(sum_wfm.size() - 2*n_baseline_samples[0] - 1)
             baseline_remover.Transform(sum_wfm)
-            energy_sum[0] = baseline_remover.GetBaselineMean()
+            energy_sum[0]     = baseline_remover.GetBaselineMean()
             energy_rms_sum[0] = baseline_remover.GetBaselineRMS()
             baseline_remover.SetStartSample(0)
             baseline_remover.Transform(sum_wfm)
@@ -1695,7 +1741,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         low_energy_rms = False
         wfm_too_low = False
         wfm_too_high = False
-        if not isMC and pmt_chi2[0] > 3.0: is_bad[0] += 1
+        if not isMC and pmt_chi2[0] > 3.0:  is_bad[0] += 1
         rms_keV_sigma = struck_analysis_parameters.rms_keV_sigma
 
         # if any channels exceed conditions, we flag the event:
@@ -1730,9 +1776,13 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             do_fill = True
             nfound_channels[0] = len(found_channels)
             #if (n_channels_in_this_event != len(charge_channels_to_use)):
+            #if len(found_channels) != n_channels_good: 
+            #    print len(found_channels)
+            #    print found_channels
+            #    raw_input()
             if (n_channels_in_this_event != n_channels_good):
-              #print "================> WARNING: %i channels in this event!! <================" % nfound_channels[0]
-              #print "================> found %i and in event %i <================" % (nfound_channels[0], n_channels_in_this_event)
+              print "================> WARNING: %i channels in this event!! <================" % nfound_channels[0]
+              print "================> found %i and in event %i <================" % (nfound_channels[0], n_channels_in_this_event)
               is_bad[0] += 32
             else:
                 if nsignals[0] > 0: do_fill = True

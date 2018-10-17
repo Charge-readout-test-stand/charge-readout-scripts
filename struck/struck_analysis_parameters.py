@@ -21,7 +21,10 @@ is_10th_LXe = False # Jan 2017
 is_11th_LXe = False # Jan/Feb 2017, with DT
 is_11th_LXeB = False # Feb 2017, with VME
 is_12th_LXe = False
-is_13th_LXe = True
+is_13th_LXe = False
+
+#Testing 
+is_11th_LXeB = True
 
 import os
 import sys
@@ -93,8 +96,9 @@ if is_8th_LXe or is_9th_LXe or is_11th_LXeB or is_12th_LXe or is_13th_LXe:
 
 do_sipm_filter = False
 sipm_low_pass = None
-if is_12th_LXe:
+if is_12th_LXe or is_13th_LXe:
     sipm_low_pass = 14.3
+    if is_13th_LXe: sipm_low_pass = 9.5
     do_sipm_filter = True
 
 # in software, struck channels start from 0, not 1
@@ -661,6 +665,9 @@ if is_12th_LXe or is_13th_LXe:
     decay_time_values[13] =  10000000000.000000*microsecond # Not Used
     decay_time_values[14] =  10000000000.000000*microsecond # Not Used
     decay_time_values[15] =  10000000000.000000*microsecond # Not Used
+    if is_13th_LXe:
+        decay_time_values[14] =  336.954510*microsecond # +/- 0.035747 Y11
+        decay_time_values[15] =  392.642787*microsecond # +/- 0.043076 X22
     decay_time_values[16] =  373.164130*microsecond # +/- 0.024446 X13
     decay_time_values[17] =  385.112331*microsecond # +/- 0.032387 X14
     decay_time_values[18] =  395.731914*microsecond # +/- 0.043800 X15
@@ -873,7 +880,7 @@ if is_11th_LXeB:
 
     calibration_values[pulser_channel] = 0.018511 # make the pulser 100 keV when warm 24 Jan 2017
 
-if is_12th_LXe or is_13th_LXe:
+if is_12th_LXe:
     calibration_values[0]  = 1.039055   # +/-  Y12 
     calibration_values[1]  = 1.119925   # +/-  Y13
     calibration_values[2]  = 2.570478*1.5   # +/-  Y14   (Bad Fit)
@@ -907,6 +914,42 @@ if is_12th_LXe or is_13th_LXe:
     calibration_values[30] = 1.0
     calibration_values[31] = 1.0
 
+if is_13th_LXe:
+    #Calibraitons 13th combining all 3 day runs with differen SiPM bias
+    calibration_values[0] = 1.039173 # +/- 0.036779 Y12
+    calibration_values[1] = 1.123437 # +/- 0.038555 Y13
+    calibration_values[2] = 2.937023 # +/- 0.001754 Y14
+    calibration_values[3] = 2.260158 # +/- 0.017537 Y15
+    calibration_values[4] = 2.089076 # +/- 0.025162 Y16
+    calibration_values[5] = 2.129663 # +/- 0.028330 Y17
+    calibration_values[6] = 1.090685 # +/- 0.025185 Y18
+    calibration_values[7] = 1.097663 # +/- 0.456941 Y19
+    calibration_values[8] = 1.062616 # +/- 0.044031 Y20
+    calibration_values[9] = 1.000000 # +/- None 2-2
+    calibration_values[10] = 1.000000 # +/- None 2-3
+    calibration_values[11] = 1.000000 # +/- None 2-4
+    calibration_values[12] = 1.000000 # +/- None 2-5
+    calibration_values[13] = 1.000000 # +/- None 2-6
+    calibration_values[14] = 1.1638   # +/- 0.072026 Y11
+    calibration_values[15] = 1.1173   # +/- 0.060159 X22
+    calibration_values[16] = 1.106813 # +/- 0.102014 X13
+    calibration_values[17] = 1.088395 # +/- 0.024772 X14
+    calibration_values[18] = 1.0945   # +/- 0.133791 X15
+    calibration_values[19] = 2.094149 # +/- 0.032667 X16
+    calibration_values[20] = 2.2960   # +/- 0.041331 X17
+    calibration_values[21] = 2.199645 # +/- 0.001754 X18
+    calibration_values[22] = 2.182251 # +/- 0.051105 X19
+    calibration_values[23] = 1.064134 # +/- 0.022905 X20
+    calibration_values[24] = 1.085066 # +/- 0.034761 X21
+    calibration_values[25] = 1.000000 # +/- None 1-1
+    calibration_values[26] = 1.000000 # +/- None 1-2
+    calibration_values[27] = 1.000000 # +/- None 1-3
+    calibration_values[28] = 1.000000 # +/- None 1-4
+    calibration_values[29] = 1.000000 # +/- None 1-5
+    calibration_values[30] = 1.000000 # +/- None 1-6
+    calibration_values[31] = 1.000000 # +/- None 2-1
+
+if is_12th_LXe or is_13th_LXe:
     channel_pos_y[0] = -10.5 #Y12
     channel_pos_y[1] =  -7.5 #Y13
     channel_pos_y[2] = -4.5  #Y14
@@ -923,6 +966,9 @@ if is_12th_LXe or is_13th_LXe:
     channel_pos_y[13] =  0.0  
     channel_pos_y[14] =  0.0  #Dead
     channel_pos_y[15] =  0.0  #Dead
+    if is_13th_LXe:
+        channel_pos_y[14] =  -13.5  #Y11
+        channel_pos_y[15] =  0.0  #X22
     channel_pos_y[16] =  0.0 #X13
     channel_pos_y[17] =  0.0 #X14
     channel_pos_y[18] =  0.0 #X15
@@ -956,6 +1002,9 @@ if is_12th_LXe or is_13th_LXe:
     channel_pos_x[13] =  0.0  
     channel_pos_x[14] =  0.0  #Dead
     channel_pos_x[15] =  0.0  #Dead
+    if is_13th_LXe:
+        channel_pos_x[14] =  0.0  #Y11
+        channel_pos_x[15] =  19.5  #X22
     channel_pos_x[16] =  -7.5 #X13
     channel_pos_x[17] =  -4.5 #X14
     channel_pos_x[18] =  -1.5 #X15
@@ -1370,9 +1419,9 @@ if is_12th_LXe or is_13th_LXe:
     rms_keV_sigma[12] = 1.161899*calibration_values[12] #S4
     rms_keV[13] = 21.770624*calibration_values[13]  #S5
     rms_keV_sigma[13] = 1.161899*calibration_values[13] #S5
-    rms_keV[14] = 21.770624*calibration_values[14]  #Dead
+    rms_keV[14] = 19.178577*calibration_values[14]
     rms_keV_sigma[14] = 1.161899*calibration_values[14] #Dead
-    rms_keV[15] = 21.770624*calibration_values[15]  #Dead
+    rms_keV[15] = 22.838138*calibration_values[15]
     rms_keV_sigma[15] = 1.161899*calibration_values[15] #Dead
 
     rms_keV[16] = 20.401463*calibration_values[16]  # +/- 0.000406 X13

@@ -267,10 +267,12 @@ def get_wfmparams(
         #raw_input("Pause")
 
     baseline_rms_filter = 0.0
-    sipm_max = 0.0
-    sipm_min = 0.0
+    sipm_max      = 0.0
+    sipm_min      = 0.0
     sipm_max_time = 0.0
     sipm_min_time = 0.0
+    sipm_amp      = 0.0
+    sipm_amp_time = 0.0
 
     #Intitially not a signal
     isSignal    = 0
@@ -391,6 +393,7 @@ def get_wfmparams(
     pole_zero.SetDecayConstant(decay_time)
     exo_wfm_pz = None
     if not is_pmtchannel and not is_sipmchannel: #Skip correction for Light Channels
+        #print "Pole 0 WFM", channel
         pole_zero.Transform(exo_wfm_baseline, energy_wfm)
         #Get the numpy pole zero corrected WF
         exo_wfm_pz = np.array([energy_wfm.At(i) for i in xrange(energy_wfm.GetLength())])
@@ -489,10 +492,21 @@ def get_wfmparams(
         sipm_max = np.max(exo_wfm_filter[1000:1600])
         sipm_max_time = (np.argmax(exo_wfm_filter[1000:1600]) + 1000)*(1.e6/sampling_freq_Hz) #us
         sipm_min_time = (np.argmin(exo_wfm_filter[1000:1600]) + 1000)*(1.e6/sampling_freq_Hz) #us
+        
+        #if sipm_max > 200:
+        #    print np.mean(exo_wfm_filter), np.mean(exo_wfm_filter[400:1000])
+        #    print sipm_max, sipm_max-np.mean(exo_wfm_filter[400:1000])
+        #    plot_wfms([[exo_wfm_filter,"WFM"]])
 
         # Currently there is a windowing issue so can't use the first several samples for the RMS
         baseline_rms_filter = np.std(exo_wfm_filter[400:1000])
         energy = sipm_max
+        
+        sipm_amp      = sipm_max
+        sipm_amp_time = sipm_max_time 
+        if abs(sipm_min) > sipm_max:
+            sipm_amp = sipm_min
+            sipm_amp_time = sipm_min_time
 
     elif is_pmtchannel: # for PMT channel, use GetMaxValue()
         #Fix me if you end up using this
@@ -592,8 +606,10 @@ def get_wfmparams(
         baseline_rms_filter,
         sipm_max,
         sipm_min,
+        sipm_amp,
         sipm_max_time,
         sipm_min_time,
+        sipm_amp_time,
         isInduction,
         induct_amp,
         induct_time
@@ -607,10 +623,13 @@ def get_wfmparams(
 
 def do_risetime_calc(rise_time_calculator, threshold_percent, wfm, max_val, period):
     rise_time_calculator.SetFinalThresholdPercentage(threshold_percent)
+    
     rise_time_calculator.SetInitialScanToPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.01) # must be < smallest final threshold crossing
     rise_time_calculator.SetInitialThresholdPercentage(rise_time_calculator.GetFinalThresholdPercentage()-0.02)
+    
     if max_val > 0.0: # throws an alert if max_val is 0
         rise_time_calculator.Transform(wfm, wfm)
+    
     return rise_time_calculator.GetFinalThresholdCrossing()*period/microsecond
 
 
@@ -622,6 +641,7 @@ def get_risetimes(
     label="", # a name for plots, used for debugging
     fit_energy=0.0
 ):
+
 
     exo_wfm.SetSamplingFreq(sampling_freq_Hz/second)
     new_wfm = EXODoubleWaveform(exo_wfm)
@@ -686,27 +706,43 @@ def get_risetimes(
         rise_time_stop70 = do_risetime_calc(rise_time_calculator, 0.70, exo_wfm, max_val, period)
         rise_time_stop80 = do_risetime_calc(rise_time_calculator, 0.80, exo_wfm, max_val, period)
 
+    rise_time_stop10 = do_risetime_calc(rise_time_calculator, 0.10, new_wfm, max_val, period)
     rise_time_stop90 = do_risetime_calc(rise_time_calculator, 0.90, new_wfm, max_val, period)
     rise_time_stop95 = do_risetime_calc(rise_time_calculator, 0.95, new_wfm, max_val, period)
     rise_time_stop99 = do_risetime_calc(rise_time_calculator, 0.99, new_wfm, max_val, period)
 
+    if rise_time_stop10 > rise_time_stop99: rise_time_stop10 = -1
+
     #Debugging to plot the risetime calculation
-    if False and max_val > 400 and (not "PMT" in label) and ("Sum" in label):
+    #if True and max_val > 200 and (not "PMT" in label) and ("Sum" in label) and rise_time_stop10 > 0:
+    #if True and max_val > 400 and (not "PMT" in label) and (not "Sum" in label) and rise_time_stop10 > 0:
+    if False:
         #Add python plotter
-        exo_wfm_np = np.array([exo_wfm.At(i) for i in xrange(exo_wfm.GetLength())])
+        exo_wfm_np        = np.array([exo_wfm.At(i) for i in xrange(exo_wfm.GetLength())])
         exo_wfm_np_smooth = np.array([new_wfm.At(i) for i in xrange(new_wfm.GetLength())])        
+        
+        exo_wfm_np -= np.mean(exo_wfm_np[:200])
 
         plt.ion()
         plt.clf()
-        time = np.arange(len(exo_wfm_np))*8.0*1e-3
+        time = np.arange(len(exo_wfm_np))*(1e6/sampling_freq_Hz)
+        
         plt.plot(time, exo_wfm_np, c='r', linewidth=1.0, label='Raw WF')
-        plt.plot(time,exo_wfm_np_smooth, c='b', linewidth=3.0, label='Smooth WF')
+        plt.plot(time, exo_wfm_np_smooth, c='b', linewidth=3.0, label='Smooth WF')
+     
+        #print np.mean(exo_wfm_np[wfm_length-274:])
+        #print sampling_freq_Hz, wfm_length, label
+        print "Label", label
+        print "Rise10:", rise_time_stop10, "Rise95", rise_time_stop95 , "Diff", (rise_time_stop95-rise_time_stop10), "Drift", (rise_time_stop95-11)
+        plt.plot([rise_time_stop10], [0.10*max_val], marker='o', ms=15, color='k')
+        plt.plot([rise_time_stop95], [0.95*max_val], marker='o', ms=15, color='k')
+
         #plt.xlim(1000, 2000)
         plt.xlabel(r"Sample Time [$\mu$s]", fontsize=18)
         plt.ylabel("Amplitude [ADC]", fontsize=18)
         plt.legend()
-        plt.savefig("risetime_example_wfm.pdf")
-        raw_input()
+        #plt.savefig("risetime_example_wfm.pdf")
+        raw_input("Rise pause")
 
 
     maw_wfm.IsA().Destructor(maw_wfm)
