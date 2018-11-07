@@ -11,6 +11,7 @@ import glob
 import shutil
 import TPMLog
 import commands
+import time
 
 def download_file():
     #Here you can hardcode a specific file.
@@ -59,6 +60,20 @@ def get_recent():
     #Get file list using glob.  Should auto sort by date.
     files=os.path.join(directory, '*.dat')
     flist=glob.glob(files)
+    
+    if len(flist)==0:
+        print "........... No files found .....", directory
+        print "............ Pause and try again"
+        time.sleep(5)
+        
+        print "..........Try #2"
+        files=os.path.join(directory, '*.dat')
+        flist=glob.glob(files)
+        
+        if len(flist)==0: 
+            print "..... Still can't find exiting?", directory
+            sys.exit(1)
+    
     testfile = flist[-1]
     print "......... Most recent file is ", testfile
     return testfile

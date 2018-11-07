@@ -72,8 +72,8 @@ def compare_isochoric(data_path, plot_dir, basename, temp_top, temp_mid,
     iso_data = plt.plot(temp, press)
     plt.setp(iso_data, color = 'c', linewidth = linewidth, label = 'Data')
     #legend = plt.legend(loc='best', shadow = False, fontsize='medium', ncol=2)
-    plt.savefig(plot_dir+"50-Comp-Isochoric_"+basename+".jpeg")
-    print "printed", plot_dir+"50-Comp-Isochoric_"+basename+".jpeg"
+    plt.savefig(plot_dir+"/50-Comp-Isochoric_"+basename+".jpeg")
+    print "printed", plot_dir+"/50-Comp-Isochoric_"+basename+".jpeg"
     plt.clf()
     
     # loop over baratron data, find corresponding pressure data from NIST
@@ -114,8 +114,8 @@ def compare_isochoric(data_path, plot_dir, basename, temp_top, temp_mid,
     subplt.set_position([box.x0, box.y0, box.width, box.height*0.9])
     #if isDB: legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, fontsize='medium', ncol=2)
     legend  =  plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False,  ncol=2, prop={'size':9})
-    plt.savefig(plot_dir+"10-Temp-Isochoric_" + basename + ".jpeg")
-    print "printed", plot_dir+"10-Temp-Isochoric_" + basename +".jpeg"
+    plt.savefig(plot_dir+"/10-Temp-Isochoric_" + basename + ".jpeg")
+    print "printed", plot_dir+"/10-Temp-Isochoric_" + basename +".jpeg"
     plt.clf()
         
       
@@ -165,8 +165,8 @@ def compare_isochoric(data_path, plot_dir, basename, temp_top, temp_mid,
     subplt.set_position([box.x0, box.y0, box.width, box.height*0.9])
     #if isDB: legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False, fontsize='medium', ncol=3)
     legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), shadow = False,  ncol=3, prop={'size':9})
-    plt.savefig(plot_dir+"10-Press-Isochoric_" + basename + ".jpeg")
-    print "printed", plot_dir+"10-Press-Isochoric_" + basename +".jpeg"
+    plt.savefig(plot_dir+"/10-Press-Isochoric_" + basename + ".jpeg")
+    print "printed", plot_dir+"/10-Press-Isochoric_" + basename +".jpeg"
     plt.clf()
  
 
@@ -535,6 +535,9 @@ def main(
             
             if time_stamp >= 3600123249: #13th LXe
                 mass_flow_rate_offset = (118/(60*14.))
+            
+            if time_stamp >= 3623963940: #15th
+                mass_flow_rate_offset = 430./(60*60)
 
             print "mass_flow_rate_offset: [grams/minute]", mass_flow_rate_offset
 
@@ -647,7 +650,8 @@ def main(
 
         # add extra TCs in HFE dewar, also try to be backwards compatible
         if column_offset >= 10:
-            T_Xe1.append(float(split_line[15]))
+            #T_Xe1.append(float(split_line[15]))
+            T_Xe1 = None
             T_Xe2.append(float(split_line[16]))
             T_Xe3.append(float(split_line[17]))
         else:
