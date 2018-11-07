@@ -22,9 +22,9 @@ is_11th_LXe = False # Jan/Feb 2017, with DT
 is_11th_LXeB = False # Feb 2017, with VME
 is_12th_LXe = False
 is_13th_LXe = False
-
+is_15th_LXe = True
 #Testing 
-is_11th_LXeB = True
+#is_11th_LXeB = True
 
 import os
 import sys
@@ -67,7 +67,7 @@ drift_time_threshold = (drift_length - 5.3)/drift_velocity # microsecond
 
 max_drift_time = drift_length/drift_velocity
 #print "max_drift_time:", max_drift_time
-if is_10th_LXe or is_11th_LXe or is_11th_LXeB or is_12th_LXe or is_13th_LXe:
+if is_10th_LXe or is_11th_LXe or is_11th_LXeB or is_12th_LXe or is_13th_LXe or is_15th_LXe:
     drift_length = 33.23 # new anode standoffs Dec 2016
     if is_10th_LXe:
         drift_velocity = 1.79 # mm/microsecond
@@ -89,17 +89,22 @@ one_strip_channels = [0]*32
 two_strip_channels = [0]*32
 channel_to_n_strips_map = [1.0]*32
 struck_to_mc_channel_map = {} # map struck channel to MC channel
-if is_8th_LXe or is_9th_LXe or is_11th_LXeB or is_12th_LXe or is_13th_LXe:
+if is_8th_LXe or is_9th_LXe or is_11th_LXeB or is_12th_LXe or is_13th_LXe or is_15th_LXe:
     charge_channels_to_use = [0]*32
     sipm_channels_to_use   = [0]*32 
     dead_channels          = [0]*32
 
 do_sipm_filter = False
 sipm_low_pass = None
+do_invert     = False
 if is_12th_LXe or is_13th_LXe:
     sipm_low_pass = 14.3
     if is_13th_LXe: sipm_low_pass = 9.5
     do_sipm_filter = True
+elif is_15th_LXe:
+    do_sipm_filter = True
+    do_invert      = True
+    sipm_low_pass=5.0
 
 # in software, struck channels start from 0, not 1
 pmt_channel = 8
@@ -153,7 +158,7 @@ elif is_10th_LXe or is_11th_LXe:
             charge_channels_to_use[i_channel] = 1
     #charge_channels_to_use[8] = 0 # Y14 changed mid-run
 
-elif is_12th_LXe or is_13th_LXe:
+elif is_12th_LXe or is_13th_LXe or is_15th_LXe:
     pmt_channel = None # now using SiPMs
     pulser_channel = None # won't have one probably?
     channels = []
@@ -169,7 +174,7 @@ elif is_12th_LXe or is_13th_LXe:
             charge_channels_to_use[i_channel] = 0
             sipm_channels_to_use[i_channel]   = 1
         elif i_channel > 13 and i_channel < 16:
-            if is_13th_LXe:
+            if is_13th_LXe or is_15th_LXe:
                 charge_channels_to_use[i_channel] = 1 #Maybe not dead anymore??
                 sipm_channels_to_use[i_channel]   = 0
                 dead_channels[i_channel] = 0
@@ -346,7 +351,7 @@ if is_10th_LXe or is_11th_LXe:
     struck_to_mc_channel_map[14] = [14]
     struck_to_mc_channel_map[15] = [13]
 
-if is_12th_LXe or is_13th_LXe:
+if is_12th_LXe or is_13th_LXe or is_15th_LXe:
     channel_map[0] = "Y12"
     channel_map[1] = "Y13"
     channel_map[2] = "Y14"
@@ -431,7 +436,7 @@ MCn_channels = len(MCchannels)
 MCcharge_channels_to_use = [0]*MCn_channels
 mc_channel_map = {} # map MC channel to label
 for struck_channel, label in channel_map.items():
-    if is_8th_LXe or is_9th_LXe or is_10th_LXe or is_11th_LXe or is_11th_LXeB or is_12th_LXe or is_13th_LXe: break # FIXME -- skip this for now
+    if is_8th_LXe or is_9th_LXe or is_10th_LXe or is_11th_LXe or is_11th_LXeB or is_12th_LXe or is_13th_LXe or is_15th_LXe: break # FIXME -- skip this for now
     is_y = False
     if "Y" in label:
         is_y = True
@@ -648,7 +653,7 @@ if is_10th_LXe or is_11th_LXe:
     decay_time_values[14] =  135.320872*microsecond # +/- 0.009996 X15
     decay_time_values[15] =  136.730159*microsecond # +/- 0.008309 X14
 
-if is_12th_LXe or is_13th_LXe:
+if is_12th_LXe or is_13th_LXe or is_15th_LXe:
     decay_time_values[0] =   342.909975*microsecond # +/- 0.033580 Y12
     decay_time_values[1] =   375.471621*microsecond # +/- 0.037684 Y13
     decay_time_values[2] =   364.445833*microsecond # +/- 0.028699 Y14
@@ -665,7 +670,7 @@ if is_12th_LXe or is_13th_LXe:
     decay_time_values[13] =  10000000000.000000*microsecond # Not Used
     decay_time_values[14] =  10000000000.000000*microsecond # Not Used
     decay_time_values[15] =  10000000000.000000*microsecond # Not Used
-    if is_13th_LXe:
+    if is_13th_LXe or is_15th_LXe:
         decay_time_values[14] =  336.954510*microsecond # +/- 0.035747 Y11
         decay_time_values[15] =  392.642787*microsecond # +/- 0.043076 X22
     decay_time_values[16] =  373.164130*microsecond # +/- 0.024446 X13
@@ -914,7 +919,7 @@ if is_12th_LXe:
     calibration_values[30] = 1.0
     calibration_values[31] = 1.0
 
-if is_13th_LXe:
+if is_13th_LXe or is_15th_LXe:
     #Calibraitons 13th combining all 3 day runs with differen SiPM bias
     calibration_values[0] = 1.039173 # +/- 0.036779 Y12
     calibration_values[1] = 1.123437 # +/- 0.038555 Y13
@@ -949,7 +954,7 @@ if is_13th_LXe:
     calibration_values[30] = 1.000000 # +/- None 1-6
     calibration_values[31] = 1.000000 # +/- None 2-1
 
-if is_12th_LXe or is_13th_LXe:
+if is_12th_LXe or is_13th_LXe or is_15th_LXe:
     channel_pos_y[0] = -10.5 #Y12
     channel_pos_y[1] =  -7.5 #Y13
     channel_pos_y[2] = -4.5  #Y14
@@ -966,7 +971,7 @@ if is_12th_LXe or is_13th_LXe:
     channel_pos_y[13] =  0.0  
     channel_pos_y[14] =  0.0  #Dead
     channel_pos_y[15] =  0.0  #Dead
-    if is_13th_LXe:
+    if is_13th_LXe or is_15th_LXe:
         channel_pos_y[14] =  -13.5  #Y11
         channel_pos_y[15] =  0.0  #X22
     channel_pos_y[16] =  0.0 #X13
@@ -1002,7 +1007,7 @@ if is_12th_LXe or is_13th_LXe:
     channel_pos_x[13] =  0.0  
     channel_pos_x[14] =  0.0  #Dead
     channel_pos_x[15] =  0.0  #Dead
-    if is_13th_LXe:
+    if is_13th_LXe or is_15th_LXe:
         channel_pos_x[14] =  0.0  #Y11
         channel_pos_x[15] =  19.5  #X22
     channel_pos_x[16] =  -7.5 #X13
@@ -1127,7 +1132,7 @@ noise_length = int(800)
 if is_10th_LXe or is_11th_LXe: 
     noise_length = int(1050)
     noiseLightCut = 20.0
-if is_12th_LXe or is_13th_LXe:
+if is_12th_LXe or is_13th_LXe or is_15th_LXe:
     noise_length = int(5250)
     noiseLightCut = 20.0
 
@@ -1141,7 +1146,7 @@ if is_11th_LXe or is_11th_LXeB:
     n_baseline_samples = 275.0 # 2x n samples
     energy_start_time_microseconds = (1050.0 - n_baseline_samples)*40/1000 # energy calc starts 850 samples
 baseline_average_time_microseconds = (n_baseline_samples/2.0*40.0/1000) # 200 samples at 25 MHz = 8 microseconds
-if is_12th_LXe or is_13th_LXe:
+if is_12th_LXe or is_13th_LXe or is_15th_LXe:
     #sampling_freq_Hz = 125.0e6 #saved in tree so don't need
     samp_period = 8 #ns (125MHz)
     wf_length = 5250.0
@@ -1389,7 +1394,7 @@ if is_11th_LXeB:
     rms_keV[31] = 2.861805*calibration_values[31]  # +/- 0.001108 PMT
     rms_keV_sigma[31] = 3.044990*calibration_values[31] # +/- 0.000784 PMT
 
-if is_12th_LXe or is_13th_LXe:
+if is_12th_LXe or is_13th_LXe or is_15th_LXe:
     #WRONG Add RMS noise
     rms_keV[0] = 21.353911*calibration_values[0]  # +/- 0.000411 Y12
     rms_keV_sigma[0] = 1.130243*calibration_values[0] # +/- 0.000291 Y12

@@ -130,6 +130,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     n_channels_good         = n_channels - sum(dead_channels)
     channel_pos_x           = struck_analysis_parameters.channel_pos_x
     channel_pos_y           = struck_analysis_parameters.channel_pos_y
+    do_invert               = struck_analysis_parameters.do_invert
 
     # this is the number of channels per event (1 if we are processing tier1
     # data, len(channels) if we are processing tier2 data
@@ -1236,8 +1237,13 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 
 
                 i = tree.HitTree.GetSlot()*16 + tree.HitTree.GetChannel()
+                #channel[i] = tree.HitTree.GetSlot()*16 + tree.HitTree.GetChannel()
+                if do_invert:
+                    #Flip everyother channel if this is 16bit digi
+                    if i%2==0:i+=1
+                    else:     i-=1
+                channel[i] = i
 
-                channel[i] = tree.HitTree.GetSlot()*16 + tree.HitTree.GetChannel()
                 #First time stamp diff in clock ticks thans convert to ms 
                 time_stamp_diff[i] = int( tree.HitTree.GetRawClock() ) - time_stamp[0]# time stamp for this channel
                 time_stampDouble_diff[i] = tree.HitTree.GetRawClock() -time_stampDouble[0] # time stamp for this channel
@@ -1337,7 +1343,28 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
                 noise_val[i] = generator.Gaus() # an extra noise value for use with energy smearing
 
+            #print 'type', type(wfm)
+            #raw_input("PAUSE")
+
             exo_wfm = EXODoubleWaveform(array('d',wfm), wfm_length[i])
+            
+            #plt.figure(109)
+            #plt.clf()
+            #plt.ion()
+            #plt.title("Channel=%i, Map=%s"%(channel[i], channel_map[i]))
+            #plt.plot(np.array([exo_wfm.At(wi) for wi in xrange(exo_wfm.GetLength())]))
+            
+            if do_invert:
+                exo_wfm_temp_np        = np.array([exo_wfm.At(wi) for wi in xrange(exo_wfm.GetLength())])
+                exo_wfm_temp_np       *= -1
+                exo_wfm                = EXODoubleWaveform(array('d',exo_wfm_temp_np), len(exo_wfm_temp_np))
+            
+            #plt.figure(110)
+            #plt.clf()
+            #plt.plot(np.array([exo_wfm.At(wi) for wi in xrange(exo_wfm.GetLength())]), label='invert')
+            #plt.legend()
+            #raw_input("PAUSE1")
+
 
             wfm_max[i] = exo_wfm.GetMaxValue()
             wfm_min[i] = exo_wfm.GetMinValue()
