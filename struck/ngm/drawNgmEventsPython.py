@@ -15,6 +15,8 @@ from scipy.fftpack import fft
 import matplotlib.pyplot as plt
 import matplotlib.backends.backend_pdf as PdfPages
 import matplotlib.gridspec as gridspec
+import matplotlib.cm as cmx
+import matplotlib.colors as colors
 
 
 #plt.ion()
@@ -54,14 +56,18 @@ nchannels = len(struck_analysis_parameters.channel_map)
 #nchannels = 32 # FIXME -- for DT unit!!
 bits = 14
 
-plot_fft = True
-sipm_twidth = 10.0
-threshold = 0 # keV
+plot_fft = False
+cut_sipm_win = True
+sipm_twidth = 5.0
+threshold = 0.0 # keV
+lthreshold = 2000.0
 energy_offset = 25000.0/nchannels
+#energy_offset = 300000.0/nchannels
 sum_offset = 51500
+smooth_charge = False
 
-energy_offset_sipm = energy_offset*.1#*1.2
-
+#energy_offset_sipm = energy_offset*2.0#.1#*1.2
+energy_offset_sipm  = energy_offset*1.0
 # if this is 1.0 there is no effect:
 pmt_shrink_scale = 1.0 # shrink PMT signal by an additional factor so it doesn't set the graphical scale
 
@@ -96,7 +102,7 @@ print "there are %i charge channels" % len(channels)
 if pmt_channel != None:
     channels.append(pmt_channel)
 n_channels = len(channels)
-colors = struck_analysis_parameters.get_colors()
+#colors = struck_analysis_parameters.get_colors()
 
 n_samples_to_avg = int(struck_analysis_parameters.n_baseline_samples)
 print "n_samples_to_avg", n_samples_to_avg
@@ -111,6 +117,26 @@ def get_recent():
     filename = output[1]
     print "--> using most recent NGM file, ", filename
     return filename
+
+def get_color_map( n ):
+    #jet = plt.get_cmap('jet')
+    #jet  = plt.get_cmap("Set1")
+    jet   = plt.get_cmap("prism")
+    cNorm  = colors.Normalize(vmin=0, vmax=n-1)
+    scalarMap = cmx.ScalarMappable(norm=cNorm, cmap=jet)
+    outmap = []
+    for i in range(n):
+        outmap.append( scalarMap.to_rgba(i) )
+    return outmap
+
+def ch_to_color(ch):
+    ncols = len(struck_analysis_parameters.channel_map)
+    col_list = get_color_map(ncols)
+    col_min  = 0
+    col_max  = ncols+1
+    col_range = np.linspace(col_min,col_max,ncols)
+    cindex = np.argmin(np.abs(col_range-ch))
+    return col_list[cindex]
 
 
 #Main Process Loop
@@ -227,6 +253,11 @@ def process_file(filename=None, n_plots_total=0):
             card_channel = tree.HitTree.GetChannel() # 0 to 16 for each card
             channel = card_channel + 16*slot # 0 to 31            
 
+            #Every other channel is switched in the 16-bit digi and all channel signals are inverted
+            if struck_analysis_parameters.do_invert:
+                if channel %2 == 0: channel+=1
+                else:               channel-=1
+
             #Check timestamp to assosiate WFs with events
             timestamp = tree.HitTree.GetRawClock()
             timestamp_diff = timestamp - timestamp_first
@@ -260,12 +291,13 @@ def process_file(filename=None, n_plots_total=0):
             if channel == pmt_channel:
                 multiplier /= pmt_shrink_scale
             if sipm_channels_to_use[channel] > 0:
-                multiplier = 1.3
+                multiplier = 1.0
                 #multiplier = 100
             
             #Get the WFM
             graph = tree.HitTree.GetGraph()
             wfm   = np.array([graph.GetY()[isamp] for isamp in xrange(graph.GetN())])
+            if struck_analysis_parameters.do_invert: wfm = -1.0*wfm
             wfm_fft = np.fft.rfft(wfm)
             fft_freq = np.fft.rfftfreq(len(wfm), d=1./sampling_freq_Hz)
             fft_freq *= 1e-6
@@ -273,7 +305,7 @@ def process_file(filename=None, n_plots_total=0):
             power_spec = wfm_fft*np.conj(wfm_fft)
 
             if sipm_channels_to_use[channel] > 0:
-                sum_wfm_average[channel] += wfm
+                #sum_wfm_average[channel] += wfm
                 if np.max(power_spec[1:]) > smax_fft: smax_fft = np.max(power_spec[1:])
                 if np.min(power_spec[1:]) < smin_fft: smin_fft = np.min(power_spec[1:])
                 ax4.plot(fft_freq, wfm_fft*np.conj(wfm_fft), linewidth=2.0, label="%s"%channel_map[channel])
@@ -291,29 +323,46 @@ def process_file(filename=None, n_plots_total=0):
 
             #Filter the SiPM WF if necceasry
             if sipm_channels_to_use[channel] > 0 and do_sipm_filter: 
+                #plt.figure(109)
+                #plt.ion()
+                #plt.clf()
+                #plt.plot(wfm)
+                
                 sipm_fft = np.fft.rfft(wfm)
                 fft_freq_pass = np.logical_and(fft_freq > -1, fft_freq < sipm_low_pass)
                 sipm_fft_filter = np.zeros_like(sipm_fft)
                 sipm_fft_filter[fft_freq_pass] = sipm_fft[fft_freq_pass]
                 wfm   =  np.fft.irfft(sipm_fft_filter)
+
+                #plt.plot(wfm)
+                #plt.show()
+                #raw_input("PAUSE")
+
             if sipm_channels_to_use[channel] > 0:
                 sum_sipm_wfm += wfm
-            
+                sum_wfm_average[channel] += wfm
+
             #Get baseline and energy
             baseline      =  np.mean(wfm[0:n_samples_to_avg])
             baseline_rms  =  np.std(wfm[0:n_samples_to_avg])
             energy        =  np.mean(wfm[energy_start_time_samples:])
             energy_rms    =  np.std(wfm[energy_start_time_samples:])
             energy        = (energy - baseline)*multiplier
-
+            sipm_amp      = 0.0
+    
             wfm-=baseline
 
             if channel == pmt_channel:
                 i_sample = int(struck_analysis_parameters.n_baseline_samples + 27)
                 energy   = (wfm[i_sample])*multiplier          
             if sipm_channels_to_use[channel] > 0:
-                energy = (np.max(wfm))*multiplier
-            
+                energy = (np.max(wfm[1000:1600]))*multiplier
+                sipm_max = np.max(wfm[1000:1600])
+                sipm_min = np.min(wfm[1000:1600])
+                sipm_amp = sipm_max
+                if np.abs(sipm_min) > sipm_max:
+                    sipm_amp = sipm_min
+
             #Quick signal Finding on Charge Channels            
             signal_threshold = 5.0*baseline_rms*multiplier/10.0
             rms_threshold = struck_analysis_parameters.rms_keV[channel] + struck_analysis_parameters.rms_keV_sigma[channel]*4.0
@@ -327,11 +376,11 @@ def process_file(filename=None, n_plots_total=0):
                 if baseline_rms>  rms_threshold:
                     n_high_rms += 1
             if sipm_channels_to_use[channel] > 0:
-                if (energy/baseline_rms) > 10.0:
+                if abs(energy/baseline_rms) > 10.0:
                     sum_energy_light += energy
 
             #Smooth the charge WFs
-            if charge_channels_to_use[channel]>0:
+            if charge_channels_to_use[channel]>0 and smooth_charge:
                 exo_wfm = EXODoubleWaveform(wfm, len(wfm))
                 new_wfm = EXODoubleWaveform(exo_wfm)
                 smoother = EXOSmoother()
@@ -365,14 +414,14 @@ def process_file(filename=None, n_plots_total=0):
                 wfm += offset
                 if np.max(wfm) > cmax: cmax=np.max(wfm)
                 if np.min(wfm) < cmin: cmin=np.min(wfm)
-                ax0.plot(time_sample, wfm, linewidth=2.0, label=leg_entry)
+                ax0.plot(time_sample, wfm, linewidth=2.0, label=leg_entry, color=ch_to_color(channel))
                 if energy > signal_threshold:
                     ax0.text(trigger_time/2.0, offset+energy_offset/2.0, "%.2f keV" % energy, size=10,
                              rotation=0, ha='center', va='center', fontweight='bold')#, 
                             #bbox=dict(boxstyle="square", ec='k', fc='w'))
-                else:
-                    ax0.text(trigger_time/2.0, offset+energy_offset/2.0, "%.2f keV" % energy, size=10,
-                                        rotation=0, ha='center', va='center')#, 
+                #else:
+                #    ax0.text(trigger_time/2.0, offset+energy_offset/2.0, "%.2f keV" % energy, size=10,
+                #                        rotation=0, ha='center', va='center')#, 
                                         #bbox=dict(boxstyle="square", ec='k', fc='w'))
             elif sipm_channels_to_use[channel] > 0:
                 offset = energy_offset_sipm*np.sum(sipm_channels_to_use[0:channel])
@@ -380,6 +429,20 @@ def process_file(filename=None, n_plots_total=0):
                 if np.max(wfm) > smax: smax=np.max(wfm)
                 if np.min(wfm) < smin: smin=np.min(wfm)
                 ax1.plot(time_sample, wfm, linewidth=2.0, label=leg_entry)
+                ax1.text(trigger_time-sipm_twidth/2, offset+energy_offset_sipm/5.0, 
+                         "%.2f" % sipm_amp, size=10,
+                         rotation=0, ha='center', va='center')
+
+                #plt.ion()
+                #plt.figure(190)
+                #plt.clf()
+                #plt.title(leg_entry)
+                #print channel, channel_map[channel]
+                #plt.plot(time_sample, wfm, linewidth=2.0, label=leg_entry)
+                #plt.show()
+                #if "1-2" in channel_map[channel]: raw_input("PAUSE")
+
+
 
         #Check if the channel is a dead channel
         if isdead_event:
@@ -401,7 +464,7 @@ def process_file(filename=None, n_plots_total=0):
         #if sum_energy < threshold or sum_energy > 650: continue
         print "n_signals:", n_signals, " | sum_energy: %.1f" % sum_energy
         
-        if sum_energy < threshold: 
+        if sum_energy < threshold or sum_energy_light < lthreshold: 
             ax0.cla()
             ax1.cla()
             ax3.cla()
@@ -441,8 +504,9 @@ def process_file(filename=None, n_plots_total=0):
         ax1.set_ylim(smin-0.2*energy_offset_sipm,smax+0.2*energy_offset_sipm)
         ax1.set_xlabel(r"Time [$\mu$s]",fontsize=16)
         #ax1.set_xlim(min(time_sample),max(time_sample))
-        ax1.set_xlim(trigger_time-sipm_twidth, trigger_time+sipm_twidth)
-        ax1.axvline(trigger_time, c='k', linestyle='--', linewidth=2.0)
+        if cut_sipm_win:
+            ax1.set_xlim(trigger_time-sipm_twidth, trigger_time+sipm_twidth)
+        #ax1.axvline(trigger_time, c='k', linestyle='--', linewidth=2.0)
 
         pdf.savefig(fig1)
         n_plots += 1
@@ -505,7 +569,7 @@ def process_file(filename=None, n_plots_total=0):
 
 if __name__ == "__main__":
 
-    n_plots_total = 2
+    n_plots_total  = 10
     n_plots_so_far = 0
     
     if len(sys.argv) > 1:
