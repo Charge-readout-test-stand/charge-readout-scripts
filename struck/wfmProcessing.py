@@ -48,7 +48,7 @@ from ROOT import EXOExtremumFinder
 from ROOT import EXOTrapezoidalFilter
 from ROOT import EXOMatchedFilter
 
-do_decay_time_fit = True
+do_decay_time_fit = False
 try:
     from ROOT import EXODecayTimeFit
 except ImportError:
@@ -328,6 +328,7 @@ def get_wfmparams(
     decay_fit = -999.0
     decay_chi2 = -999.0
     decay_error = -999.0
+
     if do_decay_time_fit and not isMC and energy_rms1 > 0.0 and energy1/energy_rms1 > 10.0:
         decay_fitter = EXODecayTimeFit()
         # start and end sample need to be size_t; after sampling freq is set exo_wfm.GimmeHist() x-axis ranges from 0 to max time, in microseconds
@@ -420,11 +421,25 @@ def get_wfmparams(
 
     # Get the energy using same number of energy averages but 2x the number of baseline
     # averages 
+    #print "BASE SAMPLES", n_baseline_samples
+    #raw_input()
     energy1_pz = np.mean(exo_wfm_pz[energy_start_sample:energy_start_sample+2*n_baseline_samples])*calibration
     energy_rms1_pz = np.std(exo_wfm_pz[energy_start_sample:energy_start_sample+2*n_baseline_samples])*calibration
     if math.isnan(energy_rms1_pz): # for events with 0 noise, RMS is sometimes NaN
         if not isMC: print "WARNING: setting RMS from nan to 0"
         energy_rms1_pz = 0.0
+
+    if False and not is_pmtchannel and not is_sipmchannel and energy1_pz > 20:
+        plt.figure(11)
+        plt.ion()
+        plt.clf()
+        plt.title("Channel =%s, Energy = %.2f, Sig=%.2f" % 
+                    (struck_analysis_parameters.channel_map[channel], energy1_pz, energy1_pz/(energy_rms1_pz/np.sqrt(n_baseline_samples))))
+        plt.plot(exo_wfm_pz*calibration, label='PZ WFM', color='k')
+        plt.plot([0,2*n_baseline_samples], [0,0], color='b', linewidth=3)
+        plt.plot([energy_start_sample,energy_start_sample+2*n_baseline_samples], [energy1_pz, energy1_pz], color='b', linewidth=3)
+        raw_input("PAUSE")
+
 
     #Skip the energy slope measurement.  Removed code not being used
     energy1_pz_slope = 0.0
@@ -435,7 +450,7 @@ def get_wfmparams(
         if not is_pmtchannel and not is_sipmchannel:
             #PMT can't be a signal because by default it has to have triggered
             isSignal = 1
-    
+            
     #Test induction finder
     if energy1_pz < struck_analysis_parameters.rms_threshold*energy_rms1_pz*math.sqrt(1.0/n_baseline_samples) and not is_sipmchannel:
         
@@ -579,6 +594,16 @@ def get_wfmparams(
     energy_wfm.IsA().Destructor(energy_wfm)
     exo_wfm_baseline.IsA().Destructor(exo_wfm_baseline)
 
+    if False and energy1_pz > 100 and (not is_sipmchannel):
+        print "PLOT WFM"
+        plt.figure(11)
+        plt.clf()
+        plt.ion()
+        plt.plot(exo_wfm_pz)
+        #plot_wfms([exo_wfm_pz, "PZ"])
+        plt.show()
+        raw_input("PAUSE")
+
     return (
         baseline_mean, 
         baseline_rms,
@@ -715,9 +740,12 @@ def get_risetimes(
 
     #Debugging to plot the risetime calculation
     #if True and max_val > 200 and (not "PMT" in label) and ("Sum" in label) and rise_time_stop10 > 0:
-    #if True and max_val > 400 and (not "PMT" in label) and (not "Sum" in label) and rise_time_stop10 > 0:
+    #if True and max_val > 400 and (not "PMT" in label) and (not "Sum" in label) and rise_time_stop10 > 0 and (rise_time_stop95 - rise_time_stop10) > 6.0 and not ( "/" in label or "-" in label):
+    #if True and max_val > 400 and (not "PMT" in label) and (not "Sum" in label) and rise_time_stop10 > 0 and (rise_time_stop95 - rise_time_stop10) < 3.0:
     if False:
+    #if "Sum" in label and fit_energy>200:
         #Add python plotter
+        
         exo_wfm_np        = np.array([exo_wfm.At(i) for i in xrange(exo_wfm.GetLength())])
         exo_wfm_np_smooth = np.array([new_wfm.At(i) for i in xrange(new_wfm.GetLength())])        
         
@@ -735,12 +763,16 @@ def get_risetimes(
         print "Label", label
         print "Rise10:", rise_time_stop10, "Rise95", rise_time_stop95 , "Diff", (rise_time_stop95-rise_time_stop10), "Drift", (rise_time_stop95-11)
         plt.plot([rise_time_stop10], [0.10*max_val], marker='o', ms=15, color='k')
+        plt.axhline(0.1*max_val, linestyle='--', color='g', linewidth=3)
+
+        #plt.plot([11], [0.0], marker='o', ms=15, color='k')
         plt.plot([rise_time_stop95], [0.95*max_val], marker='o', ms=15, color='k')
 
+        plt.xlim(10, 28)
         #plt.xlim(1000, 2000)
         plt.xlabel(r"Sample Time [$\mu$s]", fontsize=18)
         plt.ylabel("Amplitude [ADC]", fontsize=18)
-        plt.legend()
+        plt.legend(loc='lower right')
         #plt.savefig("risetime_example_wfm.pdf")
         raw_input("Rise pause")
 

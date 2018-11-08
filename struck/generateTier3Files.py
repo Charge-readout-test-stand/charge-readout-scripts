@@ -1578,15 +1578,15 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                     pmt_wf = np.array([calibrated_wfm.At(i) for i in xrange(calibrated_wfm.GetLength())])
                     fit_wf = np.array([pmt_hist.GetBinContent(i) for i in xrange(pmt_hist.GetNbinsX())])
                     
-                    plt.figure(190)
-                    plt.clf()
-                    plt.ion()
-                    plt.title("Chi2 = %.2f" % pmt_chi2[0])
-                    plt.plot(pmt_wf, label='Data')
-                    plt.plot(fit_wf, label='MC')
+                    #plt.figure(190)
+                    #plt.clf()
+                    #plt.ion()
+                    #plt.title("Chi2 = %.2f" % pmt_chi2[0])
+                    #plt.plot(pmt_wf, label='Data')
+                    #plt.plot(fit_wf, label='MC')
 
-                    plt.legend(loc='upper right')
-                    raw_input("PAUSE")
+                    #plt.legend(loc='upper right')
+                    #raw_input("PAUSE")
 
                 # testing chi2 calc
                 if not ROOT.gROOT.IsBatch():
