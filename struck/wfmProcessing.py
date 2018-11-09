@@ -450,7 +450,35 @@ def get_wfmparams(
         if not is_pmtchannel and not is_sipmchannel:
             #PMT can't be a signal because by default it has to have triggered
             isSignal = 1
-            
+         
+    if False and isSignal and not is_sipmchannel:
+        print "PLOT WFM"
+        exo_wfm_hold = EXODoubleWaveform(array('d',exo_wfm_pz), len(exo_wfm_pz))
+        exo_wfm_hold.SetSamplingFreq(sampling_freq_Hz/second)
+
+        smooth_wfm = EXODoubleWaveform(exo_wfm_hold)
+        smoother = EXOSmoother()
+        smoother.SetSmoothSize(10)
+        smoother.Transform(exo_wfm_hold, smooth_wfm)
+        exo_wfm_smooth = np.array([smooth_wfm.At(i) for i in xrange(smooth_wfm.GetLength())])
+
+        
+        plt.figure(11)
+        plt.clf()
+        plt.ion()
+        plt.plot(exo_wfm_pz*calibration,     color='k', linewidth=2)
+        plt.plot(exo_wfm_smooth*calibration, color='r', linewidth=3)
+        
+        plt.plot([0,2*n_baseline_samples], [0,0], color='b', linewidth=3)
+        plt.plot([energy_start_sample,energy_start_sample+2*n_baseline_samples], [energy1_pz, energy1_pz], color='b', linewidth=3)
+
+        plt.title("%s, E:%.2f, RMS:%.2f, sig:%.2f"% (struck_analysis_parameters.channel_map[channel], 
+                                                        energy1_pz, energy_rms1_pz, 
+                                                        energy1_pz/(energy_rms1_pz*math.sqrt(1.0/n_baseline_samples))))
+        plt.show()
+        raw_input("PAUSE %i %.2f" % (n_baseline_samples, np.sqrt(20.0/n_baseline_samples)))
+
+
     #Test induction finder
     if energy1_pz < struck_analysis_parameters.rms_threshold*energy_rms1_pz*math.sqrt(1.0/n_baseline_samples) and not is_sipmchannel:
         
@@ -594,12 +622,14 @@ def get_wfmparams(
     energy_wfm.IsA().Destructor(energy_wfm)
     exo_wfm_baseline.IsA().Destructor(exo_wfm_baseline)
 
-    if False and energy1_pz > 100 and (not is_sipmchannel):
+    if False and abs(energy1_pz) > 10 and isSignal and (not is_sipmchannel):
         print "PLOT WFM"
         plt.figure(11)
         plt.clf()
         plt.ion()
         plt.plot(exo_wfm_pz)
+        plt.title(struck_analysis_parameters.channel_map[channel])
+
         #plot_wfms([exo_wfm_pz, "PZ"])
         plt.show()
         raw_input("PAUSE")

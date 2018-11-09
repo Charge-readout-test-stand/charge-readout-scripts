@@ -1433,6 +1433,8 @@ if is_11th_LXeB:
     rms_keV_sigma[31] = 3.044990*calibration_values[31] # +/- 0.000784 PMT
 
 if is_12th_LXe or is_13th_LXe or is_15th_LXe:
+    if is_15th_LXe: 
+        rms_threshold=30
     #WRONG Add RMS noise
     rms_keV[0] = 21.353911*calibration_values[0]  # +/- 0.000411 Y12
     rms_keV_sigma[0] = 1.130243*calibration_values[0] # +/- 0.000291 Y12
