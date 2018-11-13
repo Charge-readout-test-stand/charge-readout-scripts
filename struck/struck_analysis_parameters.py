@@ -21,8 +21,8 @@ is_10th_LXe = False # Jan 2017
 is_11th_LXe = False # Jan/Feb 2017, with DT
 is_11th_LXeB = False # Feb 2017, with VME
 is_12th_LXe = False
-is_13th_LXe = False
-is_15th_LXe = True
+is_13th_LXe = True
+is_15th_LXe = False
 #Testing 
 #is_11th_LXeB = True
 
@@ -406,6 +406,9 @@ if is_12th_LXe or is_13th_LXe or is_15th_LXe:
     struck_to_mc_channel_map[13] = []
     struck_to_mc_channel_map[14] = []
     struck_to_mc_channel_map[15] = []
+    if is_13th_LXe or is_15th_LXe:
+        struck_to_mc_channel_map[14] = [40]
+        struck_to_mc_channel_map[15] = [21]
     struck_to_mc_channel_map[16] = [12]
     struck_to_mc_channel_map[17] = [13]
     struck_to_mc_channel_map[18] = [14]
@@ -966,11 +969,13 @@ if is_15th_LXe:
     calibration_values[6] = 1.090685*bit_mult # +/- 0.025185 Y18
     calibration_values[7] = 1.097663*bit_mult # +/- 0.456941 Y19
     calibration_values[8] = 1.062616*bit_mult # +/- 0.044031 Y20
-    calibration_values[9] = 1.000000 # +/- None 2-2
-    calibration_values[10] = 1.000000 # +/- None 2-3
-    calibration_values[11] = 1.000000 # +/- None 2-4
-    calibration_values[12] = 1.000000 # +/- None 2-5
-    calibration_values[13] = 1.000000 # +/- None 2-6
+    
+    calibration_values[9]  = 106.03 # +/- None 2-2
+    calibration_values[10] = 103.16 # +/- None 2-3
+    calibration_values[11] = 101.73 # +/- None 2-4
+    calibration_values[12] = 98.63  # +/- None 2-5
+    calibration_values[13] = 105.15 # +/- None 2-6
+    
     calibration_values[14] = 1.1638*bit_mult   # +/- 0.072026 Y11
     calibration_values[15] = 1.1173*bit_mult   # +/- 0.060159 X22
     calibration_values[16] = 1.106813*bit_mult # +/- 0.102014 X13
@@ -982,13 +987,14 @@ if is_15th_LXe:
     calibration_values[22] = 2.182251*bit_mult # +/- 0.051105 X19
     calibration_values[23] = 1.064134*bit_mult # +/- 0.022905 X20
     calibration_values[24] = 1.085066*bit_mult # +/- 0.034761 X21
-    calibration_values[25] = 1.000000 # +/- None 1-1
-    calibration_values[26] = 1.000000 # +/- None 1-2
-    calibration_values[27] = 1.000000 # +/- None 1-3
-    calibration_values[28] = 1.000000 # +/- None 1-4
-    calibration_values[29] = 1.000000 # +/- None 1-5
-    calibration_values[30] = 1.000000 # +/- None 1-6
-    calibration_values[31] = 1.000000 # +/- None 2-1
+    
+    calibration_values[25] = 110.77 # +/- None 1-1
+    calibration_values[26] = 102.23 # +/- None 1-2
+    calibration_values[27] = 134.24 # +/- None 1-3
+    calibration_values[28] = 143.59 # +/- None 1-4
+    calibration_values[29] = 99.67  # +/- None 1-5
+    calibration_values[30] = 99.14  # +/- None 1-6
+    calibration_values[31] = 109.29 # +/- None 2-1
 
 
 
