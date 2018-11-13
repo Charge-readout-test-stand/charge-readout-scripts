@@ -1199,8 +1199,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                     continue
 
                 #print i, pmt_channel
-                print "Channel is ", i
-                print "Ch Map is ", struck_to_mc_channel_map[i][0]
+                #print "Channel is ", i
+                #print "Ch Map is ", struck_to_mc_channel_map[i][0]
                 wfm = [wfmp for wfmp in tree.ChannelWaveform[struck_to_mc_channel_map[i][0]]]
                 if not ROOT.gROOT.IsBatch(): print "channel %i %s -- adding MC ch %s" % (
                     i, 

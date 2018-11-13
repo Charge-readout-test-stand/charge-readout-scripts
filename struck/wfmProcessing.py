@@ -553,13 +553,13 @@ def get_wfmparams(
         #    plot_wfms([[exo_wfm_filter,"WFM"]])
 
         # Currently there is a windowing issue so can't use the first several samples for the RMS
-        baseline_rms_filter = np.std(exo_wfm_filter[400:1000])
+        baseline_rms_filter = np.std(exo_wfm_filter[400:1000])*calibration
         energy = sipm_max*calibration
         
-        sipm_amp      = sipm_max
+        sipm_amp      = sipm_max*calibration
         sipm_amp_time = sipm_max_time 
         if abs(sipm_min) > sipm_max:
-            sipm_amp = sipm_min
+            sipm_amp = sipm_min*calibration
             sipm_amp_time = sipm_min_time
 
     elif is_pmtchannel: # for PMT channel, use GetMaxValue()
