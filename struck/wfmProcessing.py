@@ -452,6 +452,7 @@ def get_wfmparams(
             isSignal = 1
          
     if False and isSignal and not is_sipmchannel:
+    #if not isSignal and not is_sipmchannel:
         print "PLOT WFM"
         exo_wfm_hold = EXODoubleWaveform(array('d',exo_wfm_pz), len(exo_wfm_pz))
         exo_wfm_hold.SetSamplingFreq(sampling_freq_Hz/second)
@@ -466,14 +467,15 @@ def get_wfmparams(
         plt.figure(11)
         plt.clf()
         plt.ion()
+        #time = np.arange(len(exo_wfm_np))*(1e6/sampling_freq_Hz)
         plt.plot(exo_wfm_pz*calibration,     color='k', linewidth=2)
         plt.plot(exo_wfm_smooth*calibration, color='r', linewidth=3)
         
         plt.plot([0,2*n_baseline_samples], [0,0], color='b', linewidth=3)
         plt.plot([energy_start_sample,energy_start_sample+2*n_baseline_samples], [energy1_pz, energy1_pz], color='b', linewidth=3)
 
-        plt.title("%s, E:%.2f, RMS:%.2f, sig:%.2f"% (struck_analysis_parameters.channel_map[channel], 
-                                                        energy1_pz, energy_rms1_pz, 
+        plt.title("%s, E:%.2f, bRMS: %.2f, eRMS:%.2f, sig:%.2f"% (struck_analysis_parameters.channel_map[channel], 
+                                                        energy1_pz, baseline_rms*calibration, energy_rms1_pz, 
                                                         energy1_pz/(energy_rms1_pz*math.sqrt(1.0/n_baseline_samples))))
         plt.show()
         raw_input("PAUSE %i %.2f" % (n_baseline_samples, np.sqrt(20.0/n_baseline_samples)))
@@ -529,6 +531,15 @@ def get_wfmparams(
         
         exo_wfm_filter = np.fft.irfft(exo_fft_filter_array)
 
+        #plt.figure(15)
+        #plt.ion()
+        #plt.clf()
+        #print "Calib", calibration, "fft", sipm_low_pass
+        #plt.plot(exo_wfm_pz[1000:1600], color='k', linewidth=2, linestyle='-')
+        #plt.plot(exo_wfm_filter[1000:1600] ,color='r', linewidth=3, linestyle='-')
+        #raw_input("PAUSE")
+
+
         #We know roughly were the trigger is so limit the max here
         #mostly worried about FFT cut windowing on edges
         sipm_min = np.min(exo_wfm_filter[1000:1600]) 
@@ -543,7 +554,7 @@ def get_wfmparams(
 
         # Currently there is a windowing issue so can't use the first several samples for the RMS
         baseline_rms_filter = np.std(exo_wfm_filter[400:1000])
-        energy = sipm_max
+        energy = sipm_max*calibration
         
         sipm_amp      = sipm_max
         sipm_amp_time = sipm_max_time 
@@ -773,7 +784,8 @@ def get_risetimes(
     #if True and max_val > 400 and (not "PMT" in label) and (not "Sum" in label) and rise_time_stop10 > 0 and (rise_time_stop95 - rise_time_stop10) > 6.0 and not ( "/" in label or "-" in label):
     #if True and max_val > 400 and (not "PMT" in label) and (not "Sum" in label) and rise_time_stop10 > 0 and (rise_time_stop95 - rise_time_stop10) < 3.0:
     if False:
-    #if "Sum" in label and fit_energy>200:
+    #if "Sum" in label and fit_energy>50:
+    #if "Sum" in label and (rise_time_stop95-11)>30:   
         #Add python plotter
         
         exo_wfm_np        = np.array([exo_wfm.At(i) for i in xrange(exo_wfm.GetLength())])
@@ -798,7 +810,7 @@ def get_risetimes(
         #plt.plot([11], [0.0], marker='o', ms=15, color='k')
         plt.plot([rise_time_stop95], [0.95*max_val], marker='o', ms=15, color='k')
 
-        plt.xlim(10, 28)
+        #plt.xlim(8, 28)
         #plt.xlim(1000, 2000)
         plt.xlabel(r"Sample Time [$\mu$s]", fontsize=18)
         plt.ylabel("Amplitude [ADC]", fontsize=18)
