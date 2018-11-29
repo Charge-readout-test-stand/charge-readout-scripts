@@ -21,8 +21,8 @@ is_10th_LXe = False # Jan 2017
 is_11th_LXe = False # Jan/Feb 2017, with DT
 is_11th_LXeB = False # Feb 2017, with VME
 is_12th_LXe = False
-is_13th_LXe = True
-is_15th_LXe = False
+is_13th_LXe = False
+is_15th_LXe = True
 #Testing 
 #is_11th_LXeB = True
 
@@ -104,7 +104,7 @@ if is_12th_LXe or is_13th_LXe:
 elif is_15th_LXe:
     do_sipm_filter = True
     do_invert      = True
-    sipm_low_pass=5.0
+    sipm_low_pass=7.0
 
 # in software, struck channels start from 0, not 1
 pmt_channel = 8
