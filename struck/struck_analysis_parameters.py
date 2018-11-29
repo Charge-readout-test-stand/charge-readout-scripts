@@ -1438,9 +1438,9 @@ if is_11th_LXeB:
     rms_keV[31] = 2.861805*calibration_values[31]  # +/- 0.001108 PMT
     rms_keV_sigma[31] = 3.044990*calibration_values[31] # +/- 0.000784 PMT
 
-if is_12th_LXe or is_13th_LXe or is_15th_LXe:
-    if is_15th_LXe: 
-        rms_threshold=30
+if is_12th_LXe or is_13th_LXe:
+    #if is_15th_LXe: 
+    #    rms_threshold=30
     #WRONG Add RMS noise
     rms_keV[0] = 21.353911*calibration_values[0]  # +/- 0.000411 Y12
     rms_keV_sigma[0] = 1.130243*calibration_values[0] # +/- 0.000291 Y12
@@ -1507,6 +1507,75 @@ if is_12th_LXe or is_13th_LXe or is_15th_LXe:
     rms_keV_sigma[30] = 1.087208*calibration_values[30] # S11
     rms_keV[31] = 20.090180*calibration_values[31]  # S12
     rms_keV_sigma[31] = 1.087208*calibration_values[31] # S12
+
+if is_15th_LXe:
+    if is_15th_LXe: 
+        rms_threshold=30        
+    rms_keV[0] = 71.370726*calibration_values[0]
+    rms_keV_sigma[0] = 2.856899*calibration_values[0]
+    rms_keV[1] = 68.185964*calibration_values[1]
+    rms_keV_sigma[1] = 3.281952*calibration_values[1]
+    rms_keV[2] = 32.503679*calibration_values[2]
+    rms_keV_sigma[2] = 3.974189*calibration_values[2]
+    rms_keV[3] = 28.561532*calibration_values[3]
+    rms_keV_sigma[3] = 3.927301*calibration_values[3]
+    rms_keV[4] = 30.836379*calibration_values[4]
+    rms_keV_sigma[4] = 3.787103*calibration_values[4]
+    rms_keV[5] = 30.423390*calibration_values[5]
+    rms_keV_sigma[5] = 3.739511*calibration_values[5]
+    rms_keV[6] = 70.462898*calibration_values[6]
+    rms_keV_sigma[6] = 3.945288*calibration_values[6]
+    rms_keV[7] = 69.005958*calibration_values[7]
+    rms_keV_sigma[7] = 3.001437*calibration_values[7]
+    rms_keV[8] = 71.766057*calibration_values[8]
+    rms_keV_sigma[8] = 3.252423*calibration_values[8]
+    rms_keV[9] = 16.402702*calibration_values[9]
+    rms_keV_sigma[9] = 24.874279*calibration_values[9]
+    rms_keV[10] = 15.223629*calibration_values[10]
+    rms_keV_sigma[10] = 20.244436*calibration_values[10]
+    rms_keV[11] = 12.537945*calibration_values[11]
+    rms_keV_sigma[11] = 14.940363*calibration_values[11]
+    rms_keV[12] = 9.687942*calibration_values[12]
+    rms_keV_sigma[12] = 10.754759*calibration_values[12]
+    rms_keV[13] = 8.855581*calibration_values[13]
+    rms_keV_sigma[13] = 9.169881*calibration_values[13]
+    rms_keV[14] = 66.419212*calibration_values[14]
+    rms_keV_sigma[14] = 3.125357*calibration_values[14]
+    rms_keV[15] = 68.022054*calibration_values[15]
+    rms_keV_sigma[15] = 3.066233*calibration_values[15]
+    rms_keV[16] = 68.435204*calibration_values[16]
+    rms_keV_sigma[16] = 4.205055*calibration_values[16]
+
+    rms_keV[17] = 68.872339*calibration_values[17]
+    rms_keV_sigma[17] = 4.363039*calibration_values[17]
+    rms_keV[18] = 68.651074*calibration_values[18]
+    rms_keV_sigma[18] = 3.954244*calibration_values[18]
+    rms_keV[19] = 29.540442*calibration_values[19]
+    rms_keV_sigma[19] = 1.627477*calibration_values[19]
+    rms_keV[20] = 28.979288*calibration_values[20]
+    rms_keV_sigma[20] = 1.529885*calibration_values[20]
+    rms_keV[21] = 29.560161*calibration_values[21]
+    rms_keV_sigma[21] = 1.733649*calibration_values[21]
+    rms_keV[22] = 28.392439*calibration_values[22]
+    rms_keV_sigma[22] = 1.408389*calibration_values[22]
+    rms_keV[23] = 64.262399*calibration_values[23]
+    rms_keV_sigma[23] = 3.890123*calibration_values[23]
+    rms_keV[24] = 66.877379*calibration_values[24]
+    rms_keV_sigma[24] = 2.853026*calibration_values[24]
+    rms_keV[25] = 11.042730*calibration_values[25]
+    rms_keV_sigma[25] = 13.427616*calibration_values[25]
+    rms_keV[26] = 15.623281*calibration_values[26]
+    rms_keV_sigma[26] = 12.866316*calibration_values[26]
+    rms_keV[27] = 7.780458*calibration_values[27]
+    rms_keV_sigma[27] = 6.602754*calibration_values[27]
+    rms_keV[28] = 7.538115*calibration_values[28]
+    rms_keV_sigma[28] = 4.464493*calibration_values[28]
+    rms_keV[29] = 9.284102*calibration_values[29]
+    rms_keV_sigma[29] = 5.683785*calibration_values[29]
+    rms_keV[30] = 8.567710*calibration_values[30]
+    rms_keV_sigma[30] = 5.621719*calibration_values[30]
+    rms_keV[31] = 13.837136*calibration_values[31]
+    rms_keV_sigma[31] = 25.425298*calibration_values[31]
 
 tileCh_to_PreCh = {}
 if is_8th_LXe or is_9th_LXe:
