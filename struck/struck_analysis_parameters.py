@@ -970,11 +970,11 @@ if is_15th_LXe:
     calibration_values[7] = 1.097663*bit_mult # +/- 0.456941 Y19
     calibration_values[8] = 1.062616*bit_mult # +/- 0.044031 Y20
     
-    calibration_values[9]  = 106.03 # +/- None 2-2
-    calibration_values[10] = 103.16 # +/- None 2-3
-    calibration_values[11] = 101.73 # +/- None 2-4
-    calibration_values[12] = 98.63  # +/- None 2-5
-    calibration_values[13] = 105.15 # +/- None 2-6
+    calibration_values[9]  = 1./106.03 # +/- None 2-2
+    calibration_values[10] = 1./103.16 # +/- None 2-3
+    calibration_values[11] = 1./101.73 # +/- None 2-4
+    calibration_values[12] = 1./98.63  # +/- None 2-5
+    calibration_values[13] = 1./105.15 # +/- None 2-6
     
     calibration_values[14] = 1.1638*bit_mult   # +/- 0.072026 Y11
     calibration_values[15] = 1.1173*bit_mult   # +/- 0.060159 X22
@@ -988,13 +988,13 @@ if is_15th_LXe:
     calibration_values[23] = 1.064134*bit_mult # +/- 0.022905 X20
     calibration_values[24] = 1.085066*bit_mult # +/- 0.034761 X21
     
-    calibration_values[25] = 110.77 # +/- None 1-1
-    calibration_values[26] = 102.23 # +/- None 1-2
-    calibration_values[27] = 134.24 # +/- None 1-3
-    calibration_values[28] = 143.59 # +/- None 1-4
-    calibration_values[29] = 99.67  # +/- None 1-5
-    calibration_values[30] = 99.14  # +/- None 1-6
-    calibration_values[31] = 109.29 # +/- None 2-1
+    calibration_values[25] = 1./110.77 # +/- None 1-1
+    calibration_values[26] = 1./102.23 # +/- None 1-2
+    calibration_values[27] = 1./134.24 # +/- None 1-3
+    calibration_values[28] = 1./143.59 # +/- None 1-4
+    calibration_values[29] = 1./99.67  # +/- None 1-5
+    calibration_values[30] = 1./99.14  # +/- None 1-6
+    calibration_values[31] = 1./109.29 # +/- None 2-1
 
 
 
