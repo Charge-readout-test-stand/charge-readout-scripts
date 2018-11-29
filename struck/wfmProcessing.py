@@ -12,10 +12,24 @@ import numpy as np
 from array import array
 import matplotlib.pyplot as plt
 
+from scipy.signal import butter, lfilter, freqz, filtfilt
+
 # somehow these 2 are important?!
 from ROOT import TH1D
 from ROOT import TLine
 from ROOT import *
+
+def butter_lowpass(cutoff, fs, order=5):
+    nyq = 0.5*fs
+    normal_cutoff = cutoff/nyq
+    b,a = butter(order, normal_cutoff, btype='low', analog=False)
+    return b,a
+
+def butter_lowpass_filter(data, cutoff, fs, order=5):
+    b,a = butter_lowpass(cutoff, fs, order=order)
+    #y = lfilter(b,a,data)
+    y  = filtfilt(b,a,data)
+    return y
 
 
 # workaround for systems without EXO offline / CLHEP
@@ -531,13 +545,27 @@ def get_wfmparams(
         
         exo_wfm_filter = np.fft.irfft(exo_fft_filter_array)
 
+        #Experimenting with better filters
+        exo_wfm_butter = butter_lowpass_filter(exo_wfm_pz, sipm_low_pass*1.e6, sampling_freq_Hz, 5.0)
+
         #plt.figure(15)
         #plt.ion()
         #plt.clf()
         #print "Calib", calibration, "fft", sipm_low_pass
-        #plt.plot(exo_wfm_pz[1000:1600], color='k', linewidth=2, linestyle='-')
-        #plt.plot(exo_wfm_filter[1000:1600] ,color='r', linewidth=3, linestyle='-')
-        #raw_input("PAUSE")
+        #plt.plot(exo_wfm_pz[1200:1600],     color='k', linewidth=2, linestyle='-')
+        #plt.plot(exo_wfm_filter[1200:1600] ,color='r', linewidth=3, linestyle='-')
+        #plt.plot(exo_wfm_butter[1200:1600] ,color='g', linewidth=4, linestyle='--')
+        
+        #plt.figure(16)
+        #plt.ion()
+        #plt.clf()
+        #plt.plot(fft_freq, exo_fft_array*np.conj(exo_fft_array))
+        #plt.yscale('log')
+        #plt.xscale('log')
+        #plt.show()
+        
+        #if np.max(exo_wfm_filter)>1000: 
+        #    raw_input("PAUSE")
 
 
         #We know roughly were the trigger is so limit the max here

@@ -104,7 +104,7 @@ if is_12th_LXe or is_13th_LXe:
 elif is_15th_LXe:
     do_sipm_filter = True
     do_invert      = True
-    sipm_low_pass=5.0
+    sipm_low_pass=7.0
 
 # in software, struck channels start from 0, not 1
 pmt_channel = 8
