@@ -59,15 +59,17 @@ bits = 14
 plot_fft = False
 cut_sipm_win = True
 sipm_twidth = 5.0
-threshold = 0.0 # keV
-lthreshold = 2000.0
+threshold = 50.0 # keV
+lthreshold = 0.0
 energy_offset = 25000.0/nchannels
+energy_offset = 25000.0/(4.0*nchannels)
 #energy_offset = 300000.0/nchannels
+
 sum_offset = 51500
-smooth_charge = False
+smooth_charge = True
 
 #energy_offset_sipm = energy_offset*2.0#.1#*1.2
-energy_offset_sipm  = energy_offset*1.0
+energy_offset_sipm  = energy_offset*8.0
 # if this is 1.0 there is no effect:
 pmt_shrink_scale = 1.0 # shrink PMT signal by an additional factor so it doesn't set the graphical scale
 
@@ -293,7 +295,9 @@ def process_file(filename=None, n_plots_total=0):
             if sipm_channels_to_use[channel] > 0:
                 multiplier = 1.0
                 #multiplier = 100
-            
+            #if charge_channels_to_use[channel]>0:
+            #    multiplier *= 4.0
+
             #Get the WFM
             graph = tree.HitTree.GetGraph()
             wfm   = np.array([graph.GetY()[isamp] for isamp in xrange(graph.GetN())])
@@ -309,8 +313,10 @@ def process_file(filename=None, n_plots_total=0):
                 if np.max(power_spec[1:]) > smax_fft: smax_fft = np.max(power_spec[1:])
                 if np.min(power_spec[1:]) < smin_fft: smin_fft = np.min(power_spec[1:])
                 ax4.plot(fft_freq, wfm_fft*np.conj(wfm_fft), linewidth=2.0, label="%s"%channel_map[channel])
-                #plt.ion()
+                plt.ion()
                 #plt.figure(60)
+                #plt.clf()
+                #plt.title(channel_map[channel])
                 #plt.plot(fft_freq,wfm_fft*np.conj(wfm_fft))
                 #plt.yscale('log')
                 #plt.ylim(min(power_spec[2:]), max(power_spec[2:]))
@@ -326,6 +332,7 @@ def process_file(filename=None, n_plots_total=0):
                 #plt.figure(109)
                 #plt.ion()
                 #plt.clf()
+                #plt.title(channel_map[channel])
                 #plt.plot(wfm)
                 
                 sipm_fft = np.fft.rfft(wfm)
