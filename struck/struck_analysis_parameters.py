@@ -22,7 +22,8 @@ is_11th_LXe = False # Jan/Feb 2017, with DT
 is_11th_LXeB = False # Feb 2017, with VME
 is_12th_LXe = False
 is_13th_LXe = False
-is_15th_LXe = True
+is_15th_LXe = False  #15 and 16 are basically the same 
+is_17th_LXe = True
 #Testing 
 #is_11th_LXeB = True
 
@@ -67,7 +68,7 @@ drift_time_threshold = (drift_length - 5.3)/drift_velocity # microsecond
 
 max_drift_time = drift_length/drift_velocity
 #print "max_drift_time:", max_drift_time
-if is_10th_LXe or is_11th_LXe or is_11th_LXeB or is_12th_LXe or is_13th_LXe or is_15th_LXe:
+if is_10th_LXe or is_11th_LXe or is_11th_LXeB or is_12th_LXe or is_13th_LXe or is_15th_LXe or is_17th_LXe:
     drift_length = 33.23 # new anode standoffs Dec 2016
     if is_10th_LXe:
         drift_velocity = 1.79 # mm/microsecond
@@ -89,7 +90,7 @@ one_strip_channels = [0]*32
 two_strip_channels = [0]*32
 channel_to_n_strips_map = [1.0]*32
 struck_to_mc_channel_map = {} # map struck channel to MC channel
-if is_8th_LXe or is_9th_LXe or is_11th_LXeB or is_12th_LXe or is_13th_LXe or is_15th_LXe:
+if is_8th_LXe or is_9th_LXe or is_11th_LXeB or is_12th_LXe or is_13th_LXe or is_15th_LXe or is_17th_LXe:
     charge_channels_to_use = [0]*32
     sipm_channels_to_use   = [0]*32 
     dead_channels          = [0]*32
@@ -105,6 +106,9 @@ elif is_15th_LXe:
     do_sipm_filter = True
     do_invert      = True
     sipm_low_pass=7.0
+elif is_17th_LXe:
+    do_invert      = True
+
 
 # in software, struck channels start from 0, not 1
 pmt_channel = 8
@@ -190,6 +194,27 @@ elif is_12th_LXe or is_13th_LXe or is_15th_LXe:
             #SiPMs
             charge_channels_to_use[i_channel] = 0 
             sipm_channels_to_use[i_channel]   = 1
+
+elif is_17th_LXe:
+    pmt_channel = None # now using SiPMs
+    pulser_channel = None # won't have one probably?
+    channels = []
+    for i_channel, val in enumerate(charge_channels_to_use):
+        channels.append(i_channel)
+        if i_channel < 10:
+            #X-Charge
+            charge_channels_to_use[i_channel] = 1
+            sipm_channels_to_use[i_channel]   = 0
+        elif i_channel > 15 and i_channel < 26:
+            #Y-Charge
+            charge_channels_to_use[i_channel] = 1
+            sipm_channels_to_use[i_channel]   = 0
+        elif i_channel == 15:
+            charge_channels_to_use[i_channel] = 0
+            sipm_channels_to_use[i_channel]   = 1
+        else:
+            charge_channels_to_use[i_channel] = 0
+            sipm_channels_to_use[i_channel]   = 0
 else:
     # channels for 5th LXe
     channels = [0,1,2,3,4,8]
@@ -425,6 +450,43 @@ if is_12th_LXe or is_13th_LXe or is_15th_LXe:
     struck_to_mc_channel_map[29] = []
     struck_to_mc_channel_map[30] = []
 
+if is_17th_LXe:
+    
+    channel_map[0] = "Y11"
+    channel_map[1] = "Y12"
+    channel_map[2] = "Y13"
+    channel_map[3] = "Y14"
+    channel_map[4] = "Y15"
+    channel_map[5] = "Y16"
+    channel_map[6] = "Y17"
+    channel_map[7] = "Y18"
+    channel_map[8] = "Y19"
+    channel_map[9] = "Y20"
+    channel_map[10] = ""
+    channel_map[11] = ""
+    channel_map[12] = ""
+    channel_map[13] = ""
+    channel_map[14] = ""
+    channel_map[15] = ""
+
+    channel_map[16] = "X13"
+    channel_map[17] = "X14"
+    channel_map[18] = "X15"
+    channel_map[19] = "X16"
+    channel_map[20] = "X17"
+    channel_map[21] = "X18"
+    channel_map[22] = "X19"
+    channel_map[23] = "X20"
+    channel_map[24] = "X21"
+    channel_map[25] = "X22"
+    channel_map[26] = ""
+    channel_map[27] = ""
+    channel_map[28] = ""
+    channel_map[29] = ""
+    channel_map[30] = ""
+    channel_map[31] = ""
+
+
 
 if pulser_channel != None:
     channel_map[pulser_channel] = "pulser"
@@ -439,7 +501,7 @@ MCn_channels = len(MCchannels)
 MCcharge_channels_to_use = [0]*MCn_channels
 mc_channel_map = {} # map MC channel to label
 for struck_channel, label in channel_map.items():
-    if is_8th_LXe or is_9th_LXe or is_10th_LXe or is_11th_LXe or is_11th_LXeB or is_12th_LXe or is_13th_LXe or is_15th_LXe: break # FIXME -- skip this for now
+    if is_8th_LXe or is_9th_LXe or is_10th_LXe or is_11th_LXe or is_11th_LXeB or is_12th_LXe or is_13th_LXe or is_15th_LXe or is_17th_LXe: break # FIXME -- skip this for now
     is_y = False
     if "Y" in label:
         is_y = True
@@ -693,6 +755,40 @@ if is_12th_LXe or is_13th_LXe or is_15th_LXe:
     decay_time_values[30] =  10000000000.000000*microsecond # Not Used  
     decay_time_values[31] =  10000000000.000000*microsecond # Not Used
 
+if is_17th_LXe:
+    decay_time_values[0] =  336.954510*microsecond # +/- 0.035747 Y11  
+    decay_time_values[1] =   342.909975*microsecond # +/- 0.033580 Y12
+    decay_time_values[2] =   375.471621*microsecond # +/- 0.037684 Y13
+    decay_time_values[3] =   364.445833*microsecond # +/- 0.028699 Y14
+    decay_time_values[4] =   430.749504*microsecond # +/- 0.035263 Y15
+    decay_time_values[5] =   401.468398*microsecond # +/- 0.019691 Y16
+    decay_time_values[6] =   366.996051*microsecond # +/- 0.005235 Y17
+    decay_time_values[7] =   314.864279*microsecond # +/- 0.008820 Y18
+    decay_time_values[8] =   295.266593*microsecond # +/- 0.010130 Y19
+    decay_time_values[9] =   316.139852*microsecond # +/- 0.016089 Y20 
+    decay_time_values[10] =  10000000000.000000*microsecond # Not Used
+    decay_time_values[11] =  10000000000.000000*microsecond # Not Used
+    decay_time_values[12] =  10000000000.000000*microsecond # Not Used
+    decay_time_values[13] =  10000000000.000000*microsecond # Not Used
+    decay_time_values[14] =  10000000000.000000*microsecond # Not Used
+    decay_time_values[15] =  10000000000.000000*microsecond # Not Used
+    
+    decay_time_values[16] =  373.164130*microsecond # +/- 0.024446 X13
+    decay_time_values[17] =  385.112331*microsecond # +/- 0.032387 X14
+    decay_time_values[18] =  395.731914*microsecond # +/- 0.043800 X15
+    decay_time_values[19] =  428.013071*microsecond # +/- 0.024771 X16
+    decay_time_values[20] =  454.867452*microsecond # +/- 0.014542 X17
+    decay_time_values[21] =  436.329761*microsecond # +/- 0.022793 X18
+    decay_time_values[22] =  421.476176*microsecond # +/- 0.037603 X19
+    decay_time_values[23] =  393.562566*microsecond # +/- 0.030876 X20
+    decay_time_values[24] =  381.182494*microsecond # +/- 0.034273 X21
+    decay_time_values[25] =  392.642787*microsecond # +/- 0.043076 X22
+    decay_time_values[26] =  10000000000.000000*microsecond # Not Used
+    decay_time_values[27] =  10000000000.000000*microsecond # Not Used
+    decay_time_values[28] =  10000000000.000000*microsecond # Not Used
+    decay_time_values[29] =  10000000000.000000*microsecond # Not Used
+    decay_time_values[30] =  10000000000.000000*microsecond # Not Used  
+    decay_time_values[31] =  10000000000.000000*microsecond # Not Used
 
 # charge calbration from these files for 5th LXe:
 # tier3_LXe_Run1_1700VC_2chargechannels_609PM_60thresh_NotShaped_Amplified_GapTime20_2_0.root
@@ -996,6 +1092,44 @@ if is_15th_LXe:
     calibration_values[30] = 1./99.14  # +/- None 1-6
     calibration_values[31] = 1./109.29 # +/- None 2-1
 
+if is_17th_LXe:
+    #Calibraitons 13th combining all 3 day runs with differen SiPM bias
+    calibration_values[0] = 1.1638*bit_mult   # +/- 0.072026 Y11
+    calibration_values[1] = 1.039173*bit_mult # +/- 0.036779 Y12
+    calibration_values[2] = 1.123437*bit_mult # +/- 0.038555 Y13
+    calibration_values[3] = 2.937023*bit_mult # +/- 0.001754 Y14
+    calibration_values[4] = 2.260158*bit_mult # +/- 0.017537 Y15
+    calibration_values[5] = 2.089076*bit_mult # +/- 0.025162 Y16
+    calibration_values[6] = 2.129663*bit_mult # +/- 0.028330 Y17
+    calibration_values[7] = 1.090685*bit_mult # +/- 0.025185 Y18
+    calibration_values[8] = 1.097663*bit_mult # +/- 0.456941 Y19
+    calibration_values[9] = 1.062616*bit_mult # +/- 0.044031 Y20
+   
+    calibration_values[10] = 1 # +/- None 2-2
+    calibration_values[11] = 1 # +/- None 2-3
+    calibration_values[12] = 1 # +/- None 2-4
+    calibration_values[13] = 1  # +/- None 2-5
+    calibration_values[14] = 1 # +/- None 2-6
+    calibration_values[15] = 1 # +/- None 2-6
+    
+    calibration_values[16] = 1.106813*bit_mult # +/- 0.102014 X13
+    calibration_values[17] = 1.088395*bit_mult # +/- 0.024772 X14
+    calibration_values[18] = 1.0945*bit_mult   # +/- 0.133791 X15
+    calibration_values[19] = 2.094149*bit_mult # +/- 0.032667 X16
+    calibration_values[20] = 2.2960*bit_mult   # +/- 0.041331 X17
+    calibration_values[21] = 2.199645*bit_mult # +/- 0.001754 X18
+    calibration_values[22] = 2.182251*bit_mult # +/- 0.051105 X19
+    calibration_values[23] = 1.064134*bit_mult # +/- 0.022905 X20
+    calibration_values[24] = 1.085066*bit_mult # +/- 0.034761 X21
+    calibration_values[25] = 1.1173*bit_mult   # +/- 0.060159 X22   
+
+    calibration_values[26] = 1. # +/- None 1-2
+    calibration_values[27] = 1. # +/- None 1-3
+    calibration_values[28] = 1 # +/- None 1-4
+    calibration_values[29] = 1  # +/- None 1-5
+    calibration_values[30] = 1  # +/- None 1-6
+    calibration_values[31] = 1. # +/- None 2-1
+
 
 
 if is_12th_LXe or is_13th_LXe or is_15th_LXe:
@@ -1176,7 +1310,7 @@ noise_length = int(800)
 if is_10th_LXe or is_11th_LXe: 
     noise_length = int(1050)
     noiseLightCut = 20.0
-if is_12th_LXe or is_13th_LXe or is_15th_LXe:
+if is_12th_LXe or is_13th_LXe or is_15th_LXe or is_17th_LXe:
     noise_length = int(5250)
     noiseLightCut = 20.0
 
@@ -1190,7 +1324,7 @@ if is_11th_LXe or is_11th_LXeB:
     n_baseline_samples = 275.0 # 2x n samples
     energy_start_time_microseconds = (1050.0 - n_baseline_samples)*40/1000 # energy calc starts 850 samples
 baseline_average_time_microseconds = (n_baseline_samples/2.0*40.0/1000) # 200 samples at 25 MHz = 8 microseconds
-if is_12th_LXe or is_13th_LXe or is_15th_LXe:
+if is_12th_LXe or is_13th_LXe or is_15th_LXe or is_17th_LXe:
     #sampling_freq_Hz = 125.0e6 #saved in tree so don't need
     samp_period = 8 #ns (125MHz)
     wf_length = 5250.0
@@ -1508,7 +1642,7 @@ if is_12th_LXe or is_13th_LXe:
     rms_keV[31] = 20.090180*calibration_values[31]  # S12
     rms_keV_sigma[31] = 1.087208*calibration_values[31] # S12
 
-if is_15th_LXe:
+if is_15th_LXe or is_17th_LXe:
     if is_15th_LXe: 
         rms_threshold=30        
     rms_keV[0] = 71.370726*calibration_values[0]
