@@ -22,8 +22,8 @@ is_11th_LXe = False # Jan/Feb 2017, with DT
 is_11th_LXeB = False # Feb 2017, with VME
 is_12th_LXe = False
 is_13th_LXe = False
-is_15th_LXe = False  #15 and 16 are basically the same 
-is_17th_LXe = True
+is_15th_LXe = False#15 and 16 are basically the same (SiPM runs with 16 bit digi)
+is_17th_LXe = True # 18th and 19th all the same as 17th
 #Testing 
 #is_11th_LXeB = True
 
@@ -1644,7 +1644,9 @@ if is_12th_LXe or is_13th_LXe:
 
 if is_15th_LXe or is_17th_LXe:
     if is_15th_LXe: 
-        rms_threshold=30        
+        rms_threshold=15   
+    if is_17th_LXe:
+        rms_threshold=15
     rms_keV[0] = 71.370726*calibration_values[0]
     rms_keV_sigma[0] = 2.856899*calibration_values[0]
     rms_keV[1] = 68.185964*calibration_values[1]
