@@ -73,6 +73,10 @@ if units_to_use == 1:
 elif units_to_use == 2:
     units = "mV"
 
+elow   = 150.0
+ehigh  = 1300.0
+ewidth = 20
+
 calibration_values = struck_analysis_parameters.calibration_values    
 channel_map = struck_analysis_parameters.channel_map
 pmt_channel = struck_analysis_parameters.pmt_channel
@@ -192,7 +196,11 @@ def process_file(filename=None, n_plots_total=0):
             card_channel = tree.HitTree.GetChannel() # 0 to 16 for each card
             channel      = card_channel + 16*slot # 0 to 31            
 
-            if not charge_channels_to_use[channel]: continue
+            if struck_analysis_parameters.do_invert:
+                if channel%2==0: channel+=1
+                else: channel-=1
+
+            #if not charge_channels_to_use[channel]: continue
         
             #Check timestamp to assosiate WFs with events
             timestamp      = tree.HitTree.GetRawClock()
@@ -205,6 +213,9 @@ def process_file(filename=None, n_plots_total=0):
             
             #Don't increment until after we confirm this entry is part of current event
             i_entry +=1
+            
+            if i_entry%1000==0:
+                print "Working on %i entry " % i_entry
 
             #Sanity check to make sure we didn't already find this channel.  
             #Should probably never happen since the timestamp check should weed these out
@@ -212,7 +223,8 @@ def process_file(filename=None, n_plots_total=0):
                 print "Entry %i Channel %i" % (i_entry, channel)
                 raw_input("Found a channel more than once is this ok????? Pause here")
             found_channels.append(channel)
-            
+            if not charge_channels_to_use[channel]: continue
+
             #Get information about the card
             card = sys_config.GetSlotParameters().GetParValueO("card",slot)
             gain = card.gain[card_channel]
@@ -223,7 +235,9 @@ def process_file(filename=None, n_plots_total=0):
             wfm   = np.array([graph.GetY()[isamp] for isamp in xrange(graph.GetN())])
             wfm   *= calibration_values[channel]
 
-            if channel==30: wfm=wfm*0.0
+            #if channel==30: wfm=wfm*0.0
+            if struck_analysis_parameters.do_invert:
+                wfm *= -1.0
 
             #Get baseline and energy
             baseline      =  np.mean(wfm[0:n_samples_to_avg])
@@ -236,20 +250,27 @@ def process_file(filename=None, n_plots_total=0):
             wfm               -=baseline
             wfm_array[channel] = wfm
 
+            #print channel, energy/baseline_rms, energy, baseline_rms, n_samples_to_avg
+            #if True and np.max(np.abs(wfm))>70:
+            #    plt.ion()
+            #    plt.plot(wfm)
+            #    plt.show()
+            #    raw_input("Pause event")
+            #    plt.clf()
 
-            if (energy/baseline_rms) > rms_threshold and charge_channels_to_use[channel]:
+
+            if (energy/(baseline_rms*np.sqrt(1.0/n_samples_to_avg))) > rms_threshold and charge_channels_to_use[channel]:
                 n_signals+=1
-                
-                if True:
+                event_energy += energy
+                #print "Found Sig"        
+                if False:
                     plt.ion()
                     plt.plot(wfm)
                     plt.show()
-                    if energy>500: raw_input("Pause")
+                    if energy>500: raw_input("Pause event")
                     plt.clf()
                 
-                event_energy += energy
-
-
+        #print n_signals, isdead_event, len(found_channels)
         if n_signals < 0.5:
             continue
 
@@ -263,6 +284,16 @@ def process_file(filename=None, n_plots_total=0):
         if nfound < 32: continue
 
         energy_list.append(event_energy)
+        
+        #print "len energy", len(energy_list), event_energy
+        if len(energy_list)%200==0:
+            plt.ion()
+            plt.figure(1)
+            plt.clf()
+            plt.hist(energy_list, bins=np.arange(elow,ehigh,ewidth))
+            plt.show()
+            raw_input("Pause quick spectrum")
+
 
     pfile = basename+"_part%i.p" % current_file
     pfile = pfile.replace("tier1", 'pickle')
@@ -270,8 +301,14 @@ def process_file(filename=None, n_plots_total=0):
     pickle.dump(energy_list, dfile)
     dfile.close()
     
-    plt.hist(energy_list, bins=np.arange(0,2000))
-
+    plt.ion()
+    plt.figure(1)
+    plt.clf()
+    plt.hist(energy_list, bins=np.arange(elow,ehigh,ewidth))
+    plt.show()
+    
+    plt.savefig((basename+"_part%i.png" % current_file).replace("tier1", "spectrum_quick"))
+    raw_input("Pause final spectrum")
 
 
 if __name__ == "__main__":
