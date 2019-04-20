@@ -103,13 +103,15 @@ if is_12th_LXe or is_13th_LXe:
     sipm_low_pass = 14.3
     if is_13th_LXe: sipm_low_pass = 9.5
     do_sipm_filter = True
-elif is_15th_LXe or is_22nd_LXe:
+elif is_15th_LXe:
     do_sipm_filter = True
     do_invert      = True
     sipm_low_pass=7.0
 elif is_17th_LXe:
     do_invert      = True
-
+elif is_22nd_LXe:
+    #No need to filter anymore
+    do_invert = True
 
 # in software, struck channels start from 0, not 1
 pmt_channel = 8
