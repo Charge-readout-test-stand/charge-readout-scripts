@@ -1,0 +1,1 @@
+/home/teststand/software/charge-readout-scripts/mc/digi/compareIonAndCathodeEffects_for_15th.py
