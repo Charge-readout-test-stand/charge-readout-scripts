@@ -1,6 +1,7 @@
 import scipy.optimize as opt
 import numpy as np
 
+
 #For the Gaus + Exp Fit
 def ffn(x, A1, mu, sig, E1, E2, E3):
     gaus = A1*np.exp(-(x-mu)**2/(2*sig**2))
@@ -95,7 +96,7 @@ def FitPeakTest(hist_counts, hist_errors, bin_centers, peak_guess=570.0, fit_wid
     return xx, bp, bcov, fail, full_fit, gaus, exp
 
 
-def FitPeak(hist_counts, hist_errors, bin_centers, peak_guess=570.0, fit_width=200):
+def FitPeak(hist_counts, hist_errors, bin_centers, peak_guess=570.0, fit_width=200, sigma_guess=35):
     
     de = fit_width # Fit width
     peak_pos = peak_guess #bin_centers[np.argmax(hist_counts)]
@@ -115,7 +116,6 @@ def FitPeak(hist_counts, hist_errors, bin_centers, peak_guess=570.0, fit_width=2
     #exp_decay_guess  = np.log(fit_max/fit_min)/(2*de)
     exp_decay_guess   = np.log(1.0*start_height/end_height)*(1/(2.0*de))
     exp_height_guess = (hist_counts[fpts])[0]*np.exp(fit_min*exp_decay_guess)
-    sigma_guess  = 35.0
     height_guess = hist_counts[np.argmin(np.abs(bin_centers - peak_pos))] - exp_height_guess*np.exp(-exp_decay_guess*peak_pos)
     spars = [height_guess, peak_pos, sigma_guess, exp_height_guess, exp_decay_guess, 0.] #Initial guess for fitter
 
@@ -163,6 +163,8 @@ def FitPeakLinear(hist_counts, hist_errors, bin_centers,fit_width=190, peak_gues
     #peak_pos = 570.0 #bin_centers[np.argmax(hist_counts)]
     peak_pos = bin_centers[np.argmax(hist_counts)]
     if abs(peak_pos - peak_guess) > de: peak_pos = peak_guess
+    
+    hist_errors += 1.e-16
 
     print "Peak Guess", peak_pos
 
