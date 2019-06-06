@@ -497,34 +497,6 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     #    out_tree.Branch('rise_time_stop10', rise_time_stop10, 'rise_time_stop10[%i]/D' % n_channels_in_event)
     out_tree.Branch('rise_time_stop10', rise_time_stop10, 'rise_time_stop10[%i]/D' % n_channels_in_event)
 
-    rise_time_stop20 = array('d', [0]*n_channels_in_event) # double
-    if not skip_short_risetimes:
-        out_tree.Branch('rise_time_stop20', rise_time_stop20, 'rise_time_stop20[%i]/D' % n_channels_in_event)
-
-    rise_time_stop30 = array('d', [0]*n_channels_in_event) # double
-    if not skip_short_risetimes:
-        out_tree.Branch('rise_time_stop30', rise_time_stop30, 'rise_time_stop30[%i]/D' % n_channels_in_event)
-
-    rise_time_stop40 = array('d', [0]*n_channels_in_event) # double
-    if not skip_short_risetimes:
-        out_tree.Branch('rise_time_stop40', rise_time_stop40, 'rise_time_stop40[%i]/D' % n_channels_in_event)
-
-    rise_time_stop50 = array('d', [0]*n_channels_in_event) # double
-    if not skip_short_risetimes:
-        out_tree.Branch('rise_time_stop50', rise_time_stop50, 'rise_time_stop50[%i]/D' % n_channels_in_event)
-
-    rise_time_stop60 = array('d', [0]*n_channels_in_event) # double
-    if not skip_short_risetimes:
-        out_tree.Branch('rise_time_stop60', rise_time_stop60, 'rise_time_stop60[%i]/D' % n_channels_in_event)
-
-    rise_time_stop70 = array('d', [0]*n_channels_in_event) # double
-    if not skip_short_risetimes:
-        out_tree.Branch('rise_time_stop70', rise_time_stop70, 'rise_time_stop70[%i]/D' % n_channels_in_event)
-
-    rise_time_stop80 = array('d', [0]*n_channels_in_event) # double
-    if not skip_short_risetimes:
-        out_tree.Branch('rise_time_stop80', rise_time_stop80, 'rise_time_stop80[%i]/D' % n_channels_in_event)
-
     rise_time_stop90 = array('d', [0]*n_channels_in_event) # double
     out_tree.Branch('rise_time_stop90', rise_time_stop90, 'rise_time_stop90[%i]/D' % n_channels_in_event)
 
@@ -533,6 +505,19 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
     rise_time_stop99 = array('d', [0]*n_channels_in_event) # double
     out_tree.Branch('rise_time_stop99', rise_time_stop99, 'rise_time_stop99[%i]/D' % n_channels_in_event)
+
+
+    fit_energy = array('d', [0]*n_channels_in_event) # double
+    out_tree.Branch('fit_energy', fit_energy, 'fit_energy[%i]/D' % n_channels_in_event)
+
+    fit_tau    = array('d', [0]*n_channels_in_event) # double
+    out_tree.Branch('fit_tau', fit_tau, 'fit_tau[%i]/D' % n_channels_in_event)
+
+    fit_time   = array('d', [0]*n_channels_in_event) # double
+    out_tree.Branch('fit_time', fit_time, 'fit_time[%i]/D' % n_channels_in_event)
+
+    fit_chi    = array('d', [0]*n_channels_in_event) # double
+    out_tree.Branch('fit_chi', fit_chi, 'fit_chi[%i]/D' % n_channels_in_event)
 
     smoothed_max = array('d', [0]*n_channels_in_event) # double
     out_tree.Branch('smoothed_max', smoothed_max, 'smoothed_max[%i]/D' % n_channels_in_event)
@@ -663,34 +648,6 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     # parameters coming from sum waveform
     rise_time_stop10_sum = array('d', [0.0]) # double
     out_tree.Branch('rise_time_stop10_sum', rise_time_stop10_sum, 'rise_time_stop10_sum/D')
-
-    rise_time_stop20_sum = array('d', [0.0]) # double
-    if not skip_short_risetimes:
-        out_tree.Branch('rise_time_stop20_sum', rise_time_stop20_sum, 'rise_time_stop20_sum/D')
-
-    rise_time_stop30_sum = array('d', [0.0]) # double
-    if not skip_short_risetimes:
-        out_tree.Branch('rise_time_stop30_sum', rise_time_stop30_sum, 'rise_time_stop30_sum/D')
-
-    rise_time_stop40_sum = array('d', [0.0]) # double
-    if not skip_short_risetimes:
-        out_tree.Branch('rise_time_stop40_sum', rise_time_stop40_sum, 'rise_time_stop40_sum/D')
-
-    rise_time_stop50_sum = array('d', [0.0]) # double
-    if not skip_short_risetimes:
-        out_tree.Branch('rise_time_stop50_sum', rise_time_stop50_sum, 'rise_time_stop50_sum/D')
-
-    rise_time_stop60_sum = array('d', [0.0]) # double
-    if not skip_short_risetimes:
-        out_tree.Branch('rise_time_stop60_sum', rise_time_stop60_sum, 'rise_time_stop60_sum/D')
-
-    rise_time_stop70_sum = array('d', [0.0]) # double
-    if not skip_short_risetimes:
-        out_tree.Branch('rise_time_stop70_sum', rise_time_stop70_sum, 'rise_time_stop70_sum/D')
-
-    rise_time_stop80_sum = array('d', [0.0]) # double
-    if not skip_short_risetimes:
-        out_tree.Branch('rise_time_stop80_sum', rise_time_stop80_sum, 'rise_time_stop80_sum/D')
 
     rise_time_stop90_sum = array('d', [0.0]) # double
     out_tree.Branch('rise_time_stop90_sum', rise_time_stop90_sum, 'rise_time_stop90_sum/D')
@@ -1238,7 +1195,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
                 i = tree.HitTree.GetSlot()*16 + tree.HitTree.GetChannel()
                 #channel[i] = tree.HitTree.GetSlot()*16 + tree.HitTree.GetChannel()
-                if do_invert:
+                if do_invert and not isMC:
                     #Flip everyother channel if this is 16bit digi
                     if i%2==0:i+=1
                     else:     i-=1
@@ -1317,13 +1274,19 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
             # add noise to MC
             if isMC and channel[i] is not pmt_channel:
+                
+                #print "WFM MAX:", np.max(wfm), rms_keV[i]/calibration[i],rms_keV[i], calibration[i]
+                
                 if noise_file is None:
                     #No file use gaussian noise
+                    #This is in number of Electrons which is the units of the MC WFs
+                    #The calibration is the W-Value for MC so sigma is also in electrons
                     if not ROOT.gROOT.IsBatch(): print "no noise file, using gaussian noise"
                     try:
                         sigma = rms_keV[i]/calibration[i] 
                     except KeyError:
                         sigma = rms_keV[0]/calibration[i] # MC can have more channels than data
+                    #sigma=0.0
                     for i_point in xrange(len(wfm)):
                         noise = generator.Gaus()*sigma
                         wfm[i_point]+=noise
@@ -1332,7 +1295,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                     #Have a noise_file get random event and wfm for that channel
                     noise_array = getattr(noise_tree, "wfm%i" % channel[i])
                     #MC length is 801 why?????
-
+                    
                     #for i_point in xrange(len(wfm)):
                     for i_point in xrange(len(noise_array)):
                         #print data_calib applies to the noise in data which is ADC units
@@ -1341,31 +1304,24 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                         #print "Calib ratio", data_calib[i], calibration[i]
                         wfm[i_point] += (noise_array[i_point]*data_calib[i])/calibration[i]
 
+                #if charge_channels_to_use[i] > 0 and np.max(wfm)>5000:
+                #    plt.figure(15)
+                #    plt.ion()
+                #    plt.clf()
+                #    plt.title(channel_map[i])
+                #    plt.plot(np.array(wfm), color='r')
+                #    plt.show()
+                #    raw_input("PAUSE")
+    
                 noise_val[i] = generator.Gaus() # an extra noise value for use with energy smearing
-
-            #print 'type', type(wfm)
-            #raw_input("PAUSE")
 
             exo_wfm = EXODoubleWaveform(array('d',wfm), wfm_length[i])
             
-            #plt.figure(109)
-            #plt.clf()
-            #plt.ion()
-            #plt.title("Channel=%i, Map=%s"%(channel[i], channel_map[i]))
-            #plt.plot(np.array([exo_wfm.At(wi) for wi in xrange(exo_wfm.GetLength())]))
-            
-            if do_invert:
+            if do_invert and not isMC:
                 exo_wfm_temp_np        = np.array([exo_wfm.At(wi) for wi in xrange(exo_wfm.GetLength())])
                 exo_wfm_temp_np       *= -1
                 exo_wfm                = EXODoubleWaveform(array('d',exo_wfm_temp_np), len(exo_wfm_temp_np))
             
-            #plt.figure(110)
-            #plt.clf()
-            #plt.plot(np.array([exo_wfm.At(wi) for wi in xrange(exo_wfm.GetLength())]), label='invert')
-            #plt.legend()
-            #raw_input("PAUSE1")
-
-
             wfm_max[i] = exo_wfm.GetMaxValue()
             wfm_min[i] = exo_wfm.GetMinValue()
 
@@ -1485,16 +1441,13 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 (
                     smoothed_max[i], 
                     rise_time_stop10[i], 
-                    rise_time_stop20[i], 
-                    rise_time_stop30[i],
-                    rise_time_stop40[i], 
-                    rise_time_stop50[i], 
-                    rise_time_stop60[i], 
-                    rise_time_stop70[i],
-                    rise_time_stop80[i], 
                     rise_time_stop90[i], 
                     rise_time_stop95[i],
                     rise_time_stop99[i],
+                    fit_energy[i],
+                    fit_tau[i],
+                    fit_time[i],
+                    fit_chi[i],
                 ) = wfmProcessing.get_risetimes(
                     #exo_wfm, 
                     calibrated_wfm,
@@ -1509,16 +1462,15 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 #also skip for SiPMs
                 smoothed_max[i] = 0.0
                 rise_time_stop10[i] = 0.0
-                rise_time_stop20[i] = 0.0
-                rise_time_stop30[i] = 0.0
-                rise_time_stop40[i] = 0.0
-                rise_time_stop50[i] = 0.0
-                rise_time_stop60[i] = 0.0
-                rise_time_stop70[i] = 0.0
-                rise_time_stop80[i] = 0.0
                 rise_time_stop90[i] = 0.0
                 rise_time_stop95[i] = 0.0
                 rise_time_stop99[i] = 0.0
+
+                fit_energy[i]       = 0
+                fit_tau[i]          = 0
+                fit_time[i]         = 0
+                fit_chi[i]          = 0
+
 
             # pause & draw
             #if not gROOT.IsBatch() and channel[i] == 4:
@@ -1534,7 +1486,6 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 print "\t min %.2f" % wfm_min[i]
                 print "\t smoothed max %.2f" % smoothed_max[i]
                 #print "\t rise time [microsecond]: %.3f" % (rise_time[i])
-                print "\t rise stop 50 [microsecond]: %.2f" % (rise_time_stop50[i])
                 print "\t rise stop 90 [microsecond]: %.2f" % (rise_time_stop90[i])
                 print "\t rise stop 95 [microsecond]: %.2f" % (rise_time_stop95[i])
                 print "\t rise stop 99 [microsecond]: %.2f" % (rise_time_stop99[i])
@@ -1651,13 +1602,6 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         if sum_wfm == None:
             smoothed_max_sum[0] = 0.0
             rise_time_stop10_sum[0] = 0.0 
-            rise_time_stop20_sum[0] = 0.0
-            rise_time_stop30_sum[0] = 0.0
-            rise_time_stop40_sum[0] = 0.0
-            rise_time_stop50_sum[0] = 0.0
-            rise_time_stop60_sum[0] = 0.0
-            rise_time_stop70_sum[0] = 0.0
-            rise_time_stop80_sum[0] = 0.0
             rise_time_stop90_sum[0] = 0.0
             rise_time_stop95_sum[0] = 0.0
             rise_time_stop99_sum[0] = 0.0
@@ -1678,16 +1622,10 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             (
                 smoothed_max_sum[0], 
                 rise_time_stop10_sum[0], 
-                rise_time_stop20_sum[0], 
-                rise_time_stop30_sum[0],
-                rise_time_stop40_sum[0], 
-                rise_time_stop50_sum[0], 
-                rise_time_stop60_sum[0], 
-                rise_time_stop70_sum[0],
-                rise_time_stop80_sum[0], 
                 rise_time_stop90_sum[0], 
                 rise_time_stop95_sum[0],
-                rise_time_stop99_sum[0]
+                rise_time_stop99_sum[0],
+                trash1, trash2, trash3, trash4,
             ) = wfmProcessing.get_risetimes(
                 sum_wfm, 
                 sum_wfm.size(), 
@@ -1746,8 +1684,6 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 for i_ch, val in enumerate(signal_map):
                     if val: print "\t", i_ch, channel_map[i_ch]
                 print "rise_time_stop95_sum:", rise_time_stop95_sum[0]
-                print "rise_time_stop50_sum:", rise_time_stop50_sum[0]
-                print "95 - 50:", rise_time_stop95_sum[0]-rise_time_stop50_sum[0]
                 print sum_wfm.GetSamplingPeriod()
                 val = raw_input("enter to continue (q=quit, b=batch, p=print) ")
                 print val

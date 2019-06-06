@@ -11,25 +11,28 @@ import math
 import numpy as np
 from array import array
 import matplotlib.pyplot as plt
+import scipy.optimize as opt
 
-from scipy.signal import butter, lfilter, freqz, filtfilt
+
+#from scipy.signal import butter, lfilter, freqz, filtfilt
 
 # somehow these 2 are important?!
 from ROOT import TH1D
 from ROOT import TLine
 from ROOT import *
 
-def butter_lowpass(cutoff, fs, order=5):
-    nyq = 0.5*fs
-    normal_cutoff = cutoff/nyq
-    b,a = butter(order, normal_cutoff, btype='low', analog=False)
-    return b,a
 
-def butter_lowpass_filter(data, cutoff, fs, order=5):
-    b,a = butter_lowpass(cutoff, fs, order=order)
+#def butter_lowpass(cutoff, fs, order=5):
+#    nyq = 0.5*fs
+#    normal_cutoff = cutoff/nyq
+#    b,a = butter(order, normal_cutoff, btype='low', analog=False)
+#    return b,a
+
+#def butter_lowpass_filter(data, cutoff, fs, order=5):
+#    b,a = butter_lowpass(cutoff, fs, order=order)
     #y = lfilter(b,a,data)
-    y  = filtfilt(b,a,data)
-    return y
+#    y  = filtfilt(b,a,data)
+#    return y
 
 
 # workaround for systems without EXO offline / CLHEP
@@ -546,7 +549,7 @@ def get_wfmparams(
         exo_wfm_filter = np.fft.irfft(exo_fft_filter_array)
 
         #Experimenting with better filters
-        exo_wfm_butter = butter_lowpass_filter(exo_wfm_pz, sipm_low_pass*1.e6, sampling_freq_Hz, 5.0)
+        #exo_wfm_butter = butter_lowpass_filter(exo_wfm_pz, sipm_low_pass*1.e6, sampling_freq_Hz, 5.0)
 
         #plt.figure(15)
         #plt.ion()
@@ -814,6 +817,7 @@ def get_risetimes(
     if False:
     #if "Sum" in label and fit_energy>50:
     #if "Sum" in label and (rise_time_stop95-11)>30:   
+    #if not "Sum" in label:
         #Add python plotter
         
         exo_wfm_np        = np.array([exo_wfm.At(i) for i in xrange(exo_wfm.GetLength())])
@@ -838,6 +842,21 @@ def get_risetimes(
         #plt.plot([11], [0.0], marker='o', ms=15, color='k')
         plt.plot([rise_time_stop95], [0.95*max_val], marker='o', ms=15, color='k')
 
+        test_fit = col_model(time, max_val, 3.0, rise_time_stop95)
+
+        print time[np.argmax(exo_wfm_np_smooth)], rise_time_stop95
+        #p0 = [max_val, 3.0, time[np.argmax(exo_wfm_np_smooth)]]
+        p0 = [max_val, 3.0,  rise_time_stop95]
+        try:
+            bp, bcov = opt.curve_fit(col_model, time, exo_wfm_np_smooth, p0=p0)
+        except RuntimeError:
+            bp   = p0
+            bcov = np.eye(len(bp))
+
+        best_fit = col_model(time, *bp)
+        print "Best fit", bp
+        plt.plot(time, best_fit, color='m', linewidth=3.0, linestyle='--')
+
         #plt.xlim(8, 28)
         #plt.xlim(1000, 2000)
         plt.xlabel(r"Sample Time [$\mu$s]", fontsize=18)
@@ -846,14 +865,110 @@ def get_risetimes(
         #plt.savefig("risetime_example_wfm.pdf")
         raw_input("Rise pause")
 
+    fitE, fit_tau, fit_time, fit_chi = 0,0,0,0
+    if not "Sum" in label:
+        exo_wfm_np_smooth = np.array([new_wfm.At(i) for i in xrange(new_wfm.GetLength())])
+        time = np.arange(len(exo_wfm_np_smooth))*(1e6/sampling_freq_Hz)
+        fitE, fit_tau, fit_time, fit_chi = fit_wfm(time, exo_wfm_np_smooth, rise_time_stop95, max_val)
+
 
     maw_wfm.IsA().Destructor(maw_wfm)
     new_wfm.IsA().Destructor(new_wfm)
 
-    return [smoothed_max, rise_time_stop10, rise_time_stop20, rise_time_stop30,
-            rise_time_stop40, rise_time_stop50, rise_time_stop60, rise_time_stop70,
-            rise_time_stop80, rise_time_stop90, rise_time_stop95,
-            rise_time_stop99]
+    return [smoothed_max, 
+            rise_time_stop10, rise_time_stop90, rise_time_stop95, rise_time_stop99,
+            fitE, fit_tau, fit_time, fit_chi]
+
+
+
+def fit_wfm(time, wfm, rise_time, max_val):
+    
+    plt.ion()
+    plt.clf()
+
+    if rise_time < 11.0:
+        guess_time = 20
+    elif rise_time>40:
+        guess_time = 20
+    else:
+        guess_time = rise_time
+
+    p0 = [max_val, 3.0,  guess_time]
+    try:
+        bp_col, bcov_col = opt.curve_fit(col_model, time, wfm, p0=p0)
+    except RuntimeError:
+        bp_col   = p0
+        bcov_col = np.eye(len(bp))
+
+    col_fit = col_model(time, *bp_col)
+    chi_col = get_chisquare(wfm, col_fit, np.std(wfm[:200]))/(len(wfm) - 3)
+
+    if False:
+        plt.ion()
+        plt.clf()
+        try:
+            bp_ind, bcov_ind = opt.curve_fit(ind_model, time, wfm, p0=p0)
+        except RuntimeError:
+            bp_ind   = p0
+            bcov_ind = np.eye(len(bp))
+
+        plt.plot(time, wfm, c='b', linewidth=3.0, label='Smooth WF')
+    
+        chi_col = get_chisquare(wfm, col_fit, np.std(wfm[:200]))
+        print "Best fit", bp_col, chi_col/(len(wfm) - 3)
+        plt.plot(time, col_fit, color='r', linewidth=3.0, linestyle='--')
+
+
+        ind_fit = ind_model(time, *bp_ind)
+        print "Ind fit", bp_ind
+        plt.plot(time, ind_fit, color='g', linewidth=3.0, linestyle='--')
+
+        plt.plot([rise_time], [0.95*max_val], marker='o', ms=15, color='k')
+        plt.plot([guess_time], [0.95*max_val], marker='o', ms=15, color='c')
+
+        plt.xlabel(r"Sample Time [$\mu$s]", fontsize=18)
+        plt.ylabel("Amplitude [ADC]", fontsize=18)
+
+        plt.title(r"$\chi$$^{2}$/NDF = %.4f" % (chi_col/(len(wfm) - 3)))
+
+        #if abs(bp_col[2] - rise_time)>5:
+        if True:
+            raw_input("PAUSE")
+
+    return bp_col[0], bp_col[1], bp_col[2], chi_col
+
+def get_chisquare(d,m,sig):
+    chi = ((d-m)/sig)**2.0
+    return np.sum(chi)
+
+def col_model(x,A,tau,t):
+    y=np.zeros(np.shape(x))
+    exp_cut  = x<t
+    
+    y[:]       = A
+    y[exp_cut] = A*np.exp((x[exp_cut]-t)/tau)
+
+    return y
+
+
+def ind_model(x,A,tau,t):
+
+    y=np.zeros(np.shape(x))        
+    exp_cut  = x<t
+    y[:]       = 0.0
+    y[exp_cut] = A*np.exp((x[exp_cut]-t)/tau)
+
+    return y
+
+def sum_model(x,A1,A2,tau1, tau2,t1, t2):
+
+    col = col_model(x,A1,tau1,t1)
+    ind = col_model(x,A2,tau2,t2)
+
+    return col+ind
+
+
+
 
 
 
