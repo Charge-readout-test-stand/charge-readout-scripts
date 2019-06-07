@@ -609,6 +609,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     signal_bundle_map = array('I', [0]*n_channels)
     out_tree.Branch('signal_bundle_map', signal_bundle_map, 'signal_bundle_map[%i]/i' % n_channels_in_event)
     
+    multiplicity    = array('I', [0])
+    out_tree.Branch('multiplicity', multiplicity, 'multiplicity/i')
+
     nbundles = array('I', [0])
     out_tree.Branch('nbundles', nbundles, 'nbundles/i')
     
@@ -625,6 +628,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     bundle_energy = array('d', [0]*n_channels)
     out_tree.Branch('bundle_energy', bundle_energy, 'bundle_energy[nbundles]/D')
     
+    bundle_time = array('d', [0]*n_channels)
+    out_tree.Branch('bundle_time', bundle_time, 'bundle_time[nbundles]/D')
+
     bundle_nsigs = array('I', [0]*n_channels)
     out_tree.Branch('bundle_nsigs', bundle_nsigs, 'bundle_nsigs[nbundles]/i')
     #------------------------------------------------------------------------------------------------
@@ -1007,7 +1013,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     i_entry = 0
     n_channels_in_this_event = 0
     while i_entry < n_entries:
-    #while i_entry < 1000:
+    #while i_entry < 5000:
         tree.GetEntry(i_entry)
         #if isNGM and i_entry > 1e6: 
         #    print "<<<< DEBUGGING >>>>"
@@ -1094,6 +1100,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             bundle_type[bundle_index] = 0
             bundle_nsigs[bundle_index] = 0
             bundle_energy[bundle_index] = 0.0
+            bundle_time[bundle_index] = 0.0
         for ch_index in xrange(n_channels_in_event):
             energy[ch_index] = 0
         nbundles[0] = 0
@@ -1567,13 +1574,25 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             bundle_type,
             signal_bundle_map,
             bundle_energy,
+            bundle_time,
             bundle_nsigs,
             nbundlesX[0],
             nbundlesY[0]
         ) = BundleSignals.BundleSignals(signal_map, energy1_pz, 
                                         nbundles, bundle_type, signal_bundle_map,
-                                        bundle_energy, bundle_nsigs, isMC=isMC)
+                                        bundle_energy, bundle_time, bundle_nsigs, fit_time, isMC=isMC)
         
+        if nbundlesX[0] == 0 or nbundlesY[0] == 0:
+            multiplicity[0] = 0
+        elif nbundlesX[0]==1 and nbundlesY[0]==1:
+            if abs(bundle_time[0] - bundle_time[1])<3.0:
+                multiplicity[0] = 1
+            else:
+                multiplicity[0] = 2
+        else:
+            multiplicity[0] = 3
+
+
         #nbundles[0] = nbundles_temp
         #for bundle_index in xrange(nbundles[0]):
         #    bundle_type.append(bundle_type_temp[bundle_index])
@@ -1581,6 +1600,13 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         #    signal_bundle_map[ch_index] = bundle_index
         #--------------EndBundlind----------------
     
+
+        #print SignalEnergy
+
+        #print np.min(fit_time), np.max(fit_time), np.sum(signal_map)
+    
+        #raw_input("pause")
+
         energy_x_track = 0.0
         energy_y_track = 0.0
         for sigi, sig_map in enumerate(signal_map):

@@ -62,7 +62,9 @@ def BundleSignals(
     bundle_type, 
     signal_bundle_map,
     bundle_energy,
+    bundle_time,
     bundle_nsigs,
+    fit_time,
     isMC,
 ):
 
@@ -82,7 +84,7 @@ def BundleSignals(
     nbundlesY = 0
     for i, isSignal in enumerate(signal_map):
         if isSignal > 0.5:
-            
+
             #Is it an X or Y channel 
             chtype = GetChType(i, isMC)
 
@@ -91,32 +93,52 @@ def BundleSignals(
 
             nindex = i-1
 
+            #print i, chtype, fit_time[i], energy[i]
+
             if nindex >= 0 and nindex < n_channels and nindex != pmt_channel: 
                 #Make sure not PMT channel, or over the edge
                 #print "Compare types", chtype, GetChType(nindex)
                 if chtype == GetChType(nindex, isMC):
                     #Must be same type of channel
-                    if signal_map[nindex] > 0.5:
+                    
+                    time_diff = abs(fit_time[i] - fit_time[nindex])
+                    
+                    if signal_map[nindex] > 0.5 and time_diff<3.0:
                         #Left neighbor saw a signal so 
                         #Bundle exists already. Add to that bundle
                         ibundle = signal_bundle_map[nindex]
                         signal_bundle_map[i] = ibundle
                         bundle_type[ibundle] = chtype
                         bundle_energy[ibundle] += energy[i]
-                        bundle_nsigs[ibundle] += 1
+                        bundle_time[ibundle]   += energy[i]*fit_time[i]
+                        bundle_nsigs[ibundle]  += 1
                         continue
 
             #Bundle does not exist so create it
             signal_bundle_map[i] = nbundles[0] #Save the bundle this channel is assosiated with
             bundle_type[nbundles[0]] = chtype #X or Y
             bundle_energy[nbundles[0]] = energy[i] #Add in energy
+            bundle_time[nbundles[0]] = energy[i]*fit_time[i]
             bundle_nsigs[nbundles[0]] = 1
             nbundles[0] += 1 #Iterate bundle
-            if chtype==1: nbundlesX+=1
-            elif chtype==2: nbundlesY+=1
+            if chtype==1: 
+                nbundlesX+=1
+            elif chtype==2: 
+                nbundlesY+=1
+
         else:
             signal_bundle_map[i] = 999
+ 
+    for ib in xrange(nbundles[0]):
+        bundle_time[ib] *= 1.0/bundle_energy[ib]
+
     
+    #print  bundle_time
+    #print  bundle_energy
+    #print "numXbun, numYbun", nbundlesX, nbundlesY
+    #if nbundlesX>0 and nbundlesY>0:
+        #raw_input("paue")
+
     #if nbundles[0] > 0:
     #    print
     #    print signal_map
@@ -132,6 +154,7 @@ def BundleSignals(
         bundle_type,
         signal_bundle_map,
         bundle_energy,
+        bundle_time,
         bundle_nsigs,
         nbundlesX,
         nbundlesY
