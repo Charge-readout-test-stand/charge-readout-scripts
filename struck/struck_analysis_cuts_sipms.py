@@ -91,10 +91,16 @@ def diag_cut(chargeEnergy,lightEnergy, timeStamp):
         b2 = -50
     elif timeStamp > 1512040104.0:
         #12th LXe with 305 bias
-        m1 = 1.0#2.8
-        m2 = 0.6#2.0
-        b1 = 450#2250
-        b2 = -50#0.0
+        m1 = 2.8
+        m2 = 2.0
+        b1 = 2250
+        b2 = 0.0
+    elif timeStamp < 0:
+        m1 = 1.25
+        m2 = 0
+        b1 = 250.0
+        b2 = 0
+
     diag_high = m1*chargeEnergy + b1
     diag_low  = m2*chargeEnergy + b2
 
@@ -119,6 +125,10 @@ def light_cal(timeStamp):
         cal = 570/1850.0
     elif timeStamp > 1512040104.0:
         cal = 570./2000.
+    elif timeStamp == -1:
+        cal = 0.905
+    elif timeStamp == -2:
+        cal = 0.905*3
     return cal
 
 def get_theta(timeStamp):
