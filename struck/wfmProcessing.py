@@ -465,8 +465,9 @@ def get_wfmparams(
             #PMT can't be a signal because by default it has to have triggered
             isSignal = 1
          
-    if False and isSignal and not is_sipmchannel:
+    #if False and isSignal and not is_sipmchannel:
     #if not isSignal and not is_sipmchannel:
+    if False and isSignal:
         print "PLOT WFM"
         exo_wfm_hold = EXODoubleWaveform(array('d',exo_wfm_pz), len(exo_wfm_pz))
         exo_wfm_hold.SetSamplingFreq(sampling_freq_Hz/second)
@@ -546,8 +547,11 @@ def get_wfmparams(
         exo_wfm_filter = np.fft.irfft(exo_fft_filter_array)
 
         #Experimenting with better filters
-        exo_wfm_butter = butter_lowpass_filter(exo_wfm_pz, sipm_low_pass*1.e6, sampling_freq_Hz, 5.0)
-
+        if sipm_low_pass != None:
+            exo_wfm_butter = butter_lowpass_filter(exo_wfm_pz, sipm_low_pass*1.e6, sampling_freq_Hz, 5.0)
+        else:
+            exo_wfm_butter = exo_wfm_pz
+    
         #plt.figure(15)
         #plt.ion()
         #plt.clf()
@@ -811,7 +815,8 @@ def get_risetimes(
     #if True and max_val > 200 and (not "PMT" in label) and ("Sum" in label) and rise_time_stop10 > 0:
     #if True and max_val > 400 and (not "PMT" in label) and (not "Sum" in label) and rise_time_stop10 > 0 and (rise_time_stop95 - rise_time_stop10) > 6.0 and not ( "/" in label or "-" in label):
     #if True and max_val > 400 and (not "PMT" in label) and (not "Sum" in label) and rise_time_stop10 > 0 and (rise_time_stop95 - rise_time_stop10) < 3.0:
-    if False:
+    if True and max_val > 340 and max_val < 500 and (not "PMT" in label) and (not "Sum" in label):   
+    #if False:
     #if "Sum" in label and fit_energy>50:
     #if "Sum" in label and (rise_time_stop95-11)>30:   
         #Add python plotter
