@@ -890,8 +890,8 @@ def get_risetimes(
 
 def fit_wfm(time, wfm, rise_time, max_val):
     
-    plt.ion()
-    plt.clf()
+    #plt.ion()
+    #plt.clf()
 
     if rise_time < 11.0:
         guess_time = 20
@@ -905,7 +905,7 @@ def fit_wfm(time, wfm, rise_time, max_val):
         bp_col, bcov_col = opt.curve_fit(col_model, time, wfm, p0=p0)
     except RuntimeError:
         bp_col   = p0
-        bcov_col = np.eye(len(bp))
+        bcov_col = np.eye(len(bp_col))
 
     col_fit = col_model(time, *bp_col)
     chi_col = get_chisquare(wfm, col_fit, np.std(wfm[:200]))/(len(wfm) - 3)
