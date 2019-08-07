@@ -60,7 +60,9 @@ def get_recent():
     #Get file list using glob.  Should auto sort by date.
     files=os.path.join(directory, '*.dat')
     flist=glob.glob(files)
-    
+    #Sort files by time (oldest first)
+    flist.sort(key=os.path.getmtime)
+
     if len(flist)==0:
         print "........... No files found .....", directory
         print "............ Pause and try again"
@@ -74,7 +76,8 @@ def get_recent():
             print "..... Still can't find exiting?", directory
             sys.exit(1)
     
-    testfile = flist[-1]
+    #print flist
+    testfile = flist[-1] #last file = youngest
     print "......... Most recent file is ", testfile
     return testfile
 
