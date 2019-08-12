@@ -68,6 +68,12 @@ def get_cut_norise(timeStamp):
     selection = " && ".join(selection_new)
     return selection
 
+def get_drift_vel(drift_time):
+    drift_length=33.0
+    counts,bn = np.histogram(drift_time,bins=50,range=(1,30))
+    drift_velocity = drift_length/bn[0:][np.argmax(counts)]
+    return drift_velocity
+
 def diag_cut(chargeEnergy,lightEnergy, timeStamp):
     
 
@@ -79,10 +85,10 @@ def diag_cut(chargeEnergy,lightEnergy, timeStamp):
         b2 = 0
     elif timeStamp > 1559606400 and timeStamp<1559952000:
         #24th
-        m1 = 0.9
-        m2 = 0.65
-        b1 = 420.0
-        b2 = 10
+        m1 = 0.87
+        m2 = 0.55
+        b1 = 300.0
+        b2 = 0
     elif timeStamp > 1555372800.0:
         #22nd LXe with 315 bias
         m1 = 0.85#6.

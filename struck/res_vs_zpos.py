@@ -10,6 +10,8 @@ import FitPeakPy,PeakFitter2D, PeakFitter1D,ScanRotationAngle
 import matplotlib.backends.backend_pdf as PdfPages
 import itertools
 
+import lightMap_v2
+
 plt.ion()
 
 def get_dcmd(light_map=True):
@@ -86,6 +88,8 @@ def process_file(filename):
     drift_vel = struck_analysis_cuts_sipms.get_drift_vel(driftTime)
     pos_z     = driftTime*drift_vel
 
+    lightEnergy, lm_xyz, lm_array = lightMap_v2.gen_lightmap(pos_x,pos_y,driftTime,lightEnergy,chargeEnergy,[1,1,11])
+
     dz=3
     for z in np.arange(0, 33, dz):
         zwin = [z,z+dz]
@@ -155,7 +159,8 @@ def run_scan_1060(scanner):
     
 
 if __name__ == "__main__":
-    filename    =   "/home/teststand/23rd_LXe/tier3_all/tier3_added_23rd_dn2_newgains.root"
+    #filename    =   "/home/teststand/23rd_LXe/tier3_all/tier3_added_23rd_dn2_newgains.root"
+    filename     =   "/home/teststand/24th_LXe/tier3_added/tier3_added_24th_dn5_dn6_newgains.root"
     process_file(filename)
 
 

@@ -61,7 +61,7 @@ def gen_lightmap(x,y,drift_time,light_energy,charge_energy, lm_dims):
                 #light_energy[cut]
                 #charge_energy[cut]
 
-                fig = plt.figure(1)
+                fig = plt.figure(111)
                 plt.clf()
                 fig.set_size_inches((15,9), forward=True)
 
@@ -171,10 +171,11 @@ def gen_lightmap(x,y,drift_time,light_energy,charge_energy, lm_dims):
     #raw_input()
 
     pos_stack = np.vstack((x,y,z)).T
-    apply_light_map((lim_x, lim_y, lim_z), lm_array, pos_stack)
-    raw_input()
+    lm_corr = apply_light_map((lim_x, lim_y, lim_z), lm_array, pos_stack)
+    #raw_input()
+    #570.0/lm_corr
 
-    return (lim_x, lim_y, lim_z), lm_array
+    return light_energy*(570.0/lm_corr), (lim_x, lim_y, lim_z), lm_array
 
 def get_dcmd(light_map=True):
     draw_array = []
@@ -200,16 +201,21 @@ def apply_light_map(lim_xyz, lm_array, eval_pts):
     #print lm_rgi(eval_pts)
     #print interpnd(lim_xyz,lm_array, eval_pts)
 
-    bin_arr = np.zeros((len(lim_xyz), len(eval_pts)))
-
+    bin_arr = np.zeros((len(lim_xyz), len(eval_pts)), dtype=np.int)
     for i in xrange(len(lim_xyz)):
-
         if len(lim_xyz[i]) != 1:
-            bin_arr[i,:] = np.digitize(eval_pts[:,i], lim_xyz[i])
-       
-    print bin_arr[0]
-    print bin_arr[2]
+            db           = np.diff(lim_xyz[i])[0]/2.0
+            bin_edges    = lim_xyz[i] - db
+            bin_edges    = np.append(bin_edges, bin_edges[-1]+db*2)
+            bin_arr[i,:] = np.digitize(eval_pts[:,i], lim_xyz[i])-1  
 
+
+    #for ti, test in enumerate(bin_arr[2]):
+    #    print lim_xyz[2]
+    #    print ti,test
+    #    raw_input()
+
+    #print lm_array[bin_arr[0], bin_arr[1], bin_arr[2]]
     return lm_array[bin_arr[0], bin_arr[1], bin_arr[2]]
 
 def process_file(filename):
@@ -270,11 +276,16 @@ def process_file(filename):
     #print stack.shape
     #raw_input()
 
-    lm_xyz, lm_array = gen_lightmap(pos_x,pos_y,driftTime,lightEnergy,chargeEnergy,[1,1,11])
+    lightEnergyCorr, lm_xyz, lm_array = gen_lightmap(pos_x,pos_y,driftTime,lightEnergy,chargeEnergy,[1,1,11])
     
-    #gen_lightmap(pos_x,pos_y,driftTime,lightEnergy,chargeEnergy,[3,3,5])
+    raw_input("Pause iter 1")
 
-    find_theta=ScanRotationAngle.ScanRotation(chargeEnergy,lightEnergy, 570.0)
+    #gen_lightmap(pos_x,pos_y,driftTime,lightEnergyCorr,chargeEnergy,[3,3,5])
+    gen_lightmap(pos_x,pos_y,driftTime,lightEnergyCorr,chargeEnergy,[1,1,11])
+
+    raw_input("Pause iter 2")
+
+    find_theta=ScanRotationAngle.ScanRotation(chargeEnergy,lightEnergyCorr, 570.0)
     find_theta.setXWin([0,2000])
     find_theta.setBins(180)
     find_theta.setWidth(130)

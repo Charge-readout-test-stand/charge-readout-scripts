@@ -26,6 +26,7 @@ is_15th_LXe = False#15 and 16 are basically the same (SiPM runs with 16 bit digi
 is_17th_LXe = False# 17 - 21 all the same purity runs
 is_22nd_LXe = False
 is_23rd_LXe = True
+is_24th_LXe = False
 #Testing 
 #is_11th_LXeB = True
 
