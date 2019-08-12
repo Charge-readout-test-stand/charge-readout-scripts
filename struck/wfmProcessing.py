@@ -579,11 +579,11 @@ def get_wfmparams(
 
         #We know roughly were the trigger is so limit the max here
         #mostly worried about FFT cut windowing on edges
-        sipm_min = np.min(exo_wfm_filter[1000:1600]) 
-        sipm_max = np.max(exo_wfm_filter[1000:1600])
+        sipm_min      = np.min(exo_wfm_filter[1000:1600]) 
+        sipm_max      = np.max(exo_wfm_filter[1000:1600])
         sipm_max_time = (np.argmax(exo_wfm_filter[1000:1600]) + 1000)*(1.e6/sampling_freq_Hz) #us
         sipm_min_time = (np.argmin(exo_wfm_filter[1000:1600]) + 1000)*(1.e6/sampling_freq_Hz) #us
-        
+
         #if sipm_max > 200:
         #    print np.mean(exo_wfm_filter), np.mean(exo_wfm_filter[400:1000])
         #    print sipm_max, sipm_max-np.mean(exo_wfm_filter[400:1000])
@@ -593,6 +593,9 @@ def get_wfmparams(
         baseline_rms_filter = np.std(exo_wfm_filter[400:1000])*calibration
         energy = sipm_max*calibration
         
+
+        fit_sipm(exo_wfm_filter,(1.e6/sampling_freq_Hz),sipm_max,sipm_max_time, baseline_rms_filter/calibration)
+
         sipm_amp      = sipm_max*calibration
         sipm_amp_time = sipm_max_time 
         if abs(sipm_min) > sipm_max:
@@ -887,6 +890,43 @@ def get_risetimes(
             fitE, fit_tau, fit_time, fit_chi]
 
 
+def fit_sipm(wfm, freq, max_val, max_time, wfm_std):
+
+    wfm_time = np.arange(0.0, len(wfm))*freq
+        
+    wfm      = wfm[1000:1600]
+    wfm_time = wfm_time[1000:1600]
+
+    p0 = [max_val, 0.01,  max_time]
+    try:
+        bp_col, bcov_col = opt.curve_fit(sipm_model, wfm_time, wfm, p0=p0)
+    except RuntimeError:
+        bp_col   = p0
+        bcov_col = np.eye(len(bp_col))
+
+    col_fit = sipm_model(wfm_time, *bp_col)
+    #col_fit = sipm_model(wfm_time, *p0)
+    chi2    = get_chisquare(wfm, col_fit, wfm_std)/(len(wfm) - 3)
+
+    fit_amp  =  bp_col[0]*np.exp(-1)
+    fit_time =  bp_col[2]
+
+    if True:
+        plt.ion()
+        plt.figure(999)
+        plt.clf()
+
+        plt.plot(wfm_time, wfm, c='b', linewidth=3.0, label='Smooth WF')
+        #plt.plot([max_time], [max_val], marker='o', ms=15, color='k')
+        plt.plot(wfm_time, col_fit, color='r', linewidth=3.0, linestyle='--')
+        plt.title("Chi2 = %.2f (A= %.2f, tau=%.2f, t=%.2f) (%.2f vs %.2f)" % (chi2, bp_col[0], bp_col[1], bp_col[2], max_val, bp_col[0]*np.exp(-1)))
+        plt.xlim(max_time-0.5, max_time+0.5)
+        plt.ylim(-10, max_val*1.2)
+
+        plt.show()
+        raw_input("PAUSE")
+
+    return 
 
 def fit_wfm(time, wfm, rise_time, max_val):
     
@@ -973,6 +1013,20 @@ def sum_model(x,A1,A2,tau1, tau2,t1, t2):
     ind = col_model(x,A2,tau2,t2)
 
     return col+ind
+
+
+
+def sipm_model(x,A,tau,t):
+    y=np.zeros(np.shape(x))
+    
+    #exp_cut    = x>t
+    #y[:]       = 0.0
+    #y[exp_cut] = A*np.exp((t-x[exp_cut])/tau)
+
+    y = A*(x-t)/tau*(np.exp(-(x-t)/tau))
+    y[y<0] = 0
+
+    return y
 
 
 
