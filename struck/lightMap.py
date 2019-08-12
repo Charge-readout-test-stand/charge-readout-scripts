@@ -6,7 +6,7 @@ import os,sys
 import struck_analysis_parameters
 import struck_analysis_cuts_sipms
 import scipy.optimize as opt
-import FitPeakPy
+import FitPeakPy,PeakFitter2D
 import matplotlib.backends.backend_pdf as PdfPages
 import itertools
 import cPickle as pickle
@@ -77,6 +77,23 @@ def lightmap(x,y,drift_time,light_energy,charge_energy,cut,n_bin):
         plt.title("Ents=%i, Pos=(%.2f, %.2f, %.2f)" % (len(charge_energy_cut[selection_idx]),lim_x[vl[0]-1], lim_y[vl[1]-1], drift_length-lim_z[vl[2]-1]))
 
         plt.savefig("./plots/lightmap/ac_plot_%i_%i_%i.png" % (vl[0]-1,vl[1]-1,vl[2]-1))
+
+#==========================
+        pf2d = PeakFitter2D.PeakFitter2D(charge_energy_cut[selection_idx], light_energy_cut[selection_idx])
+        pf2d.setWin([cut[0], cut[1]], [200, 1300])
+        pf2d.setBins([40,50])
+
+
+        pf2d.setGuess(A=100, ux=np.mean(charge_energy_cut[selection_idx]), uy=np.mean(light_energy_voxel), 
+                            sigx=35, sigy=90, rho=-0.5)
+        check=pf2d.doFit(min_cut=2)
+        
+        if check>0: 
+            pf2d.plotFit(fignum=10)
+        else:
+            print "Did not suceed"
+            pf2d.plotGuess(fignum=10)
+#========================================
 
         plt.show()   
         #raw_input("PAUSE")
@@ -218,7 +235,8 @@ def process_file(filename):
 
 
 if __name__ == "__main__":
-    filename    =   "/home/teststand/23rd_LXe/tier3_all/tier3_added_23rd_dn2_newgains.root"
+    #filename    =   "/home/teststand/23rd_LXe/tier3_all/tier3_added_23rd_dn2_newgains.root"
+    filename  = "/home/teststand/24th_LXe/tier3_added/tier3_added_24th_dn5_dn6_newgains.root"
     process_file(filename)
 
 

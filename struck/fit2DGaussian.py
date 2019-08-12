@@ -8,7 +8,7 @@ import os,sys
 import struck_analysis_parameters
 import struck_analysis_cuts_sipms
 import scipy.optimize as opt
-import FitPeakPy
+import FitPeakPy,PeakFitter2D
 import matplotlib.backends.backend_pdf as PdfPages
 import cPickle as pickle
 
@@ -268,6 +268,18 @@ def process_file(filename):
     plt.colorbar()
 
     plt.show()
+
+#================================
+    pf2d = PeakFitter2D.PeakFitter2D(chargeEnergy, lightEnergy)
+    pf2d.setWin([cmin, cmax], [smin, smax])
+    pf2d.setBins([nbins,nbins])
+    pf2d.setGuess(A=100, ux=570, uy=570, sigx=35, sigy=90, rho=-0.5)
+    pf2d.doFit(min_cut=min_cut)
+    pf2d.plotFit()
+
+    print pf2d.pf
+    print coeff
+#================================
 
     raw_input("PAUSE END")
 
