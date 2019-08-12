@@ -160,8 +160,10 @@ def charge_cal(timeStamp):
 
 def PurityCorrection(driftTime, chargeEnergy, timeStamp):
     
-    if timeStamp > 1555706938:
+    if timeStamp >   1555706938:
         lifetime = 184.0
+    elif timeStamp > 1555372800.0:
+        lifetime = 50.0
     else:
         lifetime = np.inf
 
