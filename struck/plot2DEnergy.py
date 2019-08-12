@@ -104,23 +104,26 @@ def process_file(filename):
     tree.SetBranchStatus("trigger_time",1)
     tree.SetBranchStatus("pos_x",1)
     tree.SetBranchStatus("pos_y",1)
+    tree.SetBranchStatus("multiplicity",1)
     #selectcmd  = struck_analysis_cuts_sipms.get_std_cut(min_time)
     
     selectcmd  =  struck_analysis_cuts_sipms.get_cut_norise(min_time)
-    if '1320' in filename:
-        selectcmd = selectcmd + " && " + " && ".join(struck_analysis_cuts_sipms.get_risetime_cut(13,19))
+    if '1320' in filename or '24th' in filename:
+        selectcmd = selectcmd + " && " + " && ".join(struck_analysis_cuts_sipms.get_risetime_cut(14,18))
     else:
-        selectcmd = selectcmd + " && " + " && ".join(struck_analysis_cuts_sipms.get_risetime_cut(12,16))
+        #selectcmd = selectcmd + " && " + " && ".join(struck_analysis_cuts_sipms.get_risetime_cut(12,15))
+        selectcmd = selectcmd + " && " + " && ".join(struck_analysis_cuts_sipms.get_risetime_cut(14,15))
+        #selectcmd = selectcmd + " && " + " && ".join(struck_analysis_cuts_sipms.get_risetime_cut(12,15))
 
-    if DoLightCorrection:
-        selectcmd = struck_analysis_cuts_sipms.get_cut_norise(min_time)
+    #if DoLightCorrection:
+    #    selectcmd = struck_analysis_cuts_sipms.get_cut_norise(min_time)
         #selectcmd += " && " + " && ".join(struck_analysis_cuts_sipms.get_risetime_cut(4,15))
-        selectcmd += " && " + " && ".join(struck_analysis_cuts_sipms.get_risetime_cut(10,15))
+    #    selectcmd += " && " + " && ".join(struck_analysis_cuts_sipms.get_risetime_cut(10,15))
+    
+    #selectcmd += " && (pos_x<10 && pos_x>0) && (pos_y>0 && pos_y<5)"
+    #selectcmd  += " && (pos_x>0)&& ( pos_y>0)"
 
-    
-    
     drawcmd,drawpos   = get_dcmd()
- 
     print "Draw CMD",  drawcmd
     print "Select CMD for light map",selectcmd
     tree.Draw(drawcmd,selectcmd,"goff")
@@ -136,24 +139,74 @@ def process_file(filename):
 
 
     chargeEnergy = struck_analysis_cuts_sipms.PurityCorrection(driftTime, chargeEnergy, min_time)
-    ly_matrix,lim_x,lim_y,lim_z,drift_velocity = lightmap(pos_x,pos_y,driftTime,lightEnergy,chargeEnergy,(440,610),6)
-
-    pos_z = driftTime*drift_velocity
-
     lightCal = struck_analysis_cuts_sipms.light_cal(min_time)
-    lightEnergy *= lightCal#*0.65
-    #lightEnergy = apply_light_map(ly_matrix,pos_x,pos_y,pos_z,lim_x,lim_y,lim_z)*lightEnergy
+    lightEnergy    *= lightCal#*0.65
+    lightEnergy_uncorr = np.copy(lightEnergy)
 
-    if DoLightCorrection:
-        lightEnergy = struck_analysis_cuts_sipms.LightCorrect(driftTime, lightEnergy, min_time)
+    pos_z = driftTime
+    if os.path.isfile('data/light_map_file.p'):
+        pfile = open('data/light_map_file.p','rb')
+        import cPickle as pickle
+        ly_matrix       = pickle.load(pfile)
+        lim_x           = pickle.load(pfile)
+        lim_y           = pickle.load(pfile)
+        lim_z           = pickle.load(pfile)
+        drift_velocity = pickle.load(pfile)
+        pos_z *=drift_velocity
+        
+        #lightEnergy = apply_light_map(ly_matrix,pos_x,pos_y,pos_z,lim_x,lim_y,lim_z)*lightEnergy
+        #lightEnergyCorr = apply_light_map(ly_matrix,pos_x,pos_y,pos_z,lim_x,lim_y,lim_z)*lightEnergyCorr
+
+        #raw_input("Pause")
+    
+    #if DoLightCorrection:
+    #    lightEnergy = struck_analysis_cuts_sipms.LightCorrect(driftTime, lightEnergy, min_time)
+
+#========================================
+    plt.figure(figsize=(11,7))
+    print np.shape(ly_matrix)
+    plt.imshow(ly_matrix[:,:,-2]*570, interpolation='nearest')
+    plt.colorbar()
+
+#==========================================
+    plt.figure(figsize=(11,7))
+    print np.min(pos_x), np.max(pos_x), np.min(pos_y), np.max(pos_y)
+    H = plt.hist2d(pos_x, pos_y, bins=[7,7], range=[[-10,20],[-15,15]],
+                    norm=colors.LogNorm(vmin=100,vmax=10000)
+                    )
+
+    plt.colorbar()
+#====================================
 
     plt.figure(figsize=(11,7))
-    ymax = 1500
-    H = plt.hist2d(chargeEnergy, lightEnergy, bins=[100,100], range=[[200,1200],[0,ymax]], 
-                   norm=colors.LogNorm(vmin=1,vmax=100))
+    smin = 200
+    smax = 1000
+    cmin = 470
+    cmax = 670
+    nbins = 80
+    plt.subplot(121)
+    H = plt.hist2d(chargeEnergy, lightEnergy_uncorr, bins=[nbins,nbins], range=[[cmin,cmax],[smin,smax]],
+                               norm=colors.LogNorm(vmin=1,vmax=100))
+
+
+    plt.subplot(122)
+    H = plt.hist2d(chargeEnergy, lightEnergy*(570.0/500.0), bins=[nbins,nbins], range=[[cmin,cmax],[smin,smax]],
+                               norm=colors.LogNorm(vmin=1,vmax=100))
+
+
+#=====================
+    plt.figure(figsize=(11,7))
+    smin = 0
+    smax = 2500
+    cmin = 20
+    cmax = 1500
+    nbins = 120
+
+    H = plt.hist2d(chargeEnergy, lightEnergy, bins=[nbins,nbins], range=[[cmin,cmax],[smin,smax]], 
+                   norm=colors.LogNorm(vmin=1,vmax=1000))
     
-    print H
-    exit()
+    #print H
+    #exit()
 
     diagx = np.arange(np.min(chargeEnergy), np.max(chargeEnergy))
     chargeEnergyCut, lightEnergyCut, diag_parms, diag_cut =  struck_analysis_cuts_sipms.diag_cut(chargeEnergy,
@@ -172,10 +225,13 @@ def process_file(filename):
 
     plt.show()
     raw_input("PAUSE")    
+
+
+
     plt.clf()
 
-    H = plt.hist2d(chargeEnergyCut, lightEnergyCut, bins=[100,100], range=[[200,1200],[0,ymax]],
-                   norm=colors.LogNorm(vmin=1,vmax=100))
+    H = plt.hist2d(chargeEnergyCut, lightEnergyCut, bins=[nbins,nbins], range=[[cmin,cmax],[smin,smax]],
+                   norm=colors.LogNorm(vmin=1,vmax=1000))
     cb = plt.colorbar()
     cb.set_label("Counts", fontsize=15)
     plt.title("Light vs Charge SiPM Run", fontsize=16)
@@ -221,13 +277,16 @@ def CompareAngles(chargeEnergy, lightEnergy, theta_list, name):
         bin_centers = bin_edges[:-1] + np.diff(bin_edges)/2.0
 
         fitx, fitp, fit_cov, isFail, full_fit, gaus, linear = FitPeakPy.FitPeakTest(hist, np.sqrt(hist),
-                                                                                    bin_centers, fit_width=170)
+                                                                                    bin_centers, 
+                                                                                    #fit_width=170
+                                                                                    fit_width=120
+                                                                                    )
         
         fitx2, fitp2, fit_cov2, isFail2, full_fit2, gaus2, linear2 = FitPeakPy.FitPeakTest(hist, np.sqrt(hist),
                                                                                     bin_centers, fit_width=170, peak_guess=1050)
 
-        res  = (fitp[2]/fitp[1])*100
-        res2 = (fitp2[2]/fitp2[1])*100
+        res  = np.abs(fitp[2]/fitp[1])*100
+        res2 = np.abs(fitp2[2]/fitp2[1])*100
         cal = (570.0/fitp[1])
         print "------------------->Theta:",theta, "Cal:", cal
 
@@ -245,11 +304,11 @@ def CompareAngles(chargeEnergy, lightEnergy, theta_list, name):
             if ti==1:
                 etype  ='Rotated \n'
             
-            etype += r"570keV: $\sigma$/E = %.2f $\pm$ %.2f'"% (res, (fit_cov[2,2]**0.5)*100.0/fitp[1])
+            etype += r"570keV: $\sigma$/E = %.2f $\pm$ %.2f  "% (res, (fit_cov[2,2]**0.5)*100.0/fitp[1])
+            etype += "%"
             etype += "\n"
-            etype += r"1060keV: $\sigma$/E = %.2f $\pm$ %.2f" % (res2, (fit_cov2[2,2]**0.5)*100.0/fitp2[1])
-
-            
+            etype += r"1060keV: $\sigma$/E = %.2f $\pm$ %.2f " % (res2, (fit_cov2[2,2]**0.5)*100.0/fitp2[1])
+            etype += "%"
 
             print cal, cal_m*570 + cal_b, cal_m*1060 + cal_b
             cal_energy = cal_m*rot_energy + cal_b
@@ -315,19 +374,21 @@ def PlotBest(chargeEnergy, lightEnergy, theta, name):
     
     #Make Histogram
     hist,bin_edges = np.histogram(rot_energy, bins=140, range=(200,2000))
-    bin_centers = bin_edges[:-1] + np.diff(bin_edges)/2.0
+    bin_centers    = bin_edges[:-1] + np.diff(bin_edges)/2.0
 
     fitx, fitp, fit_cov, isFail, full_fit, gaus, linear = FitPeakPy.FitPeakTest(hist, np.sqrt(hist),
-                                                                                bin_centers, fit_width=170)
+                                                                                bin_centers, 
+                                                                                fit_width=120
+                                                                                )
 
     fitx2, fitp2, fit_cov2, isFail2, full_fit2, gaus2, linear2 = FitPeakPy.FitPeakTest(hist, np.sqrt(hist),
                                                                                 bin_centers, fit_width=170, peak_guess=1050)
 
-    res  = (fitp[2]/fitp[1])*100
-    res2 = (fitp2[2]/fitp2[1])*100
+    res  = np.abs(fitp[2]/fitp[1])*100
+    res2 = np.abs(fitp2[2]/fitp2[1])*100
     cal = (570.0/fitp[1])
     
-    print "------------------->Theta:",theta, "Cal:", cal
+    print "------------------->Best Theta:",theta, "Cal:", cal
     #hist,bin_edges = np.histogram(rot_energy*cal, bins=140, range=(200,2000))
     #bin_centers = bin_edges[:-1] + np.diff(bin_edges)/2.0
 
@@ -391,7 +452,7 @@ def ScanAngles(chargeEnergy, lightEnergy, theta_list, name):
         #fitx, fitp, fit_cov, isFail, full_fit, gaus, linear = FitPeakPy.FitPeakLinear(hist, np.sqrt(hist), 
         #                                                                bin_centers, fit_width=170)    
         fitx, fitp, fit_cov, isFail, full_fit, gaus, linear = FitPeakPy.FitPeakTest(hist, np.sqrt(hist),
-                                                                         bin_centers, fit_width=170)
+                                                                         bin_centers, fit_width=120)
 
         #fitx2, fitp2, fit_cov2, isFail2, full_fit2, gaus2, linear2 = FitPeakPy.FitPeak(hist, np.sqrt(hist), 
         #                                                                bin_centers, fit_width=170, peak_guess=1060)
@@ -403,13 +464,13 @@ def ScanAngles(chargeEnergy, lightEnergy, theta_list, name):
         #if theta < 0.5:
         print theta
         try:
-            res = (fitp[2]/fitp[1])*100
+            res = np.abs(fitp[2]/fitp[1])*100
             if not isFail: res_err = (fit_cov[2,2]/fitp[1])*100
             else: 
                 res_err = 0.0
                 res     = 0.0
 
-            res2 = (fitp2[2]/fitp2[1])*100
+            res2 = np.abs(fitp2[2]/fitp2[1])*100
             if not isFail2: res_err2 = (fit_cov2[2,2]/fitp2[1])*100
             else: 
                 res2      = 0.0
@@ -424,12 +485,12 @@ def ScanAngles(chargeEnergy, lightEnergy, theta_list, name):
         #Plot Single Spectrum
         plt.errorbar(bin_centers, hist, yerr=np.sqrt(hist),marker='o', linestyle='None', c='k')
         plt.plot(fitx, full_fit, c='r', label=r"$\sigma$/E (570keV) = %.2f %%" % (res), linewidth=2.0)
-        #plt.plot(fitx, gaus,     c='b')
-        #plt.plot(fitx, linear,   c='g', linewidth=2.0)
+        plt.plot(fitx, gaus,     c='b')
+        plt.plot(fitx, linear,   c='g', linewidth=2.0)
         
         plt.plot(fitx2, full_fit2, c='c', label=r"$\sigma$/E (1050keV) = %.2f %%" % (res2), linewidth=2.0)
-        #plt.plot(fitx2, gaus2,     c='b')
-        #plt.plot(fitx2, linear2,   c='g', linewidth=2.0)
+        plt.plot(fitx2, gaus2,     c='b')
+        plt.plot(fitx2, linear2,   c='g', linewidth=2.0)
 
         plt.legend(fontsize=18)
         plt.title(r"Rotated Energy ($\theta$ = %.2f rad)" % theta, fontsize=18)
@@ -490,14 +551,15 @@ def ScanAngles(chargeEnergy, lightEnergy, theta_list, name):
 
     plt.xlabel("Theta[rad]",fontsize=18)
     plt.ylabel(r"Resolution ($\sigma$/E) [$\%$]",fontsize=18)
-    plt.title("Resoltuion vs Theta Scan",fontsize=18)
+    plt.title(r"Resoltuion vs Theta Scan ($\theta_{avg}$=%.2f)"%((min_theta1 + min_theta2)/2.0),fontsize=18)
     plt.ylim(2.5, 7.5)
     plt.xlim(-.02, np.max(theta_list)*1.2)
     plt.legend()
     pdf.savefig(figprof)
     pdf.close()
     
-    return (min_theta1 + min_theta2)/2.0
+    #return (min_theta1 + min_theta2)/2.0
+    return (min_theta1)
 
 if __name__ == "__main__":
 
@@ -516,7 +578,13 @@ if __name__ == "__main__":
         #filename    = "/home/teststand/22nd_LXe/overnight_4_18_2019_aftercirc/tier3_added/tier3_added_22nd_overnight2_aftercirc.root"
         #filename    = "/home/teststand/22nd_LXe/overnight_4_18_2019_aftercirc/tier3_added/tier3_added_22nd_overnight2_aftercirc_nofilter.root"
         #filename    = "/home/teststand/22nd_LXe/day_testing_4_19_2019_newfield/tier3_added/tier3_added_22nd_1320V_v1.root"
-        filename     = "/home/teststand/23rd_LXe/tier3_all/tier3_23rd.root"
+        #filename     = "/home/teststand/23rd_LXe/tier3_all/tier3_23rd.root"
+        
+        #filename    =   "/home/teststand/23rd_LXe/tier3_all/tier3_added_23rd_dn2.root"
+        filename    =   "/home/teststand/23rd_LXe/tier3_all/tier3_added_23rd_dn2_newgains.root"
+        #filename   = "/home/teststand/24th_LXe/tier3_added/tier3_added_24th_dn5_dn6.root"
+        #filename   = "/home/teststand/24th_LXe/tier3_added/tier3_added_24th_dn5_dn6_newgains.root"
+
     else:
         filename = sys.argv[1]
 

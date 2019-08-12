@@ -21,8 +21,12 @@ def get_default_cut(timeStamp):
 
 def get_ss_cut():
     selection = []
+    #selection.append("nsignals==2")
+    #selection.append("(nXsignals==1 && nYsignals==1)")
+    
+    selection.append("multiplicity==1")
     selection.append("nsignals==2")
-    selection.append("(nXsignals==1 && nYsignals==1)")
+
     return selection
 
 def get_chcal_cut(ch, timeStamp):
@@ -50,8 +54,8 @@ def get_risetime_cut(rlow=10, rhigh=15):
 def get_std_cut(timeStamp):
     selection = get_default_cut(timeStamp)
     selection.extend(get_ss_cut())
-    selection.extend(get_risetime_cut(9,15))
-    selection.append("SignalEnergy > 200")
+    selection.extend(get_risetime_cut(10,15))
+    selection.append("SignalEnergy > 0")
     selection = " && ".join(selection)
     return selection
 
@@ -64,13 +68,27 @@ def get_cut_norise(timeStamp):
     selection = " && ".join(selection_new)
     return selection
 
-def diag_cut(chargeEnergy,lightEnergy, timeStamp):
-    if timeStamp > 1557998400.0:
-        m1 = 0.85#6.
-        m2 = 0.55#3.
-        b1 = 600.0#2000.
-        b2 = -50#0.0
+def get_drift_vel(drift_time):
+    drift_length=33.0
+    counts,bn = np.histogram(drift_time,bins=50,range=(1,30))
+    drift_velocity = drift_length/bn[0:][np.argmax(counts)]
+    return drift_velocity
 
+def diag_cut(chargeEnergy,lightEnergy, timeStamp):
+    
+
+    if timeStamp > 15577920 and timeStamp<1558137600:
+        #23rd LXe
+        m1 = 0.9
+        m2 = 0.6
+        b1 = 270.0
+        b2 = 0
+    elif timeStamp > 1559606400 and timeStamp<1559952000:
+        #24th
+        m1 = 0.87
+        m2 = 0.55
+        b1 = 300.0
+        b2 = 0
     elif timeStamp > 1555372800.0:
         #22nd LXe with 315 bias
         m1 = 0.85#6.
@@ -112,7 +130,13 @@ def light_cal(timeStamp):
     #Very rough light calibration to center the anti-correlation blob at ~570 keV (ish)
     #Makes fitting the peak in rotated space slightly easier 
     
-    if    timeStamp > 1555706938:
+    if timeStamp > 15577920 and timeStamp<1558137600:
+        #23rd
+        cal  = 570.0/220.0
+    elif timeStamp > 1559606400 and timeStamp<1559952000:
+        #24th
+        cal = 570.0/200.0
+    elif  timeStamp > 1555706938:
         #22nd but 1320V/cm
         cal = 570.0/200.0
     elif  timeStamp > 1555372800:
@@ -159,11 +183,12 @@ def charge_cal(timeStamp):
     return cal
 
 def PurityCorrection(driftTime, chargeEnergy, timeStamp):
-    
-    if timeStamp >   1555706938:
+    if timeStamp > 15577920 and timeStamp<1558137600:
+        #23rd LXe
         lifetime = 184.0
-    elif timeStamp > 1555372800.0:
-        lifetime = 50.0
+    elif timeStamp > 1559606400 and timeStamp<1559952000:
+        #24th LXe
+        lifetime=np.inf
     else:
         lifetime = np.inf
 

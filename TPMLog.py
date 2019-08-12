@@ -263,7 +263,8 @@ def plot_temperatures(filename, title, time_hours, time_stamps, TC0=None, TC1=No
         label = 'Extra 1 (%.1fK = %.1fC)' % (T_Xe1[last_index], T_Xe1[last_index]-kelvin_offset)
         plt.setp(line4, color='sienna', linewidth=linewidth, label=label, ls = '--')
 
-    if T_Xe2 and len(T_Xe2) > 0:
+    if T_Xe2 and len(T_Xe2) > 0 and False:
+        #print "----->", "XENON RET", np.max(T_Xe2)
         line4 = plt.plot(time_hours[first_index:last_index], T_Xe2[first_index:last_index])
         label = 'Xe ret. leg (%.1fK = %.1fC)' % (T_Xe2[last_index], T_Xe2[last_index]-kelvin_offset)
         plt.setp(line4, color='maroon', linewidth=linewidth, label=label, ls='--')
@@ -611,6 +612,12 @@ def main(
             full_bottle_mass = 55.7
             anode_capacitance_guess = 35.3
             cath_capacitance_guess = 31.0
+        else:
+            cath_capacitance_guess = 31.0
+            anode_capacitance_guess = 35.3
+
+        if time_stamp >= 3636637012:
+            full_bottle_mass = 55.6
 
         TC0.append(float(split_line[1]))
         TC1.append(float(split_line[2]))
@@ -1206,8 +1213,12 @@ def main(
         outfile.write("LN consumption rate [L/hour]: %.2f \n" % (ln_consumption_rate/ln_density))
 
         # estimate when LN dewar will be empty
-        empty_time = datetime.datetime.fromtimestamp(
-          time_stamps[last_index]- 2082844800 + ln_hours_remaining*3600.0)
+        if np.isinf(ln_hours_remaining):
+            #empty_time = 0
+            empty_time = datetime.datetime.fromtimestamp(time_stamps[last_index])
+        else:
+            empty_time = datetime.datetime.fromtimestamp(
+            time_stamps[last_index]- 2082844800 + ln_hours_remaining*3600.0)
 
         plt.grid(b=True)
         title="LN mass (should run out in %.1f hours, at %s) \n " % (

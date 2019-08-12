@@ -550,10 +550,10 @@ def get_wfmparams(
         exo_wfm_filter = np.fft.irfft(exo_fft_filter_array)
 
         #Experimenting with better filters
-        if sipm_low_pass != None:
-            exo_wfm_butter = butter_lowpass_filter(exo_wfm_pz, sipm_low_pass*1.e6, sampling_freq_Hz, 5.0)
-        else:
-            exo_wfm_butter = exo_wfm_pz
+        #if sipm_low_pass != None:
+        #    exo_wfm_butter = butter_lowpass_filter(exo_wfm_pz, sipm_low_pass*1.e6, sampling_freq_Hz, 5.0)
+        #else:
+        #    exo_wfm_butter = exo_wfm_pz
     
         #exo_wfm_butter = butter_lowpass_filter(exo_wfm_pz, sipm_low_pass*1.e6, sampling_freq_Hz, 5.0)
 
