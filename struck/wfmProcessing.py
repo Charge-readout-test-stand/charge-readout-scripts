@@ -820,7 +820,7 @@ def get_risetimes(
     #if True and max_val > 200 and (not "PMT" in label) and ("Sum" in label) and rise_time_stop10 > 0:
     #if True and max_val > 400 and (not "PMT" in label) and (not "Sum" in label) and rise_time_stop10 > 0 and (rise_time_stop95 - rise_time_stop10) > 6.0 and not ( "/" in label or "-" in label):
     #if True and max_val > 400 and (not "PMT" in label) and (not "Sum" in label) and rise_time_stop10 > 0 and (rise_time_stop95 - rise_time_stop10) < 3.0:
-    if True and max_val > 340 and max_val < 500 and (not "PMT" in label) and (not "Sum" in label):   
+    if False and max_val > 340 and max_val < 500 and (not "PMT" in label) and (not "Sum" in label):   
     #if False:
     #if "Sum" in label and fit_energy>50:
     #if "Sum" in label and (rise_time_stop95-11)>30:   
