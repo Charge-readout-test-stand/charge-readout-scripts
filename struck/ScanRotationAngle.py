@@ -63,6 +63,11 @@ class ScanRotation(PeakFitter1D.PeakFitter1D):
                 res     = 0
                 res_err = 1.e16
 
+            if check<0:
+                res     = 0
+                res_err = 1.e16
+                self.pf  = self.p0
+
             #print "********************", res_err, self.cov
 
             self.res_list[ti][0] = res
@@ -75,6 +80,7 @@ class ScanRotation(PeakFitter1D.PeakFitter1D):
                 plt.xlabel("Rotated Energy [keV]", fontsize=18)
                 plt.ylabel("Counts", fontsize=18)
                 
+
                 res_string =  (r"$\theta$ = %.2f" % theta) + "\n"
                 res_string += "E=%.2f keV \n" % self.pf[1]
                 res_string += (r"$\sigma/E$ = %.2f" % (res)) + "%"

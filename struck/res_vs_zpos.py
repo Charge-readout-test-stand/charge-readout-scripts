@@ -91,7 +91,9 @@ def process_file(filename):
     lightEnergy, lm_xyz, lm_array = lightMap_v2.gen_lightmap(pos_x,pos_y,driftTime,lightEnergy,chargeEnergy,[1,1,11])
 
     dz=3
-    for z in np.arange(0, 33, dz):
+    zlist = np.arange(0, 33, dz)
+    res_list = np.zeros((len(zlist),4))
+    for zi,z in enumerate(np.arange(0, 33, dz)):
         zwin = [z,z+dz]
         
         zcut = np.logical_and(pos_z > zwin[0], pos_z< zwin[1])
@@ -122,9 +124,14 @@ def process_file(filename):
         plt.clf()
         theta_scan_diag1.plot_theta(filled=False, color='k')
         plt.title("%.2fmm<Z<%.2fmm" % (zwin[0], zwin[1]))
-
+        res_list[zi,0] = 100*theta_scan_diag1.pf[2]/theta_scan_diag1.pf[1]
+        res_list[zi,1] = (np.sqrt(np.abs(theta_scan_diag1.cov[2,2]))/theta_scan_diag1.pf[1])*100
+    
         theta_scan_diag2 =  ScanRotationAngle.ScanRotation(chargeEnergyCut, lightEnergyCut, 1060.0, "diag_%s_1060"%bname)
         run_scan_1060(theta_scan_diag2)
+        res_list[zi,2] = 100*theta_scan_diag2.pf[2]/theta_scan_diag2.pf[1]
+        res_list[zi,3] = (np.sqrt(np.abs(theta_scan_diag2.cov[2,2]))/theta_scan_diag2.pf[1])*100
+
         plt.figure(192)
         plt.clf()
         theta_scan_diag2.plot_theta(filled=False, color='k')
@@ -132,7 +139,21 @@ def process_file(filename):
 #===============================================
         
         plt.show()
-        raw_input()
+        #raw_input()
+
+    plt.figure(910)
+
+    plt.title("res")
+    plt.errorbar(zlist,res_list[:,0], yerr=res_list[:,1], marker='o', ms=10, linestyle='None', color='b')
+    plt.errorbar(zlist,res_list[:,2], yerr=res_list[:,3], marker='o', ms=10, linestyle='None', color='r')
+    plt.grid(True)
+    plt.ylim(3, 9)
+    plt.xlim(0,35)
+    plt.xlabel("Zpos [mm]", fontsize=17)
+    plt.ylabel(r"Energy Resoution ($\sigma$/E)" + "[%]", fontsize=17)
+    plt.savefig("./plots/rotres_vs_zpos.png")
+
+    raw_input()
 
 def plot_ac(scanner):
     scanner.plot2D(100,[0,1500], 100, [0,1500], vmax=100)

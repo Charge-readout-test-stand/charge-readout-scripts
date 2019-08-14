@@ -75,6 +75,8 @@ class PeakFitter1D(object):
             fail = True
             bp   = self.p0
             bcov = np.eye(len(bp))
+            self.cov = bcov
+            self.pf  = bp
             return -1
         
         self.xfit = np.linspace( self.cents[fpts][0], self.cents[fpts][-1], 1e3 )
