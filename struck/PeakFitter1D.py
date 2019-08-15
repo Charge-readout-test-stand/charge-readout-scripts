@@ -64,18 +64,25 @@ class PeakFitter1D(object):
         self.p0           = [height_guess, peak_pos, self.sig_guess, exp_height_guess, exp_decay_guess]        
 
         hist_errors = np.sqrt(self.hist)
-        fail = False
+        self.fail = False
         try:
             bp, bcov = opt.curve_fit(ffs.ffn_gaus_exp, self.cents[fpts], self.hist[fpts], p0=self.p0, 
                                             sigma=hist_errors[fpts])
+            
+            if np.sum(np.isinf(bcov))>0:
+                #failed
+                self.fail=True
+
             self.pf  = bp
             self.cov = bcov
         except RuntimeError:
             print "**********************Did not work*******************************"
-            fail = True
+            self.fail = True
+        
+        if self.fail:
             bp   = self.p0
             bcov = np.eye(len(bp))
-            self.cov = bcov
+            self.cov = bcov*1.e10
             self.pf  = bp
             return -1
         
