@@ -55,7 +55,7 @@ ln_in_thresh = 300.0#140.0
 #ln_in_thresh = 220.0
 
 def print_warning(warning):
-    print "WARNING:", warning
+    print("WARNING: {}".format(warning))
 
 
 def load_gmail_info():
@@ -79,7 +79,7 @@ def filter_SMS(users):
             if "sprintpcs" in address: continue # sprint
             if "vtext" in address: continue # verizon
             if "att" in address: continue # AT&T
-            print "keeping %s: %s" % (user, address)
+            print("keeping {}: {}".format(user, address))
             new_addresses.append(address)
         if len(new_addresses) > 0: new_dict[user] = new_addresses
     return new_dict
@@ -117,14 +117,14 @@ class LXeMonitoring:
         start_time = datetime.datetime.now()
 
         if self.lxe:
-            print '\n----> monitoring for LXe\n'
+            print('\n----> monitoring for LXe\n')
         else:
-            print '===> WARNING: LXe is set to false!'
-            print '\t LN mass, Cu & cell temps, will *NOT* be monitored'
+            print('===> WARNING: LXe is set to false!')
+            print('\t LN mass, Cu & cell temps, will *NOT* be monitored')
         
 
         if self.do_test:
-            print "====> doing test... changing thresholds so all alarms trigger"
+            print("====> doing test... changing thresholds so all alarms trigger")
             # change thresholds so all alarms will trigger:
             temperature_threshold = 0.0
             cu_plate_in_threshold = 0.0
@@ -136,10 +136,10 @@ class LXeMonitoring:
             self.lxe = True
 
         if self.do_test:
-            print "===> this is a test... "
+            print("===> this is a test... ")
 
         if self.do_debug:
-            print "--> DEBUGGING"
+            print("--> DEBUGGING")
 
         # check once to be sure this script is working ok
         self.self_checks() 
@@ -150,7 +150,7 @@ class LXeMonitoring:
         while True:
 
             now = datetime.datetime.now()
-            print '===> starting monitoring loop', now
+            print('===> starting monitoring loop {}'.format(now))
 
             try:
                 self.do_ping() # ping the Omega LN controller
@@ -158,7 +158,7 @@ class LXeMonitoring:
                 while num_checks < 10:
                     if self.check_dropbox_data() < 0:
                         #Sleep for 30 seconds and try again
-                        print "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ Failed to get LV data wait and try again", num_checks
+                        print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ Failed to get LV data wait and try again {}".format(num_checks))
                         time.sleep(30)
                         num_checks+=1
                     else:
@@ -171,7 +171,7 @@ class LXeMonitoring:
                 # heartbeat info -- send a periodic email to show that things are
                 # working
                 if last_heartbeat == None or last_heartbeat < now - datetime.timedelta(hours=heartbeat_interval_hours):
-                    print "--> heartbeat at:", now
+                    print("--> heartbeat at:{}".format(now))
                     message = "heartbeat at: %s \n" % now
                     message += "there have been %i issues \n" % n_issues
                     message += "script has been running since: %s \n" % start_time
@@ -197,29 +197,29 @@ class LXeMonitoring:
                     last_heartbeat = now
                     #print message
                     filtered_users = filter_SMS(self.users) 
-                    print "Filtered users", filtered_users
+                    print("Filtered users {}".format(filtered_users))
                     self.send_messages(message, users=filtered_users, is_heartbeat=True)
 
                 if self.do_test:
-                    print "====> testing is done"
+                    print("====> testing is done")
                     break
 
             #except smtplib.SMTPException:
             #    print "Meh not sure"
             except smtplib.SMTPHeloError:
-                print "Hello Error"
+                print("Hello Error")
             except smtplib.SMTPAuthenticationError:
-                print "Authentication error"
+                print("Authentication error")
             except:
                 n_issues += 1
-                print "There have been %i issues with script!" % n_issues
+                print("There have been {} issues with script!".format(n_issues))
                 for i in xrange(10):
                     print('\a') # audible alarm!
 
             now = datetime.datetime.now()
-            print '===> done with monitoring cycle at', now
+            print('===> done with monitoring cycle at {}'.format(now))
 
-            print "---> sleeping for %i seconds" % sleep_seconds
+            print("---> sleeping for {} seconds".format(sleep_seconds))
             time.sleep(sleep_seconds) # sleep for sleep_seconds
 
 
@@ -230,28 +230,28 @@ class LXeMonitoring:
         * loop over users and addresses
         """
 
-        print "--> checking that mail info exists:"
+        print("--> checking that mail info exists:")
         load_gmail_info()
-        print "\t ok"
+        print("\t ok")
 
         # print list of active users & addresses to be sure we can loop over them:
-        print "--> users and addresses:"
+        print("--> users and addresses:")
         for user, addresses  in self.users.items():
-            print "\t%s:" % user
+            print("\t{}:".format(user))
             for address in addresses:
-                print "\t\t", address
+                print("\t\t{}".format( address))
 
 
     def send_messages(self, msg, users=None, is_heartbeat=False):
         """ loop over all addresses for users and email message"""
-        print "--> sending mail..."
+        print("--> sending mail...")
         if not is_heartbeat: print('\a') # audible alarm!
         #print "\t message:", msg
         if users==None: users = self.users
         for user, addresses  in users.items():
-            print "\t user: %s:" % user
+            print("\t user: {}:".format(user))
             for address in addresses:
-                print "\t\t", address
+                print("\t\t{}".format( address))
                 self.sendmail(msg, address, is_heartbeat)
 
     def do_ping(self, timeout=20):
@@ -262,15 +262,15 @@ class LXeMonitoring:
           -t exit after timeout of specified number of seconds
         """
 
-        print "--> pinging Omega LN controller"
+        print("--> pinging Omega LN controller")
         if os.uname()[0] == "Darwin":
             cmd = "ping -o -t %i 171.64.56.58" % timeout # AGS Mac OSX
         else:
             cmd = "ping -c 1 -w %i 171.64.56.58" % timeout # SLAC rhel6-64
         output = commands.getstatusoutput(cmd)
         if self.do_debug: 
-            print "\t", cmd
-            print output[1]
+            print("\t{}".format( cmd))
+            print(output[1])
         if output[0] != 0 or self.do_test:
             message = "Power outage? Cannot communicate with Omega LN controller \n"
             message += "command: %s \n" % cmd
@@ -281,12 +281,12 @@ class LXeMonitoring:
             print_warning(message)
             self.send_messages(message)
         else:
-            print "\t success"
+            print("\t success")
 
 
     def get_dropbox_data(self):
         """ download text file summary from dropbox currentPlots, parse for info """
-        print "--> getting log file from dropbox:"
+        print("--> getting log file from dropbox:")
         
         file_name = "99-log.txt" # dropbox log file
 
@@ -295,9 +295,9 @@ class LXeMonitoring:
         cmd = 'rm %s' % file_name
         output = commands.getstatusoutput(cmd)
         if output[0] != 0 or self.do_debug:
-            print "-- removing old file"
-            print cmd
-            print output[1]
+            print("-- removing old file")
+            print(cmd)
+            print(output[1])
  
         #cmd = 'curl -L -o %s https://www.dropbox.com/sh/an4du1pzdnl4e5z/AADd6Xcdi78WinEMHz3XGEO1a/%s' % (
         #    file_name, file_name)
@@ -307,18 +307,18 @@ class LXeMonitoring:
         
         output = commands.getstatusoutput(cmd)
         if output[0] != 0 or self.do_debug:
-            print "--> trying to download log file from dropbox:"
+            print("--> trying to download log file from dropbox:")
             message = "Trouble downloading file from dropbox \n"
             message += "command: %s \n" % cmd
             message += "output: %s \n " % output[1]
             print_warning(message)
             self.send_messages(message)
         else:
-            print "\t success"
+            print("\t success")
 
         data = {}
 
-        print "--> parsing file..."
+        print("--> parsing file...")
         # open the file and read it:
         log_file = file(file_name)
         for line in log_file:
@@ -326,66 +326,66 @@ class LXeMonitoring:
             if 'dP' in line:
                 dP_torr = float(line.split(":")[1])
                 data['dP_torr'] = dP_torr
-                if self.do_debug: print "\t", line.split(":")[0] + ":",  dP_torr
+                if self.do_debug: print("\t{}: {}".format( line.split(":")[0],  dP_torr))
 
             if 'LN mass' in line:
                 ln_mass_lbs = float(line.split(':')[1])
                 data['ln_mass_lbs'] = ln_mass_lbs
-                if self.do_debug: print "\t", line.split(":")[0] + ":",  ln_mass_lbs
+                if self.do_debug: print("\t{}: {}".format( line.split(":")[0],  ln_mass_lbs))
 
             if 'Last LabView time stamp' in line:
                 LV_time= (':').join(line.split(':')[1:])
                 LV_time = (" ").join(LV_time.split()) # get rid of trailing characters
                 data['LV_time'] = LV_time
-                if self.do_debug: print "\t", line.split(":")[0] + ":", LV_time
+                if self.do_debug: print("\t{}: {}".format( line.split(":")[0], LV_time))
 
             if 'LN time remaining' in line:
                 ln_hours_left = float(line.split(':')[1])
                 data['ln_hours_left'] = float(line.split(':')[1])
-                if self.do_debug: print "\t", line.split(":")[0] + ":", ln_hours_left
+                if self.do_debug: print("\t{}: {}".format( line.split(":")[0],  ln_hours_left))
 
             if 'Cu top [K]' in line:
                 cu_top = float(line.split(':')[1].split()[0])
                 data['cu_top'] = cu_top
-                if self.do_debug: print "\t", line.split(":")[0] + ":", cu_top
+                if self.do_debug: print("\t{}: {}".format( line.split(":")[0],  cu_top))
 
             if 'Cu bot [K]' in line:
                 cu_bot = float(line.split(':')[1])
                 data['cu_bot'] = cu_bot
-                if self.do_debug: print "\t", line.split(":")[0] + ":", cu_bot
+                if self.do_debug: print("\t{}: {}".format( line.split(":")[0],  cu_bot))
 
             if 'Cell top [K]' in line:
                 cell_top = float(line.split(':')[1])
                 data['cell_top'] = cell_top
-                if self.do_debug: print "\t", line.split(":")[0] + ":", cell_top
+                if self.do_debug: print("\t{}: {}".format( line.split(":")[0],  cell_top))
 
             if 'Cell bot [K]' in line:
                 cell_bot = float(line.split(':')[1])
                 data['cell_bot'] = cell_bot
-                if self.do_debug: print "\t", line.split(":")[0] + ":", cell_bot
+                if self.do_debug: print("\t{}: {}".format( line.split(":")[0],  cell_bot))
 
             if 'Cell mid [K]' in line:
                 cell_mid = float(line.split(':')[1])
                 data['cell_mid'] = cell_mid
-                if self.do_debug: print "\t", line.split(":")[0] + ":", cell_mid
+                if self.do_debug: print("\t{}: {}".format( line.split(":")[0],  cell_mid))
 
             if 'inlet' in line:
                 ln_in_temp = float(line.split(':')[1])
                 data['ln_in_temp'] = ln_in_temp
                 
-        print "\t done"
+        print("\t done")
         return data
 
 
     def check_dropbox_data(self):
         """ check dropbox data against thresholds """
         data = self.get_dropbox_data()
-        print "--> checking dropbox data:"
+        print("--> checking dropbox data:")
 
         if self.do_debug: 
-            print "--> dropbox data:"
+            print("--> dropbox data:")
             for key, value in data.items():
-                print "\t", key, value
+                print("\t{} {}".format( key, value))
 
         messages = []
 
@@ -429,15 +429,15 @@ class LXeMonitoring:
                 print_warning(message)
 
         else:
-            print "Warning: LXe is set to false -- not checking cell temps or LN remaining"
+            print("Warning: LXe is set to false -- not checking cell temps or LN remaining")
 
         # check how old the labview time stamp is:
         LV_time = data['LV_time']
         LV_time =  datetime.datetime.strptime(LV_time,"%Y-%m-%d %H:%M:%S.%f")
-        if self.do_debug: print "LV_time", LV_time
+        if self.do_debug: print("LV_time: {}".format( LV_time))
         now  = datetime.datetime.now()
         time_elapsed =  now - LV_time
-        if self.do_debug: print "time_elapsed", time_elapsed
+        if self.do_debug: print("time_elapsed: {}".format( time_elapsed))
         if LV_time < now - datetime.timedelta(minutes=lookback_time_minutes):
             time_elapsed =  now - LV_time
             
@@ -457,25 +457,25 @@ class LXeMonitoring:
         #raw_input("PAUSE")
 
         if len(messages) > 0:
-            print "%i warnings" % len(messages)
+            print("{} warnings".format( len(messages)))
             message = "\n".join(messages)
             self.send_messages(message)
 
-        print "\t done"
+        print("\t done")
         return 1
 
     def sendmail(self,message,address,is_heartbeat=False):
         """ send a message to a user """
-        print "trying to send mail to %s..." % address
+        print("trying to send mail to %{}...".format( address))
         gmail_user, gmail_pwd = load_gmail_info()
         smtpserver = smtplib.SMTP("smtp.gmail.com",587)
         smtpserver.ehlo()
         smtpserver.starttls()
         smtpserver.ehlo
-        print "Login info", gmail_user, gmail_pwd 
-        print "Doing the login"
+        print("Login info: {} {}".format( gmail_user, gmail_pwd))
+        print("Doing the login")
         smtpserver.login(gmail_user, gmail_pwd)
-        print "Done login"
+        print("Done login")
         subject = "Stanford LXe System Alarm!"
         if self.do_test: subject = "TEST of " + subject
         if is_heartbeat: subject = "Stanford LXe system heartbeat from %s %s" % (
@@ -486,8 +486,8 @@ class LXeMonitoring:
         info += "user: %s \n" % os.getlogin()
         info += "system info: %s \n" % " ".join(os.uname())
         msg = header + '\n%s\n%s\n' % (info, message)
-        print smtpserver.sendmail(gmail_user, address, msg)
-        print 'done! sending mail'
+        print(smtpserver.sendmail(gmail_user, address, msg))
+        print('done! sending mail')
         smtpserver.close()
 
 
