@@ -79,7 +79,6 @@ def filter_SMS(users):
             if "sprintpcs" in address: continue # sprint
             if "vtext" in address: continue # verizon
             if "att" in address: continue # AT&T
-            if "agschube@gmail.com" in address: continue # alexis gmail
             print "keeping %s: %s" % (user, address)
             new_addresses.append(address)
         if len(new_addresses) > 0: new_dict[user] = new_addresses
@@ -92,24 +91,11 @@ class LXeMonitoring:
 
         #define users here:
         self.users = {
-            #'alexis':[
-            #    'schubert.alexis@gmail.com', 
-            #    'agschube@gmail.com', 
-            #    '2064121866@tmomail.net', # cell
+            #'mike':[
+            #    #'0000000000@txt.att.net', # cell
+            #    '0000000000@mms.att.net',
+            #    'mike@emailaddress.com', 
             #],
-            'mike':[
-                #'6097062001@txt.att.net', # cell
-                '6097062001@mms.att.net',
-                'mjjewell46@gmail.com', 
-            ],
-            #'manuel':[
-            #    'maweber@stanford.edu', 
-            #],
-            #'shuoxing':[
-            #    'sxwu@stanford.edu',
-            #    ''
-            #]
-
         }
 
     def main(self, do_debug, do_test, no_lxe):
