@@ -258,15 +258,26 @@ def plot_temperatures(filename, title, time_hours, time_stamps, TC0=None, TC1=No
         TC3[first_index:last_index])
         plt.setp(line4, color = 'm', linewidth = linewidth, label = 'Cell Bot (%.1fK = %.1fC)' % (TC3[last_index], TC3[last_index]-kelvin_offset))
 
+#    if T_Xe1 and len(T_Xe1) > 0:
+#        line4 = plt.plot(time_hours[first_index:last_index], T_Xe1[first_index:last_index])
+#        label = 'Extra 1 (%.1fK = %.1fC)' % (T_Xe1[last_index], T_Xe1[last_index]-kelvin_offset)
+#        plt.setp(line4, color='sienna', linewidth=linewidth, label=label, ls = '--')
+#
+#    if T_Xe2 and len(T_Xe2) > 0 and False:
+#        #print "----->", "XENON RET", np.max(T_Xe2)
+#        line4 = plt.plot(time_hours[first_index:last_index], T_Xe2[first_index:last_index])
+#        label = 'Xe ret. leg (%.1fK = %.1fC)' % (T_Xe2[last_index], T_Xe2[last_index]-kelvin_offset)
+#        plt.setp(line4, color='maroon', linewidth=linewidth, label=label, ls='--')
+
     if T_Xe1 and len(T_Xe1) > 0:
         line4 = plt.plot(time_hours[first_index:last_index], T_Xe1[first_index:last_index])
-        label = 'Extra 1 (%.1fK = %.1fC)' % (T_Xe1[last_index], T_Xe1[last_index]-kelvin_offset)
+        label = 'RecircHeater 1 (Xe1) (%.1fK = %.1fC)' % (T_Xe1[last_index], T_Xe1[last_index]-kelvin_offset)
         plt.setp(line4, color='sienna', linewidth=linewidth, label=label, ls = '--')
 
-    if T_Xe2 and len(T_Xe2) > 0 and False:
+    if T_Xe2 and len(T_Xe2) > 0:
         #print "----->", "XENON RET", np.max(T_Xe2)
         line4 = plt.plot(time_hours[first_index:last_index], T_Xe2[first_index:last_index])
-        label = 'Xe ret. leg (%.1fK = %.1fC)' % (T_Xe2[last_index], T_Xe2[last_index]-kelvin_offset)
+        label = 'RecircHeater 2 (Xe2) (%.1fK = %.1fC)' % (T_Xe2[last_index], T_Xe2[last_index]-kelvin_offset)
         plt.setp(line4, color='maroon', linewidth=linewidth, label=label, ls='--')
 
     if T_ambient and len(T_ambient) > 0:
@@ -657,8 +668,8 @@ def main(
 
         # add extra TCs in HFE dewar, also try to be backwards compatible
         if column_offset >= 10:
-            #T_Xe1.append(float(split_line[15]))
-            T_Xe1 = None
+            T_Xe1.append(float(split_line[15]))
+            #T_Xe1 = None
             T_Xe2.append(float(split_line[16]))
             T_Xe3.append(float(split_line[17]))
         else:
@@ -1447,6 +1458,9 @@ def main(
     outfile.write("Cell mid [K]: %.3f \n" % TC2[-1])
     outfile.write("Cell bot [K]: %.3f \n" % TC3[-1])
     outfile.write("Ambient [K]: %.3f \n" % T_ambient[-1])
+    outfile.write("Xe 1 recirc [K]: %.3f \n" % T_Xe1[-1])
+    outfile.write("Xe 2 recirc [K]: %.3f \n" % T_Xe2[-1])
+
 
     if len(T_LN_in) > 0:
         outfile.write("LN F/T inlet [K]: %.3f \n" % T_LN_in[-1])
