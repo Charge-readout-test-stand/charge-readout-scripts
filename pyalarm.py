@@ -36,8 +36,16 @@ import sys
 import time
 import argparse
 import datetime
-import subprocess
 import smtplib
+
+PYTHON_VERSION = sys.version.split()[0][0]
+
+if PYTHON_VERSION == '2':
+    print('USING PYTHON2')
+    import commands as process_provider
+else:
+    print('USING PYTHON3')
+    import subprocess as process_provider
 
 # options -- monitoring thresholds:
 temperature_threshold = 220#300 # LXe & Cu operating threshold, K
@@ -275,7 +283,7 @@ class LXeMonitoring:
             cmd = "ping -o -t %i 171.64.56.58" % timeout # AGS Mac OSX
         else:
             cmd = "ping -c 1 -w %i 171.64.56.58" % timeout # SLAC rhel6-64
-        output = subprocess.getstatusoutput(cmd)
+        output = process_provider.getstatusoutput(cmd)
         if self.do_debug: 
             print("\t{}".format( cmd))
             print(output[1])
@@ -301,7 +309,7 @@ class LXeMonitoring:
         # remove old log file 
         # -f: don't complain if file doesn't exist
         cmd = 'rm %s' % file_name
-        output = subprocess.getstatusoutput(cmd)
+        output = process_provider.getstatusoutput(cmd)
         if output[0] != 0 or self.do_debug:
             print("-- removing old file")
             print(cmd)
@@ -313,7 +321,7 @@ class LXeMonitoring:
         link_name = 'https://www.dropbox.com/s/67h27p2272g8ghw/'
         cmd = 'curl -L -o %s %s/%s ' % (file_name,link_name,file_name)
         
-        output = subprocess.getstatusoutput(cmd)
+        output = process_provider.getstatusoutput(cmd)
         if output[0] != 0 or self.do_debug:
             print("--> trying to download log file from dropbox:")
             message = "Trouble downloading file from dropbox \n"
@@ -494,7 +502,7 @@ class LXeMonitoring:
         info += "user: %s \n" % os.getlogin()
         info += "system info: %s \n" % " ".join(os.uname())
         msg = header + '\n%s\n%s\n' % (info, message)
-        print(smtpserver.sendmail(gmail_user, address, msg))
+        #print(smtpserver.sendmail(gmail_user, address, msg))
         print('done! sending mail')
         smtpserver.close()
 
