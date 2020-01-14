@@ -36,7 +36,7 @@ import sys
 import time
 import argparse
 import datetime
-import commands
+import subprocess
 import smtplib
 
 # options -- monitoring thresholds:
@@ -89,8 +89,16 @@ class LXeMonitoring:
 
     def __init__(self):
 
+        username1 = 'bgle'
+        username2 = 'nardo@'
+        host1 = 'gma'
+        host2 = 'il'
+        extension1 = '.co'
+        extension2 = 'm'
+
         #define users here:
         self.users = {
+		'brian':['{}{}{}{}{}{}'.format(username1,username2,host1,host2,extension1,extension2)]
             #'mike':[
             #    #'0000000000@txt.att.net', # cell
             #    '0000000000@mms.att.net',
@@ -213,7 +221,7 @@ class LXeMonitoring:
             except:
                 n_issues += 1
                 print("There have been {} issues with script!".format(n_issues))
-                for i in xrange(10):
+                for i in range(10):
                     print('\a') # audible alarm!
 
             now = datetime.datetime.now()
@@ -267,7 +275,7 @@ class LXeMonitoring:
             cmd = "ping -o -t %i 171.64.56.58" % timeout # AGS Mac OSX
         else:
             cmd = "ping -c 1 -w %i 171.64.56.58" % timeout # SLAC rhel6-64
-        output = commands.getstatusoutput(cmd)
+        output = subprocess.getstatusoutput(cmd)
         if self.do_debug: 
             print("\t{}".format( cmd))
             print(output[1])
@@ -293,7 +301,7 @@ class LXeMonitoring:
         # remove old log file 
         # -f: don't complain if file doesn't exist
         cmd = 'rm %s' % file_name
-        output = commands.getstatusoutput(cmd)
+        output = subprocess.getstatusoutput(cmd)
         if output[0] != 0 or self.do_debug:
             print("-- removing old file")
             print(cmd)
@@ -305,7 +313,7 @@ class LXeMonitoring:
         link_name = 'https://www.dropbox.com/s/67h27p2272g8ghw/'
         cmd = 'curl -L -o %s %s/%s ' % (file_name,link_name,file_name)
         
-        output = commands.getstatusoutput(cmd)
+        output = subprocess.getstatusoutput(cmd)
         if output[0] != 0 or self.do_debug:
             print("--> trying to download log file from dropbox:")
             message = "Trouble downloading file from dropbox \n"
@@ -320,7 +328,7 @@ class LXeMonitoring:
 
         print("--> parsing file...")
         # open the file and read it:
-        log_file = file(file_name)
+        log_file = open(file_name)
         for line in log_file:
 
             if 'dP' in line:
@@ -466,7 +474,7 @@ class LXeMonitoring:
 
     def sendmail(self,message,address,is_heartbeat=False):
         """ send a message to a user """
-        print("trying to send mail to %{}...".format( address))
+        print("trying to send mail to {}...".format( address))
         gmail_user, gmail_pwd = load_gmail_info()
         smtpserver = smtplib.SMTP("smtp.gmail.com",587)
         smtpserver.ehlo()
