@@ -487,7 +487,7 @@ class LXeMonitoring:
         smtpserver = smtplib.SMTP("smtp.gmail.com",587)
         smtpserver.ehlo()
         smtpserver.starttls()
-        smtpserver.ehlo
+        smtpserver.ehlo()
         print("Login info: {} {}".format( gmail_user, gmail_pwd))
         print("Doing the login")
         smtpserver.login(gmail_user, gmail_pwd)
@@ -497,12 +497,12 @@ class LXeMonitoring:
         if is_heartbeat: subject = "Stanford LXe system heartbeat from %s %s" % (
             os.uname()[0], os.uname()[1])
         header = 'To:' + address + '\n' + 'From: ' + gmail_user + '\n' + 'Subject:%s \n' % subject
-        #print header
+        print(header)
         info = "time: %s  \n" % datetime.datetime.now()
         info += "user: %s \n" % os.getlogin()
         info += "system info: %s \n" % " ".join(os.uname())
         msg = header + '\n%s\n%s\n' % (info, message)
-        #print(smtpserver.sendmail(gmail_user, address, msg))
+        smtpserver.sendmail(gmail_user, address, msg)
         print('done! sending mail')
         smtpserver.close()
 
