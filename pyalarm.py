@@ -462,7 +462,7 @@ class LXeMonitoring:
 
             # check remaining LN mass:
             if data['ln_mass_lbs'] < ln_mass_threshold:
-                message = "hours of LN remaining: %.2f" % data['ln_mass_lbs']
+                message = "LN mass dangerously low: %.2f lbs" % data['ln_mass_lbs']
                 messages.append(message)
                 print_warning(message)
 
@@ -473,7 +473,7 @@ class LXeMonitoring:
 #                    message = "%s = %.1f K (threshold=%.1f)" % (key, data[key], temperature_threshold)
 #                    messages.append(message)
 #                    print_warning(message)
-            print(data.keys())
+            
             key = 'cu_top'
             if data[key] > cu_plate_in_threshold:
                 message = "%s = %.1f K (threshold=%.1f)" % (key, data[key], cu_plate_in_threshold)
