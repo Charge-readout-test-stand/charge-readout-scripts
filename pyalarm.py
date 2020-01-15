@@ -52,7 +52,7 @@ temperature_threshold = 220#300 # LXe & Cu operating threshold, K
 dp_threshold = 50.0 # xenon - HFE, torr
 ln_mass_threshold = 10#-10.0 # lbs of LN needed
 ln_hours_left_threshold = -100000.0 # at least 1 hour of LN must remain! 
-lookback_time_minutes = 10.0 # LabView plots shouldn't be older than this, minutes
+lookback_time_minutes = 12.0 # LabView plots shouldn't be older than this, minutes
 sleep_seconds = 60*5 # sleep for this many seconds between tests
 heartbeat_interval_hours = 1.0
 cu_plate_in_threshold = 220#+3.0 # K, this is most sensitive to failures of cooling
@@ -61,6 +61,25 @@ is_fill = True
 #temperature_threshold = 265.0
 ln_in_thresh = 300.0#140.0
 #ln_in_thresh = 220.0
+#####################################
+# SETTINGS FOR THE LONG TPC
+#####################################
+ln_in_thresh = 155 # K
+pressure_1k_threshold = 800. # torr
+pressure_10k_threshold = 800. # torr
+cell_bot_temp_threshold = 167 # K
+cell_mid_temp_threshold = 167 # K
+cell_top_temp_threshold = 169 # K
+temp_xe1_recirc_threshold = 300 # K
+temp_xe2_recirc_threshold = 300 # K
+
+
+
+
+
+
+
+
 
 def print_warning(warning):
     print("WARNING: {}".format(warning))
@@ -119,6 +138,13 @@ class LXeMonitoring:
 
         # trying to avoid UnboundLocalError 
         global temperature_threshold
+        global cell_bot_temp_threshold
+        global cell_mid_temp_threshold
+        global cell_top_temp_threshold
+        global pressure_10k_threshold
+        global pressure_1k_threshold
+        global temp_xe1_recirc_threshold
+        global temp_xe2_recirc_threshold
         global ln_mass_threshold
         global ln_hours_left_threshold
         global dp_threshold
@@ -388,6 +414,22 @@ class LXeMonitoring:
             if 'inlet' in line:
                 ln_in_temp = float(line.split(':')[1])
                 data['ln_in_temp'] = ln_in_temp
+
+            if 'Xe 1 recirc [K]' in line:
+                xe_1_recirc = float(line.split(':')[1])
+                data['xe_1_recirc'] = xe_1_recirc
+
+            if 'Xe 2 recirc [K]' in line:
+                xe_2_recirc = float(line.split(':')[1])
+                data['xe_2_recirc'] = xe_2_recirc
+
+            if 'XP5 Vacuum system pressure (1k Torr Baratron) [Torr]' in line:
+                pressure_1k = float(line.split(':')[1])
+                data['pressure_1k'] = pressure_1k
+
+            if 'XP3 Xenon system pressure (10k Torr Baratron) [Torr]' in line:
+                pressure_10k = float(line.split(':')[1])
+                data['pressure_10k'] = pressure_10k
                 
         print("\t done")
         return data
@@ -425,22 +467,65 @@ class LXeMonitoring:
                 print_warning(message)
 
             # check temps in HFE dewar:
-            temps = ['cu_top', 'cu_bot', 'cell_top', 'cell_mid', 'cell_bot']
-            for key in temps:
-                if data[key] > temperature_threshold:
-                    message = "%s = %.1f K (threshold=%.1f)" % (key, data[key], temperature_threshold)
-                    messages.append(message)
-                    print_warning(message)
-
+#            temps = ['cu_top', 'cu_bot', 'cell_top', 'cell_mid', 'cell_bot']
+#            for key in temps:
+#                if data[key] > temperature_threshold:
+#                    message = "%s = %.1f K (threshold=%.1f)" % (key, data[key], temperature_threshold)
+#                    messages.append(message)
+#                    print_warning(message)
+            print(data.keys())
             key = 'cu_top'
             if data[key] > cu_plate_in_threshold:
                 message = "%s = %.1f K (threshold=%.1f)" % (key, data[key], cu_plate_in_threshold)
                 messages.append(message)
                 print_warning(message)
 
+
             key = 'ln_in_temp'
             if data[key] > ln_in_thresh and is_fill:
                 message = "%s = %.1f K (threshold=%.1f)" % (key, data[key], ln_in_thresh)
+                messages.append(message)
+                print_warning(message)
+
+            key = 'xe_1_recirc'
+            if data[key] > temp_xe1_recirc_threshold:
+                message = "%s = %.1f K (threshold=%.1f)" % (key, data[key], temp_xe1_recirc_threshold)
+                messages.append(message)
+                print_warning(message)
+
+            key = 'xe_2_recirc'
+            if data[key] > temp_xe2_recirc_threshold:
+                message = "%s = %.1f K (threshold=%.1f)" % (key, data[key], temp_xe2_recirc_threshold)
+                messages.append(message)
+                print_warning(message)
+
+            key = 'pressure_1k'
+            if data[key] > pressure_1k_threshold:
+                message = "%s = %.1f K (threshold=%.1f)" % (key, data[key], pressure_1k_threshold)
+                messages.append(message)
+                print_warning(message)
+
+            key = 'pressure_10k'
+            if data[key] > pressure_10k_threshold:
+                message = "%s = %.1f K (threshold=%.1f)" % (key, data[key], pressure_10k_threshold)
+                messages.append(message)
+                print_warning(message)
+
+            key = 'cell_top'
+            if data[key] > cell_top_temp_threshold:
+                message = "%s = %.1f K (threshold=%.1f)" % (key, data[key], cell_top_temp_threshold)
+                messages.append(message)
+                print_warning(message)
+
+            key = 'cell_mid'
+            if data[key] > cell_mid_temp_threshold:
+                message = "%s = %.1f K (threshold=%.1f)" % (key, data[key], cell_mid_temp_threshold)
+                messages.append(message)
+                print_warning(message)
+
+            key = 'cell_bot'
+            if data[key] > cell_bot_temp_threshold:
+                message = "%s = %.1f K (threshold=%.1f)" % (key, data[key], cell_bot_temp_threshold)
                 messages.append(message)
                 print_warning(message)
 
