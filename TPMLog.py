@@ -274,11 +274,11 @@ def plot_temperatures(filename, title, time_hours, time_stamps, TC0=None, TC1=No
         label = 'RecircHeater 1 (Xe1) (%.1fK = %.1fC)' % (T_Xe1[last_index], T_Xe1[last_index]-kelvin_offset)
         plt.setp(line4, color='sienna', linewidth=linewidth, label=label, ls = '--')
 
-    if T_Xe2 and len(T_Xe2) > 0:
-        #print "----->", "XENON RET", np.max(T_Xe2)
-        line4 = plt.plot(time_hours[first_index:last_index], T_Xe2[first_index:last_index])
-        label = 'RecircHeater 2 (Xe2) (%.1fK = %.1fC)' % (T_Xe2[last_index], T_Xe2[last_index]-kelvin_offset)
-        plt.setp(line4, color='maroon', linewidth=linewidth, label=label, ls='--')
+#    if T_Xe2 and len(T_Xe2) > 0:
+#        #print "----->", "XENON RET", np.max(T_Xe2)
+#        line4 = plt.plot(time_hours[first_index:last_index], T_Xe2[first_index:last_index])
+#        label = 'RecircHeater 2 (Xe2) (%.1fK = %.1fC)' % (T_Xe2[last_index], T_Xe2[last_index]-kelvin_offset)
+#        plt.setp(line4, color='maroon', linewidth=linewidth, label=label, ls='--')
 
     if T_ambient and len(T_ambient) > 0:
         line6 = plt.plot(time_hours[first_index:last_index],

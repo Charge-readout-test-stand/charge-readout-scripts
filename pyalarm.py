@@ -64,17 +64,15 @@ ln_in_thresh = 300.0#140.0
 #####################################
 # SETTINGS FOR THE LONG TPC
 #####################################
-ln_in_thresh = 155 # K
-pressure_1k_threshold = 800. # torr
-pressure_10k_threshold = 800. # torr
+ln_in_thresh = 180 # K
+pressure_1k_threshold = 970. # torr
+pressure_10k_threshold = 915. # torr
+pressure_1k_low_threshold = 830. # torr
 cell_bot_temp_threshold = 167 # K
 cell_mid_temp_threshold = 167 # K
-cell_top_temp_threshold = 169 # K
+cell_top_temp_threshold = 170.5 # K
 temp_xe1_recirc_threshold = 300 # K
 temp_xe2_recirc_threshold = 300 # K
-
-
-
 
 
 
@@ -123,9 +121,13 @@ class LXeMonitoring:
         extension1 = '.co'
         extension2 = 'm'
 
+        username1sx = 'shuo'
+        username2sx = 'xing.wu@'
+
         #define users here:
         self.users = {
-		'brian':['{}{}{}{}{}{}'.format(username1,username2,host1,host2,extension1,extension2)]
+		'brian':['{}{}{}{}{}{}'.format(username1,username2,host1,host2,extension1,extension2)],
+		'shuoxing':['{}{}{}{}{}{}'.format(username1sx,username2sx,host1,host2,extension1,extension2)]
             #'mike':[
             #    #'0000000000@txt.att.net', # cell
             #    '0000000000@mms.att.net',
@@ -447,10 +449,10 @@ class LXeMonitoring:
 
         messages = []
 
-        if data['dP_torr'] > dp_threshold:
-            message = "dP = %.1f torr" % data['dP_torr']
-            messages.append(message)
-            print_warning(message)
+        #if data['dP_torr'] > dp_threshold:
+        #    message = "dP = %.1f torr" % data['dP_torr']
+        #    messages.append(message)
+        #    print_warning(message)
 
         if self.lxe:
 
@@ -501,13 +503,19 @@ class LXeMonitoring:
 
             key = 'pressure_1k'
             if data[key] > pressure_1k_threshold:
-                message = "%s = %.1f K (threshold=%.1f)" % (key, data[key], pressure_1k_threshold)
+                message = "%s = %.1f Torr (threshold=%.1f)" % (key, data[key], pressure_1k_threshold)
+                messages.append(message)
+                print_warning(message)
+
+            key = 'pressure_1k'
+            if data[key] < pressure_1k_low_threshold:
+                message = "%s = %.1f Torr (threshold=%.1f)" % (key, data[key], pressure_1k_low_threshold)
                 messages.append(message)
                 print_warning(message)
 
             key = 'pressure_10k'
             if data[key] > pressure_10k_threshold:
-                message = "%s = %.1f K (threshold=%.1f)" % (key, data[key], pressure_10k_threshold)
+                message = "%s = %.1f Torr (threshold=%.1f)" % (key, data[key], pressure_10k_threshold)
                 messages.append(message)
                 print_warning(message)
 
