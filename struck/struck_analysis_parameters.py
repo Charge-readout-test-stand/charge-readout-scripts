@@ -18,15 +18,16 @@ is_7th_LXe = False # March 2016
 is_8th_LXe = False # August 2016
 is_9th_LXe = False # Sept 2016
 is_10th_LXe = False # Jan 2017
-is_11th_LXe = False # Jan/Feb 2017, with DT
+is_11th_LXe  = False # Jan/Feb 2017, with DT
 is_11th_LXeB = False # Feb 2017, with VME
 is_12th_LXe = False
 is_13th_LXe = False
 is_15th_LXe = False#15 and 16 are basically the same (SiPM runs with 16 bit digi)
 is_17th_LXe = False# 17 - 21 all the same purity runs
 is_22nd_LXe = False
-is_23rd_LXe = True
+is_23rd_LXe = False
 is_24th_LXe = False
+is_28th_LXe = True
 #Testing 
 #is_11th_LXeB = True
 
@@ -79,6 +80,12 @@ if is_10th_LXe or is_11th_LXe or is_11th_LXeB or is_12th_LXe or is_13th_LXe or i
     max_drift_time = drift_length/drift_velocity
     if is_10th_LXe:
         max_drift_time += 2.0 # seems ok 
+elif is_28th_LXe:
+    #Long TPC
+    drift_length   = 140.0
+    drift_velocity = 1.79 # mm/microsecond
+    #drift_time_threshold = (drift_length - 14.3)/drift_velocity # microsecond
+    max_drift_time = drift_length/drift_velocity
 
 #print "max_drift_time:", max_drift_time
 
@@ -93,7 +100,7 @@ one_strip_channels = [0]*32
 two_strip_channels = [0]*32
 channel_to_n_strips_map = [1.0]*32
 struck_to_mc_channel_map = {} # map struck channel to MC channel
-if is_8th_LXe or is_9th_LXe or is_11th_LXeB or is_12th_LXe or is_13th_LXe or is_15th_LXe or is_17th_LXe or is_22nd_LXe or is_23rd_LXe or is_24th_LXe:
+if is_8th_LXe or is_9th_LXe or is_11th_LXeB or is_12th_LXe or is_13th_LXe or is_15th_LXe or is_17th_LXe or is_22nd_LXe or is_23rd_LXe or is_24th_LXe or is_28th_LXe:
     charge_channels_to_use = [0]*32
     sipm_channels_to_use   = [0]*32 
     dead_channels          = [0]*32
@@ -111,7 +118,7 @@ elif is_15th_LXe:
     sipm_low_pass=7.0
 elif is_17th_LXe:
     do_invert      = True
-elif is_22nd_LXe or is_23rd_LXe or is_24th_LXe:
+elif is_22nd_LXe or is_23rd_LXe or is_24th_LXe or is_28th_LXe:
     #No need to filter anymore
     do_invert = True
 
@@ -183,7 +190,7 @@ elif is_12th_LXe or is_13th_LXe or is_15th_LXe or is_22nd_LXe or is_23rd_LXe or 
             charge_channels_to_use[i_channel] = 0
             sipm_channels_to_use[i_channel]   = 1
         elif i_channel > 13 and i_channel < 16:
-            if is_13th_LXe or is_15th_LXe or is_22nd_LXe or is_23rd_LXe or is_24th_LXe:
+            if is_13th_LXe or is_15th_LXe or is_22nd_LXe or is_23rd_LXe or is_24th_LXe or is_28th_LXe:
                 charge_channels_to_use[i_channel] = 1 #Maybe not dead anymore??
                 sipm_channels_to_use[i_channel]   = 0
                 dead_channels[i_channel] = 0
@@ -199,6 +206,32 @@ elif is_12th_LXe or is_13th_LXe or is_15th_LXe or is_22nd_LXe or is_23rd_LXe or 
             #SiPMs
             charge_channels_to_use[i_channel] = 0 
             sipm_channels_to_use[i_channel]   = 1
+
+elif is_28th_LXe:
+    pmt_channel = None # now using SiPMs
+    pulser_channel = None # won't have one probably?
+    channels = []
+   
+    for i_channel, val in enumerate(charge_channels_to_use):
+        channels.append(i_channel)
+        if i_channel < 9.5:
+            #X-Charge
+            charge_channels_to_use[i_channel] = 1
+            sipm_channels_to_use[i_channel]   = 0
+        elif i_channel > 9.5 and i_channel < 15.5:
+            #SiPMs
+            charge_channels_to_use[i_channel] = 0
+            sipm_channels_to_use[i_channel]   = 1
+        elif i_channel > 15.5 and i_channel < 25.5:
+            #Y-Charge
+            charge_channels_to_use[i_channel] = 1
+            sipm_channels_to_use[i_channel]   = 0
+        elif i_channel > 25.5:
+            #SiPMs
+            charge_channels_to_use[i_channel] = 0
+            sipm_channels_to_use[i_channel]   = 1
+
+
 
 elif is_17th_LXe:
     pmt_channel = None # now using SiPMs
@@ -381,6 +414,43 @@ if is_10th_LXe or is_11th_LXe:
     struck_to_mc_channel_map[14] = [14]
     struck_to_mc_channel_map[15] = [13]
 
+if is_28th_LXe:
+    channel_map[0] = "X13"
+    channel_map[1] = "X14"
+    channel_map[2] = "X15"
+    channel_map[3] = "X16"
+    channel_map[4] = "X17"
+    channel_map[5] = "X18"
+    channel_map[6] = "X19"
+    channel_map[7] = "X20"
+    channel_map[8] = "X21"
+    channel_map[9] = "X22"
+    channel_map[10] = "2-3" #??
+    channel_map[11] = "2-4" #??
+    channel_map[12] = "2-5" #??
+    channel_map[13] = "2-6" #??
+    channel_map[14] = "2-6" #??
+    channel_map[15] = "2-6" #??
+
+    channel_map[16] = "Y11"
+    channel_map[17] = "Y12"
+    channel_map[18] = "Y13"
+    channel_map[19] = "Y14"
+    channel_map[20] = "Y15"
+    channel_map[21] = "Y16"
+    channel_map[22] = "Y17"
+    channel_map[23] = "Y18"
+    channel_map[24] = "Y19"
+    channel_map[25] = "Y20"
+    channel_map[26] = "1-2" #??
+    channel_map[27] = "1-3" #?? 
+    channel_map[28] = "1-4" #??
+    channel_map[29] = "1-5" #??
+    channel_map[30] = "1-6" #??
+    channel_map[31] = "2-1" #??
+
+
+
 if is_12th_LXe or is_13th_LXe or is_15th_LXe or is_22nd_LXe or is_23rd_LXe or is_24th_LXe:
     channel_map[0] = "Y12"
     channel_map[1] = "Y13"
@@ -436,7 +506,7 @@ if is_12th_LXe or is_13th_LXe or is_15th_LXe or is_22nd_LXe or is_23rd_LXe or is
     struck_to_mc_channel_map[13] = []
     struck_to_mc_channel_map[14] = []
     struck_to_mc_channel_map[15] = []
-    if is_13th_LXe or is_15th_LXe or is_22nd_LXe or is_23rd_LXe or is_24th_LXe:
+    if is_13th_LXe or is_15th_LXe or is_22nd_LXe or is_23rd_LXe or is_24th_LXe or is_28th_LXe:
         struck_to_mc_channel_map[14] = [40]
         struck_to_mc_channel_map[15] = [21]
     struck_to_mc_channel_map[16] = [12]
@@ -506,7 +576,7 @@ MCn_channels = len(MCchannels)
 MCcharge_channels_to_use = [0]*MCn_channels
 mc_channel_map = {} # map MC channel to label
 for struck_channel, label in channel_map.items():
-    if is_8th_LXe or is_9th_LXe or is_10th_LXe or is_11th_LXe or is_11th_LXeB or is_12th_LXe or is_13th_LXe or is_15th_LXe or is_17th_LXe or is_22nd_LXe or is_23rd_LXe or is_24th_LXe: break # FIXME -- skip this for now
+    if is_8th_LXe or is_9th_LXe or is_10th_LXe or is_11th_LXe or is_11th_LXeB or is_12th_LXe or is_13th_LXe or is_15th_LXe or is_17th_LXe or is_22nd_LXe or is_23rd_LXe or is_24th_LXe or is_28th_LXe: break # FIXME -- skip this for now
     is_y = False
     if "Y" in label:
         is_y = True
@@ -722,6 +792,42 @@ if is_10th_LXe or is_11th_LXe:
     decay_time_values[13] =  139.283740*microsecond # +/- 0.003826 X16
     decay_time_values[14] =  135.320872*microsecond # +/- 0.009996 X15
     decay_time_values[15] =  136.730159*microsecond # +/- 0.008309 X14
+
+if is_28th_LXe:
+    decay_time_values[0] = 373.164130*microsecond # +/- 0.024446 X13
+    decay_time_values[1] =  385.112331*microsecond # +/- 0.032387 X14
+    decay_time_values[2] =  395.731914*microsecond # +/- 0.043800 X15
+    decay_time_values[3] =  428.013071*microsecond # +/- 0.024771 X16
+    decay_time_values[4] =  454.867452*microsecond # +/- 0.014542 X17
+    decay_time_values[5] =  436.329761*microsecond # +/- 0.022793 X18
+    decay_time_values[6] =  421.476176*microsecond # +/- 0.037603 X19
+    decay_time_values[7] =  393.562566*microsecond # +/- 0.030876 X20
+    decay_time_values[8] =  381.182494*microsecond # +/- 0.034273 X21
+    decay_time_values[9] =  392.642787*microsecond # +/- 0.043076 X22
+    decay_time_values[10] =  10000000000.000000*microsecond # Not Used
+    decay_time_values[11] =  10000000000.000000*microsecond # Not Used
+    decay_time_values[12] =  10000000000.000000*microsecond # Not Used
+    decay_time_values[13] =  10000000000.000000*microsecond # Not Used
+    decay_time_values[14] =  10000000000.000000*microsecond # Not Used
+    decay_time_values[15] =  10000000000.000000*microsecond # Not Used
+
+    decay_time_values[16] =  336.954510*microsecond # +/- 0.035747 Y11
+    decay_time_values[17] =   342.909975*microsecond # +/- 0.033580 Y12
+    decay_time_values[18] =   375.471621*microsecond # +/- 0.037684 Y13
+    decay_time_values[19] =   364.445833*microsecond # +/- 0.028699 Y14
+    decay_time_values[20] =   430.749504*microsecond # +/- 0.035263 Y15
+    decay_time_values[21] =   401.468398*microsecond # +/- 0.019691 Y16
+    decay_time_values[22] =   366.996051*microsecond # +/- 0.005235 Y17
+    decay_time_values[23] =   314.864279*microsecond # +/- 0.008820 Y18
+    decay_time_values[24] =   295.266593*microsecond # +/- 0.010130 Y19
+    decay_time_values[25] =   316.139852*microsecond # +/- 0.016089 Y20
+    decay_time_values[26] =  10000000000.000000*microsecond # Not Used
+    decay_time_values[27] =  10000000000.000000*microsecond # Not Used
+    decay_time_values[28] =  10000000000.000000*microsecond # Not Used
+    decay_time_values[29] =  10000000000.000000*microsecond # Not Used
+    decay_time_values[30] =  10000000000.000000*microsecond # Not Used  
+    decay_time_values[31] =  10000000000.000000*microsecond # Not Used
+
 
 if is_12th_LXe or is_13th_LXe or is_15th_LXe or is_22nd_LXe or is_23rd_LXe or is_24th_LXe:
     decay_time_values[0] =   342.909975*microsecond # +/- 0.033580 Y12
@@ -1174,6 +1280,40 @@ if is_24th_LXe:
     calibration_values[30] = 1./99.14  # +/- None 1-6
     calibration_values[31] = 1./109.29 # +/- None 2-1
 
+if is_28th_LXe:
+    calibration_values[0] = 0.329404 # +/- 0.042190 X13
+    calibration_values[1] = 0.333578 # +/- 0.039041 X14
+    calibration_values[2] = 0.336020 # +/- 0.061671 X15
+    calibration_values[3] = 0.636551 # +/- 0.036947 X16
+    calibration_values[4] = 0.683377 # +/- 0.027382 X17
+    calibration_values[5] = 0.664754 # +/- 0.030490 X18
+    calibration_values[6] = 0.674815 # +/- 0.035191 X19
+    calibration_values[7] = 0.320533 # +/- 0.046747 X20
+    calibration_values[8] = 0.321199 # +/- 0.024817 X21
+    calibration_values[9] = 0.347937 # +/- 0.050970 X22
+    calibration_values[10] = 1./103.16 # +/- None 2-3
+    calibration_values[11] = 1./101.73 # +/- None 2-4
+    calibration_values[12] = 1./98.63  # +/- None 2-5
+    calibration_values[13] = 1./105.15 # +/- None 2-6
+    calibration_values[14] = 1./100.0 # +/- 0.134267 Y11
+    calibration_values[15] = 1./100.0 # +/- 0.050970 X22
+
+    calibration_values[16] = 0.323736 # +/- 0.134267 Y1    
+    calibration_values[17] = 0.315464 # +/- 0.131446 Y12
+    calibration_values[18] = 0.345048 # +/- 0.051110 Y13
+    calibration_values[19] = 0.797658 # +/- 0.044617 Y14
+    calibration_values[20] = 0.677462 # +/- 0.034290 Y15
+    calibration_values[21] = 0.635660 # +/- 0.031079 Y16
+    calibration_values[22] = 0.639245 # +/- 0.023345 Y17
+    calibration_values[23] = 0.333230 # +/- 0.037649 Y18
+    calibration_values[24] = 0.319001 # +/- 0.036188 Y19
+    calibration_values[25] = 0.339477 # +/- 0.023041 Y20
+    calibration_values[26] = 1./110.77 # +/- None 1-1
+    calibration_values[27] = 1./102.23 # +/- None 1-2
+    calibration_values[28] = 1./134.24 # +/- None 1-3
+    calibration_values[29] = 1./143.59 # +/- None 1-4
+    calibration_values[30] = 1./99.67  # +/- None 1-5
+    calibration_values[31] = 1./99.14  # +/- None 1-6
 
 
 if is_17th_LXe:
@@ -1213,7 +1353,6 @@ if is_17th_LXe:
     calibration_values[29] = 1  # +/- None 1-5
     calibration_values[30] = 1  # +/- None 1-6
     calibration_values[31] = 1. # +/- None 2-1
-
 
 
 if is_12th_LXe or is_13th_LXe or is_15th_LXe or is_22nd_LXe or is_23rd_LXe or is_24th_LXe:
@@ -1288,7 +1427,74 @@ if is_12th_LXe or is_13th_LXe or is_15th_LXe or is_22nd_LXe or is_23rd_LXe or is
     channel_pos_x[29] =  0.0
     channel_pos_x[30] =  0.0
 
+if is_28th_LXe:
+    channel_pos_x[0] =  -7.5 #X13
+    channel_pos_x[1] =  -4.5 #X14
+    channel_pos_x[2] =  -1.5 #X15
+    channel_pos_x[3] =  1.5 #X16
+    channel_pos_x[4] =  4.5 #X17
+    channel_pos_x[5] =  7.5 #X18
+    channel_pos_x[6] =  10.5 #X19
+    channel_pos_x[7] =  13.5 #X20
+    channel_pos_x[8] =  16.5 #X21
+    channel_pos_x[9] =  19.5  #X22
+    channel_pos_x[10] =  0.0
+    channel_pos_x[11] =  0.0
+    channel_pos_x[12] =  0.0
+    channel_pos_x[13] =  0.0
+    channel_pos_x[14] =  0.0  
+    channel_pos_x[15] =  0.0  
+    channel_pos_x[16] =  0.0
+    channel_pos_x[17] =  0.0
+    channel_pos_x[18] =  0.0
+    channel_pos_x[19] =  0.0
+    channel_pos_x[20] =  0.0
+    channel_pos_x[21] =  0.0
+    channel_pos_x[22] =  0.0
+    channel_pos_x[23] =  0.0
+    channel_pos_x[24] =  0.0
+    channel_pos_x[25] =  0.0
+    channel_pos_x[26] =  0.0
+    channel_pos_x[27] =  0.0
+    channel_pos_x[28] =  0.0
+    channel_pos_x[29] =  0.0
+    channel_pos_x[30] =  0.0
+    channel_pos_x[31] =  0.0
+    
+    
+    channel_pos_y[0] =  0.0
+    channel_pos_y[1] =  0.0
+    channel_pos_y[2] =  0.0
+    channel_pos_y[3] =  0.0
+    channel_pos_y[4] =  0.0
+    channel_pos_y[5] =  0.0
+    channel_pos_y[6] =  0.0
+    channel_pos_y[7] =  0.0
+    channel_pos_y[8] =  0.0
+    channel_pos_y[9] =  0.0
+    channel_pos_y[10] =  0.0
+    channel_pos_y[11] =  0.0
+    channel_pos_y[12] =  0.0
+    channel_pos_y[13] =  0.0
+    channel_pos_y[14] =  0.0
+    channel_pos_y[15] =  0.0
 
+    channel_pos_y[16] =  -13.5#Y11
+    channel_pos_y[17] = -10.5 #Y12
+    channel_pos_y[18] =  -7.5 #Y13
+    channel_pos_y[19] = -4.5  #Y14
+    channel_pos_y[20] =  -1.5 #Y15
+    channel_pos_y[21] =  1.5  #Y16
+    channel_pos_y[22] =  4.5  #Y17
+    channel_pos_y[23] =  7.5  #Y18
+    channel_pos_y[24] =  10.5 #Y19
+    channel_pos_y[25] =  13.5 #Y20
+    channel_pos_y[26] =  0.0  
+    channel_pos_y[27] =  0.0
+    channel_pos_y[28] =  0.0
+    channel_pos_y[29] =  0.0
+    channel_pos_y[30] =  0.0
+    channel_pos_y[31] =  0.0
 
 
 
@@ -1397,6 +1603,9 @@ if is_10th_LXe or is_11th_LXe:
 if is_12th_LXe or is_13th_LXe or is_15th_LXe or is_17th_LXe or is_22nd_LXe or is_23rd_LXe or is_24th_LXe:
     noise_length = int(5250)
     noiseLightCut = 20.0
+elif  is_28th_LXe:
+    noise_length = int(13000)
+    noiseLightCut = 20.0
 
 # from tier2to3_overnight.root, baseline_rms
 n_baseline_samples = 200.0 # 2x n samples
@@ -1416,6 +1625,13 @@ if is_12th_LXe or is_13th_LXe or is_15th_LXe or is_17th_LXe or is_22nd_LXe or is
     n_baseline_samples = 5*275.0 # 2x n samples
     energy_start_time_microseconds = (wf_length - n_baseline_samples)*samp_period/1000 # energy calc starts 850 samples
     #Factor of 1/2 here
+    baseline_average_time_microseconds = (n_baseline_samples/2.0*samp_period/1000) # 200 samples at 25 MHz = 8 microseconds
+elif is_28th_LXe:
+    samp_period = 8 #ns (125MHz)
+    wf_length   = 13000
+    #n_baseline_samples = 5*275.0 # 2x n samples
+    n_baseline_samples = 1000
+    energy_start_time_microseconds = (wf_length - n_baseline_samples)*samp_period/1000 # energy calc starts 850 samples
     baseline_average_time_microseconds = (n_baseline_samples/2.0*samp_period/1000) # 200 samples at 25 MHz = 8 microseconds
 
 #energy_start_time_samples = int(energy_start_time_microseconds*microsecond*sampling_freq_Hz/second)
@@ -1797,6 +2013,76 @@ if is_15th_LXe or is_17th_LXe or is_22nd_LXe or is_23rd_LXe or is_24th_LXe:
     rms_keV[31] = 13.837136*calibration_values[31]
     rms_keV_sigma[31] = 25.425298*calibration_values[31]
 
+if is_28th_LXe:
+    rms_threshold=15
+
+    rms_keV[0] = 71.370726*calibration_values[0]
+    rms_keV_sigma[0] = 2.856899*calibration_values[0]
+    rms_keV[1] = 68.185964*calibration_values[1]
+    rms_keV_sigma[1] = 3.281952*calibration_values[1]
+    rms_keV[2] = 32.503679*calibration_values[2]
+    rms_keV_sigma[2] = 3.974189*calibration_values[2]
+    rms_keV[3] = 28.561532*calibration_values[3]
+    rms_keV_sigma[3] = 3.927301*calibration_values[3]
+    rms_keV[4] = 30.836379*calibration_values[4]
+    rms_keV_sigma[4] = 3.787103*calibration_values[4]
+    rms_keV[5] = 30.423390*calibration_values[5]
+    rms_keV_sigma[5] = 3.739511*calibration_values[5]
+    rms_keV[6] = 70.462898*calibration_values[6]
+    rms_keV_sigma[6] = 3.945288*calibration_values[6]
+    rms_keV[7] = 69.005958*calibration_values[7]
+    rms_keV_sigma[7] = 3.001437*calibration_values[7]
+    rms_keV[8] = 71.766057*calibration_values[8]
+    rms_keV_sigma[8] = 3.252423*calibration_values[8]
+    rms_keV[9] = 16.402702*calibration_values[9]
+    rms_keV_sigma[9] = 24.874279*calibration_values[9]
+    rms_keV[10] = 15.223629*calibration_values[10]
+    rms_keV_sigma[10] = 20.244436*calibration_values[10]
+    rms_keV[11] = 12.537945*calibration_values[11]
+    rms_keV_sigma[11] = 14.940363*calibration_values[11]
+    rms_keV[12] = 9.687942*calibration_values[12]
+    rms_keV_sigma[12] = 10.754759*calibration_values[12]
+    rms_keV[13] = 8.855581*calibration_values[13]
+    rms_keV_sigma[13] = 9.169881*calibration_values[13]
+    rms_keV[14] = 66.419212*calibration_values[14]
+    rms_keV_sigma[14] = 3.125357*calibration_values[14]
+    rms_keV[15] = 68.022054*calibration_values[15]
+    rms_keV_sigma[15] = 3.066233*calibration_values[15]
+    rms_keV[16] = 68.435204*calibration_values[16]
+    rms_keV_sigma[16] = 4.205055*calibration_values[16]
+
+    rms_keV[17] = 68.872339*calibration_values[17]
+    rms_keV_sigma[17] = 4.363039*calibration_values[17]
+    rms_keV[18] = 68.651074*calibration_values[18]
+    rms_keV_sigma[18] = 3.954244*calibration_values[18]
+    rms_keV[19] = 29.540442*calibration_values[19]
+    rms_keV_sigma[19] = 1.627477*calibration_values[19]
+    rms_keV[20] = 28.979288*calibration_values[20]
+    rms_keV_sigma[20] = 1.529885*calibration_values[20]
+    rms_keV[21] = 29.560161*calibration_values[21]
+    rms_keV_sigma[21] = 1.733649*calibration_values[21]
+    rms_keV[22] = 28.392439*calibration_values[22]
+    rms_keV_sigma[22] = 1.408389*calibration_values[22]
+    rms_keV[23] = 64.262399*calibration_values[23]
+    rms_keV_sigma[23] = 3.890123*calibration_values[23]
+    rms_keV[24] = 66.877379*calibration_values[24]
+    rms_keV_sigma[24] = 2.853026*calibration_values[24]
+    rms_keV[25] = 11.042730*calibration_values[25]
+    rms_keV_sigma[25] = 13.427616*calibration_values[25]
+    rms_keV[26] = 15.623281*calibration_values[26]
+    rms_keV_sigma[26] = 12.866316*calibration_values[26]
+    rms_keV[27] = 7.780458*calibration_values[27]
+    rms_keV_sigma[27] = 6.602754*calibration_values[27]
+    rms_keV[28] = 7.538115*calibration_values[28]
+    rms_keV_sigma[28] = 4.464493*calibration_values[28]
+    rms_keV[29] = 9.284102*calibration_values[29]
+    rms_keV_sigma[29] = 5.683785*calibration_values[29]
+    rms_keV[30] = 8.567710*calibration_values[30]
+    rms_keV_sigma[30] = 5.621719*calibration_values[30]
+    rms_keV[31] = 13.837136*calibration_values[31]
+    rms_keV_sigma[31] = 25.425298*calibration_values[31]
+
+
 tileCh_to_PreCh = {}
 if is_8th_LXe or is_9th_LXe:
     tileCh_to_PreCh[0] = 16
@@ -1860,6 +2146,72 @@ if is_8th_LXe or is_9th_LXe:
     tileCh_to_PreCh[58] = 15
     tileCh_to_PreCh[59] = 15
 
+if is_28th_LXe:
+    tileCh_to_PreCh[0]  = 0
+    tileCh_to_PreCh[1]  = 0
+    tileCh_to_PreCh[2]  = 0
+    tileCh_to_PreCh[3]  = 0
+    tileCh_to_PreCh[4]  = 0
+    tileCh_to_PreCh[5]  = 0
+    tileCh_to_PreCh[6]  = 0
+    tileCh_to_PreCh[7]  = 0
+    tileCh_to_PreCh[8]  = 0
+    tileCh_to_PreCh[9]  = 0
+    tileCh_to_PreCh[10] = 0
+#==============================
+    tileCh_to_PreCh[11] = 0
+    tileCh_to_PreCh[12] = 1
+    tileCh_to_PreCh[13] = 2
+    tileCh_to_PreCh[14] = 3
+    tileCh_to_PreCh[15] = 4
+    tileCh_to_PreCh[16] = 5
+    tileCh_to_PreCh[17] = 6
+    tileCh_to_PreCh[18] = 7
+    tileCh_to_PreCh[19] = 8
+    tileCh_to_PreCh[20] = 9
+#==============================
+    tileCh_to_PreCh[21] = 0
+    tileCh_to_PreCh[22] = 0
+    tileCh_to_PreCh[23] = 0
+    tileCh_to_PreCh[24] = 0
+    tileCh_to_PreCh[25] = 0
+    tileCh_to_PreCh[26] = 0
+    tileCh_to_PreCh[27] = 0
+    tileCh_to_PreCh[28] = 0
+    tileCh_to_PreCh[29] = 0
+    tileCh_to_PreCh[30] = 0
+
+    tileCh_to_PreCh[31] = 0
+    tileCh_to_PreCh[32] = 0
+    tileCh_to_PreCh[33] = 0
+    tileCh_to_PreCh[34] = 0
+    tileCh_to_PreCh[35] = 0
+    tileCh_to_PreCh[36] = 0
+    tileCh_to_PreCh[37] = 0
+    tileCh_to_PreCh[38] = 0
+    tileCh_to_PreCh[39] = 0
+    tileCh_to_PreCh[40] = 0
+#==================================
+    tileCh_to_PreCh[41] = 16
+    tileCh_to_PreCh[42] = 17
+    tileCh_to_PreCh[43] = 18
+    tileCh_to_PreCh[44] = 19
+    tileCh_to_PreCh[45] = 20
+    tileCh_to_PreCh[46] = 21
+    tileCh_to_PreCh[47] = 22
+    tileCh_to_PreCh[48] = 23
+    tileCh_to_PreCh[49] = 24
+    tileCh_to_PreCh[50] = 25
+#==================================
+    tileCh_to_PreCh[51] = 0
+    tileCh_to_PreCh[52] = 0
+    tileCh_to_PreCh[53] = 0
+    tileCh_to_PreCh[54] = 0
+    tileCh_to_PreCh[55] = 0
+    tileCh_to_PreCh[56] = 0
+    tileCh_to_PreCh[57] = 0
+    tileCh_to_PreCh[58] = 0
+    tileCh_to_PreCh[59] = 0   
 
 
 

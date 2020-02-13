@@ -256,6 +256,65 @@ def ApplyFilter(exowfm, channel, wfm_length, filter_type="deriv"):
     return ratio_max, time_max
     
 
+def plot_recon_example(wfm, samp_freq, calib, energy, rise_times):
+    
+    energy_start_time_microseconds = struck_analysis_parameters.energy_start_time_microseconds
+    energy_start_sample            = int(energy_start_time_microseconds*microsecond*samp_freq)
+
+    baseline_average_time_microseconds = struck_analysis_parameters.baseline_average_time_microseconds
+    n_baseline_samples                 = int(baseline_average_time_microseconds*microsecond*samp_freq)
+
+    wfm_time = np.arange(0, len(wfm))/(microsecond*samp_freq)
+
+    plt.ion()
+    
+    plt.figure(15,figsize=(11,6))
+    plt.plot(wfm_time, wfm*calib, color='k', linewidth=2.0)
+    plt.axvline(11.0,  linestyle='--', linewidth=2, color='r')
+    plt.axvline(11+16, linestyle='--', linewidth=2, color='r')
+    plt.plot(rise_times[1], [0.95*energy], marker='o', ms=15, color='lightgreen', linestyle='None')
+
+    baseline_range = np.arange(0, 2*n_baseline_samples,1)/(microsecond*samp_freq)
+
+    energy_range   = np.arange(energy_start_sample, energy_start_sample+2*n_baseline_samples,1)/(microsecond*samp_freq)
+
+
+    plt.plot(energy_range, np.ones_like(energy_range)*energy,     color='c', linewidth=4)
+    plt.plot(baseline_range,   np.zeros_like(energy_range),       color='c', linewidth=4)
+    
+    plt.annotate('Energy', xy=(37, energy), xytext=(33,energy*0.7), size=17, xycoords='data', 
+                arrowprops=dict(arrowstyle='simple , tail_width=0.1', connectionstyle='arc3', color='c'))
+    
+    plt.annotate('Baseline', xy=(5, 0.0), xytext=(1,energy*0.2), size=17, xycoords='data', 
+                arrowprops=dict(arrowstyle='simple , tail_width=0.1', connectionstyle='arc3', color='c'))
+
+    plt.annotate('Trigger', xy=(11, energy*0.8), xytext=(1,energy*0.8), size=17, xycoords='data',       
+                arrowprops=dict(arrowstyle='simple , tail_width=0.1', connectionstyle='arc3', color='r'))
+    
+    plt.annotate('Max-Drift \n (Cathode)', xy=(27,energy*0.1), xytext=(30,energy*0.05), size=17, xycoords='data', 
+                arrowprops=dict(arrowstyle='simple , tail_width=0.1', connectionstyle='arc3', color='r'))
+
+
+    plt.annotate(r'Risetime(95$\%$)', xy=(rise_times[1],energy*0.95), xytext=(rise_times[1],energy*0.4), 
+                        size=17, xycoords='data', 
+                        arrowprops=dict(arrowstyle='simple , tail_width=0.1', connectionstyle='arc3', color='lightgreen'))
+
+    #plt.grid(True)
+    plt.xlim(0, np.max(wfm_time))
+    plt.ylim(-50, energy*1.2)
+
+    plt.xlabel(r"Time [$\mu$s]", fontsize=17)
+    plt.ylabel("Energy [keV]", fontsize=17)
+
+    plt.savefig("recon_example.pdf")
+    plt.savefig("recon_example.png")
+
+    raw_input('pause')
+    plt.ioff()
+    plt.clf()
+    
+    return
+
 
 def get_wfmparams(
     exo_wfm, 
@@ -418,9 +477,6 @@ def get_wfmparams(
     else:
         exo_wfm_pz = exo_wfm_raw
 
-    
-    #plot_wfms([[exo_wfm_raw,"RAW"], [exo_wfm_pz, "PZ1"]])
-
     # measure energy after PZ correction -- use baseline remover
     energy_pz     = np.mean(exo_wfm_pz[energy_start_sample:energy_start_sample+2*n_baseline_samples])*calibration
     energy_rms_pz = np.std(exo_wfm_pz[energy_start_sample:energy_start_sample+2*n_baseline_samples])*calibration
@@ -428,6 +484,8 @@ def get_wfmparams(
         if not isMC: print "WARNING: setting RMS from nan to 0"
         energy_rms_pz = 0.0
  
+    #plot_wfms([[exo_wfm_raw,"RAW"], [exo_wfm_pz, "PZ1"]])
+    
     #Removed code to do this since wasn't being used but leaving in the tree
     baseline_slope = 0.0
 
@@ -446,17 +504,22 @@ def get_wfmparams(
         if not isMC: print "WARNING: setting RMS from nan to 0"
         energy_rms1_pz = 0.0
 
-    if False and not is_pmtchannel and not is_sipmchannel and energy1_pz > 20:
-        plt.figure(11)
+    #if energy > 400:
+    #    plot_recon_example(exo_wfm_pz, sampling_freq_Hz/second, calibration, energy1_pz)
+
+    if False and not is_pmtchannel and not is_sipmchannel and energy1_pz > 70:
         plt.ion()
-        plt.clf()
+        plt.figure(11)
+        
         plt.title("Channel =%s, Energy = %.2f, Sig=%.2f" % 
                     (struck_analysis_parameters.channel_map[channel], energy1_pz, energy1_pz/(energy_rms1_pz/np.sqrt(n_baseline_samples))))
         plt.plot(exo_wfm_pz*calibration, label='PZ WFM', color='k')
         plt.plot([0,2*n_baseline_samples], [0,0], color='b', linewidth=3)
         plt.plot([energy_start_sample,energy_start_sample+2*n_baseline_samples], [energy1_pz, energy1_pz], color='b', linewidth=3)
+        
+        plt.show()
         raw_input("PAUSE")
-
+        plt.clf()
 
     #Skip the energy slope measurement.  Removed code not being used
     energy1_pz_slope = 0.0
@@ -531,6 +594,9 @@ def get_wfmparams(
         mfilter_max  =  0.0
         mfilter_time = 0.0
 
+    sipm_fit_amp  = 0
+    sipm_fit_time = 0
+    sipm_fit_chi2 = 0
     if is_sipmchannel:
         #Apply the filtering to the fft of the SiPM
 
@@ -593,9 +659,11 @@ def get_wfmparams(
         baseline_rms_filter = np.std(exo_wfm_filter[400:1000])*calibration
         energy = sipm_max*calibration
         
+        sipm_fit_amp, sipm_fit_time, sipm_fit_chi2 = fit_sipm(exo_wfm_filter,(1.e6/sampling_freq_Hz),
+                                                             sipm_max,sipm_max_time, 
+                                                             baseline_rms_filter/calibration)
 
-        fit_sipm(exo_wfm_filter,(1.e6/sampling_freq_Hz),sipm_max,sipm_max_time, baseline_rms_filter/calibration)
-
+        sipm_fit_amp  = sipm_fit_amp*calibration
         sipm_amp      = sipm_max*calibration
         sipm_amp_time = sipm_max_time 
         if abs(sipm_min) > sipm_max:
@@ -718,7 +786,10 @@ def get_wfmparams(
         sipm_amp_time,
         isInduction,
         induct_amp,
-        induct_time
+        induct_time,
+        sipm_fit_amp, 
+        sipm_fit_time, 
+        sipm_fit_chi2
     )
 
 #--------------------------------------------------------------------------------------------
@@ -819,6 +890,10 @@ def get_risetimes(
 
     if rise_time_stop10 > rise_time_stop99: rise_time_stop10 = -1
 
+    #if fit_energy>200:
+    #    exo_wfm_np        = np.array([exo_wfm.At(i) for i in xrange(exo_wfm.GetLength())])
+    #    plot_recon_example(exo_wfm_np, sampling_freq_Hz/second, 1.0, fit_energy, [rise_time_stop10,rise_time_stop95])
+
     #Debugging to plot the risetime calculation
     #if True and max_val > 200 and (not "PMT" in label) and ("Sum" in label) and rise_time_stop10 > 0:
     #if True and max_val > 400 and (not "PMT" in label) and (not "Sum" in label) and rise_time_stop10 > 0 and (rise_time_stop95 - rise_time_stop10) > 6.0 and not ( "/" in label or "-" in label):
@@ -834,6 +909,8 @@ def get_risetimes(
         exo_wfm_np_smooth = np.array([new_wfm.At(i) for i in xrange(new_wfm.GetLength())])        
         
         exo_wfm_np -= np.mean(exo_wfm_np[:200])
+
+        #plot_recon_example(exo_wfm_np, sampling_freq_Hz/second, 1.0, fit_energy)
 
         plt.ion()
         plt.clf()
@@ -904,38 +981,47 @@ def fit_sipm(wfm, freq, max_val, max_time, wfm_std):
         bp_col   = p0
         bcov_col = np.eye(len(bp_col))
 
-    col_fit = sipm_model(wfm_time, *bp_col)
-    #col_fit = sipm_model(wfm_time, *p0)
-    chi2    = get_chisquare(wfm, col_fit, wfm_std)/(len(wfm) - 3)
+    sipm_fit = sipm_model(wfm_time, *bp_col)
+    #sipm_fit = sipm_model(wfm_time, *p0)
+    chi2    = get_chisquare(wfm, sipm_fit, wfm_std)/(len(wfm) - 3)
 
     fit_amp  =  bp_col[0]*np.exp(-1)
     fit_time =  bp_col[2]
 
-    if True:
+    if False:
+    #if abs(max_val-bp_col[0]*np.exp(-1))>1000:
         plt.ion()
         plt.figure(999)
         plt.clf()
 
+        print bcov_col
+
         plt.plot(wfm_time, wfm, c='b', linewidth=3.0, label='Smooth WF')
         #plt.plot([max_time], [max_val], marker='o', ms=15, color='k')
-        plt.plot(wfm_time, col_fit, color='r', linewidth=3.0, linestyle='--')
-        plt.title("Chi2 = %.2f (A= %.2f, tau=%.2f, t=%.2f) (%.2f vs %.2f)" % (chi2, bp_col[0], bp_col[1], bp_col[2], max_val, bp_col[0]*np.exp(-1)))
+        plt.plot(wfm_time, sipm_fit, color='r', linewidth=3.0, linestyle='--')
+        plt.title("Chi2 = %.2f (A= %.2f, tau=%.2f, t=%.2f) (%.2f vs %.2f)" % (chi2, bp_col[0], bp_col[1]*1.e3,
+                                                                              bp_col[2], max_val, 
+                                                                              bp_col[0]*np.exp(-1)))
         plt.xlim(max_time-0.5, max_time+0.5)
         plt.ylim(-10, max_val*1.2)
 
         plt.show()
         raw_input("PAUSE")
 
-    return 
+    return fit_amp, fit_time, chi2
 
 def fit_wfm(time, wfm, rise_time, max_val):
     
     #plt.ion()
     #plt.clf()
 
+    max_risetime = (struck_analysis_parameters.wf_length - struck_analysis_parameters.n_baseline_samples)*struck_analysis_parameters.samp_period/1.e3
+
     if rise_time < 11.0:
-        guess_time = 20
-    elif rise_time>40:
+        #Risetime shouldn't be less than the trigger time
+        guess_time = (struck_analysis_parameters.wf_length/2)*struck_analysis_parameters.samp_period/1.e3
+    elif rise_time>max_risetime:
+        #Risetime shouldn't be greater than max drift time
         guess_time = 20
     else:
         guess_time = rise_time
@@ -972,6 +1058,8 @@ def fit_wfm(time, wfm, rise_time, max_val):
 
         plt.plot([rise_time], [0.95*max_val], marker='o', ms=15, color='k')
         plt.plot([guess_time], [0.95*max_val], marker='o', ms=15, color='c')
+
+        plt.axvline(bp_col[2])
 
         plt.xlabel(r"Sample Time [$\mu$s]", fontsize=18)
         plt.ylabel("Amplitude [ADC]", fontsize=18)

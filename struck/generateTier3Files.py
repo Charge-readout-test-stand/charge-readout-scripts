@@ -714,8 +714,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     SignalEnergyLight = array('d', [0])
     out_tree.Branch('SignalEnergyLight', SignalEnergyLight, 'SignalEnergyLight/D')
     
-    SignalEnergyLightBoth =  array('d', [0])
-    out_tree.Branch('SignalEnergyLightBoth', SignalEnergyLightBoth, 'SignalEnergyLightBoth/D')
+    SignalEnergyLightFit =  array('d', [0])
+    out_tree.Branch('SignalEnergyLightFit', SignalEnergyLightFit, 'SignalEnergyLightFit/D')
     
     SignalEnergyLightTCut =  array('d', [0])
     out_tree.Branch('SignalEnergyLightTCut', SignalEnergyLightTCut, 'SignalEnergyLightTCut/D')
@@ -1093,7 +1093,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         pos_y[0] = -999.0
         SignalEnergyLight[0] = 0.0
         SignalEnergyLightTCut[0] = 0.0
-        SignalEnergyLightBoth[0] = 0.0
+        SignalEnergyLightFit[0] = 0.0
         SignalEnergyX[0] = 0.0
         SignalEnergyY[0] = 0.0 
         for bundle_index in xrange(nbundles[0]):
@@ -1375,7 +1375,10 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 sipm_amp_time[i],
                 induct_map[i],
                 induct_amp[i],
-                induct_time[i]
+                induct_time[i],
+                fit_energy[i],
+                fit_time[i],
+                fit_chi[i]
             ) = wfmProcessing.get_wfmparams(
                 exo_wfm=exo_wfm, 
                 wfm_length=wfm_length[i], 
@@ -1426,10 +1429,11 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 lightEnergy[0] += energy[i]
                 if abs(energy[i]/baseline_rms_filter[i]) > 10.0: 
                     SignalEnergyLight[0] += energy[i]
-                    if (np.abs(sipm_max_time[i] - trigger_time[0]) < 0.2):
+                    if (np.abs(sipm_max_time[i] - trigger_time[0]) < 0.1):
                         SignalEnergyLightTCut[0] += energy[i]
-                if abs(sipm_amp[i]/baseline_rms_filter[i])  > 10.0:
-                    SignalEnergyLightBoth[0] += abs(sipm_amp[i])
+                #if abs(sipm_amp[i]/baseline_rms_filter[i])  > 10.0:
+                if abs(fit_energy[i]/baseline_rms_filter[i])  > 10.0:
+                    SignalEnergyLightFit[0] += fit_energy[i]#abs(sipm_amp[i])
             elif charge_channels_to_use[channel[i]]:
                 chargeEnergy[0] += energy1_pz[i]
             if isMC:
@@ -1473,10 +1477,11 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 rise_time_stop95[i] = 0.0
                 rise_time_stop99[i] = 0.0
 
-                fit_energy[i]       = 0
                 fit_tau[i]          = 0
-                fit_time[i]         = 0
-                fit_chi[i]          = 0
+                if not sipm_channels_to_use[i]:
+                    fit_energy[i]       = 0
+                    fit_time[i]         = 0
+                    fit_chi[i]          = 0
 
 
             # pause & draw
@@ -1584,6 +1589,12 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         
         if nbundlesX[0] == 0 or nbundlesY[0] == 0:
             multiplicity[0] = 0
+            if False and (nbundles[0] > 0 and np.sum(induct_map)>0):
+                for ch,im, ie, it in zip(channel, induct_map, induct_amp, induct_time):
+                    if ie>0: print "induct", ch,im, ie, it
+                for ch, sm, se, st in zip(channel, signal_map, fit_energy, fit_time):
+                    if se>0: print "sig",   ch,sm, se, st
+                raw_input("pause it")
         elif nbundlesX[0]==1 and nbundlesY[0]==1:
             if abs(bundle_time[0] - bundle_time[1])<3.0:
                 multiplicity[0] = 1
