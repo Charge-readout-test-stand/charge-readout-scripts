@@ -115,9 +115,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     # samples at wfm start and end to use for energy calc:
 
     analysis_config = StruckAnalysisParameters.StruckAnalysisParameters()
-    analysis_config.LoadChannelMapFromFile( )
-    analysis_config.LoadCalibrationConstantsFromFile( )
-    analysis_config.LoadRunParametersFromFile( )
+    analysis_config.LoadChannelMapFromFile( './configuration_files/Channel_Map_Run29.csv' )
+    analysis_config.LoadCalibrationConstantsFromFile( './configuration_files/Calibrations_Run_11b.csv' )
+    analysis_config.LoadRunParametersFromFile( './configuration_files/Run_Parameters_Run29.csv' )
 
     baseline_average_time_microseconds = analysis_config.run_parameters['Baseline Average Time [us]']
     # this is just the default; overwritten for NGM files:
