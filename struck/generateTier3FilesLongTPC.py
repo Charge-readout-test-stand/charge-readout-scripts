@@ -94,7 +94,6 @@ from ROOT import TObjString
 from array import array
 
 # definition of calibration constants, decay times, channels
-import struck_analysis_parameters
 import StruckAnalysisParameters
 import struck_analysis_cuts
 import wfmProcessing
@@ -120,28 +119,24 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     analysis_config.LoadCalibrationConstantsFromFile( )
     analysis_config.LoadRunParametersFromFile( )
 
-    baseline_average_time_microseconds = struck_analysis_parameters.baseline_average_time_microseconds
     baseline_average_time_microseconds = analysis_config.run_parameters['Baseline Average Time [us]']
     # this is just the default; overwritten for NGM files:
-    sampling_freq_Hz        = analysis_config.run_parameters['Sampling Rate [MHz]']/1.e6
-    channels                = struck_analysis_parameters.channels
-    channel_map             = struck_analysis_parameters.channel_map
-    n_chargechannels        = struck_analysis_parameters.n_chargechannels
-    pmt_channel             = struck_analysis_parameters.pmt_channel
-    pulser_channel          = struck_analysis_parameters.pulser_channel
-    n_channels              = struck_analysis_parameters.n_channels
-    charge_channels_to_use  = struck_analysis_parameters.charge_channels_to_use
-    rms_keV                 = struck_analysis_parameters.rms_keV
-    sipm_channels_to_use    = struck_analysis_parameters.sipm_channels_to_use
-    dead_channels           = struck_analysis_parameters.dead_channels
-    n_channels_good         = n_channels - sum(dead_channels)
-    channel_pos_x           = struck_analysis_parameters.channel_pos_x
-    channel_pos_y           = struck_analysis_parameters.channel_pos_y
-    do_invert               = struck_analysis_parameters.do_invert
+    pmt_channel             = analysis_config.GetSoftwareChannelOfPMT()
+    pulser_channel          = analysis_config.GetSoftwareChannelOfPulser()
+    n_channels_in_event     = analysis_config.GetNumberOfChannels()
+    charge_channels_to_use  = analysis_config.GetChargeChannelMask()
+    n_chargechannels        = np.sum( charge_channels_to_use )
+    rms_keV                 = analysis_config.GetRMSkeVArray()
+    rms_keV_sigma           = analysis_config.GetRMSkeVSigmaArray()
+    sipm_channels_to_use    = analysis_config.GetSiPMChannelMask()
+    dead_channels           = analysis_config.GetDeadChannelMask()
+    n_channels_good         = n_channels_in_event - np.sum(dead_channels)
+    channel_pos_x           = analysis_config.GetChannelPosXArray()
+    channel_pos_y           = analysis_config.GetChannelPosYArray()
 
-    # this is the number of channels per event (1 if we are processing tier1
-    # data, len(channels) if we are processing tier2 data
-    n_channels_in_event = n_channels
+    do_invert = False
+    if (analysis_config.run_parameters['Sampling Rate [MHz]'] - 125.) < 1.:
+       do_invert = True
 
     #---------------------------------------------------------------
 
@@ -165,7 +160,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     if isMC:
         tree = root_file.Get("evtTree") # MC
     else:
-        tree = root_file.Get("tree") # struck root gui tier1
+        tree = root_file.Get("tree" # struck root gui tier1
     
     try:
         n_entries = tree.GetEntries()
@@ -195,19 +190,15 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     if isMC:
         #MC has different structure so use MC channels
         #After the 8th LXe not sure we need alot of this
-        #channels = struck_analysis_parameters.MCchannels
-        #n_chargechannels = struck_analysis_parameters.n_MCchargechannels
         #pmt_channel = None #No PMT in MC
-        #n_channels = struck_analysis_parameters.MCn_channels
-        #charge_channels_to_use = struck_analysis_parameters.MCcharge_channels_to_use
         generator = ROOT.TRandom3(0) # random number generator, initialized with TUUID object
-        struck_to_mc_channel_map = struck_analysis_parameters.struck_to_mc_channel_map
+        struck_to_mc_channel_map = analysis_config.GetStruckToMCChannelMap()
         if noise_file is not None:
             noise_file_root = ROOT.TFile(noise_file)
             noise_tree = noise_file_root.Get("tree")
     if isMakeNoise:
-        noise_length = struck_analysis_parameters.noise_length
-        noiseLightCut = struck_analysis_parameters.noiseLightCut
+        noise_length = analysis_config.run_parameters['Waveform Length [samples]']
+        noiseLightCut = 20.
         
     basename = wfmProcessing.create_basename(filename, isMC)
 
@@ -245,21 +236,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         except:
             pass
 
-    # decide if this is a tier1 or tier2 file
-    is_tier1 = False
-    if isMC is False and isNGM is False:
-        try:
-            tree.GetEntry(0)
-            tree.wfm0
-            print "this is a tier2 file"
-        except AttributeError:
-            print "this is a tier1 file"
-            n_channels_in_event = 1
-            is_tier1 = True
         
-    if isMC:
-        n_channels_in_event = n_channels
-        is_tier1 = False
 
     # open output file and tree
     out_filename = wfmProcessing.create_outfile_name(filename, isMC)
@@ -296,11 +273,11 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     # 6: RMS noise too low (2^6=64)
     # 7: energy1_pz noise too low (2^7=128)
 
-    is_2Vinput = array('I', [0]*n_channels) # unsigned int
-    out_tree.Branch('is_2Vinput', is_2Vinput, 'is_2Vinput[%i]/i' % n_channels)
+    is_2Vinput = array('I', [0]*n_channels_in_event) # unsigned int
+    out_tree.Branch('is_2Vinput', is_2Vinput, 'is_2Vinput[%i]/i' % n_channels_in_event)
 
-    is_amplified = array('I', [1]*n_channels) # unsigned int
-    out_tree.Branch('is_amplified', is_amplified, 'is_amplified[%i]/i' % n_channels)
+    is_amplified = array('I', [1]*n_channels_in_event) # unsigned int
+    out_tree.Branch('is_amplified', is_amplified, 'is_amplified[%i]/i' % n_channels_in_event)
 
     run = array('L', [run_number]) # unsigned int
     out_tree.Branch('run', run, 'run/l')
@@ -335,8 +312,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         NPEactive = array("d", [0])
         out_tree.Branch('NPEactive', NPEactive, 'NPEactive/D')
 
-        noise_val = array("d", [0]*n_channels)
-        out_tree.Branch('noise', noise_val, 'noise[%i]/D' % n_channels)
+        noise_val = array("d", [0]*n_channels_in_event)
+        out_tree.Branch('noise', noise_val, 'noise[%i]/D' % n_channels_in_event)
 
     else:
         pmt_chi2 = array("d", [0.0])
@@ -348,13 +325,15 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     run_tree.Branch('file_start_time', file_start_time, 'file_start_time/i')
 
     sampling_frequency_Hz = array('d', [0]) # double
-    out_tree.Branch('sampling_freq_Hz', sampling_frequency_Hz, 'sampling_freq_Hz/D')
-    sampling_frequency_Hz[0] = sampling_freq_Hz
+    out_tree.Branch('sampling_frequency_Hz', sampling_frequency_Hz, 'sampling_frequency_Hz/D')
+    sampling_frequency_Hz[0] = analysis_config.run_parameters['Sampling Rate [MHz]'] * 1.e6
     if isNGM:
         sys_config = root_file.Get("NGMSystemConfiguration")
         card = sys_config.GetSlotParameters().GetParValueO("card",0)
-        sampling_frequency_Hz[0] = struck_analysis_parameters.get_clock_frequency_Hz_ngm(card.clock_source_choice)
-        sampling_freq_Hz = sampling_frequency_Hz[0]
+        if not analysis_config.IsClockSourceConsistentWithSamplingRate( card.clock_source_choice ):
+           print('\nERROR: Sampling rate from configuration file is NOT consistent with the')
+           print('       clock source choice in the NGMSystemConfiguration. Exiting....\n\n')
+           sys.exit(1)
         print "sampling frequency [MHz]:", sampling_frequency_Hz[0]/1e6
 
     #Time stamp in clock ticks (conversion factor is the sampling frequency)
@@ -364,17 +343,17 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     out_tree.Branch('time_stampDouble', time_stampDouble, 'time_stampDouble/D')
 
     if isNGM: # keep time stamp info for individual channels
-        time_stamp_diff = array('l', [0]*n_channels) # timestamp for each event, unsigned long
-        out_tree.Branch('time_stamp_diff', time_stamp_diff, 'time_stamp_diff[%i]/L' % n_channels)
+        time_stamp_diff = array('l', [0]*n_channels_in_event) # timestamp for each event, unsigned long
+        out_tree.Branch('time_stamp_diff', time_stamp_diff, 'time_stamp_diff[%i]/L' % n_channels_in_event)
 
-        time_stampDouble_diff = array('d', [0]*n_channels) # double
-        out_tree.Branch('time_stampDouble_diff', time_stampDouble_diff, 'time_stampDouble_diff[%i]/D' % n_channels)
+        time_stampDouble_diff = array('d', [0]*n_channels_in_event) # double
+        out_tree.Branch('time_stampDouble_diff', time_stampDouble_diff, 'time_stampDouble_diff[%i]/D' % n_channels_in_event)
 
         time_stamp_msec = array('d', [0]) # double
         out_tree.Branch('time_stamp_msec', time_stamp_msec, 'time_stamp_msec/D')
 
-        time_stamp_diff_msec = array('d', [0]*n_channels) # timestamp for each event, unsigned long
-        out_tree.Branch('time_stamp_diff_msec', time_stamp_diff_msec, 'time_stamp_diff_msec[%i]/D' % n_channels)
+        time_stamp_diff_msec = array('d', [0]*n_channels_in_event) # timestamp for each event, unsigned long
+        out_tree.Branch('time_stamp_diff_msec', time_stamp_diff_msec, 'time_stamp_diff_msec[%i]/D' % n_channels_in_event)
 
     time_since_last = array('d', [0]) # double
     out_tree.Branch('time_since_last', time_since_last, 'time_since_last/D')
@@ -391,22 +370,19 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     run_time = array('d', [0]) # double
     out_tree.Branch('run_time', run_time, 'run_time/D')
     run_tree.Branch('run_time', run_time, 'run_time/D')
-    if is_tier1:
-        run_time[0] = (tree.GetMaximum("timestampDouble") -
-            tree.GetMinimum("timestampDouble"))/sampling_freq_Hz
-    elif isMC:
+    if isMC:
         #MC so this doesn't exist
         run_time[0] = 0
     elif isNGM:
         run_time[0] = (tree.GetMaximum("_rawclock") -
-            tree.GetMinimum("_rawclock"))/sampling_freq_Hz
+            tree.GetMinimum("_rawclock"))/sampling_frequency_Hz[0]
     else:
         run_time[0] = (tree.GetMaximum("time_stampDouble") -
-            tree.GetMinimum("time_stampDouble"))/sampling_freq_Hz
+            tree.GetMinimum("time_stampDouble"))/sampling_frequency_Hz[0]
     print "run duration: %.2f seconds" % run_time[0]
 
-    channel = array('I', [0]*n_channels_in_event) # unsigned int
-    out_tree.Branch('channel', channel, 'channel[%i]/i' % n_channels_in_event)
+    #channel = array('I', [0]*n_channels_in_event) # unsigned int
+    #out_tree.Branch('channel', channel, 'channel[%i]/i' % n_channels_in_event)
     
     nfound_channels = array('I', [0])
     out_tree.Branch('nfound_channels', nfound_channels, 'nfound_channels/i') #Total # of found channels. For accounting for dead or bad channels
@@ -418,13 +394,12 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     # estimate trigger time, in microseconds
     if isMC:
         #MC this is also hardcoded into nEXO_Analysis
-        #trigger_time[0] = 200/sampling_freq_Hz*1e6
-        trigger_time[0] = 275/sampling_freq_Hz*1e6 # run 11+
+        trigger_time[0] = 275/sampling_frequency_Hz[0]*1e6 # run 11+
 
     elif isNGM:
         ngm_config = root_file.Get("NGMSystemConfiguration")
         card = sys_config.GetSlotParameters().GetParValueO("card",0)
-        trigger_time[0] = card.pretriggerdelay_block[0]/sampling_freq_Hz*1e6 
+        trigger_time[0] = card.pretriggerdelay_block[0]/sampling_frequency_Hz[0]*1e6 
         gate_window_length_block = card.gate_window_length_block[0]
         pmt_hist = None
         if trigger_time[0] == 11.0:
@@ -444,8 +419,6 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     else:
         trigger_hist = ROOT.TH1D("trigger_hist","",5000,0,5000)
         selection = "channel==%i && wfm_max - wfm%i[0] > 20" % (pmt_channel, pmt_channel)
-        if is_tier1:
-            selection = "channel==%i && wfm_max - wfm[0] > 20" % pmt_channel
 
         n_trigger_entries = 0
         n_trigger_entries = tree.Draw(
@@ -454,20 +427,20 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             "goff"
         )
         if n_trigger_entries > 0:
-            trigger_time[0] = (trigger_hist.GetMaximumBin() - 22)/sampling_freq_Hz*1e6
+            trigger_time[0] = (trigger_hist.GetMaximumBin() - 22)/sampling_frequency_Hz[0]*1e6
             print "trigger time is approximately %.3f microseconds" % trigger_time[0]
         else:
             print "--> Not enough PMT entries to determine trigger time"
 
         if trigger_time[0] < 0.4:
             "--> forcing trigger time to 200 samples = 8 microseconds (ok for 5th LXe)"
-            trigger_time[0] = 200/sampling_freq_Hz*1e6
+            trigger_time[0] = 200/sampling_frequency_Hz[0]*1e6
 
     # store some processing parameters:
     n_baseline_samples = array('I', [0]) # double
     out_tree.Branch('n_baseline_samples', n_baseline_samples, 'n_baseline_samples/i')
     run_tree.Branch('n_baseline_samples', n_baseline_samples, 'n_baseline_samples/i')
-    n_baseline_samples[0] = int(baseline_average_time_microseconds*sampling_freq_Hz/1e6)
+    n_baseline_samples[0] = int(baseline_average_time_microseconds*sampling_frequency_Hz[0]/1e6)
     print "n_baseline_samples:", n_baseline_samples[0]
     baseline_remover = EXOBaselineRemover()
     baseline_remover.SetBaselineSamples(2*n_baseline_samples[0])
@@ -478,18 +451,14 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     decay_time = array('d', [0]*n_channels_in_event) # double
     out_tree.Branch('decay_time', decay_time, 'decay_time[%i]/D' % n_channels_in_event)
 
-    decay_time_values = struck_analysis_parameters.decay_time_values
-    decay_time_values[pmt_channel] = 1e9*microsecond
     
-    if isMC:
-        #No decay in MC so set to infinite
-        decay_time_values = [1e9*microsecond]*n_channels
-
-
-    for (i, i_channel) in enumerate(channels):
-        try:
-            decay_time[i] = decay_time_values[i_channel]
-        except KeyError:
+    for i in range(len(analysis_config.channel_map)):
+        if isMC:
+            decay_time[i] = 1.e9
+        else:
+          try:
+            decay_time[i] = analysis_config.GetDecayTimeForSoftwareChannel(i)
+          except KeyError:
             print "no decay info for channel %i" % i_channel
             decay_time[i] = 1e9*microsecond
 
@@ -529,8 +498,8 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     smoothed_max = array('d', [0]*n_channels_in_event) # double
     out_tree.Branch('smoothed_max', smoothed_max, 'smoothed_max[%i]/D' % n_channels_in_event)
 
-    wfm_length = array('I', [0]*n_channels) # unsigned int
-    out_tree.Branch('wfm_length', wfm_length, 'wfm_length[%i]/i' % n_channels)
+    wfm_length = array('I', [0]*n_channels_in_event) # unsigned int
+    out_tree.Branch('wfm_length', wfm_length, 'wfm_length[%i]/i' % n_channels_in_event)
 
     wfm_max = array('d', [0]*n_channels_in_event) # double
     out_tree.Branch('wfm_max', wfm_max, 'wfm_max[%i]/D' % n_channels_in_event)
@@ -550,14 +519,14 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     baseline_rms = array('d', [0]*n_channels_in_event) # double
     out_tree.Branch('baseline_rms', baseline_rms, 'baseline_rms[%i]/D' % n_channels_in_event)
 
-    # some file-averaged parameters
-    baseline_mean_file = array('d', [0]*n_channels) # double
-    out_tree.Branch('baseline_mean_file', baseline_mean_file, 'baseline_mean_file[%i]/D' % n_channels)
-    run_tree.Branch('baseline_mean_file', baseline_mean_file, 'baseline_mean_file[%i]/D' % n_channels)
+#    # some file-averaged parameters
+#    baseline_mean_file = array('d', [0]*n_channels) # double
+#    out_tree.Branch('baseline_mean_file', baseline_mean_file, 'baseline_mean_file[%i]/D' % n_channels)
+#    run_tree.Branch('baseline_mean_file', baseline_mean_file, 'baseline_mean_file[%i]/D' % n_channels)
 
-    baseline_rms_file = array('d', [0]*n_channels) # double
-    out_tree.Branch('baseline_rms_file', baseline_rms_file, 'baseline_rms_file[%i]/D' % n_channels)
-    run_tree.Branch('baseline_rms_file', baseline_rms_file, 'baseline_rms_file[%i]/D' % n_channels)
+#    baseline_rms_file = array('d', [0]*n_channels) # double
+#    out_tree.Branch('baseline_rms_file', baseline_rms_file, 'baseline_rms_file[%i]/D' % n_channels)
+#    run_tree.Branch('baseline_rms_file', baseline_rms_file, 'baseline_rms_file[%i]/D' % n_channels)
 
     
     # info for saving the WFMs if we are making a noise library
@@ -587,15 +556,18 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
   self.pretrigger_length = None # samples
   self.baseline_length = None # samples
   self.num_struck_boards = None # number of boards
+
     signal_threshold = array('d', [0])
+
     out_tree.Branch('signal_threshold', signal_threshold, 'signal_threshold/D')
     run_tree.Branch('signal_threshold', signal_threshold, 'signal_threshold/D')
-    signal_threshold[0] = struck_analysis_parameters.rms_threshold
 
-    signal_map = array('I', [0]*n_channels) 
+    signal_threshold[0] = analysis_config.run_parameters['Strip Threshold [sigma]']
+
+    signal_map = array('I', [0]*n_channels_in_event) 
     out_tree.Branch('signal_map', signal_map, 'signal_map[%i]/i' % n_channels_in_event) 
     
-    induct_map = array('I', [0]*n_channels)
+    induct_map = array('I', [0]*n_channels_in_event)
     out_tree.Branch('induct_map', induct_map, 'induct_map[%i]/i' % n_channels_in_event)
 
     nsignals = array('I', [0])
@@ -627,7 +599,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
     #Store the assosiated bundle of adjacent wires 
     #Map each bundle to set of channels
-    signal_bundle_map = array('I', [0]*n_channels)
+    signal_bundle_map = array('I', [0]*n_channels_in_event)
     out_tree.Branch('signal_bundle_map', signal_bundle_map, 'signal_bundle_map[%i]/i' % n_channels_in_event)
     
     multiplicity    = array('I', [0])
@@ -643,16 +615,16 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     out_tree.Branch('nbundlesY', nbundlesY, 'nbundlesY/i')
 
     #The most bundles ever is just 1 per channel
-    bundle_type = array('I', [0]*n_channels)
+    bundle_type = array('I', [0]*n_channels_in_event)
     out_tree.Branch('bundle_type', bundle_type, 'bundle_type[nbundles]/i')
 
-    bundle_energy = array('d', [0]*n_channels)
+    bundle_energy = array('d', [0]*n_channels_in_event)
     out_tree.Branch('bundle_energy', bundle_energy, 'bundle_energy[nbundles]/D')
     
-    bundle_time = array('d', [0]*n_channels)
+    bundle_time = array('d', [0]*n_channels_in_event)
     out_tree.Branch('bundle_time', bundle_time, 'bundle_time[nbundles]/D')
 
-    bundle_nsigs = array('I', [0]*n_channels)
+    bundle_nsigs = array('I', [0]*n_channels_in_event)
     out_tree.Branch('bundle_nsigs', bundle_nsigs, 'bundle_nsigs[nbundles]/i')
     #------------------------------------------------------------------------------------------------
     #------------------------------------------------------------------------------------------------
@@ -661,9 +633,9 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     nsignal_strips = array('I', [0])
     out_tree.Branch('nsignal_strips', nsignal_strips, 'nsignal_strips/i') #Total Signals above threshold
 
-    n_strips = array('I', [0]*n_channels) # unsigned int
-    out_tree.Branch('n_strips', n_strips, 'n_strips[%i]/i' % n_channels)
-    for ch, strips in struck_analysis_parameters.struck_to_mc_channel_map.items():
+    n_strips = array('I', [0]*n_channels_in_event) # unsigned int
+    out_tree.Branch('n_strips', n_strips, 'n_strips[%i]/i' % n_channels_in_event)
+    for ch, strips in struck_to_mc_channel_map:
         try:
             n_strips[ch] = len(strips)
         except:
@@ -743,130 +715,28 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
     
     #End Sipm 
 
-    # make a hist for calculating some averages
-    hist = ROOT.TH1D("hist","",100, 0, pow(2,14))
-    print "calculating mean baseline & baseline RMS for each channel in this file..."
-    if isMC: 
-        print "\t skipping MC for now..."
-    elif isMakeNoise: 
-        print "\t skipping for isMakeNoise"
-    elif isNGM:
-        print "\t skipping NGM for now..."
-    else: 
-        for (i, i_channel) in enumerate(channels):
-            print "%i: ch %i" % (i, i_channel)
-            
-            #if True:
-            if do_debug: 
-                print "\t skipping for debugging"
-                continue
-                
-            # calculate avg baseline:
-            draw_command = "wfm >> hist"
-            selection = "Iteration$<%i && channel==%i" % (n_baseline_samples[0], i_channel)
-            if not is_tier1:
-                draw_command = "wfm%i >> hist" % i_channel
-            if isMC:
-                #Command that worked
-                #evtTree->Draw("ChannelWaveform[12]:Iteration$","Entry$==10 && Iteration$<300")
-                draw_command = "ChannelWaveform[%i] >> hist" % (i_channel)
-                selection = "Iteration$<%i" % (n_baseline_samples[0])
-            if isNGM:
-                draw_command = "_waveform >> hist"
-                selection = "Iteration$<%i && _channel==%i && _slot==%i" % (n_baseline_samples[0], i_channel%16, i_channel/16)
-            n_drawn = tree.Draw(
-                draw_command,
-                selection,
-                "goff"
-            )
-            baseline_mean_file[i] = hist.GetMean()
-            print "\t draw command: %s | selection: %s | n_drawn: %.2e" % (draw_command, selection, n_drawn)
-            print "\t file baseline mean:", baseline_mean_file[i]
-
-            # calculate baseline RMS:
-            # this is an appxorimation -- we can't calculate the real RMS until we
-            # know the baseline average for each wfm -- it would be better to do
-            # this in the loop over events
-            draw_command = "wfm-wfm[0] >> hist"
-            if not is_tier1:
-                draw_command = "wfm%i-wfm%i[0] >> hist" % (i_channel, i_channel)
-            if isMC:
-                #evtTree->Draw("(ChannelWaveform[12] - ChannelWaveform[12][300]):Iteration$",
-                #                "Entry$==10 && Iteration$<300")
-                draw_command = "(ChannelWaveform[%i] - ChannelWaveform[%i][0]):Iteration$" % (i_channel, i_channel)
-            if isNGM:
-                draw_command = "_waveform-_waveform[0] >> hist"
-            n_drawn = tree.Draw(
-                draw_command,
-                selection,
-                "goff"
-            )
-            baseline_rms_file[i] = hist.GetRMS()
-            print "\t draw command: %s | selection: %s | n_drawn: %.2e" % (draw_command, selection,n_drawn)
-            print "\t file baseline rms:", baseline_rms_file[i]
-
-        print "\t done"
+#    # make a hist for calculating some averages
+    hist = ROOT.TH1D("hist","",100, 0, pow(2,16))
 
     # decide whether 2V input was used for the digitizer or not. The
     # file-averaged baseline mean for channel 0 seems like a good indicator of
     # this -- we should also figure out if any channels are shaped...
 
-    calibration_values = struck_analysis_parameters.calibration_values
+    
+    for i in range( analysis_config.GetNumberOfChannels() ):
+        calibration[i] = analysis_config.GetCalibrationConstantForSoftwareChannel(i)
+
     data_calib = None
     if isMC:
-        data_calib = copy.copy(struck_analysis_parameters.calibration_values)
+        data_calib = copy.deepcopy( calibration )
         print "Test calib", data_calib[7]
-        for n in np.arange(n_channels):
+        for n in np.arange(n_channels_in_event):
             #MC is given in number of e- so need to multiply by Wvalue to get eV
             #Need factor of 1e-3 to get keV
-            calibration_values[int(n)] = struck_analysis_parameters.Wvalue*1e-3
+            Wvalue = 22.004
+            calibration_values[int(n)] = Wvalue*1e-3
         print "Test calib", data_calib[7]
 
-    print "choosing calibration values..."
-    for (i, i_channel) in enumerate(channels):
-
-        try:
-            original_calibration = calibration_values[i_channel]
-        except KeyError:
-            print "\t no calibration data for ch %i" % i_channel
-            continue
-
-        is_2Vinput[i] = struck_analysis_parameters.is_2Vinput(baseline_mean_file[i])
-        if isMC:
-            is_2Vinput[i] = False
-        if isNGM:
-            slot = 0
-            if i_channel > 15: slot = 1
-            card = sys_config.GetSlotParameters().GetParValueO("card",slot)
-            gain = card.gain[i_channel-16*slot]
-            voltage_range_mV = struck_analysis_parameters.get_voltage_range_mV_ngm(gain)
-            is_2Vinput[i] = 1
-            if voltage_range_mV == 5000.0:
-                is_2Vinput[i] = 0
-        elif is_2Vinput[i]: # don't do this for NGM -- seems like we treated is_2V differently in the past
-            print "channel %i" % i_channel
-            print "\t channel %i used 2V input range" % i_channel
-            print "\t dividing calibration by 2.5"
-            calibration_values[i_channel] /= 2.5
-
-        # this doesn't seem very reliable
-        #is_amplified[i] = struck_analysis_parameters.is_amplified(
-        #    baseline_mean_file[i], baseline_rms_file[i])
-
-        if is_amplified[i] == 0 and not isMC:
-            if i_channel != pmt_channel:
-                print "channel %i" % i_channel
-                calibration_values[i_channel] *= 4.0
-                print "\t multiplying calibration by 4"
-                print "\t channel %i is unamplified" % i_channel
-        if original_calibration != calibration_values[i_channel]:
-            print "\t original calibration value %.4e" % calibration_values[i_channel]
-            print "channel %i" % i_channel
-            print "\t channel %i calibration: %.4e" % (i_channel, calibration_values[i_channel])
-    print "\t done"
-    
-    for (i, i_channel) in enumerate(channels):
-        calibration[i] = calibration_values[i_channel]
 
     # PMT threshold
     pmt_threshold = array('d', [0]) # double
@@ -887,14 +757,12 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         draw_command = "wfm_max-wfm[0] >> hist"
         selection = "channel==%i" % pmt_channel
             
-        if not is_tier1:
-            draw_command = "wfm_max-wfm%i[0] >> hist" % pmt_channel
         if isNGM:
             draw_command = "Max$(_waveform)-_waveform[0] >> hist"
             selection = "_slot==%i && _channel==%i" % (pmt_channel/16, pmt_channel%16)
 
         tree.Draw(draw_command,selection,"goff")
-        pmt_threshold[0] = hist.GetBinLowEdge(hist.FindFirstBinAbove(0))*calibration_values[pmt_channel]
+        pmt_threshold[0] = hist.GetBinLowEdge(hist.FindFirstBinAbove(0))*calibration[pmt_channel]
         print "pmt threshold calc | draw_cmd: %s | selection: %s" % (draw_command, selection)
         print "pmt_threshold:", pmt_threshold[0]
         print "pmt_threshold hist mean, rms:", hist.GetMean(), hist.GetRMS()
@@ -1073,27 +941,21 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         else:
             event[0] = tree.event
 
-        if is_tier1:
-            time_stamp[0] = tree.timestamp
-            time_stampDouble[0] = tree.timestampDouble
-        elif isMC:
+        if isMC:
             #No timestamp in MC 
-            time_stamp[0] = int( tree.EventTime/sampling_freq_Hz ) 
-            time_stampDouble[0] = tree.EventTime/sampling_freq_Hz
+            time_stamp[0] = int( tree.EventTime/sampling_frequency_Hz[0] ) 
+            time_stampDouble[0] = tree.EventTime/sampling_frequency_Hz[0]
         elif isNGM:
             time_stamp[0] = int( tree.HitTree.GetRawClock() ) 
             time_stampDouble[0] = tree.HitTree.GetRawClock()
             #above are clock ticks. but also save a version in mili-seconds
-            time_stamp_msec[0]  = (tree.HitTree.GetRawClock()/(sampling_freq_Hz))*1.e3
+            time_stamp_msec[0]  = (tree.HitTree.GetRawClock()/(sampling_frequency_Hz[0]))*1.e3
             n_channels_in_this_event = 0
-        else:
-            time_stamp[0] = tree.time_stamp
-            time_stampDouble[0] = tree.time_stampDouble
 
         # calculate time since previous event
         if prev_time_stamp > 0:
             time_since_last[0] = time_stampDouble[0] - prev_time_stamp
-            time_since_last_msec[0] = (time_stampDouble[0] - prev_time_stamp)*1.e3/sampling_freq_Hz
+            time_since_last_msec[0] = (time_stampDouble[0] - prev_time_stamp)*1.e3/sampling_frequency_Hz[0]
         else:
             time_since_last[0] = -1.0
             time_since_last_msec[0] = -1.0
@@ -1168,10 +1030,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         sum_wfm = None
         for i in xrange(n_channels_in_event):
 
-            if is_tier1:
-                wfm = tree.wfm
-                channel[i] = tree.channel
-            elif isMC:
+            if isMC:
 
                 #Some channels are grouped together so for those sum each channel in the gropu
                 #First always get the one channel that has to exist
@@ -1189,7 +1048,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 wfm = [wfmp for wfmp in tree.ChannelWaveform[struck_to_mc_channel_map[i][0]]]
                 if not ROOT.gROOT.IsBatch(): print "channel %i %s -- adding MC ch %s" % (
                     i, 
-                    channel_map[i],
+                    analysis_config.GetChannelNameForSoftwareChannel(i),
                     struck_to_mc_channel_map[i][0],
                 )
                 
@@ -1200,14 +1059,13 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                         #print "MC=", i, mcch
                         if not ROOT.gROOT.IsBatch(): print "channel %i %s-- adding MC ch %s" % (
                             i, 
-                            channel_map[i],
+                            analysis_config.GetChannelNameForSoftwareChannel(i),
                             struck_to_mc_channel_map[i][0],
                         )
                         for index, wfmi in enumerate(tree.ChannelWaveform[mcch]):
                             wfm[index] += wfmi
 
                 MCtrueEnergy[i] = wfm[-1]*calibration[i] # set true energy to last value of wfm
-                channel[i] = i
 
             elif isNGM:
                 if n_channels_in_this_event > 0: # For NGM, each wfm is its own tree entry
@@ -1224,21 +1082,21 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 i = tree.HitTree.GetSlot()*16 + tree.HitTree.GetChannel()
                 #channel[i] = tree.HitTree.GetSlot()*16 + tree.HitTree.GetChannel()
                 if do_invert and not isMC:
-                    #Flip everyother channel if this is 16bit digi
+                    #Flip everyother channel if this is 16bit digitizer and sampling at 125MHz
                     if i%2==0:i+=1
                     else:     i-=1
-                channel[i] = i
+                #channel[i] = i
 
                 #First time stamp diff in clock ticks thans convert to ms 
                 time_stamp_diff[i] = int( tree.HitTree.GetRawClock() ) - time_stamp[0]# time stamp for this channel
                 time_stampDouble_diff[i] = tree.HitTree.GetRawClock() -time_stampDouble[0] # time stamp for this channel
-                time_stamp_diff_msec[i] = ((tree.HitTree.GetRawClock() -time_stampDouble[0])/sampling_freq_Hz)*1.e3 #save in msec too
+                time_stamp_diff_msec[i] = ((tree.HitTree.GetRawClock() -time_stampDouble[0])/sampling_frequency_Hz[0])*1.e3 #save in msec too
 
                 if do_debug: # debugging
                 #if True:
                     print "NGM event", n_events, \
                         "i", i, \
-                        "channel", channel[i], \
+                        "channel", i, \
                         "time stamp", tree.HitTree.GetRawClock(), \
                         "event_time_stamp:", time_stamp[0], \
                         "time diff:", tree.HitTree.GetRawClock() - time_stamp[0]
@@ -1257,20 +1115,20 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                     break # break from loop over events
                 
                 n_channels_in_this_event += 1
-                if channel[i] in found_channels:
+                if i in found_channels:
                     print ""
-                    print "======> Found Duplicate Channel %i at entry %i.  Should this even be possible????" % (channel[i],i_entry)
+                    print "======> Found Duplicate Channel %i at entry %i.  Should this even be possible????" % (i,i_entry)
                     print "This is entry %i out of %i entries." % (i_entry, n_entries)
                     print found_channels
                     print ""
                     sys.exit(1)
 
-                found_channels.append(channel[i])
+                found_channels.append(i)
 
-                if dead_channels[channel[i]] > 0:
+                if dead_channels[i] > 0:
                     found_dead = True
                     print ""
-                    print "===> DEAD Channel Found: %i" % channel[i]
+                    print "===> DEAD Channel Found: %i" % i
                     print ""
                     break
 
@@ -1279,29 +1137,11 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 if isMakeNoise:
                     for wfm_index in xrange(noise_length):
                         noisewfm[i][wfm_index] = wfm[wfm_index]
-
-            else:
-                channel[i] = tree.channel[i]
-                if i == 0: 
-                    wfm = tree.wfm0
-                elif i == 1: 
-                    wfm = tree.wfm1
-                elif i == 2: 
-                    wfm = tree.wfm2
-                elif i == 3: 
-                    wfm = tree.wfm3
-                elif i == 4: 
-                    wfm = tree.wfm4
-                elif i == 5: 
-                    wfm = tree.wfm5
-                elif i == 6:
-                    wfm = tree.wfm8
-                wfm_max_time[i] = tree.wfm_max_time[i]
-            
+ 
             wfm_length[i] = len(wfm)
 
             # add noise to MC
-            if isMC and channel[i] is not pmt_channel:
+            if isMC and i is not pmt_channel:
                 
                 #print "WFM MAX:", np.max(wfm), rms_keV[i]/calibration[i],rms_keV[i], calibration[i]
                 
@@ -1321,7 +1161,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 else:
                     if not ROOT.gROOT.IsBatch(): print "noise file found"
                     #Have a noise_file get random event and wfm for that channel
-                    noise_array = getattr(noise_tree, "wfm%i" % channel[i])
+                    noise_array = getattr(noise_tree, "wfm%i" % i)
                     #MC length is 801 why?????
                     
                     #for i_point in xrange(len(wfm)):
@@ -1332,14 +1172,6 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                         #print "Calib ratio", data_calib[i], calibration[i]
                         wfm[i_point] += (noise_array[i_point]*data_calib[i])/calibration[i]
 
-                #if charge_channels_to_use[i] > 0 and np.max(wfm)>5000:
-                #    plt.figure(15)
-                #    plt.ion()
-                #    plt.clf()
-                #    plt.title(channel_map[i])
-                #    plt.plot(np.array(wfm), color='r')
-                #    plt.show()
-                #    raw_input("PAUSE")
     
                 noise_val[i] = generator.Gaus() # an extra noise value for use with energy smearing
 
@@ -1361,7 +1193,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             label = "Event %i " % n_events
             if isMC:
                 label += " MC ch %i " % i 
-            label += struck_analysis_parameters.channel_map[i]
+            label += analysis_config.GetChannelNameForSoftwareChannel(i)
             # use wfmProcessing to get most wfm parameters
             (
                 baseline_mean[i], 
@@ -1403,13 +1235,13 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             ) = wfmProcessing.get_wfmparams(
                 exo_wfm=exo_wfm, 
                 wfm_length=wfm_length[i], 
-                sampling_freq_Hz=sampling_freq_Hz,
+                sampling_freq_Hz=sampling_frequency_Hz[0],
                 n_baseline_samples=n_baseline_samples[0], 
                 calibration=calibration[i], 
                 decay_time=decay_time[i], 
-                is_pmtchannel=channel[i]==pmt_channel,
-                is_sipmchannel=(sipm_channels_to_use[channel[i]] > 0),
-                channel=channel[i],
+                is_pmtchannel=(i==pmt_channel),
+                is_sipmchannel=(sipm_channels_to_use[i] > 0),
+                channel=i,
                 isMC=isMC,
                 label=label,
             )
@@ -1426,7 +1258,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                     raw_input()
                 InductionEnergy[0] += induct_amp[i]
 
-            if charge_channels_to_use[channel[i]] and signal_map[i] > 0.5:
+            if charge_channels_to_use[i] and signal_map[i] > 0.5:
                 #This is a signal so add to total and figure out the type
                 #Record Energy in  new variable which tracks total energy from 
                 #channels above threshold.
@@ -1436,17 +1268,17 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
 
                 #print "Event %i Ch %i has Signal Energy %f" %(n_events, i,energy1_pz[i])
 
-                if 'X' in channel_map[i]:
+                if 'X' in analysis_config.GetChannelNameForSoftwareChannel(i):
                     nXsignals[0]+=1
                     SignalEnergyX[0] += energy1_pz[i]
-                elif 'Y' in channel_map[i]:
+                elif 'Y' in analysis_config.GetChannelNameForSoftwareChannel(i):
                     nYsignals[0]+=1
                     SignalEnergyY[0] += energy1_pz[i]
 
-            if channel[i] == pmt_channel:
+            if i == pmt_channel:
                 #print energy[i], lightEnergy
                 lightEnergy[0] += energy[i]
-            elif sipm_channels_to_use[channel[i]]:
+            elif sipm_channels_to_use[i]:
                 lightEnergy[0] += energy[i]
                 if abs(energy[i]/baseline_rms_filter[i]) > 10.0: 
                     SignalEnergyLight[0] += energy[i]
@@ -1455,16 +1287,16 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 #if abs(sipm_amp[i]/baseline_rms_filter[i])  > 10.0:
                 if abs(fit_energy[i]/baseline_rms_filter[i])  > 10.0:
                     SignalEnergyLightFit[0] += fit_energy[i]#abs(sipm_amp[i])
-            elif charge_channels_to_use[channel[i]]:
+            elif charge_channels_to_use[i]:
                 chargeEnergy[0] += energy1_pz[i]
             if isMC:
                 MCchargeEnergy[0] += energy1_pz[i]
 
  
-            exo_wfm.SetSamplingFreq(sampling_freq_Hz/second)
+            exo_wfm.SetSamplingFreq(sampling_frequency_Hz[0]/second)
 
             #Sum the Waveforms of the active channels
-            if charge_channels_to_use[channel[i]] and signal_map[i] > 0.5:
+            if charge_channels_to_use[i] and signal_map[i] > 0.5:
                 if i == 0 or sum_wfm is None:
                     sum_wfm = EXODoubleWaveform(calibrated_wfm)
                 else:
@@ -1513,7 +1345,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
             #if not gROOT.IsBatch() and do_debug and channel[i]!=pmt_channel and energy1_pz[i]>100:
             if False:
 
-                print "--> entry %i | channel %i" % (i_entry, channel[i])
+                print "--> entry %i | channel %i" % (i_entry, i)
                 print "\t n samples: %i" % wfm_length[i]
                 print "\t max %.2f" % wfm_max[i]
                 print "\t min %.2f" % wfm_min[i]
@@ -1553,7 +1385,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 wfm_hist  = calibrated_wfm.GimmeHist("wfm_hist")
                 pmt_hist.Scale(wfm_hist.GetMaximum()/pmt_hist.GetMaximum())
                 pmt_chi2[0] = struck_analysis_cuts.pmt_chisq_per_dof(
-                    pmt_hist, wfm_hist, rms_keV[pmt_channel]/calibration_values[pmt_channel]
+                    pmt_hist, wfm_hist, rms_keV[pmt_channel]/calibration[pmt_channel]
                 )
     
                 if False and pmt_chi2[0] > 0: 
@@ -1578,7 +1410,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                     pmt_hist.SetTitle("event %i, entry %i" % (i_entry/32, i_entry))
                     pmt_hist.SetLineColor(ROOT.kBlue)
                     wfm_hist.SetLineColor(ROOT.kRed)
-                    print "\t PMT electronics noise:", rms_keV[pmt_channel]/calibration_values[pmt_channel]
+                    print "\t PMT electronics noise:", rms_keV[pmt_channel]/calibration[pmt_channel]
                     print "\t lightEnergy:", lightEnergy[0]
                     print "\t pmt_chi2:", pmt_chi2[0]
                     if False:
@@ -1587,7 +1419,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                         wfm_hist.Draw("same")
                         #wfm_hist.Draw()
                         #pmt_hist.Draw("same")
-                        print calibration_values[pmt_channel], lightEnergy[0], wfm_hist.GetMaximum()*calibration_values[pmt_channel]
+                        print calibration[pmt_channel], lightEnergy[0], wfm_hist.GetMaximum()*calibration[pmt_channel]
                         canvas.Update()
                         raw_input("enter to continue")
 
@@ -1740,7 +1572,7 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                 print "A/E:", maxCurrent[0]/SignalEnergy[0]
                 print "nsignals:", nsignals[0]
                 for i_ch, val in enumerate(signal_map):
-                    if val: print "\t", i_ch, channel_map[i_ch]
+                    if val: print "\t", i_ch, analysis_config.GetChannelNameForSoftwareChannel(i_ch)
                 print "rise_time_stop95_sum:", rise_time_stop95_sum[0]
                 print sum_wfm.GetSamplingPeriod()
                 val = raw_input("enter to continue (q=quit, b=batch, p=print) ")
@@ -1763,7 +1595,6 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
         wfm_too_low = False
         wfm_too_high = False
         if not isMC and pmt_chi2[0] > 3.0:  is_bad[0] += 1
-        rms_keV_sigma = struck_analysis_parameters.rms_keV_sigma
 
         # if any channels exceed conditions, we flag the event:
         for j, val  in enumerate(charge_channels_to_use):
@@ -1815,7 +1646,6 @@ def process_file(filename, dir_name= "", verbose=True, do_overwrite=True, isMC=F
                         do_fill = True
                     else:
                         do_fill = False
-                    if struck_analysis_parameters.is_10th_LXe and out_tree.GetEntries() >= 20: break # 20 events x 1181 files 
 
             if do_fill:
                 out_tree.Fill()
@@ -1880,14 +1710,12 @@ if __name__ == "__main__":
     noise_file = None
     test_noise = ""
     test_noise_slac = ""
-    #test_noise = "/home/teststand/testing/test_noiselib/tier3_SIS3316Raw_20160922143510_9thLXe_126mvDT_cath_1700V_100cg_overnight__1-ngm.root"
-    #test_noise = "/p/lscratchd/jewell6/MCData_9thLXe/tier3_SIS3316Raw_20160921080244_9thLXe_126mvDT_cath_1700V_100cg_overnight__1-ngm.root"
-    if struck_analysis_parameters.is_9th_LXe:
-        test_noise = "/p/lscratchd/jewell6/MCData_9thLXe/NoiseFiles/noiselib/NoiseLib_9thLXe.root"
-        test_noise_slac = "/nfs/slac/g/exo_data4/users/alexis4/test-stand/NoiseLib_9thLXe.root"
-    if struck_analysis_parameters.is_10th_LXe:
-        test_noise = "/p/lscratchd/jewell6/MCData_9thLXe/NoiseFiles/noiselib/NoiseLib_10thLXe.root"
-        test_noise_slac = "/nfs/slac/g/exo_data4/users/alexis4/test-stand/NoiseLib_10thLXe.root"
+#    if struck_analysis_parameters.is_9th_LXe:
+#        test_noise = "/p/lscratchd/jewell6/MCData_9thLXe/NoiseFiles/noiselib/NoiseLib_9thLXe.root"
+#        test_noise_slac = "/nfs/slac/g/exo_data4/users/alexis4/test-stand/NoiseLib_9thLXe.root"
+#    if struck_analysis_parameters.is_10th_LXe:
+#        test_noise = "/p/lscratchd/jewell6/MCData_9thLXe/NoiseFiles/noiselib/NoiseLib_10thLXe.root"
+#        test_noise_slac = "/nfs/slac/g/exo_data4/users/alexis4/test-stand/NoiseLib_10thLXe.root"
     if options.isMC:
         if options.noise_file is not None:
             if os.path.isfile(options.noise_file):
