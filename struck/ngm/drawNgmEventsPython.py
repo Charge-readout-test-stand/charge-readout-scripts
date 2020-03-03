@@ -58,8 +58,8 @@ bits = 14
 
 plot_fft = False
 cut_sipm_win = True
-sipm_twidth = 5.0
-threshold = 50.0 # keV
+sipm_twidth = 1.0
+threshold = 0.0 # keV
 lthreshold = 0.0
 energy_offset = 25000.0/nchannels
 energy_offset = 25000.0/(4.0*nchannels)

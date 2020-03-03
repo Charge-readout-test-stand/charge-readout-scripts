@@ -851,7 +851,7 @@ def get_risetimes(
     # perform some smoothing -- be careful because this changes the rise time
     smoother = EXOSmoother()
     #smoother.SetSmoothSize(5) #old for < 12th
-    smoother.SetSmoothSize(15)
+    smoother.SetSmoothSize(60)
     smoother.Transform(exo_wfm, new_wfm) 
 
     smoothed_max = new_wfm.GetMaxValue()
@@ -1067,7 +1067,7 @@ def fit_wfm(time, wfm, rise_time, max_val):
         plt.title(r"$\chi$$^{2}$/NDF = %.4f" % (chi_col/(len(wfm) - 3)))
 
         #if abs(bp_col[2] - rise_time)>5:
-        if True:
+        if max_val<60:
             raw_input("PAUSE")
 
     return bp_col[0], bp_col[1], bp_col[2], chi_col

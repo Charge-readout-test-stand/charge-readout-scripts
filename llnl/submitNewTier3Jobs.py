@@ -99,7 +99,7 @@ def process_file(filename, verbose=True):
 
         cmd = """msub \\
               -A nuphys \\
-              -m abe \\
+              -m a \\
               -V \\
               -N %(base)s \\
               -o out_%(base)s.out \\
@@ -156,8 +156,8 @@ if __name__ == "__main__":
 
 
     verbose = True 
-    job_lim = 1000
-    #job_lim  = 600
+    #job_lim = 5
+    job_lim  = 1000
 
     n_submitted = 0
     for filename in filenames:
